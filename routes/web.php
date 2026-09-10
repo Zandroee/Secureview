@@ -1,13 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', function () {
-    return view('landing');
-});
-
-Route::get('/', function () {
-    return view('landing');
+    return Inertia::render('landing');
 })->name('home');
 
 Route::get('/products', function () {
