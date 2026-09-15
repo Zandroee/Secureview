@@ -113,17 +113,24 @@ export default function Signup(){
                         </div>
 
                         <div className="mb-3">
-                            <PasswordInput
-                                value={password}
-                                onChange={(e)=>{
-                                    setPassword(e.target.value);
-                                    setPasswordError("");
-                                }}
-                                placeholder="Password"
+                            <label className="form-label">
+                                Password
+                            </label>
+                                <PasswordInput
+                                    value={password}
+                                    onChange={(e)=>{
+                                        setPassword(e.target.value);
+                                        setPasswordError("");
+                                    }}
+                                    placeholder="Password"
                             />
                         </div>
 
                         <div className="mb-3">
+                            <label className="form-label">
+                            Confirm Password
+                            </label>
+
                             <PasswordInput
                                 value={confirmPassword}
                                 onChange={(e)=>{
