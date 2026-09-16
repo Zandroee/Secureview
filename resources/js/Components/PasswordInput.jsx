@@ -12,7 +12,6 @@ export default function PasswordInput({
 
     return (
         <div className="password-container">
-
             <input
                 type={showPassword ? "text" : "password"}
                 className="form-control"
@@ -25,7 +24,6 @@ export default function PasswordInput({
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
             >
-
                 <i 
                     className={
                         showPassword
@@ -33,9 +31,7 @@ export default function PasswordInput({
                         : "bi bi-eye"
                     }
                 ></i>
-
             </button>
-
         </div>
     );
 }

@@ -20,20 +20,56 @@ export default function Signup(){
     //error state
     const [passwordError, setPasswordError] = useState("");
 
-    //terms error
+    //terms error state
     const[termsError, setTermsError] = useState("");
+
+     //forms error state
+    const[formError, setFormError] = useState("");
+
+    //email error state
+    const[emailError,setEmailError] = useState("");
+
+    
 
     
     // live password matching
     const passwordMatch = password === confirmPassword && confirmPassword !== "";
 
 
+    const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    });
+
     // Handling create button
     const handleSubmit = (e) => {
         e.preventDefault();
 
+        setFormError("");
+        setEmailError("");
         setPasswordError("");
         setTermsError("");
+
+        if(
+            !formData.firstName ||
+            !formData.lastName ||
+            !formData.phone ||
+            !formData.email ||
+            !password ||
+            !confirmPassword
+        ) {
+            setFormError("Please fill in all required fields");
+            return;
+        }
+
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!emailPattern.test(formData.email)){
+            setEmailError("Please enter a valid email address");
+            return;
+        }
 
         if(password !== confirmPassword){
             setPasswordError("Passwords do not match");
@@ -41,7 +77,7 @@ export default function Signup(){
         }
 
         if(!acceptedTerms){
-            setTermsError("Please accept Terms and Conditions")
+            setTermsError("Please accept Terms and Conditions");
             return;
         }
 
@@ -73,6 +109,11 @@ export default function Signup(){
                             type="text"
                             className="form-control"
                             placeholder="First Name"
+                            value={formData.firstName}
+                            onChange={(e)=>setFormData({
+                             ...formData,
+                             firstName:e.target.value
+                             })}
                             />
                         </div>
 
@@ -85,6 +126,11 @@ export default function Signup(){
                             type="text"
                             className="form-control"
                             placeholder="Last Name"
+                            value={formData.lastName}
+                            onChange={(e)=>setFormData({
+                                ...formData,
+                                lastName:e.target.value
+                             })}
                             />
                         </div>
 
@@ -97,6 +143,11 @@ export default function Signup(){
                             type="text"
                             className="form-control"
                             placeholder="09*********"
+                            value={formData.phone}
+                            onChange={(e)=>setFormData({
+                                ...formData,
+                                phone:e.target.value
+                             })}
                             />
                         </div>
 
@@ -109,7 +160,22 @@ export default function Signup(){
                             type="email"
                             className="form-control"
                             placeholder="Email"
+                            value={formData.email}
+                            onChange={(e)=> {
+                                setFormData({
+                                ...formData,
+                                email:e.target.value
+                             });
+
+                             setEmailError("");
+                            }}
                             />
+
+                            {emailError && (
+                                <p className="invalid">
+                                    {emailError}
+                                </p>
+                            )}
                         </div>
 
                         <div className="mb-3">
@@ -134,7 +200,7 @@ export default function Signup(){
                             <PasswordInput
                                 value={confirmPassword}
                                 onChange={(e)=>{
-                                    setConfirmPassword(e.target.value)
+                                    setConfirmPassword(e.target.value);
                                      setPasswordError("");
                                 }}
                                 placeholder="Confirm Password"
@@ -179,6 +245,12 @@ export default function Signup(){
                                 </p>
                             )}
                         </div>
+                        
+                        {formError && (
+                            <p className="invalid">
+                                {formError}
+                            </p>
+                        )}
 
                         <button 
                             type="submit"
@@ -186,7 +258,7 @@ export default function Signup(){
                         >
                             CREATE ACCOUNT
                         </button>
-                        
+                    
                         </form>
                     </div>
             </section>
