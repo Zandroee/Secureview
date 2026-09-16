@@ -5,10 +5,10 @@ use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('landing');
-})->name('home');
+})->name('landing');
 
 Route::get('/products', function () {
-    return view('products');
+    return Inertia::render('products');
 })->name('products');
 
 Route::get('/packages', function () {

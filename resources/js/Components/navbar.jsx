@@ -7,7 +7,7 @@ export default function Navbar() {
 
                 {/* LOGO */}
 
-                <a className="navbar-brand fw-bold fs-4" href="#" style={{ fontFamily: "Outfit, sans-serif" }}>
+                <a className="navbar-brand fw-bold fs-4" href="/" style={{ fontFamily: "Outfit, sans-serif" }}>
                     SECUREVIEW
                 </a>
 
@@ -30,10 +30,10 @@ export default function Navbar() {
                     <div className="offcanvas-body">
                         <ul className="navbar-nav ms-auto column-gap-lg-5" style={{ fontFamily: "Outfit, sans-serif" }}>
                             <li className="nav-item">
-                                <a className="nav-link" href="#">HOME</a>
+                                <a className="nav-link" href="/">HOME</a>
                             </li>
                             <li className="nav-item">
-                                <a className="nav-link" href="#">PRODUCTS</a>
+                                <a className="nav-link" href="/products">PRODUCTS</a>
                             </li>
                             <li className="nav-item">
                                 <a className="nav-link" href="#">PACKAGES</a>

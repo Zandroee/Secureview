@@ -55,10 +55,7 @@ export default function landing() {
     const totalPages = Math.ceil(cctvPackages.length / cardsPerPage);
 
     const indexOfFirstCard = (currentPage - 1) * cardsPerPage;
-    const currentCards = cctvPackages.slice(
-    indexOfFirstCard,
-    indexOfFirstCard + cardsPerPage
-    );
+    const currentCards = cctvPackages.slice(indexOfFirstCard, indexOfFirstCard + cardsPerPage);
     return (
         <>
             <Navbar />
