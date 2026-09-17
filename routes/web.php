@@ -2,21 +2,20 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\LandingController;
 
-Route::get('/', function () {
-    return Inertia::render('landing');
-})->name('landing');
+Route::get('/', [LandingController::class, 'index']);
 
-Route::get('/products', function () {
-    return Inertia::render('products');
-})->name('products');
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{id}', [ProductController::class, 'show']);
 
 Route::get('/packages', function () {
     return view('packages');
 })->name('packages');
 
 Route::get('/about', function () {
-    return view('about');
+    return Inertia::render('about');
 })->name('about');
 
 Route::get('/login', function () {

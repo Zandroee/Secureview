@@ -1,262 +1,133 @@
-import '../../css/landing.css';
-import Navbar from '../Components/Navbar';
-import Footer from '../Components/footer';
+import Navbar from "../Components/Navbar";
+import Footer from "../Components/footer";
+import PackageCard from "../Components/PackageCard";
+import ProductCard from "../Components/ProductCard";
+
+import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
-export default function landing() {
-    const [currentPage, setCurrentPage] = useState(1);
+function FeaturedNavigation({ currentPage, totalPages, onPrevious, onNext }) {
+    if (totalPages <= 1) return null;
 
-    const cardsPerPage = 4;
+    return (
+        <div className="d-flex justify-content-center align-items-center gap-3 mt-4">
+            <button type="button" className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center shadow-sm" style={{ width: "44px", height: "44px", color: currentPage === 1 ? "#adb5bd" : "#0d6efd" }} disabled={currentPage === 1} onClick={onPrevious} aria-label="Previous">
+                <i className="bi bi-chevron-left fs-5"></i>
+            </button>
 
-    const cctvPackages = [
-    {
-        title: "CCTV Package 1",
-        text: "Complete CCTV package for home security.",
-        image: "/images/cctv-cameras.jpg",
-        tag: "Popular"
-    },
-    {
-        title: "CCTV Package 2",
-        text: "Reliable CCTV package for small businesses.",
-        image: "/images/cctv-cameras.jpg"
-    },
-    {
-        title: "CCTV Package 3",
-        text: "High-quality cameras for indoor and outdoor use.",
-        image: "/images/cctv-cameras.jpg"
-    },
-    {
-        title: "CCTV Package 4",
-        text: "Affordable security package.",
-        image: "/images/cctv-cameras.jpg"
-    },
-    {
-        title: "CCTV Package 5",
-        text: "Advanced CCTV package with clear video.",
-        image: "/images/cctv-cameras.jpg"
-    },
-    {
-        title: "CCTV Package 6",
-        text: "Security cameras suitable for larger areas.",
-        image: "/images/cctv-cameras.jpg"
-    },
-    {
-        title: "CCTV Package 7",
-        text: "Professional CCTV package.",
-        image: "/images/cctv-cameras.jpg"
-    },
-    {
-        title: "CCTV Package 8",
-        text: "Reliable surveillance for your property.",
-        image: "/images/cctv-cameras.jpg"
-    }
-];
+            <button type="button" className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center shadow-sm" style={{ width: "44px", height: "44px", color: currentPage === totalPages ? "#adb5bd" : "#0d6efd" }} disabled={currentPage === totalPages} onClick={onNext} aria-label="Next">
+                <i className="bi bi-chevron-right fs-5"></i>
+            </button>
+        </div>
+    );
+}
 
-    const totalPages = Math.ceil(cctvPackages.length / cardsPerPage);
+export default function Landing({ cctvPackages = [], cameras = [] }) {
+    const [packagePage, setPackagePage] = useState(1);
+    const [cameraPage, setCameraPage] = useState(1);
 
-    const indexOfFirstCard = (currentPage - 1) * cardsPerPage;
-    const currentCards = cctvPackages.slice(indexOfFirstCard, indexOfFirstCard + cardsPerPage);
+    const packagesPerPage = 3;
+    const camerasPerPage = 4;
+
+    const totalPackagePages = Math.ceil(cctvPackages.length / packagesPerPage);
+    const packageStartIndex = (packagePage - 1) * packagesPerPage;
+    const currentPackages = cctvPackages.slice(packageStartIndex, packageStartIndex + packagesPerPage);
+
+    const totalCameraPages = Math.ceil(cameras.length / camerasPerPage);
+    const cameraStartIndex = (cameraPage - 1) * camerasPerPage;
+    const currentCameras = cameras.slice(cameraStartIndex, cameraStartIndex + camerasPerPage);
+
     return (
         <>
             <Navbar />
 
-            {/* HEADER SECTION */}
-            <header className="bg-primary d-flex align-items-center text-white">
-                <div className="container-fluid" style={{ paddingLeft: 0, paddingRight: 0 }}>
-                    <div className="row align-items-center gap-5">
-
-                        <div className="col-md-6 text-center">
-                            <img src="/images/cctv-cameras.jpg" className="img-fluid" style={{ width: "100%", height: "600px", objectFit: "cover", objectPosition: "center" }} alt="camera_img"></img>
+            <header className="bg-primary text-white">
+                <div className="container-fluid px-0">
+                    <div className="row g-0">
+                        <div className="col-lg-6">
+                            <img src="/images/cctv-cameras.jpg" alt="CCTV Cameras" className="img-fluid w-100" style={{ height: "600px", objectFit: "cover", objectPosition: "center" }} />
                         </div>
 
-                        <div className="col-md-5 text-center text-md-center d-flex flex-column gap-5" style={{ padding: "50px" }}>
+                        <div className="col-lg-6 d-flex align-items-center">
+                            <div className="w-100 text-center px-4 px-md-5 py-5" style={{ fontFamily: "Outfit, sans-serif" }}>
+                                <h1 className="display-3 fw-bold mb-4">Secure your home or your business</h1>
+                                <p className="display-6 mb-5">Secure them with our optimal CCTV packages offers just for you!</p>
 
-                            <h1 className="display-1 fw-bold" style={{fontFamily: "Outfit, sans-serif"}}>
-                                Secure your home or your business
-                            </h1>
-
-                            <p className="display-6" style={{fontFamily: "Outfit, sans-serif"}}>
-                                Secure them with our optimal CCTV packages offers just for you!
-                            </p>
-                            
-                            <div className="d-flex justify-content-center justify-content-md-center mx-auto gap-3" >
-                                <a className="btn btn-outline-primary bg-white fw-bold fs-5"href="#" role="button" style={{fontFamily: "Outfit, sans-serif", "--bs-btn-padding-x": "50px", "--bs-btn-padding-y": "10px"}}>
-                                    VIEW PACKAGES
-                                </a>
-                                <a className="btn btn-outline-primary bg-white fw-bold fs-5"href="#" role="button" style={{fontFamily: "Outfit, sans-serif", "--bs-btn-padding-x": "50px", "--bs-btn-padding-y": "10px"}}>
-                                    BROWSE CAMERAS
-                                </a>
+                                <div className="d-flex flex-column flex-sm-row justify-content-center gap-3">
+                                    <a href="#featured-packages" className="btn btn-light text-primary fw-bold fs-5 px-5 py-2">VIEW PACKAGES</a>
+                                    <Link href="/products" className="btn btn-outline-light fw-bold fs-5 px-5 py-2">BROWSE CAMERAS</Link>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </header>
 
-            {/* 2ND SECTION */}
-            <section className="text-dark mt-5">
-
-                <h2 className="display-6 fw-bold text-center" style={{fontFamily: "Outfit, sans-serif"}}>
-                    Featured CCTV Packages
-                </h2>
-
-                <div className="fs-5 text-primary text-end pe-5">
-                    <a className="nav-link" style={{fontFamily: "Outfit, sans-serif"}} href="#">
-                        VIEW ALL
-                    </a>
-                </div>
-
-                <div className="container-fluid mt-4 px-3 px-md-4 px-lg-5">
-                    <div className="d-flex align-items-center">
-
-                        {/* LEFT ARROW */}
-                        {totalPages > 1 && (
-                            <button
-                                className="btn btn-primary me-2 me-md-3 flex-shrink-0"
-                                disabled={currentPage === 1}
-                                onClick={() => setCurrentPage(currentPage - 1)}
-                            >
-                                ←
-                            </button>
-                        )}
-
-                        {/* CARDS */}
-                        <div className="row g-3 g-md-4 flex-grow-1">
-
-                            {currentCards.map((card, index) => (
-                                <div
-                                    className="col-12 col-sm-6 col-lg-3"
-                                    key={index}
-                                >
-                                    <div className="card h-100">
-                                        {/* IMAGE + TAG */}
-                                        <div className="position-relative">
-                                            <img
-                                                src={card.image}
-                                                className="card-img-top"
-                                                alt={card.title}
-                                            />
-
-                                            <span className="position-absolute top-0 end-0 badge bg-primary m-2">
-                                                {card.tag}
-                                            </span>
-                                        </div>
-
-                                        <div className="card-body">
-                                            <h5 className="card-title">
-                                                {card.title}
-                                            </h5>
-
-                                            <p className="card-text">
-                                                {card.text}
-                                            </p>
-
-                                            <a href="#" className="btn btn-primary">
-                                                Go somewhere
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
+            <section id="featured-packages" className="text-dark py-5">
+                <div className="container-fluid px-3 px-md-4 px-lg-5">
+                    <div className="row align-items-end mb-4">
+                        <div className="col">
+                            <h2 className="display-6 fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>Featured CCTV Packages</h2>
                         </div>
 
-                        {/* RIGHT ARROW */}
-                        {totalPages > 1 && (
-                            <button
-                                className="btn btn-primary ms-2 ms-md-3 flex-shrink-0"
-                                disabled={currentPage === totalPages}
-                                onClick={() => setCurrentPage(currentPage + 1)}
-                            >
-                                →
-                            </button>
-                        )}
+                        <div className="col-auto">
+                            <Link href="/packages" className="text-primary fw-bold text-decoration-none">VIEW ALL <i className="bi bi-arrow-right ms-2"></i></Link>
+                        </div>
+                    </div>
+
+                    <div className="row g-3 g-md-4">
+                        {currentPackages.map((item) => (
+                            <div className="col-sm-6 col-lg-4" key={item.id}>
+                                <PackageCard name={item.name} image={item.image} price={item.price} badge={item.badge} specifications={item.specifications} onDetails={() => console.log("Package:", item.id)} />
+                            </div>
+                        ))}
+                    </div>
+
+                    <FeaturedNavigation currentPage={packagePage} totalPages={totalPackagePages} onPrevious={() => setPackagePage(packagePage - 1)} onNext={() => setPackagePage(packagePage + 1)} />
+                </div>
+            </section>
+
+            <section id="featured-cameras" className="text-dark bg-light py-5">
+                <div className="container-fluid px-3 px-md-4 px-lg-5">
+                    <div className="row align-items-end mb-4">
+                        <div className="col">
+                            <h2 className="display-6 fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>Featured Cameras</h2>
+                        </div>
+
+                        <div className="col-auto">
+                            <Link href="/products" className="text-primary fw-bold text-decoration-none">VIEW ALL <i className="bi bi-arrow-right ms-2"></i></Link>
+                        </div>
+                    </div>
+
+                    <div className="row g-3 g-md-4">
+                        {currentCameras.map((item) => (
+                            <div className="col-sm-6 col-xl-3" key={item.id}>
+                                <ProductCard name={item.name} image={item.image} price={item.price} badge={item.badge} specifications={item.specifications} onDetails={() => router.visit(`/products/${item.id}`)} />
+                            </div>
+                        ))}
+                    </div>
+
+                    <FeaturedNavigation currentPage={cameraPage} totalPages={totalCameraPages} onPrevious={() => setCameraPage(cameraPage - 1)} onNext={() => setCameraPage(cameraPage + 1)} />
+                </div>
+            </section>
+
+            <section className="py-5">
+                <div className="container">
+                    <div className="bg-primary text-white rounded-3 p-4 p-md-5">
+                        <div className="row align-items-center">
+                            <div className="col-lg-8 text-center text-lg-start">
+                                <h2 className="fw-bold mb-2" style={{ fontFamily: "Outfit, sans-serif" }}>Ready to secure your space?</h2>
+                                <p className="mb-0">Browse our CCTV cameras and packages to find the right security solution.</p>
+                            </div>
+
+                            <div className="col-lg-4 text-center text-lg-end mt-4 mt-lg-0">
+                                <Link href="/products" className="btn btn-light text-primary fw-bold px-4 py-2">BROWSE PRODUCTS <i className="bi bi-arrow-right ms-2"></i></Link>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* 3RD SECTION */}
-            <section className="text-dark mt-5">
-
-                <h2 className="display-6 fw-bold text-center" style={{fontFamily: "Outfit, sans-serif"}}>
-                    Featured Cameras
-                </h2>
-
-                <div className="fs-5 text-primary text-end pe-5">
-                    <a className="nav-link" style={{fontFamily: "Outfit, sans-serif"}} href="#">
-                        VIEW ALL
-                    </a>
-                </div>
-
-                <div className="container-fluid mt-4 px-3 px-md-4 px-lg-5">
-                    <div className="d-flex align-items-center">
-
-                        {/* LEFT ARROW */}
-                        {totalPages > 1 && (
-                            <button
-                                className="btn btn-primary me-2 me-md-3 flex-shrink-0"
-                                disabled={currentPage === 1}
-                                onClick={() => setCurrentPage(currentPage - 1)}
-                            >
-                                ←
-                            </button>
-                        )}
-
-                        {/* CARDS */}
-                        <div className="row g-3 g-md-4 flex-grow-1">
-
-                            {currentCards.map((card, index) => (
-                                <div
-                                    className="col-12 col-sm-6 col-lg-3"
-                                    key={index}
-                                >
-                                    <div className="card h-100">
-                                        {/* IMAGE + TAG */}
-                                        <div className="position-relative">
-                                            <img
-                                                src={card.image}
-                                                className="card-img-top"
-                                                alt={card.title}
-                                            />
-
-                                            <span className="position-absolute top-0 end-0 badge bg-primary m-2">
-                                                {card.tag}
-                                            </span>
-                                        </div>
-
-                                        <div className="card-body">
-                                            <h5 className="card-title">
-                                                {card.title}
-                                            </h5>
-
-                                            <p className="card-text">
-                                                {card.text}
-                                            </p>
-
-                                            <a href="#" className="btn btn-primary">
-                                                Go somewhere
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
-                        </div>
-
-                        {/* RIGHT ARROW */}
-                        {totalPages > 1 && (
-                            <button
-                                className="btn btn-primary ms-2 ms-md-3 flex-shrink-0"
-                                disabled={currentPage === totalPages}
-                                onClick={() => setCurrentPage(currentPage + 1)}
-                            >
-                                →
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </section>
-
-            
             <Footer />
         </>
     );
