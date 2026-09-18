@@ -3,6 +3,8 @@ import React, { useState } from "react";
 export default function ProductCard({ name, image, price, badge, specifications = [], onDetails, variant = "product" }) {
     const [isHovered, setIsHovered] = useState(false);
 
+    const safeSpecifications = Array.isArray(specifications) ? specifications : [];
+
     const isPackage = variant === "package";
     const imageHeight = isPackage ? "220px" : "180px";
 
@@ -54,7 +56,7 @@ export default function ProductCard({ name, image, price, badge, specifications 
                 {/* SPECIFICATIONS */}
 
                 <ul className="ps-3 mb-3" style={{ fontSize: isPackage ? "0.78rem" : "0.72rem", lineHeight: isPackage ? "1.55" : "1.5" }}>
-                    {specifications.map((specification, index) => (
+                    {safeSpecifications.map((specification, index) => (
                         <li key={index} className="mb-1">
                             {specification}
                         </li>
