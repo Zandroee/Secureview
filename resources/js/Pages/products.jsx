@@ -9,16 +9,7 @@ import { useMemo, useState } from "react";
 
 export default function Products({ products }) {
 
-    // -------------------------------------------------
-    // SEARCH
-    // -------------------------------------------------
-
     const [search, setSearch] = useState("");
-
-    // -------------------------------------------------
-    // FILTERS
-    // -------------------------------------------------
-
     const [category, setCategory] = useState({
         dome: false,
         bullet: false,
@@ -28,16 +19,8 @@ export default function Products({ products }) {
     const [price, setPrice] = useState("");
     const [rating, setRating] = useState("");
 
-    // -------------------------------------------------
-    // PAGINATION
-    // -------------------------------------------------
-
     const [currentPage, setCurrentPage] = useState(1);
     const productsPerPage = 8;
-
-    // -------------------------------------------------
-    // FILTER PRODUCTS
-    // -------------------------------------------------
 
     const filteredProducts = useMemo(() => {
         return products.filter((product) => {
@@ -80,17 +63,9 @@ export default function Products({ products }) {
         });
     }, [search, category, price, rating]);
 
-    // -------------------------------------------------
-    // PAGINATION
-    // -------------------------------------------------
-
     const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
     const startIndex = (currentPage - 1) * productsPerPage;
     const currentProducts = filteredProducts.slice(startIndex, startIndex + productsPerPage);
-
-    // -------------------------------------------------
-    // PAGE CHANGE
-    // -------------------------------------------------
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
@@ -100,10 +75,6 @@ export default function Products({ products }) {
             behavior: "smooth",
         });
     };
-
-    // -------------------------------------------------
-    // FILTER HANDLERS
-    // -------------------------------------------------
 
     const handleCategoryChange = (name) => {
         setCategory((previous) => ({ ...previous, [name]: !previous[name] }));
