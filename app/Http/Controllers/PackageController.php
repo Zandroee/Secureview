@@ -19,9 +19,11 @@ class PackageController extends Controller
     public function show($id)
     {
         $package = Package::with('packageItems.product')->findOrFail($id);
+        $reviews = $package->reviews()->with('user')->latest()->get();
 
         return Inertia::render('package_details', [
             'package' => $package,
+            'reviews' => $reviews,
         ]);
     }
 }

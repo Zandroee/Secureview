@@ -1,5 +1,6 @@
 import Navbar from "../Components/Navbar";
 import Footer from "../Components/footer";
+import { router } from "@inertiajs/react";
 import { useState } from "react";
 
 function Stars({ rating }) {
@@ -63,12 +64,12 @@ function ReviewSummary({ reviews, rating }) {
     );
 }
 
-export default function ProductDetails({ product, reviews = [] }) {
+export default function PackageDetails({ package: packageData, reviews = [] }) {
     const [amount, setAmount] = useState(1);
     const [reviewPage, setReviewPage] = useState(1);
     const [reviewFilter, setReviewFilter] = useState("all");
 
-    const specifications = Array.isArray(product.specifications) ? product.specifications : [];
+    const specifications = Array.isArray(packageData.specifications) ? packageData.specifications : [];
     const filteredReviews = reviewFilter === "all" ? reviews : reviews.filter((review) => Number(review.rating) === Number(reviewFilter));
     const reviewsPerPage = 3;
     const totalReviewPages = Math.ceil(filteredReviews.length / reviewsPerPage);
@@ -86,25 +87,25 @@ export default function ProductDetails({ product, reviews = [] }) {
                     <div className="row g-3">
 
                         <div className="col-lg-6">
-                            {product.image ? (
-                                <img src={product.image} alt={product.name} className="img-fluid w-100" style={{ height: "330px", objectFit: "cover" }} />
+                            {packageData.image ? (
+                                <img src={packageData.image} alt={packageData.name} className="img-fluid w-100" style={{ height: "330px", objectFit: "cover" }} />
                             ) : (
                                 <div className="bg-secondary-subtle d-flex align-items-center justify-content-center" style={{ height: "330px" }}>
-                                    <i className="bi bi-camera-video text-secondary" style={{ fontSize: "5rem" }}></i>
+                                    <i className="bi bi-box-seam text-secondary" style={{ fontSize: "5rem" }}></i>
                                 </div>
                             )}
                         </div>
 
                         <div className="col-lg-6 d-flex flex-column justify-content-center">
 
-                            {product.badge && (
+                            {packageData.badge && (
                                 <span className="badge bg-primary align-self-start mb-2">
-                                    {product.badge}
+                                    {packageData.badge}
                                 </span>
                             )}
 
                             <h2 className="fw-bold mb-2">
-                                {product.name}
+                                {packageData.name}
                             </h2>
 
                             <ul className="ps-3 mb-3" style={{ fontSize: "0.8rem" }}>
@@ -116,18 +117,20 @@ export default function ProductDetails({ product, reviews = [] }) {
                             </ul>
 
                             <div className="d-flex justify-content-start gap-3 mb-2" style={{ fontSize: "0.8rem" }}>
-                                <strong>Warranty: {product.warranty}</strong>
-                                <strong>Category: {product.category}</strong>
+                                <strong>Warranty: {packageData.warranty}</strong>
+                                <strong>Category: {packageData.category}</strong>
                             </div>
 
                             <div className="d-flex align-items-center gap-3 mb-2">
+
                                 <h2 className="text-primary fw-bold mb-0">
-                                    ₱{Number(product.price).toLocaleString()}
+                                    ₱{Number(packageData.price).toLocaleString()}
                                 </h2>
 
                                 <span className="text-warning fw-bold">
-                                    {Number(product.rating || 0).toFixed(1)} <Stars rating={product.rating} />
+                                    {Number(packageData.rating || 0).toFixed(1)} <Stars rating={packageData.rating} />
                                 </span>
+
                             </div>
 
                             <div className="fw-bold mb-3">
@@ -163,6 +166,76 @@ export default function ProductDetails({ product, reviews = [] }) {
 
                 </section>
 
+                <section className="mt-2">
+
+                    <h5 className="fw-bold text-center mb-3">
+                        Inclusions
+                    </h5>
+
+                    <div className="border p-2">
+
+                        {packageData.package_items?.length > 0 ? (
+                            packageData.package_items.map((item) => (
+                                <div key={item.id} className="border rounded-2 p-2 mb-2">
+
+                                    <div className="row align-items-center g-2">
+
+                                        <div className="col-md-2">
+                                            {item.product?.image ? (
+                                                <img src={item.product.image} alt={item.product.name} className="img-fluid rounded" style={{ height: "70px", width: "100%", objectFit: "cover" }} />
+                                            ) : (
+                                                <div className="bg-secondary-subtle rounded d-flex align-items-center justify-content-center" style={{ height: "70px" }}>
+                                                    <i className="bi bi-camera-video text-secondary"></i>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="col-md-5">
+
+                                            <strong className="d-block">
+                                                {item.product?.name}
+                                            </strong>
+
+                                            <small className="text-muted">
+                                                Amount: {item.quantity}
+                                            </small>
+
+                                        </div>
+
+                                        <div className="col-md-3 text-md-end">
+
+                                            <div className="text-primary fw-bold">
+                                                ₱{Number(item.price).toLocaleString()}
+                                            </div>
+
+                                            <div className="text-warning">
+                                                {Number(item.product?.rating || 0).toFixed(1)} <Stars rating={item.product?.rating || 0} />
+                                            </div>
+
+                                        </div>
+
+                                        <div className="col-md-2">
+
+                                            <button type="button" className="btn btn-primary btn-sm fw-bold w-100" onClick={() => item.product?.id && router.visit(`/products/${item.product.id}`)}>
+                                                DETAILS
+                                            </button>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-muted text-center mb-0">
+                                No products have been added to this package yet.
+                            </p>
+                        )}
+
+                    </div>
+
+                </section>
+
                 <section className="mt-4">
 
                     <div className="row align-items-center g-4">
@@ -173,19 +246,21 @@ export default function ProductDetails({ product, reviews = [] }) {
                                     Reviews
                                 </h2>
 
-                                <select value={reviewFilter} onChange={(e) => { setReviewFilter(e.target.value); setReviewPage(1); }} className="form-select border-0" style={{ height: "50px", borderRadius: "25px", backgroundColor: "#f1f1f1", color: "#6c6c6c", fontSize: "0.75rem", fontFamily: "Outfit, sans-serif", fontWeight: "500", padding: "0 42px 0 16px", boxShadow: "none", appearance: "none", textTransform: "uppercase" }}>
-                                    <option value="all">All Reviews</option>
-                                    <option value="5">5 Stars</option>
-                                    <option value="4">4 Stars</option>
-                                    <option value="3">3 Stars</option>
-                                    <option value="2">2 Stars</option>
-                                    <option value="1">1 Star</option>
-                                </select>
+                                <div className="position-relative" style={{ width: "192px" }}>
+                                    <select value={reviewFilter} onChange={(e) => { setReviewFilter(e.target.value); setReviewPage(1); }} className="form-select border-0" style={{ height: "50px", borderRadius: "25px", backgroundColor: "#f1f1f1", color: "#6c6c6c", fontSize: "0.75rem", fontWeight: "500", padding: "0 42px 0 16px", boxShadow: "none", appearance: "none", textTransform: "uppercase" }}>
+                                        <option value="all">All Reviews</option>
+                                        <option value="5">5 Stars</option>
+                                        <option value="4">4 Stars</option>
+                                        <option value="3">3 Stars</option>
+                                        <option value="2">2 Stars</option>
+                                        <option value="1">1 Star</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
                         <div className="col-lg-8 d-flex justify-content-lg-end justify-content-center">
-                            <ReviewSummary reviews={reviews} rating={product.rating} />
+                            <ReviewSummary reviews={reviews} rating={packageData.rating} />
                         </div>
 
                     </div>

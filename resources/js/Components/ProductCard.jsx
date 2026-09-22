@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function ProductCard({ name, image, price, badge, specifications = [], onDetails, variant = "product" }) {
+export default function ProductCard({ name, image, price, badge, specifications = [], rating = 0, onDetails, variant = "product" }) {
     const [isHovered, setIsHovered] = useState(false);
 
     const safeSpecifications = Array.isArray(specifications) ? specifications : [];
@@ -21,8 +21,6 @@ export default function ProductCard({ name, image, price, badge, specifications 
     return (
         <div className="card" style={cardStyle} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
 
-            {/* IMAGE */}
-
             <div className="position-relative p-2">
 
                 {image ? (
@@ -33,8 +31,6 @@ export default function ProductCard({ name, image, price, badge, specifications 
                     </div>
                 )}
 
-                {/* BADGE */}
-
                 {badge && (
                     <span className="position-absolute top-0 end-0 badge bg-primary m-3">
                         {badge}
@@ -43,17 +39,11 @@ export default function ProductCard({ name, image, price, badge, specifications 
 
             </div>
 
-            {/* CONTENT */}
-
             <div className="card-body d-flex flex-column" style={{ padding: isPackage ? "0.5rem 1rem 1rem" : "0.25rem 0.75rem 0.75rem", fontFamily: "Outfit, sans-serif" }}>
 
-                {/* NAME */}
-
-                <h5 className="card-title fw-bold mb-2" style={{ fontSize: isPackage ? "1.05rem" : "1rem" }}>
+                <h5 className="card-title fw-bold mb-1" style={{ fontSize: isPackage ? "1.05rem" : "1rem", lineHeight: "1.15" }}>
                     {name}
                 </h5>
-
-                {/* SPECIFICATIONS */}
 
                 <ul className="ps-3 mb-3" style={{ fontSize: isPackage ? "0.78rem" : "0.72rem", lineHeight: isPackage ? "1.55" : "1.5" }}>
                     {safeSpecifications.map((specification, index) => (
@@ -63,13 +53,25 @@ export default function ProductCard({ name, image, price, badge, specifications 
                     ))}
                 </ul>
 
-                {/* PRICE + BUTTON */}
-
                 <div className="mt-auto">
 
-                    <h4 className="fw-bold text-primary mb-3" style={{ fontSize: isPackage ? "1.5rem" : "1.35rem" }}>
-                        ₱{Number(price).toLocaleString()}
-                    </h4>
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+
+                        <h4 className="fw-bold text-primary mb-0" style={{ fontSize: isPackage ? "1.5rem" : "1.35rem" }}>
+                            ₱{Number(price).toLocaleString()}
+                        </h4>
+
+                        <div className="d-flex align-items-center gap-1 text-warning fw-semibold" style={{ fontSize: isPackage ? "0.8rem" : "0.72rem" }}>
+                            <span>{Number(rating).toFixed(1)}</span>
+
+                            <span>
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <i key={star} className={star <= Math.round(Number(rating)) ? "bi bi-star-fill" : "bi bi-star"}></i>
+                                ))}
+                            </span>
+                        </div>
+
+                    </div>
 
                     <button type="button" className="btn btn-primary fw-bold w-100" onClick={onDetails}>
                         DETAILS
