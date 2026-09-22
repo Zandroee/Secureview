@@ -1,7 +1,10 @@
 import { Link, usePage } from "@inertiajs/react";
+import { useState } from "react";
 
 export default function Navbar() {
     const { url } = usePage();
+
+    const [hoveredButton, setHoveredButton] = useState(null);
 
     const isActive = (path) => {
         return path === "/" ? url === "/" : url.startsWith(path);
@@ -70,7 +73,7 @@ export default function Navbar() {
 
                         <div className="d-flex flex-column gap-2 mt-4 d-lg-none">
 
-                            <Link href="/login" className={`btn ${isActive("/login") ? "btn-primary" : "btn-outline-primary"} fw-bold w-100`} style={{ fontFamily: "Outfit, sans-serif" }}>
+                            <Link href="/login" className={`btn ${isActive("/login") ? "btn-outline-primary" : "btn-primary"} fw-bold w-100`} style={{ fontFamily: "Outfit, sans-serif" }}>
                                 LOGIN
                             </Link>
 
@@ -92,11 +95,11 @@ export default function Navbar() {
 
                 <div className="d-none d-lg-flex gap-3">
 
-                    <Link href="/login" className={`btn ${isActive("/login") ? "btn-primary" : "btn-outline-primary"} fw-bold`} style={{ fontFamily: "Outfit, sans-serif", "--bs-btn-padding-x": "25px" }}>
+                    <Link href="/login" onMouseEnter={() => setHoveredButton("login")} onMouseLeave={() => setHoveredButton(null)} className={`btn ${hoveredButton === "login" ? "btn-outline-primary" : "btn-primary"} fw-bold`} style={{ fontFamily: "Outfit, sans-serif", "--bs-btn-padding-x": "25px" }}>
                         LOGIN
                     </Link>
 
-                    <Link href="/signup" className={`btn ${isActive("/signup") ? "btn-primary" : "btn-outline-primary"} fw-bold`} style={{ fontFamily: "Outfit, sans-serif", "--bs-btn-padding-x": "25px" }}>
+                    <Link href="/signup" onMouseEnter={() => setHoveredButton("signup")} onMouseLeave={() => setHoveredButton(null)} className={`btn ${hoveredButton === "signup" ? "btn-primary" : "btn-outline-primary"} fw-bold`} style={{ fontFamily: "Outfit, sans-serif", "--bs-btn-padding-x": "25px" }}>
                         SIGN UP
                     </Link>
 

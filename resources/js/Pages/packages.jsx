@@ -105,13 +105,11 @@ export default function Packages({ packages = [] }) {
 
                 {/* SEARCH */}
 
-                <div className="products-search-wrapper position-relative w-50 mx-auto mb-5">
+                <div className="position-relative w-50 mx-auto mb-5">
 
-                    <input type="text" className="products-search form-control rounded-pill py-3 px-5" placeholder="Search CCTV packages..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} />
+                    <input type="text" className="form-control border-0" placeholder="SEARCH" value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} style={{ height: "60px", borderRadius: "24px", backgroundColor: "#f1f1f1", padding: "0 48px 0 30px", fontSize: "1rem", fontFamily: "Outfit, sans-serif", color: "#555", boxShadow: "none", textTransform: "uppercase" }} />
 
-                    <button type="button" className="btn position-absolute top-50 end-0 translate-middle-y me-2">
-                        <i className="bi bi-search text-secondary"></i>
-                    </button>
+                    <i className="bi bi-search position-absolute top-50 end-0 translate-middle-y me-4 text-secondary" style={{ fontSize: "1rem" }}></i>
 
                 </div>
 
@@ -171,16 +169,16 @@ export default function Packages({ packages = [] }) {
 
                                 <h6>Rating</h6>
 
-                                <select className="form-select mb-3" value={rating} onChange={(e) => handleRatingChange(e.target.value)}>
+                                <select value={rating} onChange={(e) => handleRatingChange(e.target.value)} className="form-select border-0 mb-3" style={{ height: "50px", borderRadius: "25px", backgroundColor: "#f1f1f1", color: "#6c6c6c", fontSize: "1rem", fontWeight: "500", padding: "0 42px 0 16px", boxShadow: "none", appearance: "none", textTransform: "uppercase" }}>
                                     <option value="">Any Rating</option>
-                                    <option value="5">⭐⭐⭐⭐⭐</option>
-                                    <option value="4">⭐⭐⭐⭐+</option>
-                                    <option value="3">⭐⭐⭐+</option>
+                                    <option value="5">5 Stars</option>
+                                    <option value="4">4 Stars</option>
+                                    <option value="3">3 Stars</option>
                                 </select>
 
                                 {/* RESET */}
 
-                                <button type="button" className="btn btn-dark w-100" onClick={resetFilters}>
+                                <button type="button" className="btn btn-primary w-100" onClick={resetFilters}>
                                     RESET FILTERS
                                 </button>
 
@@ -230,7 +228,7 @@ export default function Packages({ packages = [] }) {
 
                                 {currentPackages.map((pkg) => (
                                     <div className="col-sm-6 col-lg-4" key={pkg.id}>
-                                        <PackageCard name={pkg.name} image={pkg.image} price={pkg.price} badge={pkg.badge} specifications={pkg.specifications} onDetails={() => router.visit(`/packages/${pkg.id}`)} />
+                                        <PackageCard name={pkg.name} image={pkg.image} price={pkg.price} badge={pkg.badge} specifications={pkg.specifications} rating={pkg.rating} onDetails={() => router.visit(`/packages/${pkg.id}`)} />
                                     </div>
                                 ))}
 

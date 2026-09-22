@@ -76,9 +76,9 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
                     </div>
 
                     <div className="row g-3 g-md-4">
-                        {currentPackages.map((item) => (
-                            <div className="col-sm-6 col-lg-4" key={item.id}>
-                                <PackageCard name={item.name} image={item.image} price={item.price} badge={item.badge} specifications={item.specifications} onDetails={() => console.log("Package:", item.id)} />
+                        {currentPackages.map((pkg) => (
+                            <div className="col-sm-6 col-lg-4" key={pkg.id}>
+                                <PackageCard name={pkg.name} image={pkg.image} price={pkg.price} badge={pkg.badge} specifications={pkg.specifications} rating={pkg.rating} onDetails={() => router.visit(`/packages/${pkg.id}`)} />
                             </div>
                         ))}
                     </div>
@@ -100,9 +100,9 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
                     </div>
 
                     <div className="row g-3 g-md-4">
-                        {currentCameras.map((item) => (
-                            <div className="col-sm-6 col-xl-3" key={item.id}>
-                                <ProductCard name={item.name} image={item.image} price={item.price} badge={item.badge} specifications={item.specifications} onDetails={() => router.visit(`/products/${item.id}`)} />
+                        {currentCameras.map((product) => (
+                            <div className="col-sm-6 col-xl-3" key={product.id}>
+                                <ProductCard name={product.name} image={product.image} price={product.price} badge={product.badge} specifications={product.specifications} rating={product.rating} onDetails={() => router.visit(`/products/${product.id}`)} />
                             </div>
                         ))}
                     </div>

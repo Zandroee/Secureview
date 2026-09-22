@@ -19,9 +19,11 @@ class ProductController extends Controller
     public function show($id)
     {
         $product = Product::findOrFail($id);
+        $reviews = $product->reviews()->with('user')->latest()->get();
 
         return Inertia::render('product_details', [
             'product' => $product,
+            'reviews' => $reviews,
         ]);
     }
 }
