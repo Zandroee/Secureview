@@ -16,7 +16,7 @@ Route::get('/packages', function () {
 })->name('packages');
 
 Route::get('/about', function () {
-    return view('about');
+    return Inertia::render('about');
 })->name('about');
 
 Route::get('/login', function () {

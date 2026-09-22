@@ -36,10 +36,12 @@ export default function Navbar() {
                                 <a className="nav-link" href="/products">PRODUCTS</a>
                             </li>
                             <li className="nav-item">
-                                <a className="nav-link" href="#">PACKAGES</a>
+                                <a className="nav-link" href="/packages">PACKAGES</a>
                             </li>
                             <li className="nav-item">
-                                <a className="nav-link" href="#">ABOUT</a>
+                                <a className="nav-link" href="/about">
+                                    ABOUT
+                                </a>
                             </li>
                         </ul>
                     </div>
