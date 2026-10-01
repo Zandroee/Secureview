@@ -2,21 +2,20 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\LandingController;
+use App\Http\Controllers\PackageController;
 
-Route::get('/', function () {
-    return Inertia::render('landing');
-})->name('home');
+Route::get('/', [LandingController::class, 'index']);
 
-Route::get('/products', function () {
-    return view('products');
-})->name('products');
+Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/{id}', [ProductController::class, 'show']);
 
-Route::get('/packages', function () {
-    return view('packages');
-})->name('packages');
+Route::get('/packages', [PackageController::class, 'index']);
+Route::get('/packages/{id}', [PackageController::class, 'show']);
 
 Route::get('/about', function () {
-    return view('about');
+    return Inertia::render('about');
 })->name('about');
 
 Route::get('/login', function () {
@@ -24,5 +23,10 @@ Route::get('/login', function () {
 })->name('login');
 
 Route::get('/signup', function () {
-    return Inertia::render('signup');
+   return Inertia::render('signup');
 })->name('signup');
+
+Route::get('/dashboard', function() {
+    return Inertia::render('Dashboard');
+});
+
