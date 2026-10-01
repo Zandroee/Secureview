@@ -1,268 +1,486 @@
-import { useState } from 'react';
-import Navbar from '../Components/navbar';
+import { useEffect, useState } from "react";
+import { useForm, Link } from "@inertiajs/react";
+
+import Navbar from "../Components/navbar";
 import PasswordInput from "../Components/PasswordInput";
-import PasswordStrength from '../Components/PasswordStrength';
+import PasswordStrength from "../Components/PasswordStrength";
+import EmailVerificationModal from "../Components/EmailVerificationModal";
 
+import "../../css/signup.css";
 
-import '../../css/signup.css';
+export default function Signup({ verificationSent = false, verificationEmail = "" }) {
+    const [showVerification, setShowVerification] = useState(verificationSent);
 
+    useEffect(() => {
+        if (verificationSent) {
+            setShowVerification(true);
+        }
+    }, [verificationSent]);
 
-export default function Signup(){
-    // password state, para malaman kung ano yung mga requirements na na-met or hindi.
-    const [password, setPassword] = useState("");
-
-    //para malaman kung parehas ang password and confirm pass. kasama yung line 13.
-    const [confirmPassword, setConfirmPassword] = useState("");
-
-    //for checkbox state, terms and conditions button
-    const [acceptedTerms, setAcceptedTerms] = useState(false);
-
-    //error state
-    const [passwordError, setPasswordError] = useState("");
-
-    //terms error state
-    const[termsError, setTermsError] = useState("");
-
-     //forms error state
-    const[formError, setFormError] = useState("");
-
-    //email error state
-    const[emailError,setEmailError] = useState("");
-
-    
-
-    
-    // live password matching
-    const passwordMatch = password === confirmPassword && confirmPassword !== "";
-
-
-    const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    phone: "",
-    email: "",
+    const { data, setData, post, processing, errors, reset } = useForm({
+        firstName: "",
+        lastName: "",
+        phone: "",
+        email: "",
+        password: "",
+        password_confirmation: "",
+        terms: false,
     });
 
-    // Handling create button
+    const [touched, setTouched] = useState({
+        firstName: false,
+        lastName: false,
+        phone: false,
+        email: false,
+        password: false,
+        password_confirmation: false,
+        terms: false,
+    });
+
+    const [submitAttempted, setSubmitAttempted] = useState(false);
+
+    const passwordRules = {
+        length: data.password.length >= 8,
+        uppercase: /[A-Z]/.test(data.password),
+        lowercase: /[a-z]/.test(data.password),
+        number: /\d/.test(data.password),
+        special: /[^A-Za-z0-9]/.test(data.password),
+        noSpaces: !/\s/.test(data.password),
+    };
+
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email);
+
+    const getError = (field) => {
+        if (errors[field]) {
+            return errors[field];
+        }
+
+        if (!touched[field] && !submitAttempted) {
+            return "";
+        }
+
+        if (field === "firstName" && !data.firstName.trim()) {
+            return "First name is required.";
+        }
+
+        if (field === "lastName" && !data.lastName.trim()) {
+            return "Last name is required.";
+        }
+
+        if (field === "phone") {
+            if (!data.phone) {
+                return "Phone number is required.";
+            }
+
+            if (!/^09\d{9}$/.test(data.phone)) {
+                return "Enter a valid 11-digit Philippine mobile number.";
+            }
+        }
+
+        if (field === "email") {
+            if (!data.email.trim()) {
+                return "Email is required.";
+            }
+
+            if (!isEmailValid) {
+                return "Enter a valid email address.";
+            }
+        }
+
+        if (field === "password") {
+            if (!data.password) {
+                return "Password is required.";
+            }
+
+            if (
+                !passwordRules.length ||
+                !passwordRules.uppercase ||
+                !passwordRules.lowercase ||
+                !passwordRules.number ||
+                !passwordRules.special ||
+                !passwordRules.noSpaces
+            ) {
+                return "Password does not meet all requirements.";
+            }
+        }
+
+        if (field === "password_confirmation") {
+            if (!data.password_confirmation) {
+                return "Please confirm your password.";
+            }
+
+            if (data.password !== data.password_confirmation) {
+                return "Passwords do not match.";
+            }
+        }
+
+        if (field === "terms" && !data.terms) {
+            return "You must accept the Terms and Conditions.";
+        }
+
+        return "";
+    };
+
+    const isInvalid = (field) => Boolean(getError(field));
+
+    const markTouched = (field) => {
+        setTouched((previous) => ({
+            ...previous,
+            [field]: true,
+        }));
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        setFormError("");
-        setEmailError("");
-        setPasswordError("");
-        setTermsError("");
+        setSubmitAttempted(true);
 
-        if(
-            !formData.firstName ||
-            !formData.lastName ||
-            !formData.phone ||
-            !formData.email ||
-            !password ||
-            !confirmPassword
-        ) {
-            setFormError("Please fill in all required fields");
-            return;
-        }
+        setTouched({
+            firstName: true,
+            lastName: true,
+            phone: true,
+            email: true,
+            password: true,
+            password_confirmation: true,
+            terms: true,
+        });
 
-        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        post("/register", {
+            preserveState: true,
+            preserveScroll: true,
 
-        if (!emailPattern.test(formData.email)){
-            setEmailError("Please enter a valid email address");
-            return;
-        }
+            onSuccess: () => {
+                setShowVerification(true);
+            },
 
-        if(password !== confirmPassword){
-            setPasswordError("Passwords do not match");
-            return;
-        }
+            onError: (serverErrors) => {
+                const emailExists =
+                    serverErrors.email &&
+                    serverErrors.email.toLowerCase().includes("already");
 
-        if(!acceptedTerms){
-            setTermsError("Please accept Terms and Conditions");
-            return;
-        }
+                const phoneExists =
+                    serverErrors.phone &&
+                    serverErrors.phone.toLowerCase().includes("already");
 
-        alert("Account can be created");
-    }
+                if (emailExists && phoneExists) {
+                    alert(
+                        "An account already exists using this email address and phone number."
+                    );
+                } else if (emailExists) {
+                    alert(
+                        "An account already exists using this email address."
+                    );
+                } else if (phoneExists) {
+                    alert(
+                        "An account already exists using this phone number."
+                    );
+                }
+            },
+        });
+    };
 
-    
+    const isDuplicateError = (field) => {
+    const error = errors[field];
 
-    return(
+    return (
+        error &&
+        error.toLowerCase().includes("already")
+    );
+};
+
+    return (
         <>
-            <Navbar/>
+            <Navbar />
 
-            <section id="signup-page"> 
-                    <h1 className="signup-title">SECUREVIEW</h1>
-                
+            <section
+                id="signup-page"
+                className="container-fluid px-3 px-md-4 py-5"
+                style={{ minHeight: "calc(100vh - 75px)" }}
+            >
+                <h1
+                    className="text-center fw-bold mb-5"
+                    style={{
+                        fontFamily: "Outfit, sans-serif",
+                        fontSize: "clamp(2rem, 4vw, 3rem)",
+                    }}
+                >
+                    SECUREVIEW
+                </h1>
 
-                <div className="signup-container">
-                    <h2>
+                <div
+                    className="border rounded-3 mx-auto p-4 p-md-5"
+                    style={{ maxWidth: "600px", width: "100%" }}
+                >
+                    <h2
+                        className="text-center fw-semibold mb-5"
+                        style={{
+                            fontFamily: "Outfit, sans-serif",
+                            fontSize: "clamp(1.5rem, 3vw, 2rem)",
+                        }}
+                    >
                         CREATE AN ACCOUNT
                     </h2>
 
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-3">
-                            <label className="form-label">
-                            First Name
-                        </label>
+                    <form onSubmit={handleSubmit} noValidate>
 
-                        <input
-                            type="text"
-                            className="form-control"
-                            placeholder="First Name"
-                            value={formData.firstName}
-                            onChange={(e)=>setFormData({
-                             ...formData,
-                             firstName:e.target.value
-                             })}
-                            />
-                        </div>
-
+                        {/* FIRST NAME */}
                         <div className="mb-3">
-                            <label className="form-label">
-                                Last Name
+                            <label htmlFor="first-name" className="form-label">
+                                First Name
                             </label>
 
-                        <input
-                            type="text"
-                            className="form-control"
-                            placeholder="Last Name"
-                            value={formData.lastName}
-                            onChange={(e)=>setFormData({
-                                ...formData,
-                                lastName:e.target.value
-                             })}
-                            />
-                        </div>
-
-                        <div className="mb-3">
-                            <label className="form-label">
-                                Phone no.
-                            </label>
-
-                        <input
-                            type="text"
-                            className="form-control"
-                            placeholder="09*********"
-                            value={formData.phone}
-                            onChange={(e)=>setFormData({
-                                ...formData,
-                                phone:e.target.value
-                             })}
-                            />
-                        </div>
-
-                        <div className="mb-3">
-                            <label className="form-label">
-                            Email
-                            </label>
-
-                        <input
-                            type="email"
-                            className="form-control"
-                            placeholder="Email"
-                            value={formData.email}
-                            onChange={(e)=> {
-                                setFormData({
-                                ...formData,
-                                email:e.target.value
-                             });
-
-                             setEmailError("");
-                            }}
+                            <input
+                                id="first-name"
+                                type="text"
+                                maxLength={50}
+                                className={`form-control ${isInvalid("firstName") ? "is-invalid" : ""}`}
+                                placeholder="First Name"
+                                value={data.firstName}
+                                onChange={(e) => setData("firstName", e.target.value)}
+                                onBlur={() => markTouched("firstName")}
+                                aria-invalid={isInvalid("firstName")}
                             />
 
-                            {emailError && (
-                                <p className="invalid">
-                                    {emailError}
-                                </p>
+                            {getError("firstName") && (
+                                <div className="text-danger small mt-1">
+                                    {getError("firstName")}
+                                </div>
                             )}
                         </div>
 
+                        {/* LAST NAME */}
+                        <div className="mb-3">
+                            <label htmlFor="last-name" className="form-label">
+                                Last Name
+                            </label>
+
+                            <input
+                                id="last-name"
+                                type="text"
+                                maxLength={50}
+                                className={`form-control ${isInvalid("lastName") ? "is-invalid" : ""}`}
+                                placeholder="Last Name"
+                                value={data.lastName}
+                                onChange={(e) => setData("lastName", e.target.value)}
+                                onBlur={() => markTouched("lastName")}
+                                aria-invalid={isInvalid("lastName")}
+                            />
+
+                            {getError("lastName") && (
+                                <div className="text-danger small mt-1">
+                                    {getError("lastName")}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* PHONE */}
+                        <div className="mb-3">
+                            <label htmlFor="phone" className="form-label">
+                                Phone no.
+                            </label>
+
+                            <input
+                                id="phone"
+                                type="tel"
+                                inputMode="numeric"
+                                maxLength={11}
+                                className={`form-control ${isInvalid("phone") ? "is-invalid" : ""}`}
+                                placeholder="09*********"
+                                value={data.phone}
+                                onChange={(e) =>
+                                    setData(
+                                        "phone",
+                                        e.target.value.replace(/\D/g, "").slice(0, 11)
+                                    )
+                                }
+                                onBlur={() => markTouched("phone")}
+                                aria-invalid={isInvalid("phone")}
+                            />
+
+                            {getError("phone") && (
+                                <div className="text-danger small mt-1">
+                                    {getError("phone")}
+                                </div>
+                            )}
+
+                            className={`form-control ${
+                                isInvalid("phone") && !isDuplicateError("phone")
+                                    ? "is-invalid"
+                                    : ""
+                            }`}
+                        </div>
+
+                        {/* EMAIL */}
+                        <div className="mb-3">
+                            <label htmlFor="signup-email" className="form-label">
+                                Email
+                            </label>
+
+                            <input
+                                id="signup-email"
+                                type="email"
+                                maxLength={255}
+                                className={`form-control ${isInvalid("email") ? "is-invalid" : ""}`}
+                                placeholder="Email"
+                                value={data.email}
+                                onChange={(e) => setData("email", e.target.value)}
+                                onBlur={() => markTouched("email")}
+                                aria-invalid={isInvalid("email")}
+                            />
+
+                            {getError("email") && (
+                                <div className="text-danger small mt-1">
+                                    {getError("email")}
+                                </div>
+                            )}
+
+                            className={`form-control ${
+                                isInvalid("email") && !isDuplicateError("email")
+                                    ? "is-invalid"
+                                    : ""
+                            }`}
+                        </div>
+
+                        {/* PASSWORD */}
                         <div className="mb-3">
                             <label className="form-label">
                                 Password
                             </label>
+
+                            <div className={isInvalid("password") ? "is-invalid" : ""}>
                                 <PasswordInput
-                                    value={password}
-                                    onChange={(e)=>{
-                                        setPassword(e.target.value);
-                                        setPasswordError("");
-                                    }}
+                                    value={data.password}
+                                    onChange={(e) => setData("password", e.target.value)}
+                                    onBlur={() => markTouched("password")}
                                     placeholder="Password"
-                            />
+                                    maxLength={128}
+                                    invalid={isInvalid("password")}
+                                />
+                            </div>
+
+                            {errors.password && (
+                                <div className="text-danger small mt-1">
+                                    {errors.password}
+                                </div>
+                            )}
+
+                            {!errors.password && getError("password") && (
+                                <div className="text-danger small mt-1">
+                                    {getError("password")}
+                                </div>
+                            )}
                         </div>
 
-                        <div className="mb-3">
+                        <PasswordStrength password={data.password} />
+
+                        {/* CONFIRM PASSWORD */}
+                        <div className="mb-2 mt-3">
                             <label className="form-label">
-                            Confirm Password
+                                Confirm Password
                             </label>
 
                             <PasswordInput
-                                value={confirmPassword}
-                                onChange={(e)=>{
-                                    setConfirmPassword(e.target.value);
-                                     setPasswordError("");
-                                }}
+                                value={data.password_confirmation}
+                                onChange={(e) =>
+                                    setData("password_confirmation", e.target.value)
+                                }
+                                onBlur={() => markTouched("password_confirmation")}
                                 placeholder="Confirm Password"
+                                invalid={isInvalid("password_confirmation")}
                             />
+
+                            {getError("password_confirmation") && (
+                                <div className="text-danger small mt-1">
+                                    {getError("password_confirmation")}
+                                </div>
+                            )}
+
+                            {data.password_confirmation &&
+                                data.password === data.password_confirmation &&
+                                !getError("password_confirmation") && (
+                                    <div className="text-success small mt-1">
+                                        Passwords match.
+                                    </div>
+                                )}
                         </div>
-                            {passwordError && (
-                            <p className="invalid">
-                                {passwordError}
-                            </p>
-                            )}
 
-                            {confirmPassword && (
-                                <p className={passwordMatch ? "valid" : "invalid"}>
-                                    {
-                                        passwordMatch
-                                        ? "Passwords match"
-                                        : "Passwords do not match"
-                                    }
-                                </p>
-                            )}
-
-                            <PasswordStrength password={password}/>
-
-                        <div className="form-check mb-3">
+                        {/* TERMS */}
+                        <div className="form-check mt-3 mb-3">
                             <input
-                                className="form-check-input"
+                                id="terms"
+                                className={`form-check-input ${isInvalid("terms") ? "is-invalid" : ""}`}
                                 type="checkbox"
-                                checked={acceptedTerms}
-                                onChange={(e) => {
-                                    setAcceptedTerms(e.target.checked);
-                                    setTermsError("");
-                                }}
+                                checked={data.terms}
+                                onChange={(e) => setData("terms", e.target.checked)}
+                                onBlur={() => markTouched("terms")}
+                                aria-invalid={isInvalid("terms")}
                             />
 
-                            <label className="form-check-label">
+                            <label className="form-check-label" htmlFor="terms">
                                 I agree to the Terms and Conditions
                             </label>
 
-                            {termsError && (
-                                <p className="invalid">
-                                    {termsError}
-                                </p>
+                            {getError("terms") && (
+                                <div className="text-danger small mt-1">
+                                    {getError("terms")}
+                                </div>
                             )}
                         </div>
-                        
-                        {formError && (
-                            <p className="invalid">
-                                {formError}
-                            </p>
-                        )}
 
-                        <button 
+                        <button
                             type="submit"
-                            className="signup-button"
+                            className="btn btn-primary fw-bold w-100 py-2"
+                            disabled={processing}
                         >
-                            CREATE ACCOUNT
+                            {processing ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
                         </button>
-                    
-                        </form>
-                    </div>
+
+                        <div className="text-center my-4">
+                            <span className="text-muted small">
+                                OR
+                            </span>
+                        </div>
+
+                        <div className="d-flex flex-column gap-2">
+                            <a
+                                href="/auth/google"
+                                className="btn btn-outline-dark fw-semibold py-2"
+                            >
+                                <i className="bi bi-google me-2"></i>
+                                Continue with Google
+                            </a>
+
+                            <a
+                                href="/auth/facebook"
+                                className="btn btn-primary fw-semibold py-2"
+                            >
+                                <i className="bi bi-facebook me-2"></i>
+                                Continue with Facebook
+                            </a>
+                        </div>
+
+                        <div className="text-center mt-3">
+                            <span className="text-muted small">
+                                Already have an account?
+                            </span>
+
+                            <Link
+                                href="/login"
+                                className="text-primary text-decoration-none small fw-semibold ms-1"
+                            >
+                                Log in
+                            </Link>
+                        </div>
+                    </form>
+                </div>
             </section>
+
+            {showVerification && (
+                <EmailVerificationModal
+                    email={verificationEmail || data.email}
+                    onClose={() => setShowVerification(false)}
+                />
+            )}
         </>
-    
     );
 }

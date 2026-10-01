@@ -1,17 +1,13 @@
-export default function PasswordStrength({password}){
+export default function PasswordStrength({ password }) {
+    const passwordRules = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /\d/.test(password),
+        special: /[^A-Za-z0-9]/.test(password),
+        noSpaces: !/\s/.test(password),
+    };
 
-
-    //password checks
-        const passwordRules = {
-            length: password.length >= 8,
-            uppercase: /[A-Z]/.test(password),
-            lowercase: /[a-z]/.test(password),
-            number: /\d/.test(password),
-            special: /[^A-Za-z0-9]/.test(password),
-            noSpaces: !/\s/.test(password),
-        };
-
-    //calculation, strength of password.
     const strength = Object.values(passwordRules).filter(Boolean).length;
 
     return (
@@ -20,17 +16,7 @@ export default function PasswordStrength({password}){
                 <p>Password Strength</p>
 
                 <div className="strength-bar">
-                    <span
-                        className={
-                            password.length === 0 
-                            ? "empty"
-                            : strength === 6
-                            ? "strong"
-                            : strength >= 3
-                            ? "medium"
-                            : "weak"
-                        }
-                    ></span>
+                    <span className={password.length === 0 ? "empty" : strength === 6 ? "strong" : strength >= 3 ? "medium" : "weak"}></span>
                 </div>
             </div>
 
@@ -43,7 +29,7 @@ export default function PasswordStrength({password}){
                     Must have at least 1 uppercase and 1 lowercase character
                 </li>
 
-                <li className={passwordRules.noSpaces ? "valid": "invalid"}>
+                <li className={passwordRules.noSpaces ? "valid" : "invalid"}>
                     Must not contain white spaces
                 </li>
 
