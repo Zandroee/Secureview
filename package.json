@@ -19,7 +19,10 @@
         "@inertiajs/react": "^3.7.0",
         "bootstrap": "^5.3.8",
         "bootstrap-icons": "^1.13.1",
+        "chart.js": "^4.5.1",
         "react": "^19.3.0",
+        "react-calendar": "^6.0.1",
+        "react-chartjs-2": "^5.3.1",
         "react-dom": "^19.3.0"
     }
 }
