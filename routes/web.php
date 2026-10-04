@@ -10,6 +10,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\InquiryController;
+use App\Http\Controllers\ScheduleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -180,6 +181,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/inquiries', [InquiryController::class, 'store'])->name('inquiries.store');
     Route::get('/inquiries', [InquiryController::class, 'index'])->name('inquiries.index');
     Route::get('/inquiries/{inquiry}', [InquiryController::class, 'show'])->name('inquiries.show');
+    Route::get('/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
 
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');

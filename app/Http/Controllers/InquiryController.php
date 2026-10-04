@@ -99,6 +99,7 @@ class InquiryController extends Controller
             'city' => $validated['city'],
             'service_type' => $validated['service_type'],
             'preferred_date' => $validated['preferred_date'],
+            'preferred_time' => $validated['preferred_time'],
             'notes' => $validated['notes'] ?? null,
             'status' => 'pending',
         ]);
@@ -122,6 +123,7 @@ class InquiryController extends Controller
                     'item_name' => $inquiry->item_name,
                     'service_type' => $inquiry->service_type,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
+                    'preferred_time' => $inquiry->preferred_time,
                     'city' => $inquiry->city,
                     'status' => $inquiry->status,
                     'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
@@ -157,6 +159,7 @@ class InquiryController extends Controller
                 'city' => $inquiry->city,
                 'service_type' => $inquiry->service_type,
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
+                'preferred_time' => $inquiry->preferred_time,
                 'notes' => $inquiry->notes,
                 'status' => $inquiry->status,
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),

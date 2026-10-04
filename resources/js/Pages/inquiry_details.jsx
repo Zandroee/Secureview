@@ -112,6 +112,14 @@ export default function InquiryDetails({ inquiry, success }) {
                                         {inquiry.preferred_date}
                                     </div>
 
+                                    <div className="small text-muted mt-2">
+                                        Preferred Time
+                                    </div>
+
+                                    <div className="fw-semibold">
+                                        {inquiry.preferred_time}
+                                    </div>
+
                                     {inquiry.item_image && (
                                         <img
                                             src={inquiry.item_image}
@@ -247,13 +255,23 @@ export default function InquiryDetails({ inquiry, success }) {
                                     </span>
                                 </div>
 
-                                <div className="d-flex justify-content-between mb-3">
+                                <div className="d-flex justify-content-between mb-2">
                                     <span className="text-muted">
                                         Preferred Date
                                     </span>
 
                                     <span className="fw-semibold text-end">
                                         {inquiry.preferred_date}
+                                    </span>
+                                </div>
+
+                                <div className="d-flex justify-content-between mb-3">
+                                    <span className="text-muted">
+                                        Preferred Time
+                                    </span>
+
+                                    <span className="fw-semibold text-end">
+                                        {inquiry.preferred_time}
                                     </span>
                                 </div>
 
@@ -290,6 +308,69 @@ export default function InquiryDetails({ inquiry, success }) {
             </main>
 
             <Footer />
+
+            {success && (
+                <div
+                    className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                    style={{
+                        backgroundColor: "rgba(0,0,0,0.45)",
+                        zIndex: 2000,
+                        padding: "1rem",
+                    }}
+                >
+                    <div
+                        className="bg-white rounded-4 border text-center p-4"
+                        style={{
+                            width: "100%",
+                            maxWidth: "360px",
+                            boxShadow: "0 15px 50px rgba(0,0,0,0.2)",
+                        }}
+                    >
+                        <button
+                            type="button"
+                            className="btn btn-link btn-sm text-primary text-decoration-none position-absolute"
+                            style={{ top: "10px", right: "12px" }}
+                            onClick={() => window.history.back()}
+                        >
+                            Back
+                        </button>
+
+                        <div
+                            className="mx-auto d-flex align-items-center justify-content-center rounded-circle mb-3"
+                            style={{
+                                width: "58px",
+                                height: "58px",
+                                backgroundColor: "#eaf8f0",
+                            }}
+                        >
+                            <i
+                                className="bi bi-check-lg text-success"
+                                style={{ fontSize: "1.6rem" }}
+                            ></i>
+                        </div>
+
+                        <h4
+                            className="fw-bold mb-2"
+                            style={{ fontFamily: "Outfit, sans-serif" }}
+                        >
+                            Inquiry Sent!
+                        </h4>
+
+                        <p className="small text-muted mb-3">
+                            Your inquiry has been submitted. We will review
+                            your request and contact you regarding the next
+                            steps.
+                        </p>
+
+                        <Link
+                            href="/"
+                            className="btn btn-primary btn-sm fw-bold px-4"
+                        >
+                            HOME
+                        </Link>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
