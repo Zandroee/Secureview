@@ -130,6 +130,10 @@ export default function Inquiries({ inquiries = [] }) {
                                             <div className="fw-bold">
                                                 {inquiry.preferred_date}
                                             </div>
+
+                                            <div className="small text-muted">
+                                                {inquiry.preferred_time}
+                                            </div>
                                         </div>
                                     </div>
 
