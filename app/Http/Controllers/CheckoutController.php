@@ -302,6 +302,50 @@ class CheckoutController extends Controller
             abort(404);
         }
 
+        if (
+            $order->payment_method !== 'cash' &&
+            $order->payment_status !== 'paid' &&
+            $order->paymongo_checkout_session_id &&
+            config('services.paymongo.secret_key')
+        ) {
+            try {
+                $response = Http::withBasicAuth(
+                    config('services.paymongo.secret_key'),
+                    ''
+                )
+                    ->acceptJson()
+                    ->get(
+                        rtrim(config('services.paymongo.base_url'), '/') .
+                        '/v1/checkout_sessions/' .
+                        $order->paymongo_checkout_session_id
+                    );
+
+                if ($response->successful()) {
+                    $session = $response->json('data');
+                    $payments = $session['attributes']['payments'] ?? [];
+
+                    foreach ($payments as $payment) {
+                        $paymentStatus = $payment['attributes']['status'] ?? null;
+
+                        if ($paymentStatus === 'paid') {
+                            $order->update([
+                                'payment_status' => 'paid',
+                                'order_status' => 'processing',
+                                'paymongo_payment_id' => $payment['id'] ?? null,
+                                'paid_at' => now(),
+                            ]);
+
+                            $request->user()->cart?->items()->delete();
+
+                            break;
+                        }
+                    }
+                }
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+
         return redirect()->route('purchases.show', $order);
     }
 
