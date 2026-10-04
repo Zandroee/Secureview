@@ -1,6 +1,7 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
-import { Link } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
+import { useState } from "react";
 
 function formatPaymentMethod(method) {
     if (method === "gcash") return "GCash";
@@ -17,6 +18,22 @@ function statusClass(status) {
 }
 
 export default function Purchases({ orders = [] }) {
+    const { props } = usePage();
+    const [payingOrderId, setPayingOrderId] = useState(null);
+
+    const payNow = (order) => {
+        setPayingOrderId(order.id);
+
+        router.post(
+            `/purchases/${order.id}/pay`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setPayingOrderId(null),
+            }
+        );
+    };
+
     return (
         <div>
             <Navbar />
@@ -47,6 +64,12 @@ export default function Purchases({ orders = [] }) {
                             details.
                         </p>
                     </div>
+
+                    {props.errors?.payment && (
+                        <div className="alert alert-danger mb-4">
+                            {props.errors.payment}
+                        </div>
+                    )}
 
                     {orders.length === 0 ? (
                         <div className="bg-white border rounded-4 p-5 text-center">
@@ -252,12 +275,35 @@ export default function Purchases({ orders = [] }) {
                                                 : "s"}
                                         </span>
 
-                                        <Link
-                                            href={`/purchases/${order.id}`}
-                                            className="btn btn-outline-primary fw-bold btn-sm"
-                                        >
-                                            VIEW DETAILS
-                                        </Link>
+                                        <div className="d-flex flex-wrap gap-2">
+                                            {["gcash", "card", "maya"].includes(
+                                                order.payment_method
+                                            ) &&
+                                                ["pending", "failed"].includes(
+                                                    order.payment_status
+                                                ) &&
+                                                ["awaiting_payment", "payment_failed"].includes(
+                                                    order.order_status
+                                                ) && (
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-primary fw-bold btn-sm"
+                                                        onClick={() => payNow(order)}
+                                                        disabled={payingOrderId === order.id}
+                                                    >
+                                                        {payingOrderId === order.id
+                                                            ? "OPENING..."
+                                                            : "PAY NOW"}
+                                                    </button>
+                                                )}
+
+                                            <Link
+                                                href={`/purchases/${order.id}`}
+                                                className="btn btn-outline-primary fw-bold btn-sm"
+                                            >
+                                                VIEW DETAILS
+                                            </Link>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
