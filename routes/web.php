@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\InquiryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -174,6 +175,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
+
+    Route::get('/inquiry', [InquiryController::class, 'create'])->name('inquiries.create');
+    Route::post('/inquiries', [InquiryController::class, 'store'])->name('inquiries.store');
+    Route::get('/inquiries', [InquiryController::class, 'index'])->name('inquiries.index');
+    Route::get('/inquiries/{inquiry}', [InquiryController::class, 'show'])->name('inquiries.show');
 
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
