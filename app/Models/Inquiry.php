@@ -21,6 +21,7 @@ class Inquiry extends Model
         'city',
         'service_type',
         'preferred_date',
+        'preferred_time',
         'notes',
         'status',
     ];
