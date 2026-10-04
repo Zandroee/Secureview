@@ -173,6 +173,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
+    Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
 
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
