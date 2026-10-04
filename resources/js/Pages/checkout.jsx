@@ -5,29 +5,43 @@ import { Link, useForm } from "@inertiajs/react";
 const paymentMethods = [
     {
         id: "cash",
-        title: "Cash on Delivery",
-        subtitle: "Pay when your order arrives.",
+        title: "Cash",
+        subtitle: "Pay on delivery",
         icon: "bi bi-cash-stack",
     },
     {
         id: "gcash",
         title: "GCash",
-        subtitle: "Pay securely using GCash.",
+        subtitle: "Pay with GCash",
         icon: "bi bi-phone",
     },
     {
         id: "card",
-        title: "Credit / Debit Card",
-        subtitle: "Visa, Mastercard, and supported cards.",
+        title: "Card",
+        subtitle: "Visa / Mastercard",
         icon: "bi bi-credit-card",
     },
     {
         id: "maya",
         title: "Maya",
-        subtitle: "Pay using your Maya account.",
+        subtitle: "Pay with Maya",
         icon: "bi bi-wallet2",
     },
 ];
+
+const sectionTitleStyle = {
+    fontFamily: "Outfit, sans-serif",
+    fontSize: "1rem",
+    fontWeight: 800,
+    marginBottom: "1rem",
+};
+
+const fieldStyle = {
+    backgroundColor: "#f1f1f3",
+    border: "1px solid #e3e3e6",
+    borderRadius: "12px",
+    minHeight: "44px",
+};
 
 export default function Checkout({
     customer,
@@ -50,6 +64,11 @@ export default function Checkout({
     const shippingFee = Number(cart?.shipping_fee ?? 0);
     const total = Number(cart?.total ?? 0);
 
+    const totalQuantity = items.reduce(
+        (sum, item) => sum + Number(item.quantity),
+        0
+    );
+
     const submit = (event) => {
         event.preventDefault();
 
@@ -66,70 +85,92 @@ export default function Checkout({
                   ? "Card"
                   : paymentMethod === "maya"
                     ? "Maya"
-                    : "Cash on Delivery";
+                    : "Cash";
 
         return (
             <div>
                 <Navbar />
 
-                <main className="container py-5">
-                    <div
-                        className="border rounded-3 p-5 text-center mx-auto"
-                        style={{ maxWidth: "720px" }}
-                    >
-                        <i
-                            className="bi bi-check-circle-fill text-success"
-                            style={{ fontSize: "4rem" }}
-                        ></i>
-
-                        <h1
-                            className="fw-bold mt-4 mb-2"
-                            style={{ fontFamily: "Outfit, sans-serif" }}
+                <main
+                    style={{
+                        backgroundColor: "#f7f7f8",
+                        minHeight: "65vh",
+                    }}
+                >
+                    <div className="container py-5">
+                        <div
+                            className="mx-auto bg-white border rounded-4 p-4 p-md-5 text-center"
+                            style={{ maxWidth: "700px" }}
                         >
-                            ORDER PLACED
-                        </h1>
-
-                        <p className="text-muted mb-4">
-                            Your order <strong>{orderNumber}</strong> has been
-                            created successfully.
-                        </p>
-
-                        <div className="bg-light rounded-3 p-4 mb-4 text-start">
-                            <div className="d-flex justify-content-between mb-2">
-                                <span className="text-muted">
-                                    Payment Method
-                                </span>
-
-                                <span className="fw-semibold">
-                                    {paymentLabel}
-                                </span>
+                            <div
+                                className="mx-auto d-flex align-items-center justify-content-center rounded-circle mb-3"
+                                style={{
+                                    width: "72px",
+                                    height: "72px",
+                                    backgroundColor: "#eaf8f0",
+                                }}
+                            >
+                                <i
+                                    className="bi bi-check-lg text-success"
+                                    style={{ fontSize: "2rem" }}
+                                ></i>
                             </div>
 
-                            <div className="d-flex justify-content-between">
-                                <span className="text-muted">
-                                    Payment Status
-                                </span>
-
-                                <span className="fw-semibold">
-                                    {paymentMethod === "cash"
-                                        ? "Pending — pay on delivery"
-                                        : "Awaiting payment"}
-                                </span>
+                            <div className="small text-uppercase fw-bold text-primary mb-2">
+                                SecureView
                             </div>
+
+                            <h1
+                                className="fw-bold mb-2"
+                                style={{ fontFamily: "Outfit, sans-serif" }}
+                            >
+                                ORDER CONFIRMED
+                            </h1>
+
+                            <p className="text-muted mb-4">
+                                Your order{" "}
+                                <strong>{orderNumber}</strong> has been created
+                                successfully.
+                            </p>
+
+                            <div
+                                className="rounded-3 p-3 text-start mb-4"
+                                style={{ backgroundColor: "#f6f6f7" }}
+                            >
+                                <div className="d-flex justify-content-between mb-2">
+                                    <span className="text-muted">
+                                        Payment Method
+                                    </span>
+                                    <span className="fw-bold">
+                                        {paymentLabel}
+                                    </span>
+                                </div>
+
+                                <div className="d-flex justify-content-between">
+                                    <span className="text-muted">
+                                        Payment Status
+                                    </span>
+                                    <span className="fw-bold">
+                                        {paymentMethod === "cash"
+                                            ? "Pending"
+                                            : "Awaiting Payment"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <p className="small text-muted mb-4">
+                                Online payment processing for GCash, Card, and
+                                Maya will be connected to the payment gateway
+                                next.
+                            </p>
+
+                            <Link
+                                href="/products"
+                                className="btn btn-primary fw-bold px-4"
+                            >
+                                CONTINUE SHOPPING
+                            </Link>
                         </div>
-
-                        <p className="small text-muted mb-4">
-                            Online payment processing for GCash, Card, and Maya
-                            will be connected to the payment gateway in the
-                            next step.
-                        </p>
-
-                        <Link
-                            href="/products"
-                            className="btn btn-primary fw-bold px-4"
-                        >
-                            CONTINUE SHOPPING
-                        </Link>
                     </div>
                 </main>
 
@@ -142,119 +183,154 @@ export default function Checkout({
         <div>
             <Navbar />
 
-            <main className="container py-5">
-                <div className="mb-4">
-                    <h1
-                        className="fw-bold mb-1"
-                        style={{ fontFamily: "Outfit, sans-serif" }}
-                    >
-                        CHECKOUT
-                    </h1>
-
-                    <p className="text-muted mb-0">
-                        Enter your delivery details and choose your payment
-                        method.
-                    </p>
-                </div>
-
-                {errors.cart && (
-                    <div className="alert alert-danger">{errors.cart}</div>
-                )}
-
-                <form onSubmit={submit}>
-                    <div className="row g-4">
+            <main
+                style={{
+                    backgroundColor: "#f7f7f8",
+                    minHeight: "65vh",
+                }}
+            >
+                <div className="container py-4 py-md-5">
+                    <div className="row g-4 align-items-start">
                         <div className="col-lg-7">
-                            <div className="border rounded-3 p-4 mb-4">
-                                <h4
-                                    className="fw-bold mb-4"
-                                    style={{ fontFamily: "Outfit, sans-serif" }}
-                                >
-                                    DELIVERY INFORMATION
-                                </h4>
+                            <div
+                                className="bg-white border rounded-4 p-3 p-md-4"
+                                style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}
+                            >
+                                <div className="d-flex justify-content-between align-items-center mb-4">
+                                    <div>
+                                        <div className="small text-uppercase fw-bold text-primary mb-1">
+                                            SecureView
+                                        </div>
 
-                                <div className="row g-3">
-                                    <div className="col-12">
-                                        <label className="form-label fw-semibold">
-                                            Full Name
-                                        </label>
+                                        <h1
+                                            className="fw-bold mb-1"
+                                            style={{
+                                                fontFamily: "Outfit, sans-serif",
+                                                fontSize: "1.8rem",
+                                            }}
+                                        >
+                                            CHECKOUT
+                                        </h1>
 
-                                        <input
-                                            type="text"
-                                            className={`form-control ${errors.customer_name ? "is-invalid" : ""}`}
-                                            value={data.customer_name}
-                                            onChange={(event) =>
-                                                setData(
-                                                    "customer_name",
-                                                    event.target.value
-                                                )
-                                            }
-                                        />
-
-                                        {errors.customer_name && (
-                                            <div className="invalid-feedback">
-                                                {errors.customer_name}
-                                            </div>
-                                        )}
+                                        <p className="text-muted mb-0 small">
+                                            Complete your order details below.
+                                        </p>
                                     </div>
 
-                                    <div className="col-md-6">
-                                        <label className="form-label fw-semibold">
-                                            Phone Number
-                                        </label>
+                                    <div
+                                        className="rounded-3 px-3 py-2 small fw-bold"
+                                        style={{
+                                            backgroundColor: "#edf5ff",
+                                            color: "#0d6efd",
+                                        }}
+                                    >
+                                        {totalQuantity} item
+                                        {totalQuantity === 1 ? "" : "s"}
+                                    </div>
+                                </div>
 
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            maxLength="11"
-                                            className={`form-control ${errors.customer_phone ? "is-invalid" : ""}`}
-                                            value={data.customer_phone}
-                                            onChange={(event) =>
-                                                setData(
-                                                    "customer_phone",
-                                                    event.target.value
-                                                )
-                                            }
-                                        />
+                                <form onSubmit={submit}>
+                                    <div className="mb-4">
+                                        <div style={sectionTitleStyle}>
+                                            CUSTOMER'S PERSONAL INFORMATION
+                                        </div>
 
-                                        {errors.customer_phone && (
-                                            <div className="invalid-feedback">
-                                                {errors.customer_phone}
+                                        <div className="row g-3">
+                                            <div className="col-md-6">
+                                                <label className="form-label small fw-semibold">
+                                                    Full Name <span className="text-danger">*</span>
+                                                </label>
+
+                                                <input
+                                                    type="text"
+                                                    className={`form-control ${errors.customer_name ? "is-invalid" : ""}`}
+                                                    style={fieldStyle}
+                                                    value={data.customer_name}
+                                                    onChange={(event) =>
+                                                        setData(
+                                                            "customer_name",
+                                                            event.target.value
+                                                        )
+                                                    }
+                                                />
+
+                                                {errors.customer_name && (
+                                                    <div className="invalid-feedback">
+                                                        {errors.customer_name}
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
+
+                                            <div className="col-md-6">
+                                                <label className="form-label small fw-semibold">
+                                                    Phone No. <span className="text-danger">*</span>
+                                                </label>
+
+                                                <input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    maxLength="11"
+                                                    className={`form-control ${errors.customer_phone ? "is-invalid" : ""}`}
+                                                    style={fieldStyle}
+                                                    value={data.customer_phone}
+                                                    onChange={(event) =>
+                                                        setData(
+                                                            "customer_phone",
+                                                            event.target.value
+                                                        )
+                                                    }
+                                                />
+
+                                                {errors.customer_phone && (
+                                                    <div className="invalid-feedback">
+                                                        {errors.customer_phone}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="col-12">
+                                                <label className="form-label small fw-semibold">
+                                                    Email Address <span className="text-danger">*</span>
+                                                </label>
+
+                                                <input
+                                                    type="email"
+                                                    className={`form-control ${errors.customer_email ? "is-invalid" : ""}`}
+                                                    style={fieldStyle}
+                                                    value={data.customer_email}
+                                                    onChange={(event) =>
+                                                        setData(
+                                                            "customer_email",
+                                                            event.target.value
+                                                        )
+                                                    }
+                                                />
+
+                                                {errors.customer_email && (
+                                                    <div className="invalid-feedback">
+                                                        {errors.customer_email}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div className="col-md-6">
-                                        <label className="form-label fw-semibold">
-                                            Email
-                                        </label>
+                                    <div className="mb-4">
+                                        <div style={sectionTitleStyle}>
+                                            CUSTOMER'S ADDRESS
+                                        </div>
 
-                                        <input
-                                            type="email"
-                                            className={`form-control ${errors.customer_email ? "is-invalid" : ""}`}
-                                            value={data.customer_email}
-                                            onChange={(event) =>
-                                                setData(
-                                                    "customer_email",
-                                                    event.target.value
-                                                )
-                                            }
-                                        />
-
-                                        {errors.customer_email && (
-                                            <div className="invalid-feedback">
-                                                {errors.customer_email}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="col-12">
-                                        <label className="form-label fw-semibold">
-                                            Delivery Address
+                                        <label className="form-label small fw-semibold">
+                                            Delivery Address <span className="text-danger">*</span>
                                         </label>
 
                                         <textarea
-                                            rows="4"
+                                            rows="3"
                                             className={`form-control ${errors.delivery_address ? "is-invalid" : ""}`}
+                                            style={{
+                                                ...fieldStyle,
+                                                resize: "vertical",
+                                            }}
                                             placeholder="House/Unit, Street, Barangay, City, Province, ZIP Code"
                                             value={data.delivery_address}
                                             onChange={(event) =>
@@ -272,17 +348,118 @@ export default function Checkout({
                                         )}
                                     </div>
 
-                                    <div className="col-12">
-                                        <label className="form-label fw-semibold">
-                                            Order Notes{" "}
+                                    <div className="mb-4">
+                                        <div style={sectionTitleStyle}>
+                                            PAYMENT METHOD
+                                        </div>
+
+                                        <div className="row g-2">
+                                            {paymentMethods.map((method) => {
+                                                const selected =
+                                                    data.payment_method ===
+                                                    method.id;
+
+                                                return (
+                                                    <div
+                                                        key={method.id}
+                                                        className="col-6"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            className="w-100 text-start border rounded-3 p-3"
+                                                            style={{
+                                                                backgroundColor:
+                                                                    selected
+                                                                        ? "#edf5ff"
+                                                                        : "#fff",
+                                                                borderColor:
+                                                                    selected
+                                                                        ? "#0d6efd"
+                                                                        : "#e3e3e6",
+                                                            }}
+                                                            onClick={() =>
+                                                                setData(
+                                                                    "payment_method",
+                                                                    method.id
+                                                                )
+                                                            }
+                                                        >
+                                                            <div className="d-flex align-items-center gap-2">
+                                                                <div
+                                                                    className="d-flex align-items-center justify-content-center rounded-3 bg-light"
+                                                                    style={{
+                                                                        width: "38px",
+                                                                        height: "38px",
+                                                                        flexShrink: 0,
+                                                                    }}
+                                                                >
+                                                                    <i
+                                                                        className={method.icon}
+                                                                        style={{
+                                                                            fontSize:
+                                                                                "1rem",
+                                                                        }}
+                                                                    ></i>
+                                                                </div>
+
+                                                                <div className="flex-grow-1">
+                                                                    <div className="fw-bold small">
+                                                                        {
+                                                                            method.title
+                                                                        }
+                                                                    </div>
+
+                                                                    <div className="text-muted" style={{ fontSize: "0.72rem" }}>
+                                                                        {
+                                                                            method.subtitle
+                                                                        }
+                                                                    </div>
+                                                                </div>
+
+                                                                <i
+                                                                    className={
+                                                                        selected
+                                                                            ? "bi bi-check-circle-fill text-primary"
+                                                                            : "bi bi-circle text-muted"
+                                                                    }
+                                                                ></i>
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {data.payment_method !== "cash" && (
+                                            <div className="small text-muted mt-2">
+                                                Online payment will open through
+                                                the secure payment gateway once
+                                                payment integration is connected.
+                                            </div>
+                                        )}
+
+                                        {errors.payment_method && (
+                                            <div className="text-danger small mt-2">
+                                                {errors.payment_method}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <label className="form-label small fw-semibold">
+                                            Additional Notes{" "}
                                             <span className="text-muted fw-normal">
-                                                (optional)
+                                                (Optional)
                                             </span>
                                         </label>
 
                                         <textarea
-                                            rows="3"
+                                            rows="2"
                                             className={`form-control ${errors.notes ? "is-invalid" : ""}`}
+                                            style={{
+                                                ...fieldStyle,
+                                                resize: "vertical",
+                                            }}
                                             placeholder="Delivery instructions or other notes"
                                             value={data.notes}
                                             onChange={(event) =>
@@ -299,218 +476,202 @@ export default function Checkout({
                                             </div>
                                         )}
                                     </div>
-                                </div>
-                            </div>
 
-                            <div className="border rounded-3 p-4">
-                                <h4
-                                    className="fw-bold mb-4"
-                                    style={{ fontFamily: "Outfit, sans-serif" }}
-                                >
-                                    PAYMENT METHOD
-                                </h4>
-
-                                <div className="d-flex flex-column gap-3">
-                                    {paymentMethods.map((method) => {
-                                        const selected =
-                                            data.payment_method === method.id;
-
-                                        return (
-                                            <button
-                                                key={method.id}
-                                                type="button"
-                                                className={`btn text-start border rounded-3 p-3 ${
-                                                    selected
-                                                        ? "border-primary bg-primary-subtle"
-                                                        : "bg-white"
-                                                }`}
-                                                onClick={() =>
-                                                    setData(
-                                                        "payment_method",
-                                                        method.id
-                                                    )
-                                                }
-                                            >
-                                                <div className="d-flex align-items-center gap-3">
-                                                    <div
-                                                        className="rounded-circle d-flex align-items-center justify-content-center bg-light"
-                                                        style={{
-                                                            width: "48px",
-                                                            height: "48px",
-                                                            flexShrink: 0,
-                                                        }}
-                                                    >
-                                                        <i
-                                                            className={method.icon}
-                                                            style={{
-                                                                fontSize: "1.25rem",
-                                                            }}
-                                                        ></i>
-                                                    </div>
-
-                                                    <div className="flex-grow-1">
-                                                        <div className="fw-bold">
-                                                            {method.title}
-                                                        </div>
-
-                                                        <div className="small text-muted">
-                                                            {method.subtitle}
-                                                        </div>
-                                                    </div>
-
-                                                    <i
-                                                        className={
-                                                            selected
-                                                                ? "bi bi-check-circle-fill text-primary"
-                                                                : "bi bi-circle text-muted"
-                                                        }
-                                                        style={{
-                                                            fontSize: "1.25rem",
-                                                        }}
-                                                    ></i>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                {data.payment_method !== "cash" && (
-                                    <div className="alert alert-info mt-3 mb-0">
-                                        Online payment will open through the
-                                        secure payment gateway once the
-                                        payment integration is connected.
-                                    </div>
-                                )}
-
-                                {errors.payment_method && (
-                                    <div className="text-danger small mt-2">
-                                        {errors.payment_method}
-                                    </div>
-                                )}
+                                    <button
+                                        type="submit"
+                                        className="btn btn-primary fw-bold w-100 mt-4 py-2"
+                                        disabled={processing}
+                                    >
+                                        {processing
+                                            ? "PROCESSING..."
+                                            : data.payment_method === "cash"
+                                              ? "PLACE ORDER"
+                                              : "CONTINUE TO PAYMENT"}
+                                    </button>
+                                </form>
                             </div>
                         </div>
 
                         <div className="col-lg-5">
                             <div
-                                className="border rounded-3 p-4 sticky-lg-top"
-                                style={{ top: "20px" }}
+                                className="bg-white border rounded-4 p-3 p-md-4 sticky-lg-top"
+                                style={{
+                                    top: "20px",
+                                    boxShadow: "0 8px 24px rgba(0,0,0,0.04)",
+                                }}
                             >
-                                <h4
-                                    className="fw-bold mb-4"
-                                    style={{ fontFamily: "Outfit, sans-serif" }}
-                                >
-                                    ORDER SUMMARY
-                                </h4>
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                    <h4
+                                        className="fw-bold mb-0"
+                                        style={{
+                                            fontFamily: "Outfit, sans-serif",
+                                        }}
+                                    >
+                                        CART
+                                    </h4>
 
-                                <div className="d-flex flex-column gap-3 mb-4">
+                                    <Link
+                                        href="/cart"
+                                        className="small fw-semibold text-decoration-none"
+                                    >
+                                        Edit Cart
+                                    </Link>
+                                </div>
+
+                                <div className="d-flex flex-column gap-2">
                                     {items.map((item) => (
                                         <div
                                             key={item.id}
-                                            className="d-flex gap-3"
+                                            className="border rounded-3 p-2"
+                                            style={{
+                                                backgroundColor: "#fafafa",
+                                            }}
                                         >
-                                            {item.image ? (
-                                                <img
-                                                    src={item.image}
-                                                    alt={item.name}
-                                                    className="rounded"
-                                                    style={{
-                                                        width: "64px",
-                                                        height: "64px",
-                                                        objectFit: "cover",
-                                                    }}
-                                                />
-                                            ) : (
-                                                <div
-                                                    className="bg-secondary-subtle rounded d-flex align-items-center justify-content-center"
-                                                    style={{
-                                                        width: "64px",
-                                                        height: "64px",
-                                                    }}
-                                                >
-                                                    <i className="bi bi-camera-video text-secondary"></i>
-                                                </div>
-                                            )}
+                                            <div className="d-flex gap-2 align-items-center">
+                                                {item.image ? (
+                                                    <img
+                                                        src={item.image}
+                                                        alt={item.name}
+                                                        className="rounded-2"
+                                                        style={{
+                                                            width: "58px",
+                                                            height: "58px",
+                                                            objectFit: "cover",
+                                                            flexShrink: 0,
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div
+                                                        className="rounded-2 d-flex align-items-center justify-content-center bg-secondary-subtle"
+                                                        style={{
+                                                            width: "58px",
+                                                            height: "58px",
+                                                            flexShrink: 0,
+                                                        }}
+                                                    >
+                                                        <i
+                                                            className={
+                                                                item.type ===
+                                                                "package"
+                                                                    ? "bi bi-box-seam text-secondary"
+                                                                    : "bi bi-camera-video text-secondary"
+                                                            }
+                                                        ></i>
+                                                    </div>
+                                                )}
 
-                                            <div className="flex-grow-1">
-                                                <div className="fw-semibold">
-                                                    {item.name}
+                                                <div className="flex-grow-1 min-w-0">
+                                                    <div className="small text-primary text-uppercase fw-bold">
+                                                        {item.type}
+                                                    </div>
+
+                                                    <div
+                                                        className="fw-bold text-truncate"
+                                                        style={{
+                                                            fontFamily:
+                                                                "Outfit, sans-serif",
+                                                        }}
+                                                    >
+                                                        {item.name}
+                                                    </div>
+
+                                                    <div className="small text-muted">
+                                                        {item.quantity} × ₱
+                                                        {Number(
+                                                            item.price
+                                                        ).toLocaleString()}
+                                                    </div>
                                                 </div>
 
-                                                <div className="small text-muted">
-                                                    {item.quantity} × ₱
-                                                    {Number(
-                                                        item.price
-                                                    ).toLocaleString()}
+                                                <div className="text-end">
+                                                    <div className="fw-bold small">
+                                                        ₱
+                                                        {Number(
+                                                            item.subtotal
+                                                        ).toLocaleString()}
+                                                    </div>
                                                 </div>
-                                            </div>
-
-                                            <div className="fw-bold">
-                                                ₱
-                                                {Number(
-                                                    item.subtotal
-                                                ).toLocaleString()}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
 
-                                <hr />
-
-                                <div className="d-flex justify-content-between mb-2">
-                                    <span className="text-muted">
-                                        Subtotal
-                                    </span>
-
-                                    <span className="fw-semibold">
-                                        ₱{subtotal.toLocaleString()}
-                                    </span>
-                                </div>
-
-                                <div className="d-flex justify-content-between mb-3">
-                                    <span className="text-muted">
-                                        Shipping
-                                    </span>
-
-                                    <span className="fw-semibold">
-                                        {shippingFee === 0
-                                            ? "FREE"
-                                            : "₱" +
-                                              shippingFee.toLocaleString()}
-                                    </span>
-                                </div>
-
-                                <hr />
-
-                                <div className="d-flex justify-content-between align-items-center mb-4">
-                                    <span className="fw-bold">TOTAL</span>
-
-                                    <span className="text-primary fw-bold fs-4">
-                                        ₱{total.toLocaleString()}
-                                    </span>
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    className="btn btn-primary fw-bold w-100"
-                                    disabled={processing}
+                                <div
+                                    className="rounded-3 p-3 mt-3"
+                                    style={{ backgroundColor: "#f6f6f7" }}
                                 >
-                                    {processing
-                                        ? "PROCESSING..."
-                                        : data.payment_method === "cash"
-                                          ? "PLACE ORDER"
-                                          : "CONTINUE"}
-                                </button>
+                                    <div className="d-flex justify-content-between mb-2">
+                                        <span className="text-muted small">
+                                            Items
+                                        </span>
+
+                                        <span className="fw-semibold small">
+                                            {totalQuantity}
+                                        </span>
+                                    </div>
+
+                                    <div className="d-flex justify-content-between mb-2">
+                                        <span className="text-muted small">
+                                            Subtotal
+                                        </span>
+
+                                        <span className="fw-semibold small">
+                                            ₱{subtotal.toLocaleString()}
+                                        </span>
+                                    </div>
+
+                                    <div className="d-flex justify-content-between mb-3">
+                                        <span className="text-muted small">
+                                            Shipping
+                                        </span>
+
+                                        <span className="fw-semibold small">
+                                            {shippingFee === 0
+                                                ? "FREE"
+                                                : "₱" +
+                                                  shippingFee.toLocaleString()}
+                                        </span>
+                                    </div>
+
+                                    <hr className="my-2" />
+
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <span className="fw-bold">TOTAL</span>
+
+                                        <span className="text-primary fw-bold fs-4">
+                                            ₱{total.toLocaleString()}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div
+                                    className="rounded-3 p-3 mt-3"
+                                    style={{
+                                        backgroundColor: "#eef7ff",
+                                    }}
+                                >
+                                    <div className="fw-bold small mb-2">
+                                        <i className="bi bi-shield-check text-primary me-2"></i>
+                                        SECURE CHECKOUT
+                                    </div>
+
+                                    <div className="small text-muted">
+                                        Your order details are processed
+                                        securely. Online payment protection will
+                                        be enabled with the payment gateway.
+                                    </div>
+                                </div>
 
                                 <Link
-                                    href="/cart"
-                                    className="btn btn-outline-primary fw-bold w-100 mt-2"
+                                    href="/products"
+                                    className="btn btn-outline-primary fw-bold w-100 mt-3"
                                 >
-                                    BACK TO CART
+                                    CONTINUE SHOPPING
                                 </Link>
                             </div>
                         </div>
                     </div>
-                </form>
+                </div>
             </main>
 
             <Footer />
