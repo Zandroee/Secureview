@@ -80,6 +80,17 @@ export default function ProductDetails({ product, reviews = [] }) {
     const startIndex = (reviewPage - 1) * reviewsPerPage;
     const currentReviews = filteredReviews.slice(startIndex, startIndex + reviewsPerPage);
 
+    const handleInquiry = () => {
+        if (!user?.email_verified_at) {
+            router.visit("/login");
+            return;
+        }
+
+        router.visit(
+            "/inquiry?item_type=product&item_id=" + product.id
+        );
+    };
+
     const handleAddToCart = () => {
         if (!user?.email_verified_at) {
             router.visit("/login");
@@ -176,7 +187,11 @@ export default function ProductDetails({ product, reviews = [] }) {
                             </div>
 
                             <div className="d-flex gap-2">
-                                <button type="button" className="btn btn-outline-primary fw-bold">
+                                <button
+                                    type="button"
+                                    className="btn btn-outline-primary fw-bold"
+                                    onClick={handleInquiry}
+                                >
                                     Inquire
                                 </button>
 
