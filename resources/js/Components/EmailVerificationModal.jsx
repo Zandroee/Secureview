@@ -3,9 +3,7 @@ import { useEffect, useState } from "react";
 
 export default function EmailVerificationModal({ email, onClose }) {
     const [resending, setResending] = useState(false);
-    const [checking, setChecking] = useState(false);
     const [resent, setResent] = useState(false);
-    const [message, setMessage] = useState("");
     const [cooldown, setCooldown] = useState(0);
 
     useEffect(() => {
@@ -19,15 +17,18 @@ export default function EmailVerificationModal({ email, onClose }) {
     }, [cooldown]);
 
     const resendVerification = () => {
-        if (resending || cooldown > 0) return;
+        if (resending || cooldown > 0) {
+            return;
+        }
 
         setResending(true);
         setResent(false);
-        setMessage("");
 
         router.post(
             "/email/verification-notification",
-            {},
+            {
+                email,
+            },
             {
                 preserveScroll: true,
 
@@ -36,47 +37,11 @@ export default function EmailVerificationModal({ email, onClose }) {
                     setCooldown(60);
                 },
 
-                onError: () => {
-                    setMessage(
-                        "Unable to send the verification email right now. Please try again."
-                    );
-                },
-
                 onFinish: () => {
                     setResending(false);
                 },
             }
         );
-    };
-
-    const checkVerification = () => {
-        setChecking(true);
-        setMessage("");
-
-        router.reload({
-            only: ["auth"],
-
-            preserveState: true,
-            preserveScroll: true,
-
-            onSuccess: (page) => {
-                const user = page.props.auth?.user;
-                const verified = Boolean(user?.email_verified_at);
-
-                if (verified) {
-                    onClose();
-                    return;
-                }
-
-                setMessage(
-                    "Your email has not been verified yet. Please click the verification link in your email."
-                );
-            },
-
-            onFinish: () => {
-                setChecking(false);
-            },
-        });
     };
 
     return (
@@ -118,7 +83,7 @@ export default function EmailVerificationModal({ email, onClose }) {
                         type="button"
                         className="btn btn-link text-primary text-decoration-none p-0"
                         onClick={onClose}
-                        disabled={checking || resending}
+                        disabled={resending}
                     >
                         Back
                     </button>
@@ -132,7 +97,7 @@ export default function EmailVerificationModal({ email, onClose }) {
                             fontSize: "17px",
                         }}
                     >
-                        Check your email for the verification link.
+                        A verification link has been sent to:
                     </p>
 
                     <p
@@ -145,6 +110,12 @@ export default function EmailVerificationModal({ email, onClose }) {
                         {email}
                     </p>
 
+                    {resent && (
+                        <div className="alert alert-success text-start">
+                            A new verification email has been sent successfully.
+                        </div>
+                    )}
+
                     <button
                         type="button"
                         className="btn btn-link text-primary text-decoration-none"
@@ -152,23 +123,11 @@ export default function EmailVerificationModal({ email, onClose }) {
                         disabled={resending || cooldown > 0}
                     >
                         {resending
-                            ? "Sending..."
+                            ? "SENDING..."
                             : cooldown > 0
-                              ? `Resend available in ${cooldown}s`
-                              : "Resend Verification Email"}
+                              ? `RESEND AVAILABLE IN ${cooldown}s`
+                              : "RESEND VERIFICATION EMAIL"}
                     </button>
-
-                    {resent && (
-                        <p className="text-success small mt-2 mb-0">
-                            A new verification email has been sent.
-                        </p>
-                    )}
-
-                    {message && (
-                        <p className="text-danger small mt-3 mb-0">
-                            {message}
-                        </p>
-                    )}
 
                     <button
                         type="button"
@@ -177,12 +136,10 @@ export default function EmailVerificationModal({ email, onClose }) {
                             borderRadius: "15px",
                             padding: "13px",
                         }}
-                        onClick={checkVerification}
-                        disabled={checking || resending}
+                        onClick={onClose}
+                        disabled={resending}
                     >
-                        {checking
-                            ? "CHECKING..."
-                            : "I'VE VERIFIED MY EMAIL"}
+                        CONTINUE
                     </button>
                 </div>
             </div>

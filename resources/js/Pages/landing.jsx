@@ -1,4 +1,4 @@
-import Navbar from "../Components/Navbar";
+import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import PackageCard from "../Components/PackageCard";
 import ProductCard from "../Components/ProductCard";
