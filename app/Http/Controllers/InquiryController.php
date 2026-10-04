@@ -69,6 +69,7 @@ class InquiryController extends Controller
                 'date',
                 'after_or_equal:today',
             ],
+            'preferred_time' => ['required', 'string', 'max:50'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
