@@ -1,6 +1,7 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
-import { Link } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
+import { useState } from "react";
 
 function formatPaymentMethod(method) {
     if (method === "gcash") return "GCash";
@@ -17,6 +18,27 @@ function statusClass(status) {
 }
 
 export default function PurchaseDetails({ order }) {
+    const { props } = usePage();
+    const [paying, setPaying] = useState(false);
+
+    const payNow = () => {
+        setPaying(true);
+
+        router.post(
+            `/purchases/${order.id}/pay`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setPaying(false),
+            }
+        );
+    };
+
+    const canPay =
+        ["gcash", "card", "maya"].includes(order.payment_method) &&
+        ["pending", "failed"].includes(order.payment_status) &&
+        ["awaiting_payment", "payment_failed"].includes(order.order_status);
+
     return (
         <div>
             <Navbar />
@@ -55,6 +77,12 @@ export default function PurchaseDetails({ order }) {
                             BACK TO PURCHASES
                         </Link>
                     </div>
+
+                    {props.errors?.payment && (
+                        <div className="alert alert-danger mb-4">
+                            {props.errors.payment}
+                        </div>
+                    )}
 
                     <div className="row g-4">
                         <div className="col-lg-8">
@@ -251,6 +279,17 @@ export default function PurchaseDetails({ order }) {
                                 >
                                     ORDER SUMMARY
                                 </h4>
+
+                                {canPay && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary fw-bold w-100 mb-3"
+                                        onClick={payNow}
+                                        disabled={paying}
+                                    >
+                                        {paying ? "OPENING PAYMENT..." : "PAY NOW"}
+                                    </button>
+                                )}
 
                                 <div className="d-flex flex-wrap gap-2 mb-4">
                                     <span
