@@ -330,7 +330,7 @@ export default function InquiryDetails({ inquiry, success }) {
                             type="button"
                             className="btn btn-link btn-sm text-primary text-decoration-none position-absolute"
                             style={{ top: "10px", right: "12px" }}
-                            onClick={() => window.history.replaceState({}, "", window.location.href)}
+                            onClick={() => window.history.back()}
                         >
                             Back
                         </button>
