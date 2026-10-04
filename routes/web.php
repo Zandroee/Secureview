@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CartController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -156,7 +157,15 @@ Route::post('/reset-password', function (Request $request) {
         ]);
 })->middleware('guest')->name('password.update');
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified']);
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/cart/items', [CartController::class, 'store'])->name('cart.items.store');
+    Route::patch('/cart/items/{cartItem}', [CartController::class, 'update'])->name('cart.items.update');
+    Route::delete('/cart/items/{cartItem}', [CartController::class, 'destroy'])->name('cart.items.destroy');
+    Route::delete('/cart', [CartController::class, 'clear'])->name('cart.clear');
+
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->name('dashboard');
+});
 
