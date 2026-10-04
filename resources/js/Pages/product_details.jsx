@@ -1,5 +1,6 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
+import { usePage, router } from "@inertiajs/react";
 import { useState } from "react";
 
 function Stars({ rating }) {
@@ -64,7 +65,11 @@ function ReviewSummary({ reviews, rating }) {
 }
 
 export default function ProductDetails({ product, reviews = [] }) {
+    const { props } = usePage();
+    const user = props.auth?.user;
+
     const [amount, setAmount] = useState(1);
+    const [cartMessage, setCartMessage] = useState("");
     const [reviewPage, setReviewPage] = useState(1);
     const [reviewFilter, setReviewFilter] = useState("all");
 
@@ -74,6 +79,30 @@ export default function ProductDetails({ product, reviews = [] }) {
     const totalReviewPages = Math.ceil(filteredReviews.length / reviewsPerPage);
     const startIndex = (reviewPage - 1) * reviewsPerPage;
     const currentReviews = filteredReviews.slice(startIndex, startIndex + reviewsPerPage);
+
+    const handleAddToCart = () => {
+        if (!user?.email_verified_at) {
+            router.visit("/login");
+            return;
+        }
+
+        setCartMessage("");
+
+        router.post(
+            "/cart/items",
+            {
+                item_type: "product",
+                item_id: product.id,
+                quantity: amount,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setCartMessage("Product added to your cart.");
+                },
+            }
+        );
+    };
 
     return (
         <div>
@@ -151,11 +180,22 @@ export default function ProductDetails({ product, reviews = [] }) {
                                     Inquire
                                 </button>
 
-                                <button type="button" className="btn btn-primary fw-bold">
+                                <button
+                                    type="button"
+                                    className="btn btn-primary fw-bold"
+                                    onClick={handleAddToCart}
+                                >
                                     <i className="bi bi-cart3 me-2"></i>
                                     Add To Cart
                                 </button>
                             </div>
+
+                            {cartMessage && (
+                                <div className="text-success small mt-2">
+                                    <i className="bi bi-check-circle me-1"></i>
+                                    {cartMessage}
+                                </div>
+                            )}
 
                         </div>
 
