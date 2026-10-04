@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Package;
 use App\Models\Product;
@@ -69,6 +70,7 @@ class InquiryController extends Controller
                 'date',
                 'after_or_equal:today',
             ],
+            'preferred_time' => ['required', 'string', 'max:50'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -102,6 +104,16 @@ class InquiryController extends Controller
             'preferred_time' => $validated['preferred_time'],
             'notes' => $validated['notes'] ?? null,
             'status' => 'pending',
+        ]);
+
+        CustomerNotification::create([
+            'user_id' => $request->user()->id,
+            'type' => 'inquiry',
+            'title' => 'Inquiry received',
+            'message' => 'Your inquiry ' . $inquiry->inquiry_number . ' has been received.',
+            'action_url' => route('inquiries.show', $inquiry),
+            'related_type' => Inquiry::class,
+            'related_id' => $inquiry->id,
         ]);
 
         return redirect()->route('inquiries.show', $inquiry)->with(

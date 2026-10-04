@@ -38,9 +38,13 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
 
         $cartCount = 0;
+        $notificationCount = 0;
 
         if ($user) {
             $cartCount = $user->cart?->items()->sum('quantity') ?? 0;
+            $notificationCount = $user->customerNotifications()
+                ->whereNull('read_at')
+                ->count();
         }
 
         return array_merge(parent::share($request), [
@@ -48,7 +52,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user,
             ],
             'cartCount' => $cartCount,
-            'notificationCount' => 0,
+            'notificationCount' => $notificationCount,
         ]);
     }
 }

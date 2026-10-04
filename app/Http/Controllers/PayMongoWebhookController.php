@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CustomerNotification;
 use App\Models\Order;
 use Illuminate\Http\Request;
 
@@ -112,6 +113,16 @@ class PayMongoWebhookController extends Controller
             'order_status' => 'processing',
             'paymongo_payment_id' => $paymentId,
             'paid_at' => now(),
+        ]);
+
+        CustomerNotification::create([
+            'user_id' => $order->user_id,
+            'type' => 'payment_paid',
+            'title' => 'Payment successful',
+            'message' => 'Payment for order ' . $order->order_number . ' was successful.',
+            'action_url' => route('purchases.show', $order),
+            'related_type' => Order::class,
+            'related_id' => $order->id,
         ]);
 
         $order->user?->cart?->items()->delete();
