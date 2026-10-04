@@ -317,14 +317,12 @@ export default function Cart({ cart }) {
                                     </span>
                                 </div>
 
-                                <button
-                                    type="button"
+                                <Link
+                                    href="/checkout"
                                     className="btn btn-primary fw-bold w-100 mb-2"
-                                    disabled
-                                    title="Checkout will be built next."
                                 >
                                     PROCEED TO CHECKOUT
-                                </button>
+                                </Link>
 
                                 <Link
                                     href="/products"
