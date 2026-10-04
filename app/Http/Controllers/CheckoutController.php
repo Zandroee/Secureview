@@ -34,6 +34,12 @@ class CheckoutController extends Controller
             ]);
         }
 
+        if ($validated['payment_method'] !== 'cash' && !config('services.paymongo.secret_key')) {
+            return back()->withErrors([
+                'payment' => 'Online payments are not configured yet. Add the PayMongo test secret key first.',
+            ])->withInput();
+        }
+
         $cart = $request->user()->cart;
 
         if (!$cart) {
