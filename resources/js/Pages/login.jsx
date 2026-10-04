@@ -6,7 +6,8 @@ import "../../css/login.css";
 
 export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
-    const [loginError, setLoginError] = useState("");
+    const [emailError, setEmailError] = useState("");
+    const [passwordError, setPasswordError] = useState("");
 
     const { data, setData, post, processing } = useForm({
         email: "",
@@ -16,33 +17,55 @@ export default function Login() {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        setLoginError("");
+        setEmailError("");
+        setPasswordError("");
+
+        const email = data.email.trim();
+
+        if (!email) {
+            setEmailError("Email is required.");
+            return;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            setEmailError("Enter a valid email address.");
+            return;
+        }
+
+        if (!data.password) {
+            setPasswordError("Password is required.");
+            return;
+        }
 
         post("/login", {
             preserveScroll: true,
 
             onError: (serverErrors) => {
                 if (serverErrors.email) {
-                    setLoginError(serverErrors.email);
+                    setEmailError(serverErrors.email);
                     return;
                 }
 
                 if (serverErrors.password) {
-                    setLoginError(serverErrors.password);
+                    setPasswordError(serverErrors.password);
                     return;
                 }
 
-                setLoginError("Unable to log in. Please check your information.");
+                setEmailError("");
+                setPasswordError(
+                    "Unable to log in. Please check your information."
+                );
             },
 
             onSuccess: () => {
-                setLoginError("");
+                setEmailError("");
+                setPasswordError("");
             },
         });
     };
 
-    const emailHasError = loginError === "Account does not exist.";
-    const passwordHasError = loginError === "Incorrect password.";
+    const emailHasError = Boolean(emailError);
+    const passwordHasError = Boolean(passwordError);
 
     return (
         <>
@@ -118,13 +141,17 @@ export default function Login() {
                                     value={data.email}
                                     onChange={(e) => {
                                         setData("email", e.target.value);
-                                        setLoginError("");
+                                        setEmailError("");
                                     }}
                                 />
 
                                 {emailHasError && (
                                     <div className="text-danger small mt-1">
-                                        Account does not exist.
+                                        {emailError && (
+                                            <div className="text-danger small mt-1">
+                                                {emailError}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -147,7 +174,7 @@ export default function Login() {
                                         value={data.password}
                                         onChange={(e) => {
                                             setData("password", e.target.value);
-                                            setLoginError("");
+                                            setPasswordError("");
                                         }}
                                     />
 
@@ -169,9 +196,9 @@ export default function Login() {
                                     </button>
                                 </div>
 
-                                {passwordHasError && (
+                                {passwordError && (
                                     <div className="text-danger small mt-1">
-                                        Incorrect password.
+                                        {passwordError}
                                     </div>
                                 )}
                             </div>
@@ -179,7 +206,7 @@ export default function Login() {
                             {/* FORGOT PASSWORD */}
                             <div className="mb-4">
                                 <Link
-                                    href="#"
+                                    href="/forgot-password"
                                     className="text-primary text-decoration-none small"
                                 >
                                     Forgot Password

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Cache;
 
 class AuthController extends Controller
 {
@@ -55,10 +56,6 @@ class AuthController extends Controller
 
         event(new Registered($user));
 
-        Auth::login($user);
-
-        $request->session()->regenerate();
-
         return redirect()->route('signup')->with([
             'verificationSent' => true,
             'verificationEmail' => $user->email,
@@ -74,23 +71,37 @@ class AuthController extends Controller
 
         $user = User::where('email', $credentials['email'])->first();
 
-        if (!$user->hasVerifiedEmail()) {
-            $user->sendEmailVerificationNotification();
-
-            return redirect()->route('verification.notice');
+        if (!$user) {
+            return back()->withErrors([
+                'email' => 'Account does not exist.',
+            ])->onlyInput('email');
         }
 
-        if (!Auth::attempt($credentials)) {
+        // Check the password without logging the user in.
+        if (!Auth::validate($credentials)) {
             return back()->withErrors([
                 'password' => 'Incorrect password.',
             ])->onlyInput('email');
         }
 
-        $request->session()->regenerate();
-
+        // Correct password, but email is still unverified.
         if (!$user->hasVerifiedEmail()) {
-            return redirect()->route('verification.notice');
+            $cooldownKey = 'verification-email-cooldown:' . $user->id;
+
+            if (Cache::add($cooldownKey, true, now()->addSeconds(60))) {
+                $user->sendEmailVerificationNotification();
+            }
+
+            return redirect()->route('verification.notice')->with([
+                'verificationSent' => true,
+                'verificationEmail' => $user->email,
+            ]);
         }
+
+        // Only verified users are actually logged in.
+        Auth::login($user);
+
+        $request->session()->regenerate();
 
         return redirect()->intended('/');
     }
@@ -148,7 +159,9 @@ class AuthController extends Controller
 
     public function redirectFacebook()
     {
-        return Socialite::driver('facebook')->redirect();
+        return Socialite::driver('facebook')
+            ->scopes(['public_profile', 'email'])
+            ->redirect();
     }
 
     public function facebookCallback()

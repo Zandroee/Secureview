@@ -1,5 +1,5 @@
 import "../../css/landing.css";
-import Navbar from "../Components/Navbar";
+import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import ProductCard from "../Components/ProductCard";
 import Pagination from "../Components/Pagination";

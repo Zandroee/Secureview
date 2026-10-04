@@ -6,8 +6,12 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\AuthController;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Support\Str;
+use App\Models\User;
 
 Route::get('/', [LandingController::class, 'index']);
 
@@ -36,24 +40,43 @@ Route::post('/login', [AuthController::class, 'authenticate'])->name('login.auth
 Route::post('/register', [AuthController::class, 'register'])->name('register');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-Route::get('/email/verify', function (Request $request) {
-    return redirect()->route('signup')->with([
-        'verificationSent' => true,
-        'verificationEmail' => $request->user()->email,
+Route::get('/email/verify', function () {
+    return redirect()->route('signup');
+})->name('verification.notice');
+
+Route::get('/email/verify/{id}/{hash}', function (Request $request, $id, $hash) {
+    $user = User::findOrFail($id);
+
+    if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
+        abort(403);
+    }
+
+    if (!$user->hasVerifiedEmail()) {
+        $user->markEmailAsVerified();
+    }
+
+    return redirect()->route('login')->with([
+        'status' => 'Your email has been verified successfully. You can now log in.',
     ]);
-})->middleware('auth')->name('verification.notice');
-
-Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
-    $request->fulfill();
-
-    return redirect('/');
-})->middleware(['auth', 'signed'])->name('verification.verify');
+})->middleware('signed')->name('verification.verify');
 
 Route::post('/email/verification-notification', function (Request $request) {
-    $request->user()->sendEmailVerificationNotification();
+    $validated = $request->validate([
+        'email' => ['required', 'email'],
+    ]);
+
+    $user = User::where('email', $validated['email'])->first();
+
+    if ($user && !$user->hasVerifiedEmail()) {
+        $cooldownKey = 'verification-email-cooldown:' . $user->id;
+
+        if (Cache::add($cooldownKey, true, now()->addSeconds(60))) {
+            $user->sendEmailVerificationNotification();
+        }
+    }
 
     return back()->with('message', 'Verification link sent!');
-})->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+})->middleware('throttle:1,1')->name('verification.send');
 
 Route::get('/auth/google', [AuthController::class, 'redirectGoogle'])
     ->name('auth.google');
@@ -67,6 +90,71 @@ Route::get('/auth/facebook', [AuthController::class, 'redirectFacebook'])
 
 Route::get('/auth/facebook/callback', [AuthController::class, 'facebookCallback'])
     ->name('auth.facebook.callback');
+
+Route::get('/forgot-password', function () {
+    return Inertia::render('forgot-password');
+})->middleware('guest')->name('password.request');
+
+Route::post('/forgot-password', function (Request $request) {
+    $request->validate([
+        'email' => ['required', 'email'],
+    ]);
+
+    $status = Password::sendResetLink(
+        $request->only('email')
+    );
+
+    return $status === Password::ResetLinkSent
+        ? back()->with('status', __($status))
+        : back()->withErrors([
+            'email' => __($status),
+        ]);
+})->middleware(['guest', 'throttle:1,1'])->name('password.email');
+
+Route::get('/reset-password/{token}', function (Request $request, string $token) {
+    return Inertia::render('reset-password', [
+        'token' => $token,
+        'email' => $request->query('email', ''),
+    ]);
+})->middleware('guest')->name('password.reset');
+
+Route::post('/reset-password', function (Request $request) {
+    $request->validate([
+        'token' => ['required'],
+        'email' => ['required', 'email'],
+        'password' => [
+            'required',
+            'confirmed',
+            Password::min(8)
+                ->mixedCase()
+                ->numbers()
+                ->symbols(),
+        ],
+    ]);
+
+    $status = Password::reset(
+        $request->only(
+            'email',
+            'password',
+            'password_confirmation',
+            'token'
+        ),
+        function ($user, $password) {
+            $user->forceFill([
+                'password' => Hash::make($password),
+                'remember_token' => Str::random(60),
+            ])->save();
+
+            event(new PasswordReset($user));
+        }
+    );
+
+    return $status === Password::PasswordReset
+        ? redirect()->route('login')->with('status', __($status))
+        : back()->withErrors([
+            'email' => [__($status)],
+        ]);
+})->middleware('guest')->name('password.update');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
