@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CustomerNotification;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -179,6 +180,16 @@ class CheckoutController extends Controller
         });
 
         if ($validated['payment_method'] === 'cash') {
+            CustomerNotification::create([
+                'user_id' => $request->user()->id,
+                'type' => 'order',
+                'title' => 'Order placed',
+                'message' => 'Your Cash order ' . $order->order_number . ' has been placed successfully.',
+                'action_url' => route('purchases.show', $order),
+                'related_type' => Order::class,
+                'related_id' => $order->id,
+            ]);
+
             $cart->items()->delete();
 
             return redirect()->route('checkout')->with([
@@ -281,6 +292,16 @@ class CheckoutController extends Controller
                 'paymongo_checkout_session_id' => $checkoutSessionId,
             ]);
 
+            CustomerNotification::create([
+                'user_id' => $request->user()->id,
+                'type' => 'order',
+                'title' => 'Payment required',
+                'message' => 'Your order ' . $order->order_number . ' is waiting for payment.',
+                'action_url' => route('purchases.show', $order),
+                'related_type' => Order::class,
+                'related_id' => $order->id,
+            ]);
+
             return Inertia::location($checkoutUrl);
         } catch (\Throwable $exception) {
             report($exception);
@@ -333,6 +354,16 @@ class CheckoutController extends Controller
                                 'order_status' => 'processing',
                                 'paymongo_payment_id' => $payment['id'] ?? null,
                                 'paid_at' => now(),
+                            ]);
+
+                            CustomerNotification::create([
+                                'user_id' => $request->user()->id,
+                                'type' => 'payment_paid',
+                                'title' => 'Payment successful',
+                                'message' => 'Payment for order ' . $order->order_number . ' was successful.',
+                                'action_url' => route('purchases.show', $order),
+                                'related_type' => Order::class,
+                                'related_id' => $order->id,
                             ]);
 
                             $request->user()->cart?->items()->delete();
