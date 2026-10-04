@@ -15,6 +15,9 @@ class Order extends Model
         'shipping_fee',
         'total',
         'payment_method',
+        'paymongo_checkout_session_id',
+        'paymongo_payment_id',
+        'paid_at',
         'payment_status',
         'order_status',
         'customer_name',
@@ -28,6 +31,7 @@ class Order extends Model
         'subtotal' => 'float',
         'shipping_fee' => 'float',
         'total' => 'float',
+        'paid_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

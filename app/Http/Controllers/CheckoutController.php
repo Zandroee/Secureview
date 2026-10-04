@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -31,6 +32,12 @@ class CheckoutController extends Controller
                 'orderNumber' => $orderNumber,
                 'paymentMethod' => $request->session()->get('paymentMethod'),
             ]);
+        }
+
+        if ($validated['payment_method'] !== 'cash' && !config('services.paymongo.secret_key')) {
+            return back()->withErrors([
+                'payment' => 'Online payments are not configured yet. Add the PayMongo test secret key first.',
+            ])->withInput();
         }
 
         $cart = $request->user()->cart;
@@ -116,37 +123,20 @@ class CheckoutController extends Controller
         }
 
         $order = DB::transaction(function () use ($request, $validated, $cart) {
-            $snapshots = [];
             $subtotal = 0;
 
             foreach ($cart->items as $cartItem) {
-                $purchasable = $cartItem->purchasable;
-
-                if (!$purchasable) {
+                if (!$cartItem->purchasable) {
                     abort(422, 'An item in your cart is no longer available.');
                 }
 
-                $price = (float) $purchasable->price;
+                $price = (float) $cartItem->purchasable->price;
                 $quantity = (int) $cartItem->quantity;
-                $lineSubtotal = $price * $quantity;
 
-                $snapshots[] = [
-                    'purchasable_type' => $cartItem->purchasable_type,
-                    'purchasable_id' => $cartItem->purchasable_id,
-                    'name' => $purchasable->name,
-                    'price' => $price,
-                    'quantity' => $quantity,
-                    'subtotal' => $lineSubtotal,
-                ];
-
-                $subtotal += $lineSubtotal;
+                $subtotal += $price * $quantity;
             }
 
             $shippingFee = 0;
-            $paymentStatus = 'pending';
-            $orderStatus = $validated['payment_method'] === 'cash'
-                ? 'pending'
-                : 'awaiting_payment';
 
             do {
                 $orderNumber = 'SV-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
@@ -159,8 +149,10 @@ class CheckoutController extends Controller
                 'shipping_fee' => $shippingFee,
                 'total' => $subtotal + $shippingFee,
                 'payment_method' => $validated['payment_method'],
-                'payment_status' => $paymentStatus,
-                'order_status' => $orderStatus,
+                'payment_status' => 'pending',
+                'order_status' => $validated['payment_method'] === 'cash'
+                    ? 'pending'
+                    : 'awaiting_payment',
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
                 'customer_email' => $validated['customer_email'],
@@ -168,18 +160,159 @@ class CheckoutController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            foreach ($snapshots as $snapshot) {
-                $order->items()->create($snapshot);
-            }
+            foreach ($cart->items as $cartItem) {
+                $purchasable = $cartItem->purchasable;
+                $price = (float) $purchasable->price;
+                $quantity = (int) $cartItem->quantity;
 
-            $cart->items()->delete();
+                $order->items()->create([
+                    'purchasable_type' => $cartItem->purchasable_type,
+                    'purchasable_id' => $cartItem->purchasable_id,
+                    'name' => $purchasable->name,
+                    'price' => $price,
+                    'quantity' => $quantity,
+                    'subtotal' => $price * $quantity,
+                ]);
+            }
 
             return $order;
         });
 
-        return redirect()->route('checkout')->with([
-            'orderNumber' => $order->order_number,
-            'paymentMethod' => $order->payment_method,
+        if ($validated['payment_method'] === 'cash') {
+            $cart->items()->delete();
+
+            return redirect()->route('checkout')->with([
+                'orderNumber' => $order->order_number,
+                'paymentMethod' => $order->payment_method,
+            ]);
+        }
+
+        try {
+            $order->load('items');
+
+            $paymentMethod = match ($validated['payment_method']) {
+                'gcash' => 'gcash',
+                'card' => 'card',
+                'maya' => 'paymaya',
+            };
+
+            $lineItems = $order->items->map(function ($item) {
+                return [
+                    'name' => $item->name,
+                    'amount' => (int) round($item->price * 100),
+                    'currency' => 'PHP',
+                    'quantity' => (int) $item->quantity,
+                ];
+            })->values()->all();
+
+            $response = Http::withBasicAuth(
+                config('services.paymongo.secret_key'),
+                ''
+            )
+                ->acceptJson()
+                ->asJson()
+                ->withHeaders([
+                    'Idempotency-Key' => 'secureview-' . $order->order_number,
+                ])
+                ->post(
+                    rtrim(config('services.paymongo.base_url'), '/') . '/v2/checkout_sessions',
+                    [
+                        'data' => [
+                            'attributes' => [
+                                'line_items' => $lineItems,
+                                'payment_method_types' => [$paymentMethod],
+                                'billing' => [
+                                    'name' => $order->customer_name,
+                                    'email' => $order->customer_email,
+                                    'phone' => $order->customer_phone,
+                                ],
+                                'description' => 'SecureView Order ' . $order->order_number,
+                                'reference_number' => $order->order_number,
+                                'metadata' => [
+                                    'order_id' => (string) $order->id,
+                                    'order_number' => $order->order_number,
+                                ],
+                                'send_email_receipt' => true,
+                                'show_description' => true,
+                                'show_line_items' => true,
+                                'success_url' => route(
+                                    'checkout.payment.success',
+                                    ['order' => $order->id],
+                                    true
+                                ),
+                                'cancel_url' => route(
+                                    'checkout.payment.cancel',
+                                    ['order' => $order->id],
+                                    true
+                                ),
+                            ],
+                        ],
+                    ]
+                );
+
+            if (!$response->successful()) {
+                $order->update([
+                    'payment_status' => 'failed',
+                    'order_status' => 'payment_failed',
+                ]);
+
+                return back()->withErrors([
+                    'payment' => 'Unable to start the online payment. Please try again.',
+                ])->withInput();
+            }
+
+            $session = $response->json('data');
+
+            $checkoutSessionId = $session['id'] ?? null;
+            $checkoutUrl = $session['attributes']['checkout_url'] ?? null;
+
+            if (!$checkoutSessionId || !$checkoutUrl) {
+                $order->update([
+                    'payment_status' => 'failed',
+                    'order_status' => 'payment_failed',
+                ]);
+
+                return back()->withErrors([
+                    'payment' => 'PayMongo returned an invalid checkout response. Please try again.',
+                ])->withInput();
+            }
+
+            $order->update([
+                'paymongo_checkout_session_id' => $checkoutSessionId,
+            ]);
+
+            return Inertia::location($checkoutUrl);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            $order->update([
+                'payment_status' => 'failed',
+                'order_status' => 'payment_failed',
+            ]);
+
+            return back()->withErrors([
+                'payment' => 'Unable to connect to the payment gateway. Please try again.',
+            ])->withInput();
+        }
+    }
+
+    public function paymentSuccess(Request $request, Order $order)
+    {
+        if ($order->user_id !== $request->user()->id) {
+            abort(404);
+        }
+
+        return redirect()->route('purchases.show', $order);
+    }
+
+    public function paymentCancel(Request $request, Order $order)
+    {
+        if ($order->user_id !== $request->user()->id) {
+            abort(404);
+        }
+
+        return redirect()->route('purchases.show', $order)->with([
+            'paymentCancelled' => true,
         ]);
     }
 }

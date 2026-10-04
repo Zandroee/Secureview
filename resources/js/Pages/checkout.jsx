@@ -229,6 +229,12 @@ export default function Checkout({
                                     </div>
                                 </div>
 
+                                {errors.payment && (
+                                    <div className="alert alert-danger mb-4">
+                                        {errors.payment}
+                                    </div>
+                                )}
+
                                 <form onSubmit={submit}>
                                     <div className="mb-4">
                                         <div style={sectionTitleStyle}>

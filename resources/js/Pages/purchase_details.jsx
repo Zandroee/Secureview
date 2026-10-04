@@ -11,7 +11,7 @@ function formatPaymentMethod(method) {
 
 function statusClass(status) {
     if (status === "paid" || status === "delivered") return "bg-success-subtle text-success";
-    if (status === "failed" || status === "cancelled") return "bg-danger-subtle text-danger";
+    if (status === "failed" || status === "cancelled" || status === "payment_failed") return "bg-danger-subtle text-danger";
     if (status === "awaiting_payment") return "bg-warning-subtle text-warning-emphasis";
     return "bg-primary-subtle text-primary";
 }
