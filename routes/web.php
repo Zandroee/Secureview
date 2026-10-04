@@ -7,9 +7,15 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\InquiryController;
+use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Str;
 use App\Models\User;
@@ -84,7 +90,6 @@ Route::get('/auth/google', [AuthController::class, 'redirectGoogle'])
 
 Route::get('/auth/google/callback', [AuthController::class, 'googleCallback'])
     ->name('auth.google.callback');
-
 
 Route::get('/auth/facebook', [AuthController::class, 'redirectFacebook'])
     ->name('auth.facebook');
@@ -164,8 +169,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/cart/items/{cartItem}', [CartController::class, 'destroy'])->name('cart.items.destroy');
     Route::delete('/cart', [CartController::class, 'clear'])->name('cart.clear');
 
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::get('/checkout/payment/{order}/success', [CheckoutController::class, 'paymentSuccess'])->name('checkout.payment.success');
+    Route::get('/checkout/payment/{order}/cancel', [CheckoutController::class, 'paymentCancel'])->name('checkout.payment.cancel');
+
+    Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+    Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
+    Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
+
+    Route::get('/inquiry', [InquiryController::class, 'create'])->name('inquiries.create');
+    Route::post('/inquiries', [InquiryController::class, 'store'])->name('inquiries.store');
+    Route::get('/inquiries', [InquiryController::class, 'index'])->name('inquiries.index');
+    Route::get('/inquiries/{inquiry}', [InquiryController::class, 'show'])->name('inquiries.show');
+    Route::get('/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 });
-
