@@ -14,6 +14,12 @@ const items = [
         icon: "bi bi-calendar3",
     },
     {
+        key: "inquiries",
+        label: "INQUIRY HISTORY",
+        href: "/inquiries",
+        icon: "bi bi-chat-left-text",
+    },
+    {
         key: "purchases",
         label: "PURCHASE HISTORY",
         href: "/purchases",
