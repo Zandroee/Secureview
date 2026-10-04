@@ -11,6 +11,7 @@ class ScheduleController extends Controller
     {
         $schedules = $request->user()
             ->inquiries()
+            ->with('inquirable')
             ->whereIn('status', ['confirmed', 'ongoing'])
             ->latest('preferred_date')
             ->get()
