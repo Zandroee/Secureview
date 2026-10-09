@@ -349,7 +349,7 @@ class CheckoutController extends Controller
         }
     }
 
-    public function paymentSuccess(Request $request, Order $order)
+    public function paymentSuccess(Request $request, Order $order, InventoryService $inventory)
     {
         if ($order->user_id !== $request->user()->id) {
             abort(404);
@@ -387,6 +387,12 @@ class CheckoutController extends Controller
                                 'paymongo_payment_id' => $payment['id'] ?? null,
                                 'paid_at' => now(),
                             ]);
+
+                            try {
+                                $inventory->deductForOrder($order);
+                            } catch (\Throwable $exception) {
+                                report($exception);
+                            }
 
                             CustomerNotification::create([
                                 'user_id' => $request->user()->id,
