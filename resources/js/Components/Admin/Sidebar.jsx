@@ -18,6 +18,12 @@ export default function Sidebar({ active = "dashboard" }) {
             icon: "bi-chat-left-text",
         },
         {
+            label: "Users",
+            href: "/admin/users",
+            key: "users",
+            icon: "bi-people",
+        },
+        {
             label: "Products",
             href: "/admin/products",
             key: "products",
@@ -41,10 +47,6 @@ export default function Sidebar({ active = "dashboard" }) {
         {
             label: "Purchase History",
             icon: "bi-bag-check",
-        },
-        {
-            label: "Users",
-            icon: "bi-people",
         },
     ];
 
