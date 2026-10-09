@@ -7,11 +7,27 @@ function statusClass(status) {
         return "bg-success-subtle text-success";
     }
 
+    if (status === "in_progress") {
+        return "bg-primary-subtle text-primary";
+    }
+
     if (status === "cancelled") {
         return "bg-danger-subtle text-danger";
     }
 
     return "bg-warning-subtle text-warning-emphasis";
+}
+
+function urgencyClass(urgency) {
+    if (urgency === "emergency") {
+        return "bg-danger-subtle text-danger";
+    }
+
+    if (urgency === "urgent") {
+        return "bg-warning-subtle text-warning-emphasis";
+    }
+
+    return "bg-success-subtle text-success";
 }
 
 export default function InquiryDetails({ inquiry, success }) {
@@ -103,6 +119,19 @@ export default function InquiryDetails({ inquiry, success }) {
                                         {inquiry.item_name ||
                                             "General Service Inquiry"}
                                     </div>
+
+                                    <div className="small text-muted mt-3">
+                                        Urgency
+                                    </div>
+
+                                    <span
+                                        className={
+                                            "badge rounded-pill text-capitalize " +
+                                            urgencyClass(inquiry.urgency)
+                                        }
+                                    >
+                                        {inquiry.urgency}
+                                    </span>
 
                                     <div className="small text-muted mt-2">
                                         Preferred Date
