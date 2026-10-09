@@ -29,16 +29,18 @@ export default function Sidebar({ active = "dashboard" }) {
             key: "products",
             icon: "bi-camera-video",
         },
+        {
+            label: "Schedules",
+            href: "/admin/schedules",
+            key: "schedules",
+            icon: "bi-calendar3",
+        },
     ];
 
     const comingSoonItems = [
         {
             label: "Packages",
             icon: "bi-box-seam",
-        },
-        {
-            label: "Schedules",
-            icon: "bi-calendar3",
         },
         {
             label: "Transaction Logs",

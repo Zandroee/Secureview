@@ -12,7 +12,7 @@ class ScheduleController extends Controller
         $schedules = $request->user()
             ->inquiries()
             ->with('inquirable')
-            ->whereIn('status', ['confirmed', 'ongoing'])
+            ->whereIn('status', ['confirmed', 'in_progress'])
             ->latest('preferred_date')
             ->get()
             ->map(function ($inquiry) {
@@ -22,7 +22,7 @@ class ScheduleController extends Controller
                     'service_type' => $inquiry->service_type,
                     'date' => $inquiry->preferred_date?->format('M d, Y'),
                     'time' => $inquiry->preferred_time,
-                    'status' => $inquiry->status === 'ongoing' ? 'On Going' : 'Confirmed',
+                    'status' => $inquiry->status === 'in_progress' ? 'In Progress' : 'Confirmed',
                     'item_name' => $inquiry->item_name,
                     'item_type' => $inquiry->inquirable_type === \App\Models\Package::class
                         ? 'package'
