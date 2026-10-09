@@ -205,6 +205,8 @@ class ProductSeeder extends Seeder
         ];
 
         foreach ($products as $product) {
+            $product['stock_quantity'] = $product['stock_quantity'] ?? 20;
+
             Product::updateOrCreate(
                 ['name' => $product['name']],
                 $product

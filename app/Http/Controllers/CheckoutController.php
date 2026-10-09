@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomerNotification;
 use App\Models\Order;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -12,7 +13,7 @@ use Inertia\Inertia;
 
 class CheckoutController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, InventoryService $inventory)
     {
         $orderNumber = $request->session()->get('orderNumber');
 
@@ -51,7 +52,7 @@ class CheckoutController extends Controller
             ]);
         }
 
-        $items = $cart->items->map(function ($item) {
+        $items = $cart->items->map(function ($item) use ($inventory) {
             $purchasable = $item->purchasable;
 
             return [
@@ -62,6 +63,9 @@ class CheckoutController extends Controller
                 'price' => (float) $item->price,
                 'quantity' => (int) $item->quantity,
                 'subtotal' => (float) $item->price * (int) $item->quantity,
+                'available_stock' => $purchasable
+                    ? $inventory->getAvailableStock($purchasable)
+                    : 0,
             ];
         })->values();
 
@@ -86,7 +90,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, InventoryService $inventory)
     {
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
@@ -121,6 +125,27 @@ class CheckoutController extends Controller
             return back()->withErrors([
                 'cart' => 'Your cart is empty.',
             ]);
+        }
+
+        foreach ($cart->items as $cartItem) {
+            $purchasable = $cartItem->purchasable;
+
+            if (!$purchasable) {
+                return back()->withErrors([
+                    'stock' => 'An item in your cart is no longer available.',
+                ]);
+            }
+
+            $stockError = $inventory->getAvailabilityError(
+                $purchasable,
+                (int) $cartItem->quantity
+            );
+
+            if ($stockError) {
+                return back()->withErrors([
+                    'stock' => $stockError,
+                ]);
+            }
         }
 
         $order = DB::transaction(function () use ($request, $validated, $cart) {
@@ -180,6 +205,16 @@ class CheckoutController extends Controller
         });
 
         if ($validated['payment_method'] === 'cash') {
+            try {
+                $inventory->deductForOrder($order);
+            } catch (\Throwable $exception) {
+                report($exception);
+
+                return back()->withErrors([
+                    'stock' => 'We could not confirm the stock for this order. Please try again.',
+                ]);
+            }
+
             CustomerNotification::create([
                 'user_id' => $request->user()->id,
                 'type' => 'order',
@@ -317,7 +352,7 @@ class CheckoutController extends Controller
         }
     }
 
-    public function paymentSuccess(Request $request, Order $order)
+    public function paymentSuccess(Request $request, Order $order, InventoryService $inventory)
     {
         if ($order->user_id !== $request->user()->id) {
             abort(404);
@@ -355,6 +390,12 @@ class CheckoutController extends Controller
                                 'paymongo_payment_id' => $payment['id'] ?? null,
                                 'paid_at' => now(),
                             ]);
+
+                            try {
+                                $inventory->deductForOrder($order);
+                            } catch (\Throwable $exception) {
+                                report($exception);
+                            }
 
                             CustomerNotification::create([
                                 'user_id' => $request->user()->id,

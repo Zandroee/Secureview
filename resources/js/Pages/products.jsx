@@ -221,7 +221,7 @@ export default function Products({ products }) {
 
                                 {currentProducts.map((product) => (
                                     <div className="col-sm-6 col-xl-3" key={product.id}>
-                                        <ProductCard name={product.name} image={product.image} price={product.price} badge={product.badge} specifications={product.specifications} rating={product.rating} onDetails={() => router.visit(`/products/${product.id}`)} />
+                                        <ProductCard name={product.name} image={product.image} price={product.price} badge={product.badge} specifications={product.specifications} rating={product.rating} available={Number(product.stock_quantity) > 0} onDetails={() => router.visit(`/products/${product.id}`)} />
                                     </div>
                                 ))}
 

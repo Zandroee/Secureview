@@ -1,9 +1,14 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
-import { Link, router } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
 
 export default function Cart({ cart }) {
+    const { props } = usePage();
+    const stockError = props.errors?.stock ?? "";
     const items = cart?.items ?? [];
+    const hasStockIssue = items.some(
+        (item) => Number(item.available_stock) < Number(item.quantity)
+    );
 
     const subtotal = items.reduce(
         (total, item) => total + Number(item.price) * Number(item.quantity),
@@ -39,6 +44,13 @@ export default function Cart({ cart }) {
             <Navbar />
 
             <main className="container py-5">
+                {(stockError || hasStockIssue) && (
+                    <div className="alert alert-danger border-0 mb-4">
+                        <i className="bi bi-exclamation-circle me-2"></i>
+                        {stockError || "One or more cart items no longer have enough stock."}
+                    </div>
+                )}
+
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                     <div>
                         <h1
@@ -165,6 +177,19 @@ export default function Cart({ cart }) {
                                                     {item.name}
                                                 </h5>
 
+                                                <div
+                                                    className={
+                                                        "small fw-semibold mt-1 " +
+                                                        (Number(item.available_stock) >= Number(item.quantity)
+                                                            ? "text-success"
+                                                            : "text-danger")
+                                                    }
+                                                >
+                                                    {Number(item.available_stock) > 0
+                                                        ? `${Number(item.available_stock).toLocaleString()} available`
+                                                        : "Out of stock"}
+                                                </div>
+
                                                 <div className="text-muted">
                                                     ₱
                                                     {Number(
@@ -236,7 +261,7 @@ export default function Cart({ cart }) {
                                                         }
                                                         disabled={
                                                             item.quantity >=
-                                                            99
+                                                            Math.min(99, Number(item.available_stock))
                                                         }
                                                     >
                                                         +
@@ -319,7 +344,16 @@ export default function Cart({ cart }) {
 
                                 <Link
                                     href="/checkout"
-                                    className="btn btn-primary fw-bold w-100 mb-2"
+                                    className={
+                                        "btn btn-primary fw-bold w-100 mb-2 " +
+                                        (hasStockIssue ? "disabled" : "")
+                                    }
+                                    aria-disabled={hasStockIssue}
+                                    onClick={(event) => {
+                                        if (hasStockIssue) {
+                                            event.preventDefault();
+                                        }
+                                    }}
                                 >
                                     PROCEED TO CHECKOUT
                                 </Link>

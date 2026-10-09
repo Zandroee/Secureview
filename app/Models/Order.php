@@ -18,6 +18,7 @@ class Order extends Model
         'paymongo_checkout_session_id',
         'paymongo_payment_id',
         'paid_at',
+        'stock_deducted_at',
         'payment_status',
         'order_status',
         'customer_name',
@@ -32,6 +33,7 @@ class Order extends Model
         'shipping_fee' => 'float',
         'total' => 'float',
         'paid_at' => 'datetime',
+        'stock_deducted_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

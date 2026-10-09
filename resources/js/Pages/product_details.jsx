@@ -70,6 +70,9 @@ export default function ProductDetails({ product, reviews = [] }) {
 
     const [amount, setAmount] = useState(1);
     const [cartMessage, setCartMessage] = useState("");
+    const [cartError, setCartError] = useState("");
+
+    const availableStock = Math.max(0, Number(product.stock_quantity ?? 0));
     const [reviewPage, setReviewPage] = useState(1);
     const [reviewFilter, setReviewFilter] = useState("all");
 
@@ -98,6 +101,7 @@ export default function ProductDetails({ product, reviews = [] }) {
         }
 
         setCartMessage("");
+        setCartError("");
 
         router.post(
             "/cart/items",
@@ -110,6 +114,9 @@ export default function ProductDetails({ product, reviews = [] }) {
                 preserveScroll: true,
                 onSuccess: () => {
                     setCartMessage("Product added to your cart.");
+                },
+                onError: (serverErrors) => {
+                    setCartError(serverErrors.stock || "Unable to add this product to your cart.");
                 },
             }
         );
@@ -170,10 +177,21 @@ export default function ProductDetails({ product, reviews = [] }) {
                                 </span>
                             </div>
 
+                            <div
+                                className={
+                                    "small fw-semibold mb-2 " +
+                                    (availableStock > 0 ? "text-success" : "text-danger")
+                                }
+                            >
+                                {availableStock > 0
+                                    ? `${availableStock.toLocaleString()} IN STOCK`
+                                    : "OUT OF STOCK"}
+                            </div>
+
                             <div className="fw-bold mb-3">
                                 AMOUNT:
 
-                                <button type="button" className="btn btn-sm btn-light border ms-2" onClick={() => setAmount(Math.max(1, amount - 1))}>
+                                <button type="button" className="btn btn-sm btn-light border ms-2" onClick={() => setAmount(Math.max(1, amount - 1))} disabled={amount <= 1 || availableStock === 0}>
                                     −
                                 </button>
 
@@ -181,7 +199,7 @@ export default function ProductDetails({ product, reviews = [] }) {
                                     {amount}
                                 </span>
 
-                                <button type="button" className="btn btn-sm btn-light border" onClick={() => setAmount(amount + 1)}>
+                                <button type="button" className="btn btn-sm btn-light border" onClick={() => setAmount(Math.min(availableStock, amount + 1))} disabled={amount >= availableStock || availableStock === 0}>
                                     +
                                 </button>
                             </div>
@@ -199,6 +217,7 @@ export default function ProductDetails({ product, reviews = [] }) {
                                     type="button"
                                     className="btn btn-primary fw-bold"
                                     onClick={handleAddToCart}
+                                    disabled={availableStock === 0}
                                 >
                                     <i className="bi bi-cart3 me-2"></i>
                                     Add To Cart
@@ -209,6 +228,13 @@ export default function ProductDetails({ product, reviews = [] }) {
                                 <div className="text-success small mt-2">
                                     <i className="bi bi-check-circle me-1"></i>
                                     {cartMessage}
+                                </div>
+                            )}
+
+                            {cartError && (
+                                <div className="text-danger small mt-2">
+                                    <i className="bi bi-exclamation-circle me-1"></i>
+                                    {cartError}
                                 </div>
                             )}
 
