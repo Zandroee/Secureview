@@ -13,7 +13,7 @@ use Inertia\Inertia;
 
 class CheckoutController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, InventoryService $inventory)
     {
         $orderNumber = $request->session()->get('orderNumber');
 
@@ -52,7 +52,7 @@ class CheckoutController extends Controller
             ]);
         }
 
-        $items = $cart->items->map(function ($item) {
+        $items = $cart->items->map(function ($item) use ($inventory) {
             $purchasable = $item->purchasable;
 
             return [
@@ -63,6 +63,9 @@ class CheckoutController extends Controller
                 'price' => (float) $item->price,
                 'quantity' => (int) $item->quantity,
                 'subtotal' => (float) $item->price * (int) $item->quantity,
+                'available_stock' => $purchasable
+                    ? $inventory->getAvailableStock($purchasable)
+                    : 0,
             ];
         })->values();
 
