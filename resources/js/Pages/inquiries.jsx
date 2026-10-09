@@ -187,6 +187,15 @@ export default function Inquiries({ inquiries = [] }) {
                                                         </span>
 
                                                         <div className="small text-muted mt-1">
+                                                            TECHNICIAN
+                                                        </div>
+
+                                                        <div className="fw-semibold small">
+                                                            {inquiry.technician?.name ||
+                                                                "Not assigned yet"}
+                                                        </div>
+
+                                                        <div className="small text-muted mt-1">
                                                             ITEM
                                                         </div>
 
