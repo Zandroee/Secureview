@@ -28,6 +28,10 @@ Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/packages', [PackageController::class, 'index']);
 Route::get('/packages/{id}', [PackageController::class, 'show']);
 
+Route::get('/services', function () {
+    return Inertia::render('services');
+})->name('services');
+
 Route::get('/about', function () {
     return Inertia::render('about');
 })->name('about');
