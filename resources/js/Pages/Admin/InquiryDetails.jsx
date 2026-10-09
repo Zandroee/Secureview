@@ -35,12 +35,24 @@ function statusClass(status) {
     return "bg-warning-subtle text-warning-emphasis";
 }
 
-export default function AdminInquiryDetails({ inquiry }) {
+export default function AdminInquiryDetails({ inquiry, technicians = [] }) {
     const updateStatus = (event) => {
         router.patch(
             "/admin/inquiries/" + inquiry.id + "/status",
             {
                 status: event.target.value,
+            },
+            {
+                preserveScroll: true,
+            }
+        );
+    };
+
+    const assignTechnician = (event) => {
+        router.patch(
+            "/admin/inquiries/" + inquiry.id + "/technician",
+            {
+                technician_id: event.target.value || null,
             },
             {
                 preserveScroll: true,
@@ -241,6 +253,39 @@ export default function AdminInquiryDetails({ inquiry }) {
                                     </div>
 
                                     <h2 className="h5 fw-bold mb-3">
+                                        Technician Assignment
+                                    </h2>
+
+                                    <select
+                                        className="form-select mb-3"
+                                        value={inquiry.technician?.id ?? ""}
+                                        onChange={assignTechnician}
+                                    >
+                                        <option value="">
+                                            Unassigned
+                                        </option>
+
+                                        {technicians.map((technician) => (
+                                            <option
+                                                key={technician.id}
+                                                value={technician.id}
+                                            >
+                                                {technician.name}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    {inquiry.technician && (
+                                        <div className="small text-muted mb-4">
+                                            {inquiry.technician.email}
+                                        </div>
+                                    )}
+
+                                    <div className="small text-primary fw-bold mb-1">
+                                        JOB STATUS
+                                    </div>
+
+                                    <h2 className="h5 fw-bold mb-3">
                                         Update inquiry status
                                     </h2>
 
@@ -293,8 +338,8 @@ export default function AdminInquiryDetails({ inquiry }) {
                                     )}
 
                                     <div className="small text-muted mt-4">
-                                        When the status changes, the customer
-                                        receives a notification in SecureView.
+                                        Status and technician assignment changes
+                                        notify the customer in SecureView.
                                     </div>
                                 </div>
                             </div>
