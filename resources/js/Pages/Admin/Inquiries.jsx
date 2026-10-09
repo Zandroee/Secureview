@@ -284,7 +284,7 @@ export default function AdminInquiries({
                                         {inquiries.length === 0 ? (
                                             <tr>
                                                 <td
-                                                    colSpan="7"
+                                                    colSpan="8"
                                                     className="text-center text-muted py-5"
                                                 >
                                                     No inquiries found.
