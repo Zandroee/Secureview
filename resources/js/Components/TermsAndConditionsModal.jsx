@@ -84,11 +84,15 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
 
                     <button
                         type="button"
-                        className="btn btn-light border"
+                        className="btn btn-link p-0 text-primary text-decoration-none fw-semibold"
                         onClick={onClose}
-                        aria-label="Close Terms and Conditions"
+                        aria-label="Back from Terms and Conditions"
+                        style={{
+                            fontFamily: "Outfit, sans-serif",
+                            fontSize: "0.9rem",
+                        }}
                     >
-                        <i className="bi bi-x-lg"></i>
+                        Back
                     </button>
                 </div>
 
@@ -245,8 +249,11 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                     <div className="d-flex justify-content-end gap-2">
                         <button
                             type="button"
-                            className="btn btn-outline-secondary"
+                            className="btn btn-outline-primary fw-bold"
                             onClick={onClose}
+                            style={{
+                                fontFamily: "Outfit, sans-serif",
+                            }}
                         >
                             CLOSE
                         </button>
