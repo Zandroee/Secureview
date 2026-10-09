@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function ProductCard({ name, image, price, badge, specifications = [], rating = 0, stock = null, onDetails, variant = "product" }) {
+export default function ProductCard({ name, image, price, badge, specifications = [], rating = 0, available = true, onDetails, variant = "product" }) {
     const [isHovered, setIsHovered] = useState(false);
 
     const safeSpecifications = Array.isArray(specifications) ? specifications : [];
@@ -13,8 +13,9 @@ export default function ProductCard({ name, image, price, badge, specifications 
         border: "1px solid #dee2e6",
         borderRadius: "0.375rem",
         overflow: "hidden",
-        transform: isHovered ? "translateY(-4px)" : "translateY(0)",
-        boxShadow: isHovered ? "0 8px 20px rgba(0, 0, 0, 0.10)" : "none",
+        transform: isHovered && available ? "translateY(-4px)" : "translateY(0)",
+        boxShadow: isHovered && available ? "0 8px 20px rgba(0, 0, 0, 0.10)" : "none",
+        opacity: available ? 1 : 0.62,
         transition: "transform 0.2s ease, box-shadow 0.2s ease",
     };
 
@@ -31,10 +32,23 @@ export default function ProductCard({ name, image, price, badge, specifications 
                     </div>
                 )}
 
-                {badge && (
+                {badge && available && (
                     <span className="position-absolute top-0 end-0 badge bg-primary m-3">
                         {badge}
                     </span>
+                )}
+
+                {!available && (
+                    <div
+                        className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                        style={{
+                            backgroundColor: "rgba(255,255,255,0.35)",
+                        }}
+                    >
+                        <span className="badge bg-secondary px-3 py-2">
+                            OUT OF STOCK
+                        </span>
+                    </div>
                 )}
 
             </div>
@@ -55,19 +69,6 @@ export default function ProductCard({ name, image, price, badge, specifications 
 
                 <div className="mt-auto">
 
-                    {stock !== null && (
-                        <div
-                            className={
-                                "small fw-semibold mb-2 " +
-                                (Number(stock) > 0 ? "text-success" : "text-danger")
-                            }
-                        >
-                            {Number(stock) > 0
-                                ? `${Number(stock).toLocaleString()} IN STOCK`
-                                : "OUT OF STOCK"}
-                        </div>
-                    )}
-
                     <div className="d-flex justify-content-between align-items-center mb-2">
 
                         <h4 className="fw-bold text-primary mb-0" style={{ fontSize: isPackage ? "1.5rem" : "1.35rem" }}>
@@ -86,8 +87,13 @@ export default function ProductCard({ name, image, price, badge, specifications 
 
                     </div>
 
-                    <button type="button" className="btn btn-primary fw-bold w-100" onClick={onDetails}>
-                        DETAILS
+                    <button
+                        type="button"
+                        className="btn btn-primary fw-bold w-100"
+                        onClick={onDetails}
+                        disabled={!available}
+                    >
+                        {available ? "DETAILS" : "UNAVAILABLE"}
                     </button>
 
                 </div>
