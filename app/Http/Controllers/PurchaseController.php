@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -90,7 +91,7 @@ class PurchaseController extends Controller
         ]);
     }
 
-    public function pay(Request $request, Order $order)
+    public function pay(Request $request, Order $order, InventoryService $inventory)
     {
         if ($order->user_id !== $request->user()->id) {
             abort(404);
@@ -111,6 +112,32 @@ class PurchaseController extends Controller
         if (!in_array($order->order_status, ['awaiting_payment', 'payment_failed'], true)) {
             return back()->withErrors([
                 'payment' => 'This order is no longer available for payment.',
+            ]);
+        }
+
+        $stockError = null;
+
+        foreach ($order->items()->get() as $orderItem) {
+            $purchasable = $orderItem->purchasable;
+
+            if (!$purchasable) {
+                $stockError = 'An item in this order is no longer available.';
+                break;
+            }
+
+            $stockError = $inventory->getAvailabilityError(
+                $purchasable,
+                (int) $orderItem->quantity
+            );
+
+            if ($stockError) {
+                break;
+            }
+        }
+
+        if ($stockError) {
+            return back()->withErrors([
+                'stock' => $stockError,
             ]);
         }
 
