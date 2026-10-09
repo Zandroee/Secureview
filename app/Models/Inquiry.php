@@ -10,6 +10,7 @@ class Inquiry extends Model
 {
     protected $fillable = [
         'user_id',
+        'technician_id',
         'inquiry_number',
         'inquirable_type',
         'inquirable_id',
@@ -34,6 +35,11 @@ class Inquiry extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function technician(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'technician_id');
     }
 
     public function inquirable(): MorphTo
