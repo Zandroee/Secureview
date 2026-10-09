@@ -13,6 +13,7 @@ use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Admin\InquiryController as AdminInquiryController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -201,6 +202,12 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/inquiries', [AdminInquiryController::class, 'index'])
         ->name('admin.inquiries.index');
+
+    Route::get('/admin/products', [AdminProductController::class, 'index'])
+        ->name('admin.products.index');
+
+    Route::patch('/admin/products/{product}/stock', [AdminProductController::class, 'updateStock'])
+        ->name('admin.products.stock');
 
     Route::get('/admin/inquiries/{inquiry}', [AdminInquiryController::class, 'show'])
         ->name('admin.inquiries.show');

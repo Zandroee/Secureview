@@ -17,13 +17,15 @@ export default function Sidebar({ active = "dashboard" }) {
             key: "inquiries",
             icon: "bi-chat-left-text",
         },
+        {
+            label: "Products",
+            href: "/admin/products",
+            key: "products",
+            icon: "bi-camera-video",
+        },
     ];
 
     const comingSoonItems = [
-        {
-            label: "Products",
-            icon: "bi-camera-video",
-        },
         {
             label: "Packages",
             icon: "bi-box-seam",
