@@ -70,6 +70,7 @@ export default function Inquiry({ customer, item }) {
         street_address: "",
         city: "",
         service_type: "Installation",
+        urgency: "normal",
         preferred_date: "",
         preferred_time: "",
         notes: "",
@@ -408,7 +409,7 @@ export default function Inquiry({ customer, item }) {
                                         </div>
 
                                         <div className="row g-2">
-                                            <div className="col-md-6">
+                                            <div className="col-md-4">
                                                 <label className="form-label small fw-semibold mb-1">
                                                     Service Type *
                                                 </label>
@@ -448,7 +449,48 @@ export default function Inquiry({ customer, item }) {
                                                 )}
                                             </div>
 
-                                            <div className="col-md-6">
+                                            <div className="col-md-4">
+                                                <label className="form-label small fw-semibold mb-1">
+                                                    Urgency *
+                                                </label>
+
+                                                <select
+                                                    className={
+                                                        "form-select " +
+                                                        (errors.urgency
+                                                            ? "is-invalid"
+                                                            : "")
+                                                    }
+                                                    style={fieldStyle}
+                                                    value={data.urgency}
+                                                    onChange={(event) =>
+                                                        setData(
+                                                            "urgency",
+                                                            event.target.value
+                                                        )
+                                                    }
+                                                >
+                                                    <option value="normal">
+                                                        Normal
+                                                    </option>
+
+                                                    <option value="urgent">
+                                                        Urgent
+                                                    </option>
+
+                                                    <option value="emergency">
+                                                        Emergency
+                                                    </option>
+                                                </select>
+
+                                                {errors.urgency && (
+                                                    <div className="invalid-feedback">
+                                                        {errors.urgency}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="col-md-4">
                                                 <label className="form-label small fw-semibold mb-1">
                                                     Preferred Date &amp; Time *
                                                 </label>

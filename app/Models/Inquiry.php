@@ -20,6 +20,7 @@ class Inquiry extends Model
         'street_address',
         'city',
         'service_type',
+        'urgency',
         'preferred_date',
         'preferred_time',
         'notes',

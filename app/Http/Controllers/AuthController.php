@@ -105,7 +105,9 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended('/');
+        return $user->isAdmin()
+            ? redirect()->route('dashboard')
+            : redirect()->intended('/');
     }
 
     public function logout(Request $request)
@@ -156,7 +158,9 @@ class AuthController extends Controller
 
         request()->session()->regenerate();
 
-        return redirect('/');
+        return $user->isAdmin()
+            ? redirect()->route('dashboard')
+            : redirect('/');
     }
 
     public function redirectFacebook()
@@ -199,6 +203,8 @@ class AuthController extends Controller
 
         request()->session()->regenerate();
 
-        return redirect('/');
+        return $user->isAdmin()
+            ? redirect()->route('dashboard')
+            : redirect('/');
     }
 }

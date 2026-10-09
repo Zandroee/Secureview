@@ -12,6 +12,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Admin\InquiryController as AdminInquiryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -191,7 +192,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
+});
+
+Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
+
+    Route::get('/admin/inquiries', [AdminInquiryController::class, 'index'])
+        ->name('admin.inquiries.index');
+
+    Route::get('/admin/inquiries/{inquiry}', [AdminInquiryController::class, 'show'])
+        ->name('admin.inquiries.show');
+
+    Route::patch('/admin/inquiries/{inquiry}/status', [AdminInquiryController::class, 'updateStatus'])
+        ->name('admin.inquiries.status');
 });

@@ -354,6 +354,18 @@ export default function Navbar() {
 
                                     {/* USER OPTIONS */}
 
+                                    {isAdmin && (
+                                        <Link
+                                            href="/dashboard"
+                                            className="btn btn-primary fw-bold w-100"
+                                            style={{
+                                                fontFamily: "Outfit, sans-serif",
+                                            }}
+                                        >
+                                            ADMIN DASHBOARD
+                                        </Link>
+                                    )}
+
                                     <Link
                                         href="/settings"
                                         className="btn btn-outline-primary fw-bold w-100"
@@ -635,6 +647,27 @@ export default function Navbar() {
                                             overflow: "hidden",
                                         }}
                                     >
+                                        {isAdmin && (
+                                            <Link
+                                                href="/dashboard"
+                                                className="d-block text-dark text-decoration-none fw-semibold text-center"
+                                                style={{
+                                                    padding: "9px 12px",
+                                                    fontFamily: "Outfit, sans-serif",
+                                                    fontSize: "0.88rem",
+                                                    transition: "background-color 0.15s ease",
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "#f8f9fa";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "transparent";
+                                                }}
+                                            >
+                                                ADMIN DASHBOARD
+                                            </Link>
+                                        )}
+
                                         <Link
                                             href="/settings"
                                             className="d-block text-dark text-decoration-none fw-semibold text-center"

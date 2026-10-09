@@ -8,11 +8,27 @@ function statusClass(status) {
         return "bg-success-subtle text-success";
     }
 
+    if (status === "in_progress") {
+        return "bg-primary-subtle text-primary";
+    }
+
     if (status === "cancelled") {
         return "bg-danger-subtle text-danger";
     }
 
     return "bg-warning-subtle text-warning-emphasis";
+}
+
+function urgencyClass(urgency) {
+    if (urgency === "emergency") {
+        return "bg-danger-subtle text-danger";
+    }
+
+    if (urgency === "urgent") {
+        return "bg-warning-subtle text-warning-emphasis";
+    }
+
+    return "bg-success-subtle text-success";
 }
 
 export default function Inquiries({ inquiries = [] }) {
@@ -154,6 +170,21 @@ export default function Inquiries({ inquiries = [] }) {
                                                                 inquiry.service_type
                                                             }
                                                         </div>
+
+                                                        <div className="small text-muted mt-1">
+                                                            URGENCY
+                                                        </div>
+
+                                                        <span
+                                                            className={
+                                                                "badge rounded-pill text-capitalize " +
+                                                                urgencyClass(
+                                                                    inquiry.urgency
+                                                                )
+                                                            }
+                                                        >
+                                                            {inquiry.urgency}
+                                                        </span>
 
                                                         <div className="small text-muted mt-1">
                                                             ITEM
