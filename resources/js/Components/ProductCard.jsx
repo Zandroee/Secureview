@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function ProductCard({ name, image, price, badge, specifications = [], rating = 0, onDetails, variant = "product" }) {
+export default function ProductCard({ name, image, price, badge, specifications = [], rating = 0, stock = null, onDetails, variant = "product" }) {
     const [isHovered, setIsHovered] = useState(false);
 
     const safeSpecifications = Array.isArray(specifications) ? specifications : [];
@@ -54,6 +54,19 @@ export default function ProductCard({ name, image, price, badge, specifications 
                 </ul>
 
                 <div className="mt-auto">
+
+                    {stock !== null && (
+                        <div
+                            className={
+                                "small fw-semibold mb-2 " +
+                                (Number(stock) > 0 ? "text-success" : "text-danger")
+                            }
+                        >
+                            {Number(stock) > 0
+                                ? `${Number(stock).toLocaleString()} IN STOCK`
+                                : "OUT OF STOCK"}
+                        </div>
+                    )}
 
                     <div className="d-flex justify-content-between align-items-center mb-2">
 
