@@ -52,6 +52,8 @@ class AuthController extends Controller
             'phone' => $validated['phone'],
             'password' => $validated['password'],
             'role' => 'user',
+            'terms_accepted_at' => now(),
+            'terms_version' => '1.0',
         ]);
 
         event(new Registered($user));

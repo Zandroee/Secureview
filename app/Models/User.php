@@ -23,6 +23,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'google_id',
         'facebook_id',
         'role',
+        'terms_accepted_at',
+        'terms_version',
     ];
 
     protected $hidden = [
@@ -34,6 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
