@@ -13,6 +13,7 @@ class Product extends Model
         'category',
         'warranty',
         'price',
+        'stock_quantity',
         'badge',
         'image',
         'specifications',
@@ -23,6 +24,7 @@ class Product extends Model
     protected $casts = [
         'specifications' => 'array',
         'rating' => 'float',
+        'stock_quantity' => 'integer',
         'is_featured' => 'boolean',
     ];
 
