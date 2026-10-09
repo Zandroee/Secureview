@@ -5,11 +5,14 @@ import Navbar from "../Components/navbar";
 import PasswordInput from "../Components/PasswordInput";
 import PasswordStrength from "../Components/PasswordStrength";
 import EmailVerificationModal from "../Components/EmailVerificationModal";
+import TermsAndConditionsModal from "../Components/TermsAndConditionsModal";
 
 import "../../css/signup.css";
 
 export default function Signup({ verificationSent = false, verificationEmail = "" }) {
     const [showVerification, setShowVerification] = useState(verificationSent);
+    const [showTerms, setShowTerms] = useState(false);
+    const [termsRead, setTermsRead] = useState(false);
 
     useEffect(() => {
         if (verificationSent) {
@@ -115,7 +118,9 @@ export default function Signup({ verificationSent = false, verificationEmail = "
         }
 
         if (field === "terms" && !data.terms) {
-            return "You must accept the Terms and Conditions.";
+            return termsRead
+                ? "You must accept the Terms and Conditions."
+                : "Please read and accept the Terms and Conditions.";
         }
 
         return "";
@@ -144,6 +149,11 @@ export default function Signup({ verificationSent = false, verificationEmail = "
             password_confirmation: true,
             terms: true,
         });
+
+        if (!data.terms) {
+            setShowTerms(true);
+            return;
+        }
 
         post("/register", {
             preserveState: true,
@@ -178,15 +188,6 @@ export default function Signup({ verificationSent = false, verificationEmail = "
             },
         });
     };
-
-    const isDuplicateError = (field) => {
-    const error = errors[field];
-
-    return (
-        error &&
-        error.toLowerCase().includes("already")
-    );
-};
 
     return (
         <>
@@ -303,11 +304,6 @@ export default function Signup({ verificationSent = false, verificationEmail = "
                                 </div>
                             )}
 
-                            className={`form-control ${
-                                isInvalid("phone") && !isDuplicateError("phone")
-                                    ? "is-invalid"
-                                    : ""
-                            }`}
                         </div>
 
                         {/* EMAIL */}
@@ -334,11 +330,6 @@ export default function Signup({ verificationSent = false, verificationEmail = "
                                 </div>
                             )}
 
-                            className={`form-control ${
-                                isInvalid("email") && !isDuplicateError("email")
-                                    ? "is-invalid"
-                                    : ""
-                            }`}
                         </div>
 
                         {/* PASSWORD */}
@@ -405,23 +396,44 @@ export default function Signup({ verificationSent = false, verificationEmail = "
                         </div>
 
                         {/* TERMS */}
-                        <div className="form-check mt-3 mb-3">
-                            <input
-                                id="terms"
-                                className={`form-check-input ${isInvalid("terms") ? "is-invalid" : ""}`}
-                                type="checkbox"
-                                checked={data.terms}
-                                onChange={(e) => setData("terms", e.target.checked)}
-                                onBlur={() => markTouched("terms")}
-                                aria-invalid={isInvalid("terms")}
-                            />
+                        <div className="border rounded-3 p-3 mt-3 mb-3 bg-light-subtle">
+                            <div className="d-flex align-items-start gap-2">
+                                <input
+                                    id="terms"
+                                    className={`form-check-input mt-1 ${isInvalid("terms") ? "is-invalid" : ""}`}
+                                    type="checkbox"
+                                    checked={data.terms}
+                                    disabled={!termsRead}
+                                    onChange={(e) => setData("terms", e.target.checked)}
+                                    onBlur={() => markTouched("terms")}
+                                    aria-invalid={isInvalid("terms")}
+                                />
 
-                            <label className="form-check-label" htmlFor="terms">
-                                I agree to the Terms and Conditions
-                            </label>
+                                <div>
+                                    <label className="form-check-label" htmlFor="terms">
+                                        I agree to the Terms and Conditions
+                                    </label>
+
+                                    <div className="small mt-1">
+                                        <button
+                                            type="button"
+                                            className="btn btn-link p-0 text-decoration-none"
+                                            onClick={() => setShowTerms(true)}
+                                        >
+                                            {termsRead ? "Review Terms and Conditions" : "Read Terms and Conditions first"}
+                                        </button>
+                                    </div>
+
+                                    {!termsRead && (
+                                        <div className="text-muted small mt-1">
+                                            You must read the terms before the acceptance checkbox can be selected.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
 
                             {getError("terms") && (
-                                <div className="text-danger small mt-1">
+                                <div className="text-danger small mt-2">
                                     {getError("terms")}
                                 </div>
                             )}
@@ -474,6 +486,17 @@ export default function Signup({ verificationSent = false, verificationEmail = "
                     </form>
                 </div>
             </section>
+
+            {showTerms && (
+                <TermsAndConditionsModal
+                    onClose={() => setShowTerms(false)}
+                    onAccept={() => {
+                        setTermsRead(true);
+                        setData("terms", true);
+                        setShowTerms(false);
+                    }}
+                />
+            )}
 
             {showVerification && (
                 <EmailVerificationModal
