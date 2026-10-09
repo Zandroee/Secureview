@@ -47,6 +47,7 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                 alignItems: "center",
                 justifyContent: "center",
                 padding: "20px",
+                fontFamily: "Outfit, sans-serif",
             }}
         >
             <div
@@ -59,6 +60,7 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
+                    border: "1px solid #dee2e6",
                 }}
             >
                 <div className="d-flex align-items-center justify-content-between border-bottom px-4 py-3">
@@ -69,6 +71,7 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                             style={{
                                 fontFamily: "Outfit, sans-serif",
                                 fontSize: "1.25rem",
+                                letterSpacing: "0.01em",
                             }}
                         >
                             TERMS AND CONDITIONS
@@ -97,7 +100,7 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                         overflowY: "auto",
                         minHeight: "260px",
                         lineHeight: 1.65,
-                        fontSize: "0.93rem",
+                        fontSize: "0.9rem",
                     }}
                 >
                     <p className="mb-3">
