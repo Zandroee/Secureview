@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomerNotification;
 use App\Models\Order;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 
 class PayMongoWebhookController extends Controller
 {
-    public function handle(Request $request)
+    public function handle(Request $request, InventoryService $inventory)
     {
         $rawBody = $request->getContent();
         $signatureHeader = $request->header('Paymongo-Signature');
@@ -114,6 +115,12 @@ class PayMongoWebhookController extends Controller
             'paymongo_payment_id' => $paymentId,
             'paid_at' => now(),
         ]);
+
+        try {
+            $inventory->deductForOrder($order);
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
 
         CustomerNotification::create([
             'user_id' => $order->user_id,
