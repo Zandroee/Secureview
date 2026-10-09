@@ -228,7 +228,7 @@ export default function Packages({ packages = [] }) {
 
                                 {currentPackages.map((pkg) => (
                                     <div className="col-sm-6 col-lg-4" key={pkg.id}>
-                                        <PackageCard name={pkg.name} image={pkg.image} price={pkg.price} badge={pkg.badge} specifications={pkg.specifications} rating={pkg.rating} onDetails={() => router.visit(`/packages/${pkg.id}`)} />
+                                        <PackageCard name={pkg.name} image={pkg.image} price={pkg.price} badge={pkg.badge} specifications={pkg.specifications} rating={pkg.rating} stock={pkg.available_stock} onDetails={() => router.visit(`/packages/${pkg.id}`)} />
                                     </div>
                                 ))}
 
