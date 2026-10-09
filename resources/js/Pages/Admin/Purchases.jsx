@@ -407,9 +407,10 @@ export default function AdminPurchases({
 
                                                     <td>
                                                         <div className="small">
-                                                            {order.created_at?.split(
-                                                                " "
-                                                            )[0]}
+                                                            {order.created_at
+                                                                ?.split(" ")
+                                                                .slice(0, 3)
+                                                                .join(" ")}
                                                         </div>
 
                                                         <div className="small text-muted">
