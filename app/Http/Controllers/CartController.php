@@ -5,12 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\CartItem;
 use App\Models\Package;
 use App\Models\Product;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class CartController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, InventoryService $inventory)
     {
         $cart = $request->user()->cart;
 
@@ -35,6 +36,9 @@ class CartController extends Controller
                 'type' => $purchasable instanceof Package ? 'package' : 'product',
                 'name' => $purchasable?->name,
                 'image' => $purchasable?->image,
+                'available_stock' => $purchasable
+                    ? $inventory->getAvailableStock($purchasable)
+                    : 0,
             ];
         })->values();
 
@@ -46,7 +50,7 @@ class CartController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, InventoryService $inventory)
     {
         $validated = $request->validate([
             'item_type' => ['required', 'in:product,package'],
@@ -67,9 +71,21 @@ class CartController extends Controller
             ->where('purchasable_id', $purchasable->id)
             ->first();
 
+        $newQuantity = $item
+            ? min(99, $item->quantity + $validated['quantity'])
+            : $validated['quantity'];
+
+        $stockError = $inventory->getAvailabilityError($purchasable, $newQuantity);
+
+        if ($stockError) {
+            return back()->withErrors([
+                'stock' => $stockError,
+            ]);
+        }
+
         if ($item) {
             $item->update([
-                'quantity' => min(99, $item->quantity + $validated['quantity']),
+                'quantity' => $newQuantity,
                 'price' => $purchasable->price,
             ]);
         } else {
@@ -84,7 +100,7 @@ class CartController extends Controller
         return back();
     }
 
-    public function update(Request $request, CartItem $cartItem)
+    public function update(Request $request, CartItem $cartItem, InventoryService $inventory)
     {
         $validated = $request->validate([
             'quantity' => ['required', 'integer', 'min:1', 'max:99'],
@@ -96,9 +112,28 @@ class CartController extends Controller
             abort(404);
         }
 
+        $purchasable = $cartItem->purchasable;
+
+        if (!$purchasable) {
+            return back()->withErrors([
+                'stock' => 'This cart item is no longer available.',
+            ]);
+        }
+
+        $stockError = $inventory->getAvailabilityError(
+            $purchasable,
+            $validated['quantity']
+        );
+
+        if ($stockError) {
+            return back()->withErrors([
+                'stock' => $stockError,
+            ]);
+        }
+
         $cartItem->update([
             'quantity' => $validated['quantity'],
-            'price' => $cartItem->purchasable?->price ?? $cartItem->price,
+            'price' => $purchasable->price,
         ]);
 
         return back();
