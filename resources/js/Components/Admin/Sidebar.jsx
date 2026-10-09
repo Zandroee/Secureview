@@ -29,6 +29,18 @@ export default function Sidebar({ active = "dashboard" }) {
             key: "products",
             icon: "bi-camera-video",
         },
+        {
+            label: "Schedules",
+            href: "/admin/schedules",
+            key: "schedules",
+            icon: "bi-calendar3",
+        },
+        {
+            label: "Purchase History",
+            href: "/admin/purchases",
+            key: "purchases",
+            icon: "bi-bag-check",
+        },
     ];
 
     const comingSoonItems = [
@@ -37,17 +49,10 @@ export default function Sidebar({ active = "dashboard" }) {
             icon: "bi-box-seam",
         },
         {
-            label: "Schedules",
-            icon: "bi-calendar3",
-        },
-        {
             label: "Transaction Logs",
             icon: "bi-receipt",
         },
-        {
-            label: "Purchase History",
-            icon: "bi-bag-check",
-        },
+
     ];
 
     return (

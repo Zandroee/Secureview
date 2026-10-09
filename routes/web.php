@@ -14,6 +14,7 @@ use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Admin\InquiryController as AdminInquiryController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\ScheduleController as AdminScheduleController;
 use App\Http\Controllers\Admin\PurchaseController as AdminPurchaseController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use Illuminate\Http\Request;
@@ -222,6 +223,12 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/users', [AdminUserController::class, 'index'])
         ->name('admin.users.index');
+
+    Route::get('/admin/schedules', [AdminScheduleController::class, 'index'])
+        ->name('admin.schedules.index');
+
+    Route::get('/admin/purchases', [AdminPurchaseController::class, 'index'])
+        ->name('admin.purchases.index');
 
     Route::patch('/admin/users/{user}/role', [AdminUserController::class, 'updateRole'])
         ->name('admin.users.role');
