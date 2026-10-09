@@ -26,7 +26,7 @@ class CartController extends Controller
 
         $cart->load('items.purchasable');
 
-        $items = $cart->items->map(function (CartItem $item) {
+        $items = $cart->items->map(function (CartItem $item) use ($inventory) {
             $purchasable = $item->purchasable;
 
             return [
