@@ -40,7 +40,11 @@ function formatStatus(status) {
     return status.replace("_", " ");
 }
 
-export default function AdminInquiries({ inquiries = [], filters = {} }) {
+export default function AdminInquiries({
+    inquiries = [],
+    technicians = [],
+    filters = {},
+}) {
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
     const [urgency, setUrgency] = useState(filters.urgency ?? "");
@@ -84,6 +88,18 @@ export default function AdminInquiries({ inquiries = [], filters = {} }) {
             "/admin/inquiries/" + inquiry.id + "/status",
             {
                 status: nextStatus,
+            },
+            {
+                preserveScroll: true,
+            }
+        );
+    };
+
+    const assignTechnician = (inquiry, technicianId) => {
+        router.patch(
+            "/admin/inquiries/" + inquiry.id + "/technician",
+            {
+                technician_id: technicianId || null,
             },
             {
                 preserveScroll: true,
@@ -255,6 +271,7 @@ export default function AdminInquiries({ inquiries = [], filters = {} }) {
                                             <th>INQUIRY</th>
                                             <th>CUSTOMER</th>
                                             <th>SERVICE</th>
+                                            <th>TECHNICIAN</th>
                                             <th>SCHEDULE</th>
                                             <th>STATUS</th>
                                             <th className="text-end pe-3">
@@ -267,7 +284,7 @@ export default function AdminInquiries({ inquiries = [], filters = {} }) {
                                         {inquiries.length === 0 ? (
                                             <tr>
                                                 <td
-                                                    colSpan="7"
+                                                    colSpan="8"
                                                     className="text-center text-muted py-5"
                                                 >
                                                     No inquiries found.
@@ -328,6 +345,54 @@ export default function AdminInquiries({ inquiries = [], filters = {} }) {
                                                             {inquiry.item_name ||
                                                                 "General service"}
                                                         </div>
+                                                    </td>
+
+                                                    <td>
+                                                        <select
+                                                            className="form-select form-select-sm"
+                                                            value={
+                                                                inquiry.technician?.id ??
+                                                                ""
+                                                            }
+                                                            onChange={(event) =>
+                                                                assignTechnician(
+                                                                    inquiry,
+                                                                    event.target
+                                                                        .value
+                                                                )
+                                                            }
+                                                        >
+                                                            <option value="">
+                                                                Unassigned
+                                                            </option>
+
+                                                            {technicians.map(
+                                                                (technician) => (
+                                                                    <option
+                                                                        key={
+                                                                            technician.id
+                                                                        }
+                                                                        value={
+                                                                            technician.id
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            technician.name
+                                                                        }
+                                                                    </option>
+                                                                )
+                                                            )}
+                                                        </select>
+
+                                                        {inquiry.technician && (
+                                                            <div className="small text-muted mt-1">
+                                                                {
+                                                                    inquiry
+                                                                        .technician
+                                                                        .email
+                                                                }
+                                                            </div>
+                                                        )}
                                                     </td>
 
                                                     <td>

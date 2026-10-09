@@ -207,4 +207,7 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::patch('/admin/inquiries/{inquiry}/status', [AdminInquiryController::class, 'updateStatus'])
         ->name('admin.inquiries.status');
+
+    Route::patch('/admin/inquiries/{inquiry}/technician', [AdminInquiryController::class, 'assignTechnician'])
+        ->name('admin.inquiries.technician');
 });

@@ -131,6 +131,7 @@ class InquiryController extends Controller
     {
         $inquiries = $request->user()
             ->inquiries()
+            ->with('technician')
             ->latest()
             ->get()
             ->map(function (Inquiry $inquiry) {
@@ -140,6 +141,12 @@ class InquiryController extends Controller
                     'item_name' => $inquiry->item_name,
                     'service_type' => $inquiry->service_type,
                     'urgency' => $inquiry->urgency,
+                    'technician' => $inquiry->technician
+                        ? [
+                            'name' => $inquiry->technician->name,
+                            'email' => $inquiry->technician->email,
+                        ]
+                        : null,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_time' => $inquiry->preferred_time,
                     'city' => $inquiry->city,
@@ -159,7 +166,7 @@ class InquiryController extends Controller
             abort(404);
         }
 
-        $inquiry->load('inquirable');
+        $inquiry->load(['inquirable', 'technician']);
 
         return Inertia::render('inquiry_details', [
             'inquiry' => [
@@ -177,6 +184,12 @@ class InquiryController extends Controller
                 'city' => $inquiry->city,
                 'service_type' => $inquiry->service_type,
                 'urgency' => $inquiry->urgency,
+                'technician' => $inquiry->technician
+                    ? [
+                        'name' => $inquiry->technician->name,
+                        'email' => $inquiry->technician->email,
+                    ]
+                    : null,
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                 'preferred_time' => $inquiry->preferred_time,
                 'notes' => $inquiry->notes,

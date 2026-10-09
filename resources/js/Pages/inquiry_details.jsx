@@ -149,6 +149,15 @@ export default function InquiryDetails({ inquiry, success }) {
                                         {inquiry.preferred_time}
                                     </div>
 
+                                    <div className="small text-muted mt-2">
+                                        Technician
+                                    </div>
+
+                                    <div className="fw-semibold">
+                                        {inquiry.technician?.name ||
+                                            "Not assigned yet"}
+                                    </div>
+
                                     {inquiry.item_image && (
                                         <img
                                             src={inquiry.item_image}

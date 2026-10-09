@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -18,7 +19,7 @@ class InquiryController extends Controller
             'urgency' => ['nullable', 'in:normal,urgent,emergency'],
         ]);
 
-        $query = Inquiry::with(['user', 'inquirable']);
+        $query = Inquiry::with(['user', 'inquirable', 'technician']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -53,6 +54,13 @@ class InquiryController extends Controller
                     'customer_name' => $inquiry->customer_name,
                     'customer_email' => $inquiry->customer_email,
                     'customer_phone' => $inquiry->customer_phone,
+                    'technician' => $inquiry->technician
+                        ? [
+                            'id' => $inquiry->technician->id,
+                            'name' => $inquiry->technician->name,
+                            'email' => $inquiry->technician->email,
+                        ]
+                        : null,
                     'service_type' => $inquiry->service_type,
                     'urgency' => $inquiry->urgency,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
@@ -65,8 +73,14 @@ class InquiryController extends Controller
             })
             ->values();
 
+        $technicians = User::where('role', 'technician')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email'])
+            ->values();
+
         return Inertia::render('Admin/Inquiries', [
             'inquiries' => $inquiries,
+            'technicians' => $technicians,
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
@@ -77,7 +91,12 @@ class InquiryController extends Controller
 
     public function show(Inquiry $inquiry)
     {
-        $inquiry->load(['user', 'inquirable']);
+        $inquiry->load(['user', 'inquirable', 'technician']);
+
+        $technicians = User::where('role', 'technician')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email'])
+            ->values();
 
         return Inertia::render('Admin/InquiryDetails', [
             'inquiry' => [
@@ -91,6 +110,13 @@ class InquiryController extends Controller
                 'customer_name' => $inquiry->customer_name,
                 'customer_phone' => $inquiry->customer_phone,
                 'customer_email' => $inquiry->customer_email,
+                'technician' => $inquiry->technician
+                    ? [
+                        'id' => $inquiry->technician->id,
+                        'name' => $inquiry->technician->name,
+                        'email' => $inquiry->technician->email,
+                    ]
+                    : null,
                 'street_address' => $inquiry->street_address,
                 'city' => $inquiry->city,
                 'service_type' => $inquiry->service_type,
@@ -102,7 +128,53 @@ class InquiryController extends Controller
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
                 'user_id' => $inquiry->user_id,
             ],
+            'technicians' => $technicians,
         ]);
+    }
+
+    public function assignTechnician(Request $request, Inquiry $inquiry)
+    {
+        $validated = $request->validate([
+            'technician_id' => ['nullable', 'integer', 'exists:users,id'],
+        ]);
+
+        $technicianId = $validated['technician_id'] ?? null;
+
+        if ($technicianId) {
+            $technicianExists = User::where('id', $technicianId)
+                ->where('role', 'technician')
+                ->exists();
+
+            if (!$technicianExists) {
+                return back()->withErrors([
+                    'technician_id' => 'Selected user is not a technician.',
+                ]);
+            }
+        }
+
+        $oldTechnicianId = $inquiry->technician_id;
+
+        if ((int) $oldTechnicianId !== (int) $technicianId) {
+            $inquiry->update([
+                'technician_id' => $technicianId,
+            ]);
+
+            $message = $technicianId
+                ? 'A technician has been assigned to your inquiry ' . $inquiry->inquiry_number . '.'
+                : 'The technician assignment for your inquiry ' . $inquiry->inquiry_number . ' has been removed.';
+
+            CustomerNotification::create([
+                'user_id' => $inquiry->user_id,
+                'type' => 'technician_assignment',
+                'title' => 'Technician assignment updated',
+                'message' => $message,
+                'action_url' => route('inquiries.show', $inquiry),
+                'related_type' => Inquiry::class,
+                'related_id' => $inquiry->id,
+            ]);
+        }
+
+        return back()->with('success', 'Technician assignment updated successfully.');
     }
 
     public function updateStatus(Request $request, Inquiry $inquiry)
