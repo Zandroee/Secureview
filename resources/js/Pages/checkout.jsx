@@ -229,9 +229,9 @@ export default function Checkout({
                                     </div>
                                 </div>
 
-                                {errors.payment && (
+                                {(errors.payment || errors.stock || errors.cart) && (
                                     <div className="alert alert-danger mb-4">
-                                        {errors.payment}
+                                        {errors.payment || errors.stock || errors.cart}
                                     </div>
                                 )}
 
@@ -586,6 +586,19 @@ export default function Checkout({
                                                         {Number(
                                                             item.price
                                                         ).toLocaleString()}
+                                                    </div>
+
+                                                    <div
+                                                        className={
+                                                            "small fw-semibold " +
+                                                            (Number(item.available_stock) >= Number(item.quantity)
+                                                                ? "text-success"
+                                                                : "text-danger")
+                                                        }
+                                                    >
+                                                        {Number(item.available_stock) > 0
+                                                            ? `${Number(item.available_stock).toLocaleString()} available`
+                                                            : "Out of stock"}
                                                     </div>
                                                 </div>
 
