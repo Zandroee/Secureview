@@ -165,6 +165,17 @@ export default function Navbar() {
 
                             <li className="nav-item">
                                 <Link
+                                    href="/services"
+                                    className={`nav-link ${isActive("/services")
+                                            ? "text-primary fw-bold border-bottom border-primary border-2"
+                                            : "fw-medium"}
+                                >
+                                    SERVICES
+                                </Link>
+                            </li>
+
+                            <li className="nav-item">
+                                <Link
                                     href="/about"
                                     className={`nav-link ${
                                         isActive("/about")
