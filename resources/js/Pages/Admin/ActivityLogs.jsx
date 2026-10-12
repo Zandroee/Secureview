@@ -341,7 +341,7 @@ export default function AdminActivityLogs({
                         </div>
 
                         <div className="small text-muted mt-3">
-                            Activity is recorded by the server when a supported administrative change succeeds. This page does not allow logs to be edited or deleted.
+                            Successful admin sign-ins, sign-outs, and supported administrative changes are recorded by the server. This page does not allow logs to be edited or deleted.
                         </div>
                     </main>
                 </div>
