@@ -41,6 +41,12 @@ export default function Sidebar({ active = "dashboard" }) {
             key: "purchases",
             icon: "bi-bag-check",
         },
+        {
+            label: "Activity Logs",
+            href: "/admin/activity-logs",
+            key: "activity-logs",
+            icon: "bi-clock-history",
+        },
     ];
 
     const comingSoonItems = [
