@@ -11,6 +11,8 @@ use Inertia\Inertia;
 class ActivityLogController extends Controller
 {
     private const ACTION_LABELS = [
+        'admin_logged_in' => 'Admin signed in',
+        'admin_logged_out' => 'Admin signed out',
         'user_role_updated' => 'User role updated',
         'product_stock_updated' => 'Product stock updated',
         'inquiry_technician_assigned' => 'Technician assignment changed',
@@ -21,7 +23,7 @@ class ActivityLogController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'action' => ['nullable', 'in:user_role_updated,product_stock_updated,inquiry_technician_assigned,inquiry_status_updated'],
+            'action' => ['nullable', 'in:admin_logged_in,admin_logged_out,user_role_updated,product_stock_updated,inquiry_technician_assigned,inquiry_status_updated'],
             'admin_id' => ['nullable', 'integer', 'exists:users,id'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
