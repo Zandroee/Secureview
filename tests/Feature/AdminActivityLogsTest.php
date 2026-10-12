@@ -37,6 +37,35 @@ class AdminActivityLogsTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_successful_admin_login_is_recorded(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->post(route('login.authenticate'), [
+            'email' => $admin->email,
+            'password' => 'password',
+        ])->assertRedirect(route('dashboard'));
+
+        $this->assertDatabaseHas('admin_activity_logs', [
+            'admin_id' => $admin->id,
+            'action' => 'admin_logged_in',
+        ]);
+    }
+
+    public function test_admin_logout_is_recorded(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('logout'))
+            ->assertRedirect('/');
+
+        $this->assertDatabaseHas('admin_activity_logs', [
+            'admin_id' => $admin->id,
+            'action' => 'admin_logged_out',
+        ]);
+    }
+
     public function test_user_role_change_is_recorded_with_before_and_after_values(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
