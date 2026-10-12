@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\AdminActivityLogger;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -64,7 +65,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function authenticate(Request $request)
+    public function authenticate(Request $request, AdminActivityLogger $activityLogger)
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -105,13 +106,27 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        $activityLogger->record(
+            $request,
+            'admin_logged_in',
+            'Administrator signed in successfully.',
+            $user
+        );
+
         return $user->isAdmin()
             ? redirect()->route('dashboard')
             : redirect()->intended('/');
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request, AdminActivityLogger $activityLogger)
     {
+        $activityLogger->record(
+            $request,
+            'admin_logged_out',
+            'Administrator signed out.',
+            $request->user()
+        );
+
         Auth::logout();
 
         $request->session()->invalidate();
@@ -125,7 +140,7 @@ class AuthController extends Controller
         return Socialite::driver('google')->redirect();
     }
 
-    public function googleCallback()
+    public function googleCallback(Request $request, AdminActivityLogger $activityLogger)
     {
         $googleUser = Socialite::driver('google')->user();
 
@@ -156,7 +171,14 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        request()->session()->regenerate();
+        $request->session()->regenerate();
+
+        $activityLogger->record(
+            $request,
+            'admin_logged_in',
+            'Administrator signed in successfully with Google.',
+            $user
+        );
 
         return $user->isAdmin()
             ? redirect()->route('dashboard')
@@ -170,7 +192,7 @@ class AuthController extends Controller
             ->redirect();
     }
 
-    public function facebookCallback()
+    public function facebookCallback(Request $request, AdminActivityLogger $activityLogger)
     {
         $facebookUser = Socialite::driver('facebook')->user();
 
@@ -201,7 +223,14 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        request()->session()->regenerate();
+        $request->session()->regenerate();
+
+        $activityLogger->record(
+            $request,
+            'admin_logged_in',
+            'Administrator signed in successfully with Facebook.',
+            $user
+        );
 
         return $user->isAdmin()
             ? redirect()->route('dashboard')
