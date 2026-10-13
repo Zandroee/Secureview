@@ -71,6 +71,11 @@ export default function ProductDetails({ product, reviews = [] }) {
     const [amount, setAmount] = useState(1);
     const [cartMessage, setCartMessage] = useState("");
     const [cartError, setCartError] = useState("");
+    const galleryImages = Array.isArray(product.images) && product.images.length
+        ? product.images
+        : (product.image ? [product.image] : []);
+    const [selectedImage, setSelectedImage] = useState(galleryImages[0] ?? "");
+    const displayedImage = galleryImages.includes(selectedImage) ? selectedImage : (galleryImages[0] ?? "");
 
     const availableStock = Math.max(0, Number(product.stock_quantity ?? 0));
     const [reviewPage, setReviewPage] = useState(1);
@@ -133,11 +138,27 @@ export default function ProductDetails({ product, reviews = [] }) {
                     <div className="row g-3">
 
                         <div className="col-lg-6">
-                            {product.image ? (
-                                <img src={product.image} alt={product.name} className="img-fluid w-100" style={{ height: "330px", objectFit: "cover" }} />
+                            {displayedImage ? (
+                                <img src={displayedImage} alt={product.name} className="img-fluid w-100 rounded-2" style={{ height: "330px", objectFit: "contain", backgroundColor: "#f8f9fa" }} />
                             ) : (
                                 <div className="bg-secondary-subtle d-flex align-items-center justify-content-center" style={{ height: "330px" }}>
                                     <i className="bi bi-camera-video text-secondary" style={{ fontSize: "5rem" }}></i>
+                                </div>
+                            )}
+                            {galleryImages.length > 1 && (
+                                <div className="d-flex flex-wrap gap-2 mt-2">
+                                    {galleryImages.map((image, index) => (
+                                        <button
+                                            key={image + "-" + index}
+                                            type="button"
+                                            className={"btn p-1 " + (displayedImage === image ? "border-primary" : "border")}
+                                            style={{ borderWidth: displayedImage === image ? "2px" : "1px" }}
+                                            aria-label={"View product image " + (index + 1)}
+                                            onClick={() => setSelectedImage(image)}
+                                        >
+                                            <img src={image} alt={product.name + " view " + (index + 1)} style={{ width: "68px", height: "68px", objectFit: "cover" }} />
+                                        </button>
+                                    ))}
                                 </div>
                             )}
                         </div>
