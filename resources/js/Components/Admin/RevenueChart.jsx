@@ -23,7 +23,12 @@ const currency = (value) =>
         maximumFractionDigits: 0,
     })}`;
 
-export default function RevenueChart({ title, data = [] }) {
+export default function RevenueChart({
+    title,
+    data = [],
+    period = "year",
+    onPeriodChange,
+}) {
     const chartData = {
         labels: data.map((item) => item.month),
         datasets: [
@@ -46,9 +51,7 @@ export default function RevenueChart({ title, data = [] }) {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: {
-                display: false,
-            },
+            legend: { display: false },
             tooltip: {
                 callbacks: {
                     label: (context) => `Revenue: ₱${Number(context.parsed.y).toLocaleString("en-PH", {
@@ -61,9 +64,7 @@ export default function RevenueChart({ title, data = [] }) {
         scales: {
             y: {
                 beginAtZero: true,
-                ticks: {
-                    callback: (value) => currency(value),
-                },
+                ticks: { callback: (value) => currency(value) },
             },
         },
     };
@@ -71,9 +72,19 @@ export default function RevenueChart({ title, data = [] }) {
     return (
         <div className="card border rounded-3 mt-4">
             <div className="card-body p-4">
-                <div className="d-flex justify-content-between align-items-center mb-3">
+                <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
                     <h5 className="fw-bold mb-0">{title}</h5>
-                    <small className="text-muted">This Year</small>
+                    <select
+                        className="form-select form-select-sm"
+                        style={{ maxWidth: "190px" }}
+                        aria-label="Filter revenue chart period"
+                        value={period}
+                        onChange={onPeriodChange}
+                    >
+                        <option value="year">This year</option>
+                        <option value="six_months">Last 6 months</option>
+                        <option value="twelve_months">Last 12 months</option>
+                    </select>
                 </div>
 
                 <div style={{ height: "300px" }}>
