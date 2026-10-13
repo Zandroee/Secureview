@@ -59,37 +59,67 @@ function CatalogOptionSelect({
     error,
     allowBlank = false,
 }) {
+    const field = label.toLowerCase();
     const values = [...(options ?? [])].filter(Boolean);
     if (value && !values.some((item) => String(item).toLowerCase() === String(value).toLowerCase())) {
         values.push(value);
     }
     const uniqueValues = [...new Map(values.map((item) => [String(item).toLowerCase(), item])).values()];
+    const activeValue = (options ?? []).some((item) => String(item).toLowerCase() === String(value ?? "").toLowerCase());
 
     const handleChange = (event) => {
-        if (event.target.value === "__add_new_option__") {
-            const nextValue = window.prompt("Add a new " + label.toLowerCase() + ":");
-            if (nextValue?.trim()) onChange(nextValue.trim());
+        const nextValue = event.target.value;
+        if (nextValue === "__add_new_option__") {
+            const enteredValue = window.prompt("Add a new " + field + ":");
+            const newValue = enteredValue?.trim();
+            if (!newValue) return;
+
+            router.post("/admin/catalog-options", { field, value: newValue }, {
+                preserveScroll: true,
+                onSuccess: () => onChange(newValue),
+            });
             return;
         }
 
-        onChange(event.target.value);
+        onChange(nextValue);
+    };
+
+    const removeSelectedOption = () => {
+        if (!value || !activeValue) return;
+        if (!window.confirm(
+            "Remove “" + value + "” from the shared " + field + " dropdown? Existing products and packages using it will not be changed."
+        )) return;
+
+        router.delete("/admin/catalog-options", {
+            data: { field, value },
+            preserveScroll: true,
+        });
     };
 
     return (
-        <select
-            className={"form-select " + (error ? "is-invalid" : "")}
-            value={value ?? ""}
-            onChange={handleChange}
-            required={required}
-        >
-            <option value="">
-                {allowBlank ? "No " + label.toLowerCase() : "Select " + label.toLowerCase()}
-            </option>
-            {uniqueValues.map((item) => (
-                <option key={item} value={item}>{item}</option>
-            ))}
-            <option value="__add_new_option__">+ Add new {label.toLowerCase()}…</option>
-        </select>
+        <div>
+            <select
+                className={"form-select " + (error ? "is-invalid" : "")}
+                value={value ?? ""}
+                onChange={handleChange}
+                required={required}
+            >
+                <option value="">
+                    {allowBlank ? "No " + field : "Select " + field}
+                </option>
+                {uniqueValues.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                ))}
+                <option value="__add_new_option__">+ Add new {field}…</option>
+            </select>
+            {value && activeValue && (
+                <div className="d-flex justify-content-end mt-1">
+                    <button type="button" className="btn btn-link btn-sm text-danger p-0" onClick={removeSelectedOption}>
+                        <i className="bi bi-trash3 me-1" />Remove selected option
+                    </button>
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -99,21 +129,29 @@ function imageSource(image) {
     return "/storage/" + String(image).replace(/^\/+/, "");
 }
 
-function ImagePicker({ label, currentImage, selectedFile, onChange, error }) {
-    const [previewUrl, setPreviewUrl] = useState("");
+function ImagePicker({
+    label,
+    currentImages = [],
+    selectedFiles = [],
+    onFilesChange,
+    onRemoveImage,
+    error,
+}) {
+    const [previewUrls, setPreviewUrls] = useState([]);
 
     useEffect(() => {
-        if (!selectedFile) {
-            setPreviewUrl("");
-            return undefined;
-        }
+        const urls = selectedFiles.map((file) => URL.createObjectURL(file));
+        setPreviewUrls(urls);
+        return () => urls.forEach((url) => URL.revokeObjectURL(url));
+    }, [selectedFiles]);
 
-        const url = URL.createObjectURL(selectedFile);
-        setPreviewUrl(url);
-        return () => URL.revokeObjectURL(url);
-    }, [selectedFile]);
-
-    const preview = previewUrl || imageSource(currentImage);
+    const slotsLeft = Math.max(0, 10 - currentImages.length);
+    const addFiles = (event) => {
+        const chosen = Array.from(event.target.files ?? []);
+        const next = [...selectedFiles, ...chosen].slice(0, slotsLeft + selectedFiles.length);
+        onFilesChange(next.slice(0, 10 - currentImages.length));
+        event.target.value = "";
+    };
 
     return (
         <div>
@@ -121,27 +159,68 @@ function ImagePicker({ label, currentImage, selectedFile, onChange, error }) {
             <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                multiple
                 className={"form-control " + (error ? "is-invalid" : "")}
-                onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+                onChange={addFiles}
+                disabled={currentImages.length + selectedFiles.length >= 10}
             />
-            <div className="form-text">Choose JPG, PNG, or WebP, up to 5 MB.</div>
-            {selectedFile && (
-                <div className="small text-muted mt-1">
-                    Selected: {selectedFile.name}
+            <div className="form-text">Choose up to 10 images in total. JPG, PNG, or WebP, up to 5 MB each. The first image is the main image.</div>
+            {(currentImages.length + selectedFiles.length) > 0 && (
+                <div className="row g-2 mt-1">
+                    {currentImages.map((image, index) => (
+                        <div className="col-auto" key={"existing-" + image + "-" + index}>
+                            <div className="position-relative">
+                                <img
+                                    src={imageSource(image)}
+                                    alt={label + " " + (index + 1)}
+                                    className="rounded border"
+                                    style={{ width: "92px", height: "92px", objectFit: "cover" }}
+                                />
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle d-flex align-items-center justify-content-center"
+                                    style={{ width: "25px", height: "25px", padding: 0 }}
+                                    title="Remove image"
+                                    aria-label="Remove image"
+                                    onClick={() => onRemoveImage(image)}
+                                >
+                                    <i className="bi bi-x" />
+                                </button>
+                            </div>
+                            {index === 0 && <div className="small text-muted text-center">Primary</div>}
+                        </div>
+                    ))}
+                    {previewUrls.map((url, index) => (
+                        <div className="col-auto" key={"new-" + selectedFiles[index]?.name + "-" + index}>
+                            <div className="position-relative">
+                                <img
+                                    src={url}
+                                    alt={"Selected upload " + (index + 1)}
+                                    className="rounded border"
+                                    style={{ width: "92px", height: "92px", objectFit: "cover" }}
+                                />
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle d-flex align-items-center justify-content-center"
+                                    style={{ width: "25px", height: "25px", padding: 0 }}
+                                    title="Remove selected image"
+                                    aria-label="Remove selected image"
+                                    onClick={() => onFilesChange(selectedFiles.filter((_, selectedIndex) => selectedIndex !== index))}
+                                >
+                                    <i className="bi bi-x" />
+                                </button>
+                            </div>
+                            {currentImages.length === 0 && index === 0 && <div className="small text-muted text-center">Primary</div>}
+                            <div className="small text-muted text-truncate" style={{ maxWidth: "92px" }}>{selectedFiles[index]?.name}</div>
+                        </div>
+                    ))}
                 </div>
-            )}
-            {preview && (
-                <img
-                    src={preview}
-                    alt="Product preview"
-                    className="rounded border mt-2"
-                    style={{ width: "100px", height: "100px", objectFit: "cover" }}
-                />
             )}
             <FieldError message={error} />
         </div>
     );
 }
+
 
 export default function AdminProducts({
     products = [],
