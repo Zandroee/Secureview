@@ -1,0 +1,348 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\AdminActivityLog;
+use App\Models\Cart;
+use App\Models\Order;
+use App\Models\Package;
+use App\Models\Product;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class AdminProductManagementTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_admin_can_view_products_with_create_and_edit_capability(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Products')
+                ->has('products', 0)
+                ->where('summary.total_products', 0)
+            );
+    }
+
+    public function test_non_admin_cannot_create_a_product(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($user)
+            ->post(route('admin.products.store'), $this->validProduct())
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('products', 0);
+    }
+
+    public function test_admin_can_create_a_product_and_action_is_logged(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.products.store'), $this->validProduct([
+                'name' => '4K Outdoor Camera',
+                'stock_quantity' => 18,
+                'specifications' => ['4K recording', 'Night vision'],
+                'is_featured' => true,
+            ]))
+            ->assertRedirect(route('admin.products.index'));
+
+        $product = Product::query()
+            ->where('name', '4K Outdoor Camera')
+            ->firstOrFail();
+
+        $this->assertSame('CCTV', $product->category);
+        $this->assertSame(18, $product->stock_quantity);
+        $this->assertSame(['4K recording', 'Night vision'], $product->specifications);
+        $this->assertTrue($product->is_featured);
+
+        $this->assertDatabaseHas('admin_activity_logs', [
+            'admin_id' => $admin->id,
+            'action' => 'product_created',
+            'subject_type' => 'Product',
+            'subject_id' => $product->id,
+        ]);
+
+        $log = AdminActivityLog::query()
+            ->where('action', 'product_created')
+            ->where('subject_id', $product->id)
+            ->firstOrFail();
+
+        $this->assertSame('4K Outdoor Camera', $log->new_values['name']);
+        $this->assertSame(18, $log->new_values['stock_quantity']);
+    }
+
+    public function test_admin_can_update_product_details_and_change_is_logged(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Indoor Camera', 4);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.products.update', $product), $this->validProduct([
+                'name' => 'Indoor Camera Pro',
+                'price' => '4599.00',
+                'stock_quantity' => 10,
+                'badge' => 'Best Seller',
+                'specifications' => ['2K recording', 'Two-way audio'],
+                'is_featured' => true,
+            ]))
+            ->assertRedirect(route('admin.products.index'));
+
+        $product->refresh();
+
+        $this->assertSame('Indoor Camera Pro', $product->name);
+        $this->assertSame(10, $product->stock_quantity);
+        $this->assertSame('Best Seller', $product->badge);
+        $this->assertTrue($product->is_featured);
+
+        $log = AdminActivityLog::query()
+            ->where('action', 'product_updated')
+            ->where('subject_id', $product->id)
+            ->firstOrFail();
+
+        $this->assertSame('Indoor Camera', $log->old_values['name']);
+        $this->assertSame('Indoor Camera Pro', $log->new_values['name']);
+        $this->assertSame(4, $log->old_values['stock_quantity']);
+        $this->assertSame(10, $log->new_values['stock_quantity']);
+    }
+
+    public function test_admin_cannot_delete_a_product_used_by_a_package(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Package Camera', 12);
+        $package = Package::create([
+            'name' => 'Starter Kit',
+            'category' => 'CCTV',
+            'warranty' => '1 year',
+            'price' => 9999,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        $package->packageItems()->create([
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'price' => $product->price,
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.products.index'))
+            ->delete(route('admin.products.destroy', $product))
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHasErrors('product');
+
+        $this->assertDatabaseHas('products', ['id' => $product->id]);
+        $this->assertDatabaseMissing('admin_activity_logs', [
+            'action' => 'product_deleted',
+            'subject_id' => $product->id,
+        ]);
+    }
+
+    public function test_admin_can_delete_an_unused_product_and_deletion_is_logged(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Unused Camera', 0);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.products.destroy', $product))
+            ->assertRedirect(route('admin.products.index'));
+
+        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+        $this->assertDatabaseHas('admin_activity_logs', [
+            'admin_id' => $admin->id,
+            'action' => 'product_deleted',
+            'subject_type' => 'Product',
+            'subject_id' => $product->id,
+        ]);
+    }
+
+    public function test_product_form_rejects_invalid_price_and_stock(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.products.store'), $this->validProduct([
+                'price' => '0',
+                'stock_quantity' => -1,
+            ]))
+            ->assertSessionHasErrors(['price', 'stock_quantity']);
+
+        $this->assertDatabaseCount('products', 0);
+    }
+
+
+    public function test_admin_cannot_delete_a_product_referenced_by_a_cart(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+        $product = $this->createProduct('Cart Camera', 6);
+        $cart = Cart::create(['user_id' => $customer->id]);
+
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => $product->price,
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.products.index'))
+            ->delete(route('admin.products.destroy', $product))
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHasErrors('product');
+
+        $this->assertDatabaseHas('products', ['id' => $product->id]);
+    }
+
+    public function test_admin_cannot_delete_a_product_referenced_by_an_order(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+        $product = $this->createProduct('Purchased Camera', 3);
+
+        $order = Order::create([
+            'user_id' => $customer->id,
+            'order_number' => 'ORD-' . fake()->unique()->numerify('######'),
+            'subtotal' => 2500,
+            'shipping_fee' => 0,
+            'total' => 2500,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+            'order_status' => 'processing',
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'delivery_address' => '123 Test Street, Taguig',
+        ]);
+
+        $order->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'name' => $product->name,
+            'price' => $product->price,
+            'quantity' => 1,
+            'subtotal' => $product->price,
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.products.index'))
+            ->delete(route('admin.products.destroy', $product))
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHasErrors('product');
+
+        $this->assertDatabaseHas('products', ['id' => $product->id]);
+    }
+
+    public function test_admin_cannot_delete_a_product_with_reviews(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+        $product = $this->createProduct('Reviewed Camera', 2);
+
+        $product->reviews()->create([
+            'user_id' => $customer->id,
+            'rating' => 5,
+            'comment' => 'Excellent product',
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.products.index'))
+            ->delete(route('admin.products.destroy', $product))
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHasErrors('product');
+
+        $this->assertDatabaseHas('products', ['id' => $product->id]);
+    }
+
+    public function test_product_price_update_refreshes_cart_price_but_not_order_history(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+        $product = $this->createProduct('Price Update Camera', 8);
+        $cart = Cart::create(['user_id' => $customer->id]);
+
+        $cartItem = $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => 2500,
+        ]);
+
+        $order = Order::create([
+            'user_id' => $customer->id,
+            'order_number' => 'ORD-' . fake()->unique()->numerify('######'),
+            'subtotal' => 2500,
+            'shipping_fee' => 0,
+            'total' => 2500,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+            'order_status' => 'processing',
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'delivery_address' => '123 Test Street, Taguig',
+        ]);
+        $orderItem = $order->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'name' => $product->name,
+            'price' => 2500,
+            'quantity' => 1,
+            'subtotal' => 2500,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.products.update', $product), $this->validProduct([
+                'name' => $product->name,
+                'price' => '3299.00',
+                'stock_quantity' => 8,
+            ]))
+            ->assertRedirect(route('admin.products.index'));
+
+        $this->assertDatabaseHas('cart_items', [
+            'id' => $cartItem->id,
+            'price' => '3299.00',
+        ]);
+        $this->assertDatabaseHas('order_items', [
+            'id' => $orderItem->id,
+            'price' => '2500.00',
+            'subtotal' => '2500.00',
+        ]);
+    }
+
+    private function validProduct(array $overrides = []): array
+    {
+        return array_merge([
+            'name' => 'Test Camera',
+            'category' => 'CCTV',
+            'warranty' => '1 year',
+            'price' => '2999.00',
+            'stock_quantity' => 5,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'is_featured' => false,
+        ], $overrides);
+    }
+
+    private function createProduct(string $name, int $stock): Product
+    {
+        return Product::create([
+            'name' => $name,
+            'category' => 'CCTV',
+            'warranty' => '1 year',
+            'price' => 2500,
+            'stock_quantity' => $stock,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+    }
+}

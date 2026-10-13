@@ -230,6 +230,15 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/admin/products', [AdminProductController::class, 'index'])
         ->name('admin.products.index');
 
+    Route::post('/admin/products', [AdminProductController::class, 'store'])
+        ->name('admin.products.store');
+
+    Route::patch('/admin/products/{product}', [AdminProductController::class, 'update'])
+        ->name('admin.products.update');
+
+    Route::delete('/admin/products/{product}', [AdminProductController::class, 'destroy'])
+        ->name('admin.products.destroy');
+
     Route::patch('/admin/products/{product}/stock', [AdminProductController::class, 'updateStock'])
         ->name('admin.products.stock');
 
