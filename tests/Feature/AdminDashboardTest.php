@@ -76,7 +76,7 @@ class AdminDashboardTest extends TestCase
             'city' => 'Taguig',
             'service_type' => 'CCTV Installation',
             'urgency' => 'normal',
-            'preferred_date' => today()->startOfWeek()->addDays(6),
+            'preferred_date' => today(),
             'preferred_time' => '10:00',
             'notes' => null,
             'status' => 'confirmed',
