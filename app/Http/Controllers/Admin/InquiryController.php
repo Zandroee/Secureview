@@ -79,7 +79,7 @@ class InquiryController extends Controller
         $technicians = User::where('role', 'technician')
             ->orderBy('name')
             ->get(['id', 'name', 'email'])
-            ->values();
+            
 
         return Inertia::render('Admin/Inquiries', [
             'inquiries' => $inquiries,
