@@ -9,13 +9,14 @@ use App\Models\Product;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
     private const LOW_STOCK_THRESHOLD = 5;
 
-    public function index()
+    public function index(Request $request)
     {
         $currentWeekStart = now()->startOfWeek();
         $currentWeekEnd = now()->endOfWeek();
@@ -73,26 +74,24 @@ class DashboardController extends Controller
             ->where('stock_quantity', '<=', self::LOW_STOCK_THRESHOLD)
             ->orderBy('stock_quantity')
             ->orderBy('name')
-            ->limit(5)
-            ->get(['id', 'name', 'stock_quantity'])
-            ->map(fn (Product $product) => [
+            ->paginate(5, ['id', 'name', 'stock_quantity'], 'low_stock_page')
+            ->withQueryString()
+            ->through(fn (Product $product) => [
                 str_pad((string) $product->id, 7, '0', STR_PAD_LEFT),
                 $product->name,
                 (string) $product->stock_quantity,
-            ])
-            ->values();
+            ]);
 
         $pendingPaymentData = Order::query()
             ->whereIn('payment_status', ['pending', 'failed'])
             ->latest()
-            ->limit(5)
-            ->get(['order_number', 'customer_name', 'total'])
-            ->map(fn (Order $order) => [
+            ->paginate(5, ['order_number', 'customer_name', 'total'], 'pending_payments_page')
+            ->withQueryString()
+            ->through(fn (Order $order) => [
                 $order->order_number,
                 $order->customer_name,
                 '₱' . number_format((float) $order->total, 2),
-            ])
-            ->values();
+            ]);
 
         $scheduleData = Inquiry::query()
             ->whereIn('status', ['confirmed', 'in_progress'])
@@ -130,32 +129,81 @@ class DashboardController extends Controller
             ])
             ->values();
 
-        $yearStart = now()->startOfYear();
-        $yearEnd = now();
-        $paidOrdersForYear = $this->paidOrdersBetween($yearStart, $yearEnd)
+        $chartFilters = $request->validate([
+            'chart_period' => ['nullable', 'in:year,six_months,twelve_months'],
+        ]);
+        $chartPeriod = $chartFilters['chart_period'] ?? 'year';
+        $chartMonthCount = match ($chartPeriod) {
+            'six_months' => 6,
+            'twelve_months' => 12,
+            default => 12,
+        };
+        $chartStart = match ($chartPeriod) {
+            'six_months' => now()->copy()->startOfMonth()->subMonths(5),
+            'twelve_months' => now()->copy()->startOfMonth()->subMonths(11),
+            default => now()->copy()->startOfYear(),
+        };
+        $chartEnd = now();
+        $paidOrdersForChart = $this->paidOrdersBetween($chartStart, $chartEnd)
             ->get(['total', 'paid_at', 'created_at']);
 
-        $revenueByMonth = array_fill(1, 12, 0.0);
+        $revenueByMonth = [];
+        foreach (range(0, $chartMonthCount - 1) as $offset) {
+            $month = $chartStart->copy()->addMonths($offset);
+            $revenueByMonth[$month->format('Y-m')] = 0.0;
+        }
 
-        foreach ($paidOrdersForYear as $order) {
+        foreach ($paidOrdersForChart as $order) {
             $recognizedAt = $order->paid_at ?? $order->created_at;
 
             if ($recognizedAt) {
-                $month = (int) $recognizedAt->format('n');
-                $revenueByMonth[$month] += (float) $order->total;
+                $monthKey = $recognizedAt->format('Y-m');
+
+                if (array_key_exists($monthKey, $revenueByMonth)) {
+                    $revenueByMonth[$monthKey] += (float) $order->total;
+                }
             }
         }
 
-        $revenueData = collect(range(1, 12))
-            ->map(fn (int $month) => [
-                'month' => Carbon::create((int) now()->format('Y'), $month, 1)->format('M'),
-                'revenue' => round($revenueByMonth[$month], 2),
+        $revenueData = collect(range(0, $chartMonthCount - 1))
+            ->map(function (int $offset) use ($chartStart, $chartPeriod, $revenueByMonth) {
+                $month = $chartStart->copy()->addMonths($offset);
+                $labelFormat = $chartPeriod === 'year' ? 'M' : 'M y';
+
+                return [
+                    'month' => $month->format($labelFormat),
+                    'revenue' => round($revenueByMonth[$month->format('Y-m')] ?? 0, 2),
+                ];
+            })
+            ->values();
+
+        $orderStatusLabels = [
+            'pending' => 'Pending',
+            'awaiting_payment' => 'Awaiting payment',
+            'payment_failed' => 'Payment failed',
+            'processing' => 'Processing',
+            'delivered' => 'Delivered',
+            'completed' => 'Completed',
+            'cancelled' => 'Cancelled',
+        ];
+        $orderStatusCounts = Order::query()
+            ->select('order_status')
+            ->selectRaw('COUNT(*) as order_count')
+            ->groupBy('order_status')
+            ->pluck('order_count', 'order_status');
+        $orderStatusData = collect($orderStatusLabels)
+            ->map(fn (string $label, string $status) => [
+                $label,
+                (string) ($orderStatusCounts[$status] ?? 0),
             ])
+            ->filter(fn (array $row) => (int) $row[1] > 0)
             ->values();
 
         return Inertia::render('Dashboard', [
             'stats' => $stats,
             'revenueData' => $revenueData,
+            'chartPeriod' => $chartPeriod,
+            'orderStatusData' => $orderStatusData,
             'lowStockData' => $lowStockData,
             'pendingPaymentData' => $pendingPaymentData,
             'scheduleData' => $scheduleData,
