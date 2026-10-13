@@ -4,6 +4,7 @@ export default function AdminPagination({
     pagination,
     label = "records",
     compact = false,
+    insideCard = false,
 }) {
     if (!pagination || typeof pagination !== "object") {
         return null;
@@ -49,7 +50,7 @@ export default function AdminPagination({
         <div
             className={
                 "d-flex flex-wrap align-items-center justify-content-between gap-2 " +
-                (compact ? "mt-3" : "mt-3 p-3 border-top")
+                (compact ? "mt-3" : insideCard ? "p-3 border-top" : "mt-3 pt-3 border-top")
             }
         >
             <small className="text-muted">
