@@ -190,11 +190,6 @@ class PackageController extends Controller
         $oldComponents = $this->componentSummary($package);
         $oldName = $package->name;
         $fields = $this->packageFields($validated);
-        $oldImage = $package->image;
-
-        if ($request->hasFile('image_file')) {
-            $fields['image'] = '/storage/' . $request->file('image_file')->store('packages', 'public');
-        }
 
         $oldComposition = $package->packageItems()
             ->orderBy('product_id')
@@ -215,6 +210,10 @@ class PackageController extends Controller
             return back()->withErrors([
                 'items' => 'This package has existing purchase, cart, inquiry, or review history. Its bundle contents are locked. Create a new package to use different components.',
             ]);
+        }
+
+        if ($request->hasFile('image_file')) {
+            $fields['image'] = '/storage/' . $request->file('image_file')->store('packages', 'public');
         }
 
         $priceChanged = (float) $oldSnapshot['price'] !== (float) $fields['price'];
@@ -274,6 +273,7 @@ class PackageController extends Controller
             ]);
         }
 
+        $oldImage = $package->image;
         $oldSnapshot = $this->snapshot($package);
         $oldComponents = $this->componentSummary($package);
 
