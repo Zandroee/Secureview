@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CatalogOption;
 use App\Models\Package;
 use App\Models\Product;
 use App\Services\AdminActivityLogger;
@@ -10,6 +11,7 @@ use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -60,18 +62,14 @@ class ProductController extends Controller
             ->values();
 
         $allProducts = Product::all();
-        $allPackagesForOptions = Package::query()->get(['category', 'warranty', 'badge']);
 
-        $catalogOptions = static function (string $field) use ($allProducts, $allPackagesForOptions) {
-            return $allProducts->pluck($field)
-                ->merge($allPackagesForOptions->pluck($field))
-                ->filter(fn ($value) => filled($value))
-                ->map(fn ($value) => trim((string) $value))
-                ->filter()
-                ->unique()
-                ->sort()
-                ->values();
-        };
+        // Only active shared options populate the dropdowns. Existing catalog records
+        // keep their saved values even after an option is removed from this list.
+        $catalogOptions = static fn (string $field) => CatalogOption::query()
+            ->where('field', $field)
+            ->orderBy('value')
+            ->pluck('value')
+            ->values();
 
         $packages = Package::with('packageItems.product')
             ->orderBy('name')
@@ -113,10 +111,9 @@ class ProductController extends Controller
     {
         $validated = $this->validateProduct($request);
         $fields = $this->productFields($validated);
-
-        if ($request->hasFile('image_file')) {
-            $fields['image'] = '/storage/' . $request->file('image_file')->store('products', 'public');
-        }
+        $legacyImage = filled($fields['image'] ?? null) ? $fields['image'] : null;
+        $fields['images'] = $this->resolveImages($request, [], $legacyImage, 'products');
+        $fields['image'] = $fields['images'][0] ?? null;
 
         DB::transaction(function () use ($request, $fields, $activityLogger) {
             $product = Product::create($fields);
@@ -143,11 +140,17 @@ class ProductController extends Controller
     ) {
         $validated = $this->validateProduct($request);
         $fields = $this->productFields($validated);
-        $oldImage = $product->image;
-
-        if ($request->hasFile('image_file')) {
-            $fields['image'] = '/storage/' . $request->file('image_file')->store('products', 'public');
-        }
+        $oldImages = $this->currentImages($product);
+        $existingImages = $request->exists('existing_images')
+            ? collect($request->input('existing_images', []))
+                ->filter(fn ($image) => is_string($image) && in_array($image, $oldImages, true))
+                ->unique()
+                ->values()
+                ->all()
+            : $oldImages;
+        $legacyImage = filled($fields['image'] ?? null) ? $fields['image'] : null;
+        $fields['images'] = $this->resolveImages($request, $existingImages, $legacyImage, 'products');
+        $fields['image'] = $fields['images'][0] ?? null;
 
         $oldSnapshot = $this->snapshot($product);
         $oldName = $product->name;
@@ -182,8 +185,8 @@ class ProductController extends Controller
             );
         });
 
-        if ($request->hasFile('image_file') && $oldImage !== $product->image) {
-            $this->deleteStoredImage($oldImage);
+        foreach (array_diff($oldImages, $fields['images']) as $removedImage) {
+            $this->deleteStoredImage($removedImage);
         }
 
         return redirect()
@@ -202,7 +205,7 @@ class ProductController extends Controller
             ]);
         }
 
-        $oldImage = $product->image;
+        $oldImages = $this->currentImages($product);
 
         DB::transaction(function () use ($request, $product, $activityLogger) {
             // Lock the parent row before rechecking references to reduce race conditions with new cart/package/order items.
@@ -228,7 +231,9 @@ class ProductController extends Controller
             $lockedProduct->delete();
         });
 
-        $this->deleteStoredImage($oldImage);
+        foreach ($oldImages as $oldImage) {
+            $this->deleteStoredImage($oldImage);
+        }
 
         return redirect()
             ->route('admin.products.index')
@@ -284,6 +289,10 @@ class ProductController extends Controller
             'badge' => ['nullable', 'string', 'max:80'],
             'image' => ['nullable', 'string', 'max:2048'],
             'image_file' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'image_files' => ['nullable', 'array', 'max:10'],
+            'image_files.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'existing_images' => ['sometimes', 'array', 'max:10'],
+            'existing_images.*' => ['string', 'max:2048'],
             'specifications' => ['nullable', 'array', 'max:30'],
             'specifications.*' => ['nullable', 'string', 'max:255'],
             'is_featured' => ['required', 'boolean'],
@@ -309,6 +318,49 @@ class ProductController extends Controller
             'specifications' => $specifications ?: null,
             'is_featured' => (bool) $validated['is_featured'],
         ];
+    }
+
+    /**
+     * Resolve the ordered gallery from retained existing images and newly uploaded files.
+     * The first image is the primary image for older storefront components.
+     */
+    private function resolveImages(Request $request, array $existingImages, ?string $legacyImage, string $directory): array
+    {
+        if (!$request->exists('existing_images') && $legacyImage && !in_array($legacyImage, $existingImages, true)) {
+            array_unshift($existingImages, $legacyImage);
+        }
+
+        $files = array_values(array_filter((array) $request->file('image_files', [])));
+        if ($request->hasFile('image_file')) {
+            $files[] = $request->file('image_file');
+        }
+
+        if (count($existingImages) + count($files) > 10) {
+            throw ValidationException::withMessages([
+                'image_files' => 'You can keep or upload a maximum of 10 images per catalog item.',
+            ]);
+        }
+
+        $uploadedImages = collect($files)
+            ->map(fn ($file) => '/storage/' . $file->store($directory, 'public'))
+            ->all();
+
+        return collect(array_merge($existingImages, $uploadedImages))
+            ->filter(fn ($image) => is_string($image) && trim($image) !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function currentImages(Product $product): array
+    {
+        $images = is_array($product->images) ? $product->images : [];
+
+        if (!$images && filled($product->image)) {
+            $images = [$product->image];
+        }
+
+        return array_values(array_unique(array_filter($images, fn ($image) => is_string($image) && trim($image) !== '')));
     }
 
     private function deleteStoredImage(?string $image): void
