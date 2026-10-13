@@ -6,6 +6,7 @@ import RevenueChart from "../Components/Admin/RevenueChart";
 import NoticeTable from "../Components/Admin/NoticeTable";
 import Calendar from "../Components/Admin/Calendar";
 import Announcements from "../Components/Admin/Announcements";
+import OrderStatusOverview from "../Components/Admin/OrderStatusOverview";
 import { router } from "@inertiajs/react";
 
 export default function Dashboard({
@@ -106,13 +107,7 @@ export default function Dashboard({
                                     </div>
                                 </div>
 
-                                <div className="mt-4">
-                                    <NoticeTable
-                                        title="Order Status Overview"
-                                        headers={["Order Status", "Orders"]}
-                                        rows={orderStatusData}
-                                    />
-                                </div>
+                                <OrderStatusOverview statuses={orderStatusData} />
                             </div>
 
                             <div className="col-lg-3">
