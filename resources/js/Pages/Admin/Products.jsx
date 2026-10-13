@@ -334,7 +334,7 @@ export default function AdminProducts({
     useEffect(() => {
         setStockValues(
             Object.fromEntries(
-                products.map((product) => [
+                (products.data ?? []).map((product) => [
                     product.id,
                     Number(product.stock_quantity ?? 0),
                 ])
