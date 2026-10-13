@@ -16,6 +16,7 @@ class Product extends Model
         'stock_quantity',
         'badge',
         'image',
+        'images',
         'specifications',
         'rating',
         'is_featured',
@@ -23,6 +24,7 @@ class Product extends Model
 
     protected $casts = [
         'specifications' => 'array',
+        'images' => 'array',
         'rating' => 'float',
         'stock_quantity' => 'integer',
         'is_featured' => 'boolean',
