@@ -42,6 +42,12 @@ export default function Sidebar({ active = "dashboard" }) {
             icon: "bi-bag-check",
         },
         {
+            label: "Transaction Logs",
+            href: "/admin/transactions",
+            key: "transactions",
+            icon: "bi-receipt",
+        },
+        {
             label: "Activity Logs",
             href: "/admin/activity-logs",
             key: "activity-logs",
