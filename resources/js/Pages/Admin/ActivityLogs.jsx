@@ -5,16 +5,20 @@ import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
 function actionClass(action) {
-    if (action === "user_role_updated") {
-        return "bg-primary-subtle text-primary";
+    if (action === "package_deleted") {
+        return "bg-danger-subtle text-danger";
     }
 
-    if (action === "product_stock_updated") {
+    if (action === "product_stock_updated" || action === "package_updated") {
         return "bg-warning-subtle text-warning-emphasis";
     }
 
-    if (action === "inquiry_status_updated") {
+    if (action === "inquiry_status_updated" || action === "package_created") {
         return "bg-success-subtle text-success";
+    }
+
+    if (action === "user_role_updated") {
+        return "bg-primary-subtle text-primary";
     }
 
     return "bg-info-subtle text-info-emphasis";

@@ -35,4 +35,19 @@ class Package extends Model
     {
         return $this->morphMany(Review::class, 'reviewable');
     }
+
+    public function orderItems(): MorphMany
+    {
+        return $this->morphMany(OrderItem::class, 'purchasable');
+    }
+
+    public function cartItems(): MorphMany
+    {
+        return $this->morphMany(CartItem::class, 'purchasable');
+    }
+
+    public function inquiryReferences(): MorphMany
+    {
+        return $this->morphMany(Inquiry::class, 'inquirable');
+    }
 }
