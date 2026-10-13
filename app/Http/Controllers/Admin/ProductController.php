@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Package;
 use App\Models\Product;
 use App\Services\InventoryService;
+use App\Services\AdminActivityLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -83,15 +85,31 @@ class ProductController extends Controller
         ]);
     }
 
-    public function updateStock(Request $request, Product $product)
+    public function updateStock(Request $request, Product $product, AdminActivityLogger $activityLogger)
     {
         $validated = $request->validate([
             'stock_quantity' => ['required', 'integer', 'min:0'],
         ]);
 
-        $product->update([
-            'stock_quantity' => $validated['stock_quantity'],
-        ]);
+        $oldQuantity = (int) $product->stock_quantity;
+        $newQuantity = (int) $validated['stock_quantity'];
+
+        DB::transaction(function () use ($request, $product, $oldQuantity, $newQuantity, $activityLogger) {
+            $product->update([
+                'stock_quantity' => $newQuantity,
+            ]);
+
+            if ($oldQuantity !== $newQuantity) {
+                $activityLogger->record(
+                    $request,
+                    'product_stock_updated',
+                    "Changed stock for {$product->name} from {$oldQuantity} to {$newQuantity} units.",
+                    $product,
+                    ['stock_quantity' => $oldQuantity],
+                    ['stock_quantity' => $newQuantity]
+                );
+            }
+        });
 
         return back()->with('success', $product->name . ' stock was updated successfully.');
     }

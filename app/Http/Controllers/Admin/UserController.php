@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AdminActivityLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class UserController extends Controller
@@ -66,7 +68,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function updateRole(Request $request, User $user)
+    public function updateRole(Request $request, User $user, AdminActivityLogger $activityLogger)
     {
         $validated = $request->validate([
             'role' => ['required', 'in:user,technician,admin'],
@@ -97,9 +99,20 @@ class UserController extends Controller
             }
         }
 
-        $user->update([
-            'role' => $newRole,
-        ]);
+        DB::transaction(function () use ($request, $user, $oldRole, $newRole, $activityLogger) {
+            $user->update([
+                'role' => $newRole,
+            ]);
+
+            $activityLogger->record(
+                $request,
+                'user_role_updated',
+                "Changed {$user->name}'s role from {$oldRole} to {$newRole}.",
+                $user,
+                ['role' => $oldRole],
+                ['role' => $newRole]
+            );
+        });
 
         return back()->with('success', 'User role updated successfully.');
     }

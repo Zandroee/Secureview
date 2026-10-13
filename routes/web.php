@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\ScheduleController as AdminScheduleController;
 use App\Http\Controllers\Admin\PurchaseController as AdminPurchaseController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -202,6 +203,9 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
+
+    Route::get('/admin/activity-logs', [AdminActivityLogController::class, 'index'])
+        ->name('admin.activity-logs.index');
 
     Route::get('/admin/inquiries', [AdminInquiryController::class, 'index'])
         ->name('admin.inquiries.index');

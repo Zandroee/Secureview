@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\User;
+use App\Services\AdminActivityLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class InquiryController extends Controller
@@ -132,8 +134,11 @@ class InquiryController extends Controller
         ]);
     }
 
-    public function assignTechnician(Request $request, Inquiry $inquiry)
-    {
+    public function assignTechnician(
+        Request $request,
+        Inquiry $inquiry,
+        AdminActivityLogger $activityLogger
+    ) {
         $validated = $request->validate([
             'technician_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
@@ -155,30 +160,57 @@ class InquiryController extends Controller
         $oldTechnicianId = $inquiry->technician_id;
 
         if ((int) $oldTechnicianId !== (int) $technicianId) {
-            $inquiry->update([
-                'technician_id' => $technicianId,
-            ]);
+            $oldTechnician = $oldTechnicianId ? User::find($oldTechnicianId) : null;
+            $newTechnician = $technicianId ? User::find($technicianId) : null;
+            $oldTechnicianName = $oldTechnician?->name ?? 'Unassigned';
+            $newTechnicianName = $newTechnician?->name ?? 'Unassigned';
 
-            $message = $technicianId
-                ? 'A technician has been assigned to your inquiry ' . $inquiry->inquiry_number . '.'
-                : 'The technician assignment for your inquiry ' . $inquiry->inquiry_number . ' has been removed.';
+            DB::transaction(function () use (
+                $request,
+                $inquiry,
+                $technicianId,
+                $oldTechnicianId,
+                $oldTechnicianName,
+                $newTechnicianName,
+                $activityLogger
+            ) {
+                $inquiry->update([
+                    'technician_id' => $technicianId,
+                ]);
 
-            CustomerNotification::create([
-                'user_id' => $inquiry->user_id,
-                'type' => 'technician_assignment',
-                'title' => 'Technician assignment updated',
-                'message' => $message,
-                'action_url' => route('inquiries.show', $inquiry),
-                'related_type' => Inquiry::class,
-                'related_id' => $inquiry->id,
-            ]);
+                $message = $technicianId
+                    ? 'A technician has been assigned to your inquiry ' . $inquiry->inquiry_number . '.'
+                    : 'The technician assignment for your inquiry ' . $inquiry->inquiry_number . ' has been removed.';
+
+                CustomerNotification::create([
+                    'user_id' => $inquiry->user_id,
+                    'type' => 'technician_assignment',
+                    'title' => 'Technician assignment updated',
+                    'message' => $message,
+                    'action_url' => route('inquiries.show', $inquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $inquiry->id,
+                ]);
+
+                $activityLogger->record(
+                    $request,
+                    'inquiry_technician_assigned',
+                    "Changed technician assignment for inquiry {$inquiry->inquiry_number} from {$oldTechnicianName} to {$newTechnicianName}.",
+                    $inquiry,
+                    ['technician_id' => $oldTechnicianId],
+                    ['technician_id' => $technicianId]
+                );
+            });
         }
 
         return back()->with('success', 'Technician assignment updated successfully.');
     }
 
-    public function updateStatus(Request $request, Inquiry $inquiry)
-    {
+    public function updateStatus(
+        Request $request,
+        Inquiry $inquiry,
+        AdminActivityLogger $activityLogger
+    ) {
         $validated = $request->validate([
             'status' => ['required', 'in:pending,confirmed,in_progress,completed,cancelled'],
         ]);
@@ -187,19 +219,36 @@ class InquiryController extends Controller
         $newStatus = $validated['status'];
 
         if ($oldStatus !== $newStatus) {
-            $inquiry->update([
-                'status' => $newStatus,
-            ]);
+            DB::transaction(function () use (
+                $request,
+                $inquiry,
+                $oldStatus,
+                $newStatus,
+                $activityLogger
+            ) {
+                $inquiry->update([
+                    'status' => $newStatus,
+                ]);
 
-            CustomerNotification::create([
-                'user_id' => $inquiry->user_id,
-                'type' => 'inquiry_status',
-                'title' => 'Inquiry status updated',
-                'message' => 'Your inquiry ' . $inquiry->inquiry_number . ' is now marked as ' . str_replace('_', ' ', $newStatus) . '.',
-                'action_url' => route('inquiries.show', $inquiry),
-                'related_type' => Inquiry::class,
-                'related_id' => $inquiry->id,
-            ]);
+                CustomerNotification::create([
+                    'user_id' => $inquiry->user_id,
+                    'type' => 'inquiry_status',
+                    'title' => 'Inquiry status updated',
+                    'message' => 'Your inquiry ' . $inquiry->inquiry_number . ' is now marked as ' . str_replace('_', ' ', $newStatus) . '.',
+                    'action_url' => route('inquiries.show', $inquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $inquiry->id,
+                ]);
+
+                $activityLogger->record(
+                    $request,
+                    'inquiry_status_updated',
+                    "Changed inquiry {$inquiry->inquiry_number} status from {$oldStatus} to {$newStatus}.",
+                    $inquiry,
+                    ['status' => $oldStatus],
+                    ['status' => $newStatus]
+                );
+            });
         }
 
         return back()->with('success', 'Inquiry status updated successfully.');
