@@ -7,6 +7,7 @@ export default function NoticeTable({
     headers,
     rows = [],
     pagination = null,
+    paginationLabel = "records",
 }){
 
     return(
@@ -57,7 +58,7 @@ export default function NoticeTable({
                         }
                     </tbody>
                 </table>
-                <AdminPagination pagination={pagination} compact />
+                <AdminPagination pagination={pagination} label={paginationLabel} compact />
             </div>
         </div>
     );
