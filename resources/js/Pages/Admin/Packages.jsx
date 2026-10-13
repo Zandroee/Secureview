@@ -12,7 +12,8 @@ function emptyPackage() {
         price: "",
         badge: "",
         image: "",
-        image_file: null,
+        existing_images: [],
+        image_files: [],
         specificationsText: "",
         is_featured: false,
         items: [{ product_id: "", quantity: 1 }],
@@ -292,7 +293,8 @@ export default function AdminPackages({
             price: String(item.price ?? ""),
             badge: item.badge ?? "",
             image: item.image ?? "",
-            image_file: null,
+            existing_images: Array.isArray(item.images) && item.images.length ? item.images : (item.image ? [item.image] : []),
+            image_files: [],
             specificationsText: Array.isArray(item.specifications)
                 ? item.specifications.join("\n")
                 : "",
@@ -804,10 +806,11 @@ export default function AdminPackages({
                                         <div className="col-md-4">
                                             <ImagePicker
                                                 label="PACKAGE IMAGE"
-                                                currentImage={data.image}
-                                                selectedFile={data.image_file}
-                                                onChange={(file) => setData("image_file", file)}
-                                                error={errors.image_file}
+                                                currentImages={data.existing_images}
+                                                selectedFiles={data.image_files}
+                                                onFilesChange={(files) => setData("image_files", files)}
+                                                onRemoveImage={(image) => setData("existing_images", data.existing_images.filter((item) => item !== image))}
+                                                error={errors.image_files || errors.image_file}
                                             />
                                         </div>
 
