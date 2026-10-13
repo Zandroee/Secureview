@@ -70,12 +70,12 @@ class ScheduleController extends Controller
                         ]
                         : null,
                 ];
-            })
-            ->values();
+            });
 
         $technicians = User::where('role', 'technician')
             ->orderBy('name')
             ->get(['id', 'name', 'email'])
+            ->values();
             
 
         return Inertia::render('Admin/Schedules', [
