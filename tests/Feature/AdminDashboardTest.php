@@ -89,6 +89,7 @@ class AdminDashboardTest extends TestCase
                 ->component('Dashboard')
                 ->where('stats.0.title', 'Total Sales')
                 ->where('stats.0.value', '₱1,234.50')
+                ->where('stats.0.growth', null)
                 ->where('stats.1.title', 'Total Orders')
                 ->where('stats.1.value', '2')
                 ->where('stats.2.title', 'Total Installation')
