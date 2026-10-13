@@ -98,11 +98,28 @@ class AdminDashboardTest extends TestCase
                 ->where('stats.3.value', '1')
                 ->has('revenueData', 12)
                 ->where('revenueData.0.month', 'Jan')
-                ->has('lowStockData', 1)
-                ->where('lowStockData.0.1', 'Dahua Camera')
-                ->has('pendingPaymentData', 1)
+                ->where('chartPeriod', 'year')
+                ->has('orderStatusData', 2)
+                ->has('lowStockData.data', 1)
+                ->where('lowStockData.data.0.1', 'Dahua Camera')
+                ->has('pendingPaymentData.data', 1)
                 ->has('scheduleData', 1)
                 ->has('recentInquiries', 1)
+            );
+    }
+
+
+    public function test_dashboard_chart_can_filter_to_the_last_six_months(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard', ['chart_period' => 'six_months']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('chartPeriod', 'six_months')
+                ->has('revenueData', 6)
             );
     }
 
