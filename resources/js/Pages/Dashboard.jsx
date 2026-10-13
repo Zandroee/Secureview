@@ -6,15 +6,30 @@ import RevenueChart from "../Components/Admin/RevenueChart";
 import NoticeTable from "../Components/Admin/NoticeTable";
 import Calendar from "../Components/Admin/Calendar";
 import Announcements from "../Components/Admin/Announcements";
+import { router } from "@inertiajs/react";
 
 export default function Dashboard({
     stats = [],
     revenueData = [],
-    lowStockData = [],
-    pendingPaymentData = [],
+    chartPeriod = "year",
+    orderStatusData = [],
+    lowStockData = { data: [] },
+    pendingPaymentData = { data: [] },
     scheduleData = [],
     recentInquiries = [],
 }) {
+    const changeChartPeriod = (event) => {
+        router.get(
+            "/dashboard",
+            { chart_period: event.target.value },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            }
+        );
+    };
+
     return (
         <>
             <Navbar />
@@ -28,11 +43,16 @@ export default function Dashboard({
                         <div className="row g-4">
                             <div className="col-lg-9">
                                 <div className="d-flex justify-content-between align-items-center mb-4">
-                                    <h1 className="fw-bold text-primary mb-0">
-                                        Dashboard
-                                    </h1>
-                                    <span className="btn btn-light text-primary fw-bold">
-                                        This Week
+                                    <div>
+                                        <div className="small text-primary fw-bold">
+                                            SECUREVIEW ADMIN
+                                        </div>
+                                        <h1 className="fw-bold text-primary mb-0">
+                                            Dashboard
+                                        </h1>
+                                    </div>
+                                    <span className="badge bg-light text-primary border px-3 py-2">
+                                        Live data
                                     </span>
                                 </div>
 
@@ -54,9 +74,11 @@ export default function Dashboard({
                                 <RevenueChart
                                     title="Total Revenue"
                                     data={revenueData}
+                                    period={chartPeriod}
+                                    onPeriodChange={changeChartPeriod}
                                 />
 
-                                <div className="row g-4 mt-4">
+                                <div className="row g-4 mt-2">
                                     <div className="col-lg-6">
                                         <NoticeTable
                                             title="Low Stock Notice"
@@ -65,7 +87,8 @@ export default function Dashboard({
                                                 "Product Name",
                                                 "Quantity",
                                             ]}
-                                            rows={lowStockData}
+                                            rows={lowStockData.data ?? []}
+                                            pagination={lowStockData}
                                         />
                                     </div>
 
@@ -77,9 +100,18 @@ export default function Dashboard({
                                                 "Customer",
                                                 "Total",
                                             ]}
-                                            rows={pendingPaymentData}
+                                            rows={pendingPaymentData.data ?? []}
+                                            pagination={pendingPaymentData}
                                         />
                                     </div>
+                                </div>
+
+                                <div className="mt-4">
+                                    <NoticeTable
+                                        title="Order Status Overview"
+                                        headers={["Order Status", "Orders"]}
+                                        rows={orderStatusData}
+                                    />
                                 </div>
                             </div>
 
