@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Package;
 use App\Models\Product;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -299,6 +300,52 @@ class AdminPackageManagementTest extends TestCase
             'action' => 'package_deleted',
             'subject_id' => $package->id,
         ]);
+    }
+
+    public function test_catalog_dropdown_options_include_values_from_products_and_packages(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        Product::create([
+            'name' => 'Dropdown Camera',
+            'category' => 'Camera Systems',
+            'warranty' => '18 months',
+            'price' => 3200,
+            'stock_quantity' => 5,
+            'badge' => 'Top Seller',
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        Package::create([
+            'name' => 'Dropdown Alarm Bundle',
+            'category' => 'Alarm Bundles',
+            'warranty' => '3 years',
+            'price' => 9500,
+            'badge' => 'Premium',
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('categoryOptions', ['Alarm Bundles', 'Camera Systems'])
+                ->where('warrantyOptions', ['18 months', '3 years'])
+                ->where('badgeOptions', ['Premium', 'Top Seller'])
+            );
+
+        $this->actingAs($admin)
+            ->get(route('admin.packages.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('categoryOptions', ['Alarm Bundles', 'Camera Systems'])
+                ->where('warrantyOptions', ['18 months', '3 years'])
+                ->where('badgeOptions', ['Premium', 'Top Seller'])
+            );
     }
 
     public function test_admin_can_upload_a_package_image_from_a_file(): void
