@@ -51,7 +51,7 @@ class UserController extends Controller
                     'created_at' => $user->created_at?->format('M d, Y'),
                 ];
             })
-            ->values();
+            
 
         return Inertia::render('Admin/Users', [
             'users' => $users,
