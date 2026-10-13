@@ -1,6 +1,7 @@
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
+import AdminPagination from "../../Components/Admin/AdminPagination";
 import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
@@ -48,6 +49,7 @@ export default function AdminTransactions({
     summary = {},
     filters = {},
 }) {
+    const transactionRows = transactions.data ?? (Array.isArray(transactions) ? transactions : []);
     const [search, setSearch] = useState(filters.search ?? "");
     const [paymentStatus, setPaymentStatus] = useState(
         filters.payment_status ?? ""
@@ -300,7 +302,7 @@ export default function AdminTransactions({
                                     </thead>
 
                                     <tbody>
-                                        {transactions.length === 0 ? (
+                                        {transactionRows.length === 0 ? (
                                             <tr>
                                                 <td
                                                     colSpan="7"
@@ -310,7 +312,7 @@ export default function AdminTransactions({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            transactions.map((transaction) => (
+                                            transactionRows.map((transaction) => (
                                                 <tr key={transaction.id}>
                                                     <td className="ps-3">
                                                         <div className="fw-semibold">
@@ -395,6 +397,7 @@ export default function AdminTransactions({
                                     </tbody>
                                 </table>
                             </div>
+                            <AdminPagination pagination={transactions} label="transactions" />
                         </div>
                     </main>
                 </div>
