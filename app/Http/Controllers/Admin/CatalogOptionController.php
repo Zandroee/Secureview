@@ -39,19 +39,12 @@ class CatalogOptionController extends Controller
             'value' => ['required', 'string', 'max:120'],
         ]);
 
-        $option = CatalogOption::query()
-            ->where('field', $validated['field'])
-            ->where('value', trim($validated['value']))
-            ->first();
-
-        $deleted = $option && $option->is_active;
-        if ($deleted) {
-            $option->update(['is_active' => false]);
-        }
-
-        if ($deleted === 0) {
-            return back()->with('success', 'That option was already removed.');
-        }
+        CatalogOption::query()->updateOrCreate([
+            'field' => $validated['field'],
+            'value' => trim($validated['value']),
+        ], [
+            'is_active' => false,
+        ]);
 
         return back()->with('success', ucfirst($validated['field']) . ' option removed from the dropdown. Existing catalog items are unchanged.');
     }
