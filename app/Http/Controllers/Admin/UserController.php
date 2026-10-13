@@ -50,7 +50,7 @@ class UserController extends Controller
                     'email_verified' => $user->hasVerifiedEmail(),
                     'created_at' => $user->created_at?->format('M d, Y'),
                 ];
-            })
+            });
             
 
         return Inertia::render('Admin/Users', [
