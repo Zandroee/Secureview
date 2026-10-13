@@ -361,7 +361,7 @@ class AdminPackageManagementTest extends TestCase
                 'price' => '2500.00',
                 'badge' => 'New',
                 'image' => null,
-                'image_file' => UploadedFile::fake()->image('package.png'),
+                'image_file' => UploadedFile::fake()->create('package.png', 10, 'image/png'),
                 'specifications' => ['Camera included'],
                 'is_featured' => false,
                 'items' => [
