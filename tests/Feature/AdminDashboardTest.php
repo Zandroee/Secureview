@@ -1,0 +1,116 @@
+<?php
+
+namespace Tests\\Feature;
+
+use App\\Models\\Inquiry;
+use App\\Models\\Order;
+use App\\Models\\Product;
+use App\\Models\\User;
+use Illuminate\\Foundation\\Testing\\RefreshDatabase;
+use Inertia\\Testing\\AssertableInertia as Assert;
+use Tests\\TestCase;
+
+class AdminDashboardTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_admin_dashboard_displays_live_store_data(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+
+        Product::create([
+            'name' => 'Dahua Camera',
+            'category' => 'CCTV',
+            'warranty' => '1 year',
+            'price' => 2500,
+            'stock_quantity' => 2,
+            'badge' => null,
+            'image' => null,
+            'images' => [],
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        Order::create([
+            'user_id' => $customer->id,
+            'order_number' => 'ORD-DASH-PAID',
+            'subtotal' => 1234.5,
+            'shipping_fee' => 0,
+            'total' => 1234.5,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+            'order_status' => 'processing',
+            'paid_at' => now(),
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'delivery_address' => '123 Test Street',
+        ]);
+
+        Order::create([
+            'user_id' => $customer->id,
+            'order_number' => 'ORD-DASH-PENDING',
+            'subtotal' => 799,
+            'shipping_fee' => 0,
+            'total' => 799,
+            'payment_method' => 'gcash',
+            'payment_status' => 'pending',
+            'order_status' => 'awaiting_payment',
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'delivery_address' => '123 Test Street',
+        ]);
+
+        Inquiry::create([
+            'user_id' => $customer->id,
+            'technician_id' => null,
+            'inquiry_number' => 'INQ-DASH-001',
+            'item_name' => 'Dahua Camera',
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'street_address' => '123 Test Street',
+            'city' => 'Taguig',
+            'service_type' => 'CCTV Installation',
+            'urgency' => 'normal',
+            'preferred_date' => today()->addDays(2),
+            'preferred_time' => '10:00',
+            'notes' => null,
+            'status' => 'confirmed',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('stats.0.title', 'Total Sales')
+                ->where('stats.0.value', '₱1,234.50')
+                ->where('stats.1.title', 'Total Orders')
+                ->where('stats.1.value', '2')
+                ->where('stats.2.title', 'Total Installation')
+                ->where('stats.2.value', '1')
+                ->where('stats.3.title', 'New Customers')
+                ->where('stats.3.value', '1')
+                ->has('revenueData', 12)
+                ->where('revenueData.0.month', 'Jan')
+                ->has('lowStockData', 1)
+                ->where('lowStockData.0.1', 'Dahua Camera')
+                ->has('pendingPaymentData', 1)
+                ->has('scheduleData', 1)
+                ->has('recentInquiries', 1)
+            );
+    }
+
+    public function test_non_admin_cannot_view_dashboard(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertForbidden();
+    }
+}
