@@ -9,6 +9,7 @@ use App\Services\AdminActivityLogger;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -59,6 +60,18 @@ class ProductController extends Controller
             ->values();
 
         $allProducts = Product::all();
+        $allPackagesForOptions = Package::query()->get(['category', 'warranty', 'badge']);
+
+        $catalogOptions = static function (string $field) use ($allProducts, $allPackagesForOptions) {
+            return $allProducts->pluck($field)
+                ->merge($allPackagesForOptions->pluck($field))
+                ->filter(fn ($value) => filled($value))
+                ->map(fn ($value) => trim((string) $value))
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        };
 
         $packages = Package::with('packageItems.product')
             ->orderBy('name')
@@ -78,6 +91,9 @@ class ProductController extends Controller
         return Inertia::render('Admin/Products', [
             'products' => $products,
             'categories' => $categories,
+            'categoryOptions' => $catalogOptions('category'),
+            'warrantyOptions' => $catalogOptions('warranty'),
+            'badgeOptions' => $catalogOptions('badge'),
             'packages' => $packages,
             'summary' => [
                 'total_products' => $allProducts->count(),
@@ -97,6 +113,10 @@ class ProductController extends Controller
     {
         $validated = $this->validateProduct($request);
         $fields = $this->productFields($validated);
+
+        if ($request->hasFile('image_file')) {
+            $fields['image'] = '/storage/' . $request->file('image_file')->store('products', 'public');
+        }
 
         DB::transaction(function () use ($request, $fields, $activityLogger) {
             $product = Product::create($fields);
@@ -123,6 +143,12 @@ class ProductController extends Controller
     ) {
         $validated = $this->validateProduct($request);
         $fields = $this->productFields($validated);
+        $oldImage = $product->image;
+
+        if ($request->hasFile('image_file')) {
+            $fields['image'] = '/storage/' . $request->file('image_file')->store('products', 'public');
+        }
+
         $oldSnapshot = $this->snapshot($product);
         $oldName = $product->name;
         $priceChanged = (float) $product->price !== (float) $fields['price'];
@@ -156,6 +182,10 @@ class ProductController extends Controller
             );
         });
 
+        if ($request->hasFile('image_file') && $oldImage !== $product->image) {
+            $this->deleteStoredImage($oldImage);
+        }
+
         return redirect()
             ->route('admin.products.index')
             ->with('success', 'Product updated successfully.');
@@ -171,6 +201,8 @@ class ProductController extends Controller
                 'product' => 'This product is used by a package, cart, order, or review and cannot be deleted. Remove or resolve those references first.',
             ]);
         }
+
+        $oldImage = $product->image;
 
         DB::transaction(function () use ($request, $product, $activityLogger) {
             // Lock the parent row before rechecking references to reduce race conditions with new cart/package/order items.
@@ -195,6 +227,8 @@ class ProductController extends Controller
 
             $lockedProduct->delete();
         });
+
+        $this->deleteStoredImage($oldImage);
 
         return redirect()
             ->route('admin.products.index')
@@ -248,7 +282,8 @@ class ProductController extends Controller
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
             'stock_quantity' => ['required', 'integer', 'min:0'],
             'badge' => ['nullable', 'string', 'max:80'],
-            'image' => ['nullable', 'string', 'max:255'],
+            'image' => ['nullable', 'string', 'max:2048'],
+            'image_file' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'specifications' => ['nullable', 'array', 'max:30'],
             'specifications.*' => ['nullable', 'string', 'max:255'],
             'is_featured' => ['required', 'boolean'],
@@ -274,6 +309,19 @@ class ProductController extends Controller
             'specifications' => $specifications ?: null,
             'is_featured' => (bool) $validated['is_featured'],
         ];
+    }
+
+    private function deleteStoredImage(?string $image): void
+    {
+        if (!$image || preg_match('#^https?://#i', $image)) {
+            return;
+        }
+
+        $path = preg_replace('#^/?storage/#', '', $image);
+
+        if ($path && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     private function hasReferences(Product $product): bool
