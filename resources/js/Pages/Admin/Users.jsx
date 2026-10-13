@@ -2,6 +2,7 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import { router } from "@inertiajs/react";
+import AdminPagination from "../../Components/Admin/AdminPagination";
 import { useState } from "react";
 
 function roleClass(role) {
@@ -34,12 +35,13 @@ export default function AdminUsers({
     summary = {},
     filters = {},
 }) {
+    const userRows = users.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [role, setRole] = useState(filters.role ?? "");
     const [roleValues, setRoleValues] = useState(
         () =>
             Object.fromEntries(
-                users.map((user) => [user.id, user.role])
+                userRows.map((user) => [user.id, user.role])
             )
     );
     const [savingId, setSavingId] = useState(null);
@@ -267,7 +269,7 @@ export default function AdminUsers({
                                     </thead>
 
                                     <tbody>
-                                        {users.length === 0 ? (
+                                        {userRows.length === 0 ? (
                                             <tr>
                                                 <td
                                                     colSpan="6"
@@ -277,7 +279,7 @@ export default function AdminUsers({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            users.map((user) => {
+                                            userRows.map((user) => {
                                                 const isCurrentUser =
                                                     user.id === currentUserId;
                                                 const value =
@@ -406,6 +408,9 @@ export default function AdminUsers({
                                 </table>
                             </div>
                         </div>
+
+                        <AdminPagination pagination={users} />
+
                     </main>
                 </div>
             </div>
