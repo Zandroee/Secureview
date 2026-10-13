@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\ScheduleController as AdminScheduleController;
 use App\Http\Controllers\Admin\PurchaseController as AdminPurchaseController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
+use App\Http\Controllers\Admin\PackageController as AdminPackageController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -207,6 +208,18 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/activity-logs', [AdminActivityLogController::class, 'index'])
         ->name('admin.activity-logs.index');
+
+    Route::get('/admin/packages', [AdminPackageController::class, 'index'])
+        ->name('admin.packages.index');
+
+    Route::post('/admin/packages', [AdminPackageController::class, 'store'])
+        ->name('admin.packages.store');
+
+    Route::patch('/admin/packages/{package}', [AdminPackageController::class, 'update'])
+        ->name('admin.packages.update');
+
+    Route::delete('/admin/packages/{package}', [AdminPackageController::class, 'destroy'])
+        ->name('admin.packages.destroy');
 
     Route::get('/admin/transactions', [AdminTransactionController::class, 'index'])
         ->name('admin.transactions.index');

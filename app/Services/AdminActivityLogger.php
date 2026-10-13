@@ -17,6 +17,13 @@ class AdminActivityLogger
         'stock_quantity',
         'technician_id',
         'status',
+        'name',
+        'category',
+        'warranty',
+        'price',
+        'badge',
+        'is_featured',
+        'items_count',
     ];
 
     public function record(

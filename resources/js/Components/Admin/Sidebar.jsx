@@ -30,6 +30,12 @@ export default function Sidebar({ active = "dashboard" }) {
             icon: "bi-camera-video",
         },
         {
+            label: "Packages",
+            href: "/admin/packages",
+            key: "packages",
+            icon: "bi-box-seam",
+        },
+        {
             label: "Schedules",
             href: "/admin/schedules",
             key: "schedules",
@@ -56,10 +62,6 @@ export default function Sidebar({ active = "dashboard" }) {
     ];
 
     const comingSoonItems = [
-        {
-            label: "Packages",
-            icon: "bi-box-seam",
-        },
         {
             label: "Transaction Logs",
             icon: "bi-receipt",

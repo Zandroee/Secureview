@@ -17,13 +17,16 @@ class ActivityLogController extends Controller
         'product_stock_updated' => 'Product stock updated',
         'inquiry_technician_assigned' => 'Technician assignment changed',
         'inquiry_status_updated' => 'Inquiry status updated',
+        'package_created' => 'Package created',
+        'package_updated' => 'Package updated',
+        'package_deleted' => 'Package deleted',
     ];
 
     public function index(Request $request)
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'action' => ['nullable', 'in:admin_logged_in,admin_logged_out,user_role_updated,product_stock_updated,inquiry_technician_assigned,inquiry_status_updated'],
+            'action' => ['nullable', 'in:admin_logged_in,admin_logged_out,user_role_updated,product_stock_updated,inquiry_technician_assigned,inquiry_status_updated,package_created,package_updated,package_deleted'],
             'admin_id' => ['nullable', 'integer', 'exists:users,id'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
