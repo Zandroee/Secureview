@@ -693,7 +693,7 @@ export default function AdminPackages({
                                 </table>
                             </div>
 
-                            <AdminPagination pagination={packages} label="packages" />
+                            <AdminPagination pagination={packages} label="packages" insideCard />
                         </div>
 
                         <div className="small text-muted mt-3">
