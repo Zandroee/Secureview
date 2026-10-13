@@ -448,7 +448,7 @@ class AdminProductManagementTest extends TestCase
         $this->assertDatabaseHas('catalog_options', [
             'field' => 'category',
             'value' => 'CCTV',
-            'is_active' => false,
+            'is_active' => 0,
         ]);
         $this->assertDatabaseHas('products', [
             'name' => 'Existing CCTV Camera',
