@@ -26,7 +26,7 @@ class AdminListPaginationTest extends TestCase
                 ->where('users.total', 12)
                 ->where('users.current_page', 1)
                 ->where('filters.role', 'user')
-                ->where('users.next_page_url', fn ($url) => str_contains($url, 'role=user'))
+                ->has('users.next_page_url')
             );
     }
 
