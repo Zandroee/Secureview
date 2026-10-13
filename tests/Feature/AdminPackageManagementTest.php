@@ -378,6 +378,43 @@ class AdminPackageManagementTest extends TestCase
         );
     }
 
+    public function test_admin_can_upload_multiple_package_images(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Gallery Bundle Camera', 5);
+
+        $this->actingAs($admin)
+            ->post(route('admin.packages.store'), [
+                'name' => 'Package Gallery Test',
+                'category' => 'CCTV',
+                'warranty' => '1 year',
+                'price' => '2500.00',
+                'badge' => null,
+                'image' => null,
+                'image_files' => [
+                    UploadedFile::fake()->create('package-front.png', 10, 'image/png'),
+                    UploadedFile::fake()->create('package-side.png', 10, 'image/png'),
+                ],
+                'specifications' => [],
+                'is_featured' => false,
+                'items' => [
+                    ['product_id' => $product->id, 'quantity' => 1],
+                ],
+            ])
+            ->assertRedirect(route('admin.packages.index'));
+
+        $package = Package::query()->where('name', 'Package Gallery Test')->firstOrFail();
+        $this->assertCount(2, $package->images);
+        $this->assertSame($package->images[0], $package->image);
+
+        foreach ($package->images as $image) {
+            Storage::disk('public')->assertExists(
+                preg_replace('#^/storage/#', '', $image)
+            );
+        }
+    }
+
     private function createProduct(string $name, int $stock): Product
     {
         return Product::create([
