@@ -61,13 +61,6 @@ export default function Sidebar({ active = "dashboard" }) {
         },
     ];
 
-    const comingSoonItems = [
-        {
-            label: "Transaction Logs",
-            icon: "bi-receipt",
-        },
-
-    ];
 
     return (
         <aside
@@ -115,21 +108,6 @@ export default function Sidebar({ active = "dashboard" }) {
                     </Link>
                 ))}
 
-                <div className="small text-uppercase text-muted fw-bold mt-3 mb-1">
-                    Coming Soon
-                </div>
-
-                {comingSoonItems.map((item) => (
-                    <button
-                        key={item.label}
-                        type="button"
-                        className="btn btn-light text-start text-muted"
-                        disabled
-                    >
-                        <i className={"bi " + item.icon + " me-2"}></i>
-                        {item.label}
-                    </button>
-                ))}
             </div>
         </aside>
     );
