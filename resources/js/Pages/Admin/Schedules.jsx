@@ -2,6 +2,7 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import { Link, router } from "@inertiajs/react";
+import AdminPagination from "../../Components/Admin/AdminPagination";
 import { useState } from "react";
 
 function urgencyClass(urgency) {
@@ -34,6 +35,7 @@ export default function AdminSchedules({
     summary = {},
     filters = {},
 }) {
+    const scheduleRows = schedules.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
     const [technician, setTechnician] = useState(filters.technician ?? "");
@@ -275,7 +277,7 @@ export default function AdminSchedules({
                                     </thead>
 
                                     <tbody>
-                                        {schedules.length === 0 ? (
+                                        {scheduleRows.length === 0 ? (
                                             <tr>
                                                 <td
                                                     colSpan="7"
@@ -285,7 +287,7 @@ export default function AdminSchedules({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            schedules.map((schedule) => (
+                                            scheduleRows.map((schedule) => (
                                                 <tr key={schedule.id}>
                                                     <td className="ps-3">
                                                         <span
@@ -398,6 +400,8 @@ export default function AdminSchedules({
                                 </table>
                             </div>
                         </div>
+
+                        <AdminPagination pagination={schedules} />
 
                         <div className="small text-muted mt-3">
                             Use the inquiry details page to change the
