@@ -401,7 +401,7 @@ export default function AdminSchedules({
                             </div>
                         </div>
 
-                        <AdminPagination pagination={schedules} />
+                        <AdminPagination pagination={schedules} label="schedules" />
 
                         <div className="small text-muted mt-3">
                             Use the inquiry details page to change the
