@@ -1,6 +1,7 @@
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
+import AdminPagination from "../../Components/Admin/AdminPagination";
 import { Link, router, useForm } from "@inertiajs/react";
 import { useEffect, useState } from "react";
 
@@ -692,30 +693,7 @@ export default function AdminPackages({
                                 </table>
                             </div>
 
-                            <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 p-3 border-top">
-                                <div className="small text-muted">
-                                    Showing {packages.from ?? 0}–{packages.to ?? 0} of {packages.total ?? 0} packages
-                                </div>
-                                <div className="d-flex gap-1 flex-wrap">
-                                    {(packages.links ?? []).map((link, index) => (
-                                        link.url ? (
-                                            <Link
-                                                key={index}
-                                                href={link.url}
-                                                preserveScroll
-                                                className={"btn btn-sm " + (link.active ? "btn-primary" : "btn-outline-secondary")}
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
-                                        ) : (
-                                            <span
-                                                key={index}
-                                                className="btn btn-sm btn-outline-secondary disabled"
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
-                                        )
-                                    ))}
-                                </div>
-                            </div>
+                            <AdminPagination pagination={packages} label="packages" />
                         </div>
 
                         <div className="small text-muted mt-3">
