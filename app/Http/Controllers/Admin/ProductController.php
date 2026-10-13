@@ -159,7 +159,7 @@ class ProductController extends Controller
         $validated = $this->validateProduct($request);
         $fields = $this->productFields($validated);
         $oldImages = $this->currentImages($product);
-        $existingImages = $request->exists('existing_images')
+        $existingImages = $request->boolean('gallery_managed') || $request->exists('existing_images')
             ? collect($request->input('existing_images', []))
                 ->filter(fn ($image) => is_string($image) && in_array($image, $oldImages, true))
                 ->unique()
@@ -309,6 +309,7 @@ class ProductController extends Controller
             'image_file' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'image_files' => ['nullable', 'array', 'max:10'],
             'image_files.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'gallery_managed' => ['sometimes', 'boolean'],
             'existing_images' => ['sometimes', 'array', 'max:10'],
             'existing_images.*' => ['string', 'max:2048'],
             'specifications' => ['nullable', 'array', 'max:30'],
@@ -344,7 +345,7 @@ class ProductController extends Controller
      */
     private function resolveImages(Request $request, array $existingImages, ?string $legacyImage, string $directory): array
     {
-        if (!$request->exists('existing_images') && $legacyImage && !in_array($legacyImage, $existingImages, true)) {
+        if (!$request->boolean('gallery_managed') && !$request->exists('existing_images') && $legacyImage && !in_array($legacyImage, $existingImages, true)) {
             array_unshift($existingImages, $legacyImage);
         }
 
