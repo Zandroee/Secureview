@@ -27,11 +27,36 @@ class AdminProductManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/Products')
-                ->has('products', 0)
+                ->has('products.data', 0)
+                ->where('products.total', 0)
                 ->has('categoryOptions')
                 ->has('warrantyOptions')
                 ->has('badgeOptions')
                 ->where('summary.total_products', 0)
+            );
+    }
+
+
+    public function test_admin_products_are_paginated_and_keep_search_filters(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        for ($index = 1; $index <= 13; $index++) {
+            $this->createProduct('Pagination Camera ' . $index, 10);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.index', [
+                'search' => 'Pagination Camera',
+                'page' => 2,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Products')
+                ->has('products.data', 1)
+                ->where('products.total', 13)
+                ->where('products.current_page', 2)
+                ->where('filters.search', 'Pagination Camera')
             );
     }
 
