@@ -40,8 +40,9 @@ class TransactionController extends Controller
         }
 
         $transactions = $query
-            ->get()
-            ->map(function (Order $order) {
+            ->paginate(12)
+            ->withQueryString()
+            ->through(function (Order $order) {
                 return [
                     'id' => $order->id,
                     'transaction_id' => $order->paymongo_payment_id,
@@ -56,8 +57,7 @@ class TransactionController extends Controller
                     'created_at' => $order->created_at?->format('M d, Y h:i A'),
                     'paid_at' => $order->paid_at?->format('M d, Y h:i A'),
                 ];
-            })
-            ->values();
+            });
 
         return Inertia::render('Admin/Transactions', [
             'transactions' => $transactions,
