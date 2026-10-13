@@ -13,6 +13,7 @@ return new class extends Migration
             $table->id();
             $table->string('field', 20);
             $table->string('value', 120);
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->unique(['field', 'value']);
         });
