@@ -73,12 +73,12 @@ class InquiryController extends Controller
                     'item_name' => $inquiry->item_name,
                     'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
                 ];
-            })
-            ->values();
+            });
 
         $technicians = User::where('role', 'technician')
             ->orderBy('name')
             ->get(['id', 'name', 'email'])
+            ->values();
             
 
         return Inertia::render('Admin/Inquiries', [
