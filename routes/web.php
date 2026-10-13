@@ -202,6 +202,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'admin'])->group(function () {
+    Route::post('/admin/catalog-options', [AdminCatalogOptionController::class, 'store'])
+        ->name('admin.catalog-options.store');
+
+    Route::delete('/admin/catalog-options', [AdminCatalogOptionController::class, 'destroy'])
+        ->name('admin.catalog-options.destroy');
+
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
