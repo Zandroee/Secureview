@@ -698,7 +698,7 @@ export default function AdminProducts({
                                     </tbody>
                                 </table>
                             </div>
-                            <AdminPagination pagination={products} label="products" />
+                            <AdminPagination pagination={products} label="products" insideCard />
                         </div>
 
                         <div
