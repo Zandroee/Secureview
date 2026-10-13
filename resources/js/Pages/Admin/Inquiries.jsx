@@ -473,7 +473,7 @@ export default function AdminInquiries({
                             </div>
                         </div>
 
-                        <AdminPagination pagination={inquiries} />
+                        <AdminPagination pagination={inquiries} label="inquiries" />
 
                     </main>
                 </div>
