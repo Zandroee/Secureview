@@ -2,7 +2,7 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import { Link, router, useForm } from "@inertiajs/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function emptyPackage() {
     return {
@@ -12,6 +12,7 @@ function emptyPackage() {
         price: "",
         badge: "",
         image: "",
+        image_file: null,
         specificationsText: "",
         is_featured: false,
         items: [{ product_id: "", quantity: 1 }],
@@ -37,10 +38,116 @@ function ErrorText({ message }) {
     return <div className="small text-danger mt-1">{message}</div>;
 }
 
+
+function CatalogOptionSelect({
+    label,
+    value,
+    options = [],
+    onChange,
+    required = false,
+    error,
+    allowBlank = false,
+}) {
+    const values = [...(options ?? [])].filter(Boolean);
+    if (value && !values.some((item) => String(item).toLowerCase() === String(value).toLowerCase())) {
+        values.push(value);
+    }
+    const uniqueValues = [...new Map(values.map((item) => [String(item).toLowerCase(), item])).values()];
+
+    const handleChange = (event) => {
+        if (event.target.value === "__add_new_option__") {
+            const nextValue = window.prompt("Add a new " + label.toLowerCase() + ":");
+            if (nextValue?.trim()) onChange(nextValue.trim());
+            return;
+        }
+
+        onChange(event.target.value);
+    };
+
+    return (
+        <select
+            className={"form-select " + (error ? "is-invalid" : "")}
+            value={value ?? ""}
+            onChange={handleChange}
+            required={required}
+        >
+            <option value="">
+                {allowBlank ? "No " + label.toLowerCase() : "Select " + label.toLowerCase()}
+            </option>
+            {uniqueValues.map((item) => (
+                <option key={item} value={item}>{item}</option>
+            ))}
+            <option value="__add_new_option__">+ Add new {label.toLowerCase()}…</option>
+        </select>
+    );
+}
+
+function imageSource(image) {
+    if (!image) return "";
+    if (/^https?:\/\//i.test(image) || String(image).startsWith("/")) return image;
+    return "/storage/" + String(image).replace(/^\/+/, "");
+}
+
+function ImagePicker({ label, currentImage, selectedFile, onChange, error }) {
+    const [previewUrl, setPreviewUrl] = useState("");
+
+    useEffect(() => {
+        if (!selectedFile) {
+            setPreviewUrl("");
+            return undefined;
+        }
+
+        const url = URL.createObjectURL(selectedFile);
+        setPreviewUrl(url);
+        return () => URL.revokeObjectURL(url);
+    }, [selectedFile]);
+
+    const preview = previewUrl || imageSource(currentImage);
+
+    return (
+        <div>
+            <label className="form-label fw-semibold">{label}</label>
+            <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className={"form-control " + (error ? "is-invalid" : "")}
+                onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+            />
+            <div className="form-text">Choose JPG, PNG, or WebP, up to 5 MB.</div>
+            {selectedFile && (
+                <div className="small text-muted mt-1">
+                    Selected: {selectedFile.name}
+                </div>
+            )}
+            {preview && (
+                <img
+                    src={preview}
+                    alt="Package preview"
+                    className="rounded border mt-2"
+                    style={{ width: "100px", height: "100px", objectFit: "cover" }}
+                />
+            )}
+            <ErrorText message={error} />
+        </div>
+    );
+}
+
+function componentSubtotal(items, products) {
+    return (items ?? []).reduce((total, item) => {
+        const product = products.find((candidate) => String(candidate.id) === String(item.product_id));
+        const quantity = Number(item.quantity);
+        if (!product || !Number.isFinite(quantity) || quantity <= 0) return total;
+        return total + Number(product.price ?? 0) * quantity;
+    }, 0);
+}
+
 export default function AdminPackages({
     packages = { data: [], links: [] },
     products = [],
     categories = [],
+    categoryOptions = [],
+    warrantyOptions = [],
+    badgeOptions = [],
     filters = {},
     summary = {},
     success = "",
@@ -115,6 +222,7 @@ export default function AdminPackages({
             price: String(item.price ?? ""),
             badge: item.badge ?? "",
             image: item.image ?? "",
+            image_file: null,
             specificationsText: Array.isArray(item.specifications)
                 ? item.specifications.join("\n")
                 : "",
@@ -153,6 +261,7 @@ export default function AdminPackages({
 
         const options = {
             preserveScroll: true,
+            forceFormData: true,
             onSuccess: () => closeForm(),
             onError: () => setGeneralError("Please review the highlighted fields and try again."),
         };
@@ -179,6 +288,11 @@ export default function AdminPackages({
         });
 
         setData("items", nextItems);
+
+        if (key === "product_id" || key === "quantity") {
+            const total = componentSubtotal(nextItems, products);
+            setData("price", total > 0 ? total.toFixed(2) : "");
+        }
     };
 
     const removeComponent = (index) => {
@@ -565,28 +679,26 @@ export default function AdminPackages({
 
                                         <div className="col-md-3">
                                             <label className="form-label fw-semibold">CATEGORY *</label>
-                                            <input
-                                                className={"form-control " + (errors.category ? "is-invalid" : "")}
+                                            <CatalogOptionSelect
+                                                label="Category"
                                                 value={data.category}
-                                                maxLength={120}
-                                                list="package-category-options"
-                                                onChange={(event) => setData("category", event.target.value)}
+                                                options={categoryOptions}
                                                 required
+                                                error={errors.category}
+                                                onChange={(value) => setData("category", value)}
                                             />
-                                            <datalist id="package-category-options">
-                                                {categories.map((item) => <option key={item} value={item} />)}
-                                            </datalist>
                                             <ErrorText message={errors.category} />
                                         </div>
 
                                         <div className="col-md-3">
                                             <label className="form-label fw-semibold">WARRANTY *</label>
-                                            <input
-                                                className={"form-control " + (errors.warranty ? "is-invalid" : "")}
+                                            <CatalogOptionSelect
+                                                label="Warranty"
                                                 value={data.warranty}
-                                                maxLength={120}
-                                                onChange={(event) => setData("warranty", event.target.value)}
+                                                options={warrantyOptions}
                                                 required
+                                                error={errors.warranty}
+                                                onChange={(value) => setData("warranty", value)}
                                             />
                                             <ErrorText message={errors.warranty} />
                                         </div>
@@ -602,31 +714,33 @@ export default function AdminPackages({
                                                 onChange={(event) => setData("price", event.target.value)}
                                                 required
                                             />
+                                            <div className="form-text">
+                                                Selected product total: {money(componentSubtotal(data.items, products))}. Changes to components automatically recalculate this value.
+                                            </div>
                                             <ErrorText message={errors.price} />
                                         </div>
 
                                         <div className="col-md-4">
                                             <label className="form-label fw-semibold">BADGE</label>
-                                            <input
-                                                className={"form-control " + (errors.badge ? "is-invalid" : "")}
+                                            <CatalogOptionSelect
+                                                label="Badge"
                                                 value={data.badge}
-                                                maxLength={80}
-                                                onChange={(event) => setData("badge", event.target.value)}
-                                                placeholder="e.g. Best Value"
+                                                options={badgeOptions}
+                                                allowBlank
+                                                error={errors.badge}
+                                                onChange={(value) => setData("badge", value)}
                                             />
                                             <ErrorText message={errors.badge} />
                                         </div>
 
                                         <div className="col-md-4">
-                                            <label className="form-label fw-semibold">IMAGE URL OR PATH</label>
-                                            <input
-                                                className={"form-control " + (errors.image ? "is-invalid" : "")}
-                                                value={data.image}
-                                                maxLength={2048}
-                                                onChange={(event) => setData("image", event.target.value)}
-                                                placeholder="https://... or storage path"
+                                            <ImagePicker
+                                                label="PACKAGE IMAGE"
+                                                currentImage={data.image}
+                                                selectedFile={data.image_file}
+                                                onChange={(file) => setData("image_file", file)}
+                                                error={errors.image_file}
                                             />
-                                            <ErrorText message={errors.image} />
                                         </div>
 
                                         <div className="col-12">
