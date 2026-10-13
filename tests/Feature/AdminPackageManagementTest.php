@@ -8,6 +8,8 @@ use App\Models\Package;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -25,6 +27,9 @@ class AdminPackageManagementTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Packages')
                 ->has('packages.data', 0)
+                ->has('categoryOptions')
+                ->has('warrantyOptions')
+                ->has('badgeOptions')
                 ->where('summary.total', 0)
             );
     }
@@ -294,6 +299,37 @@ class AdminPackageManagementTest extends TestCase
             'action' => 'package_deleted',
             'subject_id' => $package->id,
         ]);
+    }
+
+    public function test_admin_can_upload_a_package_image_from_a_file(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Image Bundle Camera', 10);
+
+        $this->actingAs($admin)
+            ->post(route('admin.packages.store'), [
+                'name' => 'Image Bundle Kit',
+                'category' => 'CCTV',
+                'warranty' => '1 year',
+                'price' => '2500.00',
+                'badge' => 'New',
+                'image' => null,
+                'image_file' => UploadedFile::fake()->image('package.png'),
+                'specifications' => ['Camera included'],
+                'is_featured' => false,
+                'items' => [
+                    ['product_id' => $product->id, 'quantity' => 1],
+                ],
+            ])
+            ->assertRedirect(route('admin.packages.index'));
+
+        $package = Package::query()->where('name', 'Image Bundle Kit')->firstOrFail();
+
+        $this->assertStringStartsWith('/storage/packages/', $package->image);
+        Storage::disk('public')->assertExists(
+            preg_replace('#^/storage/#', '', $package->image)
+        );
     }
 
     private function createProduct(string $name, int $stock): Product
