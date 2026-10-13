@@ -109,6 +109,60 @@ class AdminDashboardTest extends TestCase
     }
 
 
+
+    public function test_dashboard_notice_tables_have_independent_pagination(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+
+        for ($index = 1; $index <= 7; $index++) {
+            Product::create([
+                'name' => 'Low Stock Camera ' . $index,
+                'category' => 'CCTV',
+                'warranty' => '1 year',
+                'price' => 2500,
+                'stock_quantity' => 1,
+                'badge' => null,
+                'image' => null,
+                'images' => [],
+                'specifications' => [],
+                'rating' => 0,
+                'is_featured' => false,
+            ]);
+
+            Order::create([
+                'user_id' => $customer->id,
+                'order_number' => 'ORD-DASH-PAGE-' . $index,
+                'subtotal' => 799,
+                'shipping_fee' => 0,
+                'total' => 799,
+                'payment_method' => 'gcash',
+                'payment_status' => 'pending',
+                'order_status' => 'awaiting_payment',
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'delivery_address' => '123 Test Street',
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('dashboard', [
+                'low_stock_page' => 2,
+                'pending_payments_page' => 2,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('lowStockData.current_page', 2)
+                ->where('lowStockData.total', 7)
+                ->has('lowStockData.data', 2)
+                ->where('pendingPaymentData.current_page', 2)
+                ->where('pendingPaymentData.total', 7)
+                ->has('pendingPaymentData.data', 2)
+            );
+    }
+
     public function test_dashboard_chart_can_filter_to_the_last_six_months(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
