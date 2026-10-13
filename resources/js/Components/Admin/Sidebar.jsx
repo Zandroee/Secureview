@@ -42,12 +42,6 @@ export default function Sidebar({ active = "dashboard" }) {
             icon: "bi-calendar3",
         },
         {
-            label: "Purchase History",
-            href: "/admin/purchases",
-            key: "purchases",
-            icon: "bi-bag-check",
-        },
-        {
             label: "Transaction Logs",
             href: "/admin/transactions",
             key: "transactions",

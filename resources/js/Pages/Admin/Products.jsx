@@ -38,6 +38,7 @@ function emptyProduct() {
         stock_quantity: 0,
         badge: "",
         image: "",
+        image_file: null,
         specifications: [],
         is_featured: false,
     };
@@ -48,10 +49,107 @@ function FieldError({ message }) {
     return <div className="small text-danger mt-1">{message}</div>;
 }
 
+
+function CatalogOptionSelect({
+    label,
+    value,
+    options = [],
+    onChange,
+    required = false,
+    error,
+    allowBlank = false,
+}) {
+    const values = [...(options ?? [])].filter(Boolean);
+    if (value && !values.some((item) => String(item).toLowerCase() === String(value).toLowerCase())) {
+        values.push(value);
+    }
+    const uniqueValues = [...new Map(values.map((item) => [String(item).toLowerCase(), item])).values()];
+
+    const handleChange = (event) => {
+        if (event.target.value === "__add_new_option__") {
+            const nextValue = window.prompt("Add a new " + label.toLowerCase() + ":");
+            if (nextValue?.trim()) onChange(nextValue.trim());
+            return;
+        }
+
+        onChange(event.target.value);
+    };
+
+    return (
+        <select
+            className={"form-select " + (error ? "is-invalid" : "")}
+            value={value ?? ""}
+            onChange={handleChange}
+            required={required}
+        >
+            <option value="">
+                {allowBlank ? "No " + label.toLowerCase() : "Select " + label.toLowerCase()}
+            </option>
+            {uniqueValues.map((item) => (
+                <option key={item} value={item}>{item}</option>
+            ))}
+            <option value="__add_new_option__">+ Add new {label.toLowerCase()}…</option>
+        </select>
+    );
+}
+
+function imageSource(image) {
+    if (!image) return "";
+    if (/^https?:\/\//i.test(image) || String(image).startsWith("/")) return image;
+    return "/storage/" + String(image).replace(/^\/+/, "");
+}
+
+function ImagePicker({ label, currentImage, selectedFile, onChange, error }) {
+    const [previewUrl, setPreviewUrl] = useState("");
+
+    useEffect(() => {
+        if (!selectedFile) {
+            setPreviewUrl("");
+            return undefined;
+        }
+
+        const url = URL.createObjectURL(selectedFile);
+        setPreviewUrl(url);
+        return () => URL.revokeObjectURL(url);
+    }, [selectedFile]);
+
+    const preview = previewUrl || imageSource(currentImage);
+
+    return (
+        <div>
+            <label className="form-label fw-semibold">{label}</label>
+            <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className={"form-control " + (error ? "is-invalid" : "")}
+                onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+            />
+            <div className="form-text">Choose JPG, PNG, or WebP, up to 5 MB.</div>
+            {selectedFile && (
+                <div className="small text-muted mt-1">
+                    Selected: {selectedFile.name}
+                </div>
+            )}
+            {preview && (
+                <img
+                    src={preview}
+                    alt="Product preview"
+                    className="rounded border mt-2"
+                    style={{ width: "100px", height: "100px", objectFit: "cover" }}
+                />
+            )}
+            <FieldError message={error} />
+        </div>
+    );
+}
+
 export default function AdminProducts({
     products = [],
     packages = [],
     categories = [],
+    categoryOptions = [],
+    warrantyOptions = [],
+    badgeOptions = [],
     summary = {},
     filters = {},
     success = "",
@@ -91,6 +189,7 @@ export default function AdminProducts({
             stock_quantity: Number(product.stock_quantity ?? 0),
             badge: product.badge ?? "",
             image: product.image ?? "",
+            image_file: null,
             specifications: Array.isArray(product.specifications) ? product.specifications : [],
             is_featured: Boolean(product.is_featured),
         });
@@ -101,6 +200,7 @@ export default function AdminProducts({
         event.preventDefault();
         const options = {
             preserveScroll: true,
+            forceFormData: true,
             onSuccess: () => {
                 setProductModalOpen(false);
                 setEditingProductId(null);
@@ -627,13 +727,13 @@ export default function AdminProducts({
 
                                         <div className="col-md-4">
                                             <label className="form-label fw-semibold">Category *</label>
-                                            <input
-                                                className="form-control"
+                                            <CatalogOptionSelect
+                                                label="Category"
                                                 value={productForm.data.category}
-                                                onChange={(event) => productForm.setData("category", event.target.value)}
-                                                maxLength={120}
-                                                placeholder="e.g. CCTV"
+                                                options={categoryOptions}
                                                 required
+                                                error={productForm.errors.category}
+                                                onChange={(value) => productForm.setData("category", value)}
                                             />
                                             <FieldError message={productForm.errors.category} />
                                         </div>
@@ -669,39 +769,38 @@ export default function AdminProducts({
 
                                         <div className="col-md-4">
                                             <label className="form-label fw-semibold">Warranty *</label>
-                                            <input
-                                                className="form-control"
+                                            <CatalogOptionSelect
+                                                label="Warranty"
                                                 value={productForm.data.warranty}
-                                                onChange={(event) => productForm.setData("warranty", event.target.value)}
-                                                maxLength={120}
-                                                placeholder="e.g. 1 year"
+                                                options={warrantyOptions}
                                                 required
+                                                error={productForm.errors.warranty}
+                                                onChange={(value) => productForm.setData("warranty", value)}
                                             />
                                             <FieldError message={productForm.errors.warranty} />
                                         </div>
 
                                         <div className="col-md-6">
                                             <label className="form-label fw-semibold">Badge <span className="text-muted fw-normal">(optional)</span></label>
-                                            <input
-                                                className="form-control"
+                                            <CatalogOptionSelect
+                                                label="Badge"
                                                 value={productForm.data.badge ?? ""}
-                                                onChange={(event) => productForm.setData("badge", event.target.value)}
-                                                maxLength={80}
-                                                placeholder="e.g. Best Seller"
+                                                options={badgeOptions}
+                                                allowBlank
+                                                error={productForm.errors.badge}
+                                                onChange={(value) => productForm.setData("badge", value)}
                                             />
                                             <FieldError message={productForm.errors.badge} />
                                         </div>
 
                                         <div className="col-md-6">
-                                            <label className="form-label fw-semibold">Image URL/path <span className="text-muted fw-normal">(optional)</span></label>
-                                            <input
-                                                className="form-control"
-                                                value={productForm.data.image ?? ""}
-                                                onChange={(event) => productForm.setData("image", event.target.value)}
-                                                maxLength={255}
-                                                placeholder="https://… or existing image path"
+                                            <ImagePicker
+                                                label="Product image (optional)"
+                                                currentImage={productForm.data.image}
+                                                selectedFile={productForm.data.image_file}
+                                                onChange={(file) => productForm.setData("image_file", file)}
+                                                error={productForm.errors.image_file}
                                             />
-                                            <FieldError message={productForm.errors.image} />
                                         </div>
 
                                         <div className="col-12">

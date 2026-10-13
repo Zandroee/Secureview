@@ -8,7 +8,10 @@ use App\Models\Order;
 use App\Models\Package;
 use App\Models\Product;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminProductManagementTest extends TestCase
@@ -25,6 +28,9 @@ class AdminProductManagementTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/Products')
                 ->has('products', 0)
+                ->has('categoryOptions')
+                ->has('warrantyOptions')
+                ->has('badgeOptions')
                 ->where('summary.total_products', 0)
             );
     }
@@ -315,6 +321,74 @@ class AdminProductManagementTest extends TestCase
             'price' => '2500.00',
             'subtotal' => '2500.00',
         ]);
+    }
+
+    public function test_catalog_dropdown_options_include_values_from_products_and_packages(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        Product::create([
+            'name' => 'Dropdown Camera',
+            'category' => 'Camera Systems',
+            'warranty' => '18 months',
+            'price' => 3200,
+            'stock_quantity' => 5,
+            'badge' => 'Top Seller',
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        Package::create([
+            'name' => 'Dropdown Alarm Bundle',
+            'category' => 'Alarm Bundles',
+            'warranty' => '3 years',
+            'price' => 9500,
+            'badge' => 'Premium',
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('categoryOptions', ['Alarm Bundles', 'Camera Systems'])
+                ->where('warrantyOptions', ['18 months', '3 years'])
+                ->where('badgeOptions', ['Premium', 'Top Seller'])
+            );
+
+        $this->actingAs($admin)
+            ->get(route('admin.packages.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('categoryOptions', ['Alarm Bundles', 'Camera Systems'])
+                ->where('warrantyOptions', ['18 months', '3 years'])
+                ->where('badgeOptions', ['Premium', 'Top Seller'])
+            );
+    }
+
+    public function test_admin_can_upload_a_product_image_from_a_file(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $payload = $this->validProduct([
+            'name' => 'Camera With Image',
+            'image_file' => UploadedFile::fake()->image('camera.png'),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.products.store'), $payload)
+            ->assertRedirect(route('admin.products.index'));
+
+        $product = Product::query()->where('name', 'Camera With Image')->firstOrFail();
+
+        $this->assertStringStartsWith('/storage/products/', $product->image);
+        Storage::disk('public')->assertExists(
+            preg_replace('#^/storage/#', '', $product->image)
+        );
     }
 
     private function validProduct(array $overrides = []): array
