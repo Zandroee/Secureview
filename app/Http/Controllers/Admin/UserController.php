@@ -38,8 +38,9 @@ class UserController extends Controller
         $users = $query
             ->orderByRaw("CASE role WHEN 'admin' THEN 1 WHEN 'technician' THEN 2 ELSE 3 END")
             ->orderBy('name')
-            ->get()
-            ->map(function (User $user) {
+            ->paginate(10)
+            ->withQueryString()
+            ->through(function (User $user) {
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
