@@ -409,7 +409,7 @@ export default function AdminUsers({
                             </div>
                         </div>
 
-                        <AdminPagination pagination={users} />
+                        <AdminPagination pagination={users} label="users" />
 
                     </main>
                 </div>
