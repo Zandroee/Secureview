@@ -296,15 +296,13 @@ export default function AdminPackages({
     };
 
     const removeComponent = (index) => {
-        if (data.items.length === 1) {
-            setData("items", [{ product_id: "", quantity: 1 }]);
-            return;
-        }
+        const nextItems = data.items.length === 1
+            ? [{ product_id: "", quantity: 1 }]
+            : data.items.filter((_, itemIndex) => itemIndex !== index);
 
-        setData(
-            "items",
-            data.items.filter((_, itemIndex) => itemIndex !== index)
-        );
+        setData("items", nextItems);
+        const total = componentSubtotal(nextItems, products);
+        setData("price", total > 0 ? total.toFixed(2) : "");
     };
 
     const deletePackage = (item) => {
