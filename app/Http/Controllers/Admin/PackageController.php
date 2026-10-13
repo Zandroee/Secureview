@@ -9,6 +9,7 @@ use App\Services\AdminActivityLogger;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class PackageController extends Controller
@@ -96,6 +97,18 @@ class PackageController extends Controller
             ->values();
 
         $allPackages = Package::with('packageItems.product')->get();
+        $allProductsForOptions = Product::query()->get(['category', 'warranty', 'badge']);
+
+        $catalogOptions = static function (string $field) use ($allPackages, $allProductsForOptions) {
+            return $allPackages->pluck($field)
+                ->merge($allProductsForOptions->pluck($field))
+                ->filter(fn ($value) => filled($value))
+                ->map(fn ($value) => trim((string) $value))
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values();
+        };
         $stockCounts = $allPackages->map(
             fn (Package $package) => $inventory->getAvailableStock($package)
         );
@@ -114,6 +127,9 @@ class PackageController extends Controller
                 ])
                 ->values(),
             'categories' => $categories,
+            'categoryOptions' => $catalogOptions('category'),
+            'warrantyOptions' => $catalogOptions('warranty'),
+            'badgeOptions' => $catalogOptions('badge'),
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'category' => $filters['category'] ?? '',
@@ -136,6 +152,10 @@ class PackageController extends Controller
         unset($validated['items']);
 
         $fields = $this->packageFields($validated);
+
+        if ($request->hasFile('image_file')) {
+            $fields['image'] = '/storage/' . $request->file('image_file')->store('packages', 'public');
+        }
 
         DB::transaction(function () use ($request, $fields, $items, $activityLogger) {
             $package = Package::create($fields);
@@ -165,10 +185,16 @@ class PackageController extends Controller
         $items = $validated['items'];
         unset($validated['items']);
 
+        $oldImage = $package->image;
         $oldSnapshot = $this->snapshot($package);
         $oldComponents = $this->componentSummary($package);
         $oldName = $package->name;
         $fields = $this->packageFields($validated);
+        $oldImage = $package->image;
+
+        if ($request->hasFile('image_file')) {
+            $fields['image'] = '/storage/' . $request->file('image_file')->store('packages', 'public');
+        }
 
         $oldComposition = $package->packageItems()
             ->orderBy('product_id')
@@ -231,6 +257,10 @@ class PackageController extends Controller
             );
         });
 
+        if ($request->hasFile('image_file') && $oldImage !== $package->image) {
+            $this->deleteStoredImage($oldImage);
+        }
+
         return redirect()
             ->route('admin.packages.index')
             ->with('success', 'Package updated successfully.');
@@ -260,9 +290,24 @@ class PackageController extends Controller
             $package->delete();
         });
 
+        $this->deleteStoredImage($oldImage);
+
         return redirect()
             ->route('admin.packages.index')
             ->with('success', 'Package deleted successfully.');
+    }
+
+    private function deleteStoredImage(?string $image): void
+    {
+        if (!$image || preg_match('#^https?://#i', $image)) {
+            return;
+        }
+
+        $path = preg_replace('#^/?storage/#', '', $image);
+
+        if ($path && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     private function hasReferences(Package $package): bool
@@ -282,6 +327,7 @@ class PackageController extends Controller
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
             'badge' => ['nullable', 'string', 'max:80'],
             'image' => ['nullable', 'string', 'max:2048'],
+            'image_file' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'specifications' => ['nullable', 'array', 'max:30'],
             'specifications.*' => ['required', 'string', 'max:255'],
             'is_featured' => ['required', 'boolean'],
