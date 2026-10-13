@@ -397,7 +397,7 @@ export default function AdminTransactions({
                                     </tbody>
                                 </table>
                             </div>
-                            <AdminPagination pagination={transactions} label="transactions" />
+                            <AdminPagination pagination={transactions} label="transactions" insideCard />
                         </div>
                     </main>
                 </div>
