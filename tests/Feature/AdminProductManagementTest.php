@@ -376,7 +376,7 @@ class AdminProductManagementTest extends TestCase
 
         $payload = $this->validProduct([
             'name' => 'Camera With Image',
-            'image_file' => UploadedFile::fake()->image('camera.png'),
+            'image_file' => UploadedFile::fake()->create('camera.png', 10, 'image/png'),
         ]);
 
         $this->actingAs($admin)
