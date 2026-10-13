@@ -42,17 +42,19 @@ class ProductController extends Controller
 
         $products = $query
             ->orderBy('name')
-            ->get();
+            ->paginate(12)
+            ->withQueryString()
+            ->through(function (Product $product) {
+                $product->setAttribute(
+                    'can_delete',
+                    (int) $product->package_items_count === 0
+                        && (int) $product->reviews_count === 0
+                        && (int) $product->order_items_count === 0
+                        && (int) $product->cart_items_count === 0
+                );
 
-        $products->each(function (Product $product) {
-            $product->setAttribute(
-                'can_delete',
-                (int) $product->package_items_count === 0
-                    && (int) $product->reviews_count === 0
-                    && (int) $product->order_items_count === 0
-                    && (int) $product->cart_items_count === 0
-            );
-        });
+                return $product;
+            });
 
         $categories = Product::query()
             ->select('category')
