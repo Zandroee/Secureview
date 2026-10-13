@@ -48,8 +48,9 @@ class InquiryController extends Controller
             ->orderByRaw("CASE status WHEN 'pending' THEN 1 WHEN 'confirmed' THEN 2 WHEN 'in_progress' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END")
             ->orderBy('preferred_date')
             ->orderByDesc('created_at')
-            ->get()
-            ->map(function (Inquiry $inquiry) {
+            ->paginate(10)
+            ->withQueryString()
+            ->through(function (Inquiry $inquiry) {
                 return [
                     'id' => $inquiry->id,
                     'inquiry_number' => $inquiry->inquiry_number,
