@@ -83,6 +83,7 @@ export default function Dashboard({
                                     <div className="col-lg-6">
                                         <NoticeTable
                                             title="Low Stock Notice"
+                                            paginationLabel="low stock items"
                                             headers={[
                                                 "Product ID",
                                                 "Product Name",
@@ -96,6 +97,7 @@ export default function Dashboard({
                                     <div className="col-lg-6">
                                         <NoticeTable
                                             title="Pending Payments"
+                                            paginationLabel="pending payments"
                                             headers={[
                                                 "Order #",
                                                 "Customer",
