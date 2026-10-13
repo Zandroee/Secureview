@@ -1,15 +1,15 @@
 <?php
 
-namespace App\\Http\\Controllers\\Admin;
+namespace App\Http\Controllers\Admin;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Inquiry;
-use App\\Models\\Order;
-use App\\Models\\Product;
-use App\\Models\\User;
-use Carbon\\Carbon;
-use Illuminate\\Database\\Eloquent\\Builder;
-use Inertia\\Inertia;
+use App\Http\Controllers\Controller;
+use App\Models\Inquiry;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
