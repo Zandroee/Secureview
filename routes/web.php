@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogControll
 use App\Http\Controllers\Admin\PackageController as AdminPackageController;
 use App\Http\Controllers\Admin\CatalogOptionController as AdminCatalogOptionController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -209,9 +210,7 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::delete('/admin/catalog-options', [AdminCatalogOptionController::class, 'destroy'])
         ->name('admin.catalog-options.destroy');
 
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/admin/activity-logs', [AdminActivityLogController::class, 'index'])
         ->name('admin.activity-logs.index');
