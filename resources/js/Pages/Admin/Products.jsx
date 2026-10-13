@@ -38,7 +38,8 @@ function emptyProduct() {
         stock_quantity: 0,
         badge: "",
         image: "",
-        image_file: null,
+        existing_images: [],
+        image_files: [],
         specifications: [],
         is_featured: false,
     };
@@ -268,7 +269,8 @@ export default function AdminProducts({
             stock_quantity: Number(product.stock_quantity ?? 0),
             badge: product.badge ?? "",
             image: product.image ?? "",
-            image_file: null,
+            existing_images: Array.isArray(product.images) && product.images.length ? product.images : (product.image ? [product.image] : []),
+            image_files: [],
             specifications: Array.isArray(product.specifications) ? product.specifications : [],
             is_featured: Boolean(product.is_featured),
         });
@@ -875,10 +877,11 @@ export default function AdminProducts({
                                         <div className="col-md-6">
                                             <ImagePicker
                                                 label="Product image (optional)"
-                                                currentImage={productForm.data.image}
-                                                selectedFile={productForm.data.image_file}
-                                                onChange={(file) => productForm.setData("image_file", file)}
-                                                error={productForm.errors.image_file}
+                                                currentImages={productForm.data.existing_images}
+                                                selectedFiles={productForm.data.image_files}
+                                                onFilesChange={(files) => productForm.setData("image_files", files)}
+                                                onRemoveImage={(image) => productForm.setData("existing_images", productForm.data.existing_images.filter((item) => item !== image))}
+                                                error={productForm.errors.image_files || productForm.errors.image_file}
                                             />
                                         </div>
 
