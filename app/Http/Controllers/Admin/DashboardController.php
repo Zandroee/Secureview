@@ -182,10 +182,10 @@ class DashboardController extends Controller
             ->whereBetween('preferred_date', [$start->toDateString(), $end->toDateString()]);
     }
 
-    private function growthPercentage(float|int $current, float|int $previous): float
+    private function growthPercentage(float|int $current, float|int $previous): ?float
     {
         if ($previous <= 0) {
-            return $current > 0 ? 100.0 : 0.0;
+            return $current > 0 ? null : 0.0;
         }
 
         return round((($current - $previous) / $previous) * 100, 1);
