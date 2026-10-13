@@ -101,13 +101,31 @@ class PackageController extends Controller
 
         $allPackages = Package::with('packageItems.product')->get();
 
-        // Only active shared options populate dropdowns. Existing catalog records
-        // retain their saved values even after an option is removed from the list.
-        $catalogOptions = static fn (string $field) => CatalogOption::query()
-            ->where('field', $field)
-            ->orderBy('value')
-            ->pluck('value')
-            ->values();
+        $allProductsForOptions = Product::query()->get(['category', 'warranty', 'badge']);
+
+        // Include values already in the catalog and explicitly-added options, except
+        // options that an admin has removed from the shared dropdown.
+        $catalogOptions = static function (string $field) use ($allPackages, $allProductsForOptions) {
+            $removed = CatalogOption::query()
+                ->where('field', $field)
+                ->where('is_active', false)
+                ->pluck('value')
+                ->map(fn ($value) => mb_strtolower(trim((string) $value)))
+                ->all();
+
+            return CatalogOption::query()
+                ->where('field', $field)
+                ->where('is_active', true)
+                ->pluck('value')
+                ->merge($allPackages->pluck($field))
+                ->merge($allProductsForOptions->pluck($field))
+                ->filter(fn ($value) => filled($value))
+                ->map(fn ($value) => trim((string) $value))
+                ->filter(fn ($value) => $value !== '' && !in_array(mb_strtolower($value), $removed, true))
+                ->unique()
+                ->sort()
+                ->values();
+        };
         $stockCounts = $allPackages->map(
             fn (Package $package) => $inventory->getAvailableStock($package)
         );
