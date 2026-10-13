@@ -177,26 +177,68 @@ class DashboardController extends Controller
             })
             ->values();
 
-        $orderStatusLabels = [
-            'pending' => 'Pending',
-            'awaiting_payment' => 'Awaiting payment',
-            'payment_failed' => 'Payment failed',
-            'processing' => 'Processing',
-            'delivered' => 'Delivered',
-            'completed' => 'Completed',
-            'cancelled' => 'Cancelled',
+        $orderStatusDefinitions = [
+            'pending' => [
+                'label' => 'Pending',
+                'color' => 'warning',
+                'icon' => 'bi-hourglass-split',
+                'description' => 'Payment not confirmed',
+            ],
+            'awaiting_payment' => [
+                'label' => 'Awaiting Payment',
+                'color' => 'warning',
+                'icon' => 'bi-wallet2',
+                'description' => 'Checkout in progress',
+            ],
+            'payment_failed' => [
+                'label' => 'Payment Failed',
+                'color' => 'danger',
+                'icon' => 'bi-exclamation-triangle',
+                'description' => 'Payment needs attention',
+            ],
+            'processing' => [
+                'label' => 'Processing',
+                'color' => 'primary',
+                'icon' => 'bi-box-seam',
+                'description' => 'Order being prepared',
+            ],
+            'delivered' => [
+                'label' => 'Delivered',
+                'color' => 'info',
+                'icon' => 'bi-truck',
+                'description' => 'Order delivered',
+            ],
+            'completed' => [
+                'label' => 'Completed',
+                'color' => 'success',
+                'icon' => 'bi-check-circle',
+                'description' => 'Order fulfilled',
+            ],
+            'cancelled' => [
+                'label' => 'Cancelled',
+                'color' => 'secondary',
+                'icon' => 'bi-x-circle',
+                'description' => 'Order cancelled',
+            ],
         ];
+
         $orderStatusCounts = Order::query()
             ->select('order_status')
             ->selectRaw('COUNT(*) as order_count')
             ->groupBy('order_status')
             ->pluck('order_count', 'order_status');
-        $orderStatusData = collect($orderStatusLabels)
-            ->map(fn (string $label, string $status) => [
-                $label,
-                (string) ($orderStatusCounts[$status] ?? 0),
-            ])
-            ->filter(fn (array $row) => (int) $row[1] > 0)
+
+        $orderStatusData = collect($orderStatusDefinitions)
+            ->map(function (array $definition, string $status) use ($orderStatusCounts) {
+                return [
+                    'key' => $status,
+                    'label' => $definition['label'],
+                    'count' => (int) ($orderStatusCounts[$status] ?? 0),
+                    'color' => $definition['color'],
+                    'icon' => $definition['icon'],
+                    'description' => $definition['description'],
+                ];
+            })
             ->values();
 
         return Inertia::render('Dashboard', [
