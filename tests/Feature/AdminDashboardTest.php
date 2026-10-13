@@ -1,14 +1,14 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\Inquiry;
-use App\\Models\\Order;
-use App\\Models\\Product;
-use App\\Models\\User;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Inertia\\Testing\\AssertableInertia as Assert;
-use Tests\\TestCase;
+use App\Models\Inquiry;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
+use Tests\TestCase;
 
 class AdminDashboardTest extends TestCase
 {
@@ -76,7 +76,7 @@ class AdminDashboardTest extends TestCase
             'city' => 'Taguig',
             'service_type' => 'CCTV Installation',
             'urgency' => 'normal',
-            'preferred_date' => today()->addDays(2),
+            'preferred_date' => today()->startOfWeek()->addDays(6),
             'preferred_time' => '10:00',
             'notes' => null,
             'status' => 'confirmed',
