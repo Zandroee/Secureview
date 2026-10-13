@@ -63,13 +63,31 @@ class ProductController extends Controller
 
         $allProducts = Product::all();
 
-        // Only active shared options populate the dropdowns. Existing catalog records
-        // keep their saved values even after an option is removed from this list.
-        $catalogOptions = static fn (string $field) => CatalogOption::query()
-            ->where('field', $field)
-            ->orderBy('value')
-            ->pluck('value')
-            ->values();
+        $allPackagesForOptions = Package::query()->get(['category', 'warranty', 'badge']);
+
+        // Include values already in the catalog and explicitly-added options, except
+        // options that an admin has removed from the shared dropdown.
+        $catalogOptions = static function (string $field) use ($allProducts, $allPackagesForOptions) {
+            $removed = CatalogOption::query()
+                ->where('field', $field)
+                ->where('is_active', false)
+                ->pluck('value')
+                ->map(fn ($value) => mb_strtolower(trim((string) $value)))
+                ->all();
+
+            return CatalogOption::query()
+                ->where('field', $field)
+                ->where('is_active', true)
+                ->pluck('value')
+                ->merge($allProducts->pluck($field))
+                ->merge($allPackagesForOptions->pluck($field))
+                ->filter(fn ($value) => filled($value))
+                ->map(fn ($value) => trim((string) $value))
+                ->filter(fn ($value) => $value !== '' && !in_array(mb_strtolower($value), $removed, true))
+                ->unique()
+                ->sort()
+                ->values();
+        };
 
         $packages = Package::with('packageItems.product')
             ->orderBy('name')
