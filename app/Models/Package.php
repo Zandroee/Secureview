@@ -15,6 +15,7 @@ class Package extends Model
         'price',
         'badge',
         'image',
+        'images',
         'specifications',
         'rating',
         'is_featured',
@@ -22,6 +23,7 @@ class Package extends Model
 
     protected $casts = [
         'specifications' => 'array',
+        'images' => 'array',
         'rating' => 'float',
         'is_featured' => 'boolean',
     ];
