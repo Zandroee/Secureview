@@ -5,15 +5,15 @@ import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
 function actionClass(action) {
-    if (action === "package_deleted") {
+    if (action === "package_deleted" || action === "product_deleted") {
         return "bg-danger-subtle text-danger";
     }
 
-    if (action === "product_stock_updated" || action === "package_updated") {
+    if (action === "product_stock_updated" || action === "product_updated" || action === "package_updated") {
         return "bg-warning-subtle text-warning-emphasis";
     }
 
-    if (action === "inquiry_status_updated" || action === "package_created") {
+    if (action === "inquiry_status_updated" || action === "package_created" || action === "product_created") {
         return "bg-success-subtle text-success";
     }
 
