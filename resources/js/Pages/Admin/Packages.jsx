@@ -12,6 +12,7 @@ function emptyPackage() {
         price: "",
         badge: "",
         image: "",
+        gallery_managed: true,
         existing_images: [],
         image_files: [],
         specificationsText: "",
@@ -293,6 +294,7 @@ export default function AdminPackages({
             price: String(item.price ?? ""),
             badge: item.badge ?? "",
             image: item.image ?? "",
+            gallery_managed: true,
             existing_images: Array.isArray(item.images) && item.images.length ? item.images : (item.image ? [item.image] : []),
             image_files: [],
             specificationsText: Array.isArray(item.specifications)
