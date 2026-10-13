@@ -51,12 +51,15 @@ function CatalogOptionSelect({
     allowBlank = false,
 }) {
     const field = label.toLowerCase();
-    const values = [...(options ?? [])].filter(Boolean);
-    if (value && !values.some((item) => String(item).toLowerCase() === String(value).toLowerCase())) {
-        values.push(value);
+    const activeOptions = [...new Map(
+        (options ?? [])
+            .filter(Boolean)
+            .map((item) => [String(item).toLowerCase(), item])
+    ).values()];
+    const selectValues = [...activeOptions];
+    if (value && !selectValues.some((item) => String(item).toLowerCase() === String(value).toLowerCase())) {
+        selectValues.push(value);
     }
-    const uniqueValues = [...new Map(values.map((item) => [String(item).toLowerCase(), item])).values()];
-    const activeValue = (options ?? []).some((item) => String(item).toLowerCase() === String(value ?? "").toLowerCase());
 
     const handleChange = (event) => {
         const nextValue = event.target.value;
@@ -75,14 +78,13 @@ function CatalogOptionSelect({
         onChange(nextValue);
     };
 
-    const removeSelectedOption = () => {
-        if (!value || !activeValue) return;
+    const removeOption = (option) => {
         if (!window.confirm(
-            "Remove “" + value + "” from the shared " + field + " dropdown? Existing products and packages using it will not be changed."
+            "Remove “" + option + "” from the " + field + " options? Existing products and packages using it will keep their saved value."
         )) return;
 
         router.delete("/admin/catalog-options", {
-            data: { field, value },
+            data: { field, value: option },
             preserveScroll: true,
         });
     };
@@ -98,21 +100,42 @@ function CatalogOptionSelect({
                 <option value="">
                     {allowBlank ? "No " + field : "Select " + field}
                 </option>
-                {uniqueValues.map((item) => (
+                {selectValues.map((item) => (
                     <option key={item} value={item}>{item}</option>
                 ))}
                 <option value="__add_new_option__">+ Add new {field}…</option>
             </select>
-            {value && activeValue && (
-                <div className="d-flex justify-content-end mt-1">
-                    <button type="button" className="btn btn-link btn-sm text-danger p-0" onClick={removeSelectedOption}>
-                        <i className="bi bi-trash3 me-1" />Remove selected option
-                    </button>
+
+            <details className="mt-2">
+                <summary className="small text-primary" style={{ cursor: "pointer" }}>
+                    Manage {field} options ({activeOptions.length})
+                </summary>
+                <div className="border rounded-2 p-2 mt-2">
+                    {activeOptions.length > 0 ? (
+                        <div className="d-flex flex-column gap-2">
+                            {activeOptions.map((option) => (
+                                <div key={option} className="d-flex justify-content-between align-items-center gap-2">
+                                    <span className="small text-break">{option}</span>
+                                    <button
+                                        type="button"
+                                        className="btn btn-sm btn-outline-danger flex-shrink-0"
+                                        onClick={() => removeOption(option)}
+                                    >
+                                        <i className="bi bi-trash3 me-1" />
+                                        Remove
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="small text-muted">No saved options. Choose “Add new {field}…” above to create one.</div>
+                    )}
                 </div>
-            )}
+            </details>
         </div>
     );
 }
+
 
 function imageSource(image) {
     if (!image) return "";
