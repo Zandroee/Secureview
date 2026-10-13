@@ -391,6 +391,76 @@ class AdminProductManagementTest extends TestCase
         );
     }
 
+    public function test_admin_can_upload_multiple_product_images(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.products.store'), $this->validProduct([
+                'name' => 'Camera Gallery Test',
+                'image_files' => [
+                    UploadedFile::fake()->create('camera-front.png', 10, 'image/png'),
+                    UploadedFile::fake()->create('camera-side.png', 10, 'image/png'),
+                ],
+            ]))
+            ->assertRedirect(route('admin.products.index'));
+
+        $product = Product::query()->where('name', 'Camera Gallery Test')->firstOrFail();
+        $this->assertCount(2, $product->images);
+        $this->assertSame($product->images[0], $product->image);
+
+        foreach ($product->images as $image) {
+            Storage::disk('public')->assertExists(
+                preg_replace('#^/storage/#', '', $image)
+            );
+        }
+    }
+
+    public function test_admin_can_remove_a_dropdown_option_without_changing_existing_catalog_values(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Product::create([
+            'name' => 'Existing CCTV Camera',
+            'category' => 'CCTV',
+            'warranty' => '1 year',
+            'price' => 2500,
+            'stock_quantity' => 5,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.catalog-options.store'), [
+                'field' => 'category',
+                'value' => 'CCTV',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($admin)
+            ->delete(route('admin.catalog-options.destroy'), [
+                'field' => 'category',
+                'value' => 'CCTV',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('catalog_options', [
+            'field' => 'category',
+            'value' => 'CCTV',
+            'is_active' => 0,
+        ]);
+        $this->assertDatabaseHas('products', [
+            'name' => 'Existing CCTV Camera',
+            'category' => 'CCTV',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('categoryOptions', []));
+    }
+
     private function validProduct(array $overrides = []): array
     {
         return array_merge([

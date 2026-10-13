@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CatalogOption;
 use App\Models\Package;
 use App\Models\Product;
 use App\Services\AdminActivityLogger;
@@ -10,6 +11,7 @@ use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class PackageController extends Controller
@@ -66,6 +68,7 @@ class PackageController extends Controller
                     'price' => (float) $package->price,
                     'badge' => $package->badge,
                     'image' => $package->image,
+                    'images' => $this->currentImages($package),
                     'specifications' => $package->specifications ?? [],
                     'rating' => (float) $package->rating,
                     'is_featured' => (bool) $package->is_featured,
@@ -97,14 +100,28 @@ class PackageController extends Controller
             ->values();
 
         $allPackages = Package::with('packageItems.product')->get();
+
         $allProductsForOptions = Product::query()->get(['category', 'warranty', 'badge']);
 
+        // Include values already in the catalog and explicitly-added options, except
+        // options that an admin has removed from the shared dropdown.
         $catalogOptions = static function (string $field) use ($allPackages, $allProductsForOptions) {
-            return $allPackages->pluck($field)
+            $removed = CatalogOption::query()
+                ->where('field', $field)
+                ->where('is_active', false)
+                ->pluck('value')
+                ->map(fn ($value) => mb_strtolower(trim((string) $value)))
+                ->all();
+
+            return CatalogOption::query()
+                ->where('field', $field)
+                ->where('is_active', true)
+                ->pluck('value')
+                ->merge($allPackages->pluck($field))
                 ->merge($allProductsForOptions->pluck($field))
                 ->filter(fn ($value) => filled($value))
                 ->map(fn ($value) => trim((string) $value))
-                ->filter()
+                ->filter(fn ($value) => $value !== '' && !in_array(mb_strtolower($value), $removed, true))
                 ->unique()
                 ->sort()
                 ->values();
@@ -152,10 +169,9 @@ class PackageController extends Controller
         unset($validated['items']);
 
         $fields = $this->packageFields($validated);
-
-        if ($request->hasFile('image_file')) {
-            $fields['image'] = '/storage/' . $request->file('image_file')->store('packages', 'public');
-        }
+        $legacyImage = filled($fields['image'] ?? null) ? $fields['image'] : null;
+        $fields['images'] = $this->resolveImages($request, [], $legacyImage, 'packages');
+        $fields['image'] = $fields['images'][0] ?? null;
 
         DB::transaction(function () use ($request, $fields, $items, $activityLogger) {
             $package = Package::create($fields);
@@ -185,7 +201,7 @@ class PackageController extends Controller
         $items = $validated['items'];
         unset($validated['items']);
 
-        $oldImage = $package->image;
+        $oldImages = $this->currentImages($package);
         $oldSnapshot = $this->snapshot($package);
         $oldComponents = $this->componentSummary($package);
         $oldName = $package->name;
@@ -212,9 +228,16 @@ class PackageController extends Controller
             ]);
         }
 
-        if ($request->hasFile('image_file')) {
-            $fields['image'] = '/storage/' . $request->file('image_file')->store('packages', 'public');
-        }
+        $existingImages = $request->boolean('gallery_managed') || $request->exists('existing_images')
+            ? collect($request->input('existing_images', []))
+                ->filter(fn ($image) => is_string($image) && in_array($image, $oldImages, true))
+                ->unique()
+                ->values()
+                ->all()
+            : $oldImages;
+        $legacyImage = filled($fields['image'] ?? null) ? $fields['image'] : null;
+        $fields['images'] = $this->resolveImages($request, $existingImages, $legacyImage, 'packages');
+        $fields['image'] = $fields['images'][0] ?? null;
 
         $priceChanged = (float) $oldSnapshot['price'] !== (float) $fields['price'];
 
@@ -256,8 +279,8 @@ class PackageController extends Controller
             );
         });
 
-        if ($request->hasFile('image_file') && $oldImage !== $package->image) {
-            $this->deleteStoredImage($oldImage);
+        foreach (array_diff($oldImages, $fields['images']) as $removedImage) {
+            $this->deleteStoredImage($removedImage);
         }
 
         return redirect()
@@ -273,7 +296,7 @@ class PackageController extends Controller
             ]);
         }
 
-        $oldImage = $package->image;
+        $oldImages = $this->currentImages($package);
         $oldSnapshot = $this->snapshot($package);
         $oldComponents = $this->componentSummary($package);
 
@@ -290,11 +313,52 @@ class PackageController extends Controller
             $package->delete();
         });
 
-        $this->deleteStoredImage($oldImage);
+        foreach ($oldImages as $oldImage) {
+            $this->deleteStoredImage($oldImage);
+        }
 
         return redirect()
             ->route('admin.packages.index')
             ->with('success', 'Package deleted successfully.');
+    }
+
+    private function resolveImages(Request $request, array $existingImages, ?string $legacyImage, string $directory): array
+    {
+        if (!$request->boolean('gallery_managed') && !$request->exists('existing_images') && $legacyImage && !in_array($legacyImage, $existingImages, true)) {
+            array_unshift($existingImages, $legacyImage);
+        }
+
+        $files = array_values(array_filter((array) $request->file('image_files', [])));
+        if ($request->hasFile('image_file')) {
+            $files[] = $request->file('image_file');
+        }
+
+        if (count($existingImages) + count($files) > 10) {
+            throw ValidationException::withMessages([
+                'image_files' => 'You can keep or upload a maximum of 10 images per catalog item.',
+            ]);
+        }
+
+        $uploadedImages = collect($files)
+            ->map(fn ($file) => '/storage/' . $file->store($directory, 'public'))
+            ->all();
+
+        return collect(array_merge($existingImages, $uploadedImages))
+            ->filter(fn ($image) => is_string($image) && trim($image) !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function currentImages(Package $package): array
+    {
+        $images = is_array($package->images) ? $package->images : [];
+
+        if (!$images && filled($package->image)) {
+            $images = [$package->image];
+        }
+
+        return array_values(array_unique(array_filter($images, fn ($image) => is_string($image) && trim($image) !== '')));
     }
 
     private function deleteStoredImage(?string $image): void
@@ -328,6 +392,11 @@ class PackageController extends Controller
             'badge' => ['nullable', 'string', 'max:80'],
             'image' => ['nullable', 'string', 'max:2048'],
             'image_file' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'image_files' => ['nullable', 'array', 'max:10'],
+            'image_files.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'gallery_managed' => ['sometimes', 'boolean'],
+            'existing_images' => ['sometimes', 'array', 'max:10'],
+            'existing_images.*' => ['string', 'max:2048'],
             'specifications' => ['nullable', 'array', 'max:30'],
             'specifications.*' => ['required', 'string', 'max:255'],
             'is_featured' => ['required', 'boolean'],

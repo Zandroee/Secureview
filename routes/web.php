@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\PurchaseController as AdminPurchaseController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
 use App\Http\Controllers\Admin\PackageController as AdminPackageController;
+use App\Http\Controllers\Admin\CatalogOptionController as AdminCatalogOptionController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -202,6 +203,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'admin'])->group(function () {
+    Route::post('/admin/catalog-options', [AdminCatalogOptionController::class, 'store'])
+        ->name('admin.catalog-options.store');
+
+    Route::delete('/admin/catalog-options', [AdminCatalogOptionController::class, 'destroy'])
+        ->name('admin.catalog-options.destroy');
+
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
