@@ -175,6 +175,13 @@ function sortTableByHeader(header) {
     });
 
     sortableRows.sort((left, right) => {
+        const leftValue = sortValue(left.cell);
+        const rightValue = sortValue(right.cell);
+
+        // Keep blank cells at the bottom in both sort directions.
+        if (leftValue.type === "empty" && rightValue.type !== "empty") return 1;
+        if (rightValue.type === "empty" && leftValue.type !== "empty") return -1;
+
         const result = compareCells(left.cell, right.cell) * multiplier;
         return result || left.index - right.index;
     });
