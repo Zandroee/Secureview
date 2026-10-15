@@ -12,7 +12,9 @@ const NON_SORTABLE_HEADERS = new Set([
 const MONTH_PATTERN = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i;
 
 function headerLabel(header) {
-    return (header.textContent || "").replace(/\s+/g, " ").trim();
+    const clone = header.cloneNode(true);
+    clone.querySelectorAll(".sv-sort-indicator").forEach((indicator) => indicator.remove());
+    return (clone.textContent || "").replace(/\s+/g, " ").trim();
 }
 
 function shouldEnhanceHeader(header) {
@@ -50,9 +52,14 @@ function enhanceTable(table) {
 
 function enhanceTables(root) {
     if (!root) return;
+
     if (root instanceof HTMLTableElement) {
         enhanceTable(root);
+    } else if (root instanceof Element) {
+        const parentTable = root.closest("table");
+        if (parentTable) enhanceTable(parentTable);
     }
+
     if (typeof root.querySelectorAll === "function") {
         root.querySelectorAll("table").forEach(enhanceTable);
     }
