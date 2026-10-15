@@ -57,7 +57,7 @@ export default function AdminPagination({
                 Showing {from}–{to} of {total} {label}
             </small>
 
-            {lastPage > 1 && (
+            {total > 0 && (
                 <nav aria-label={`Pagination for ${label}`}>
                     <div className="d-flex align-items-center gap-1">
                         {previousLink?.url ? (
