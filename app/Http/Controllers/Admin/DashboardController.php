@@ -621,6 +621,10 @@ class DashboardController extends Controller
 
     private function growthPercentage(float|int $current, float|int|null $previous): ?float
     {
+        if ($previous === null) {
+            return null;
+        }
+
         if ($previous <= 0) {
             return $current > 0 ? null : 0.0;
         }
