@@ -229,7 +229,7 @@ export default function AdminSchedules({
                                         BOOKING DATE AVAILABILITY
                                     </h2>
                                     <p className="small text-muted mb-0">
-                                        Mark an entire date as fully booked, or reopen a blocked date when appointments are available again.
+                                        Block an entire date or one of its three-hour time slots. Customers cannot select blocked options until you reopen them.
                                     </p>
                                 </div>
                                 <span className="badge rounded-pill bg-danger-subtle text-danger px-3 py-2">
