@@ -616,7 +616,8 @@ class DashboardController extends Controller
         return Inquiry::query()
             ->whereIn('status', ['confirmed', 'in_progress'])
             ->whereRaw('LOWER(service_type) LIKE ?', ['%install%'])
-            ->whereBetween('preferred_date', [$start->toDateString(), $end->toDateString()]);
+            ->whereDate('preferred_date', '>=', $start->toDateString())
+            ->whereDate('preferred_date', '<=', $end->toDateString());
     }
 
     private function growthPercentage(float|int $current, float|int|null $previous): ?float
