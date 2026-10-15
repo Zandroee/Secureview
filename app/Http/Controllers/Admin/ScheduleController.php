@@ -47,8 +47,9 @@ class ScheduleController extends Controller
             ->orderBy('preferred_date')
             ->orderBy('preferred_time')
             ->orderByDesc('created_at')
-            ->get()
-            ->map(function (Inquiry $inquiry) {
+            ->paginate(10)
+            ->withQueryString()
+            ->through(function (Inquiry $inquiry) {
                 return [
                     'id' => $inquiry->id,
                     'inquiry_number' => $inquiry->inquiry_number,
@@ -69,13 +70,13 @@ class ScheduleController extends Controller
                         ]
                         : null,
                 ];
-            })
-            ->values();
+            });
 
         $technicians = User::where('role', 'technician')
             ->orderBy('name')
             ->get(['id', 'name', 'email'])
             ->values();
+            
 
         return Inertia::render('Admin/Schedules', [
             'schedules' => $schedules,

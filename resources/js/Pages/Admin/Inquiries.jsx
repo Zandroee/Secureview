@@ -2,6 +2,7 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import { Link, router } from "@inertiajs/react";
+import AdminPagination from "../../Components/Admin/AdminPagination";
 import { useState } from "react";
 
 function urgencyClass(urgency) {
@@ -45,6 +46,7 @@ export default function AdminInquiries({
     technicians = [],
     filters = {},
 }) {
+    const inquiryRows = inquiries.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
     const [urgency, setUrgency] = useState(filters.urgency ?? "");
@@ -147,7 +149,7 @@ export default function AdminInquiries({
                                 </span>
 
                                 <div className="fw-bold text-primary">
-                                    {inquiries.length}
+                                    {inquiries.total ?? inquiryRows.length}
                                 </div>
                             </div>
                         </div>
@@ -281,7 +283,7 @@ export default function AdminInquiries({
                                     </thead>
 
                                     <tbody>
-                                        {inquiries.length === 0 ? (
+                                        {inquiryRows.length === 0 ? (
                                             <tr>
                                                 <td
                                                     colSpan="8"
@@ -291,7 +293,7 @@ export default function AdminInquiries({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            inquiries.map((inquiry) => (
+                                            inquiryRows.map((inquiry) => (
                                                 <tr key={inquiry.id}>
                                                     <td className="ps-3">
                                                         <span
@@ -469,7 +471,10 @@ export default function AdminInquiries({
                                     </tbody>
                                 </table>
                             </div>
+                            <AdminPagination pagination={inquiries} label="inquiries" insideCard />
                         </div>
+
+
                     </main>
                 </div>
             </div>

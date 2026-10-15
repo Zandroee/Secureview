@@ -1,7 +1,8 @@
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
-import { Link, router } from "@inertiajs/react";
+import { router } from "@inertiajs/react";
+import AdminPagination from "../../Components/Admin/AdminPagination";
 import { useState } from "react";
 
 function actionClass(action) {
@@ -318,30 +319,7 @@ export default function AdminActivityLogs({
                                 </table>
                             </div>
 
-                            <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 px-3 py-3 border-top">
-                                <div className="small text-muted">
-                                    Showing {logs.from ?? 0}–{logs.to ?? 0} of {logs.total ?? 0} actions
-                                </div>
-                                <div className="d-flex gap-1 flex-wrap">
-                                    {(logs.links ?? []).map((link, index) => (
-                                        link.url ? (
-                                            <Link
-                                                key={index}
-                                                href={link.url}
-                                                preserveScroll
-                                                className={"btn btn-sm " + (link.active ? "btn-primary" : "btn-outline-secondary")}
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
-                                        ) : (
-                                            <span
-                                                key={index}
-                                                className="btn btn-sm btn-outline-secondary disabled"
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
-                                        )
-                                    ))}
-                                </div>
-                            </div>
+                            <AdminPagination pagination={logs} label="activity log actions" insideCard />
                         </div>
 
                         <div className="small text-muted mt-3">

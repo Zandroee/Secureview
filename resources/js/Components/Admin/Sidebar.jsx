@@ -1,16 +1,15 @@
 import { Link, usePage } from "@inertiajs/react";
 
-export default function Sidebar({ active = "dashboard" }) {
-    const { props } = usePage();
-    const user = props.auth?.user;
-
-    const menuItems = [
+const menuGroups = [
+    [
         {
             label: "Dashboard",
             href: "/dashboard",
             key: "dashboard",
             icon: "bi-speedometer2",
         },
+    ],
+    [
         {
             label: "Inquiries",
             href: "/admin/inquiries",
@@ -18,11 +17,13 @@ export default function Sidebar({ active = "dashboard" }) {
             icon: "bi-chat-left-text",
         },
         {
-            label: "Users",
-            href: "/admin/users",
-            key: "users",
-            icon: "bi-people",
+            label: "Schedules",
+            href: "/admin/schedules",
+            key: "schedules",
+            icon: "bi-calendar3",
         },
+    ],
+    [
         {
             label: "Products",
             href: "/admin/products",
@@ -35,12 +36,16 @@ export default function Sidebar({ active = "dashboard" }) {
             key: "packages",
             icon: "bi-box-seam",
         },
+    ],
+    [
         {
-            label: "Schedules",
-            href: "/admin/schedules",
-            key: "schedules",
-            icon: "bi-calendar3",
+            label: "Users",
+            href: "/admin/users",
+            key: "users",
+            icon: "bi-people",
         },
+    ],
+    [
         {
             label: "Transaction Logs",
             href: "/admin/transactions",
@@ -53,8 +58,12 @@ export default function Sidebar({ active = "dashboard" }) {
             key: "activity-logs",
             icon: "bi-clock-history",
         },
-    ];
+    ],
+];
 
+export default function Sidebar({ active = "dashboard" }) {
+    const { props } = usePage();
+    const user = props.auth?.user;
 
     return (
         <aside
@@ -76,7 +85,6 @@ export default function Sidebar({ active = "dashboard" }) {
 
                 <div className="min-w-0">
                     <div className="small text-muted">ADMIN</div>
-
                     <strong className="text-truncate d-block">
                         {user?.name || "Administrator"}
                     </strong>
@@ -85,24 +93,42 @@ export default function Sidebar({ active = "dashboard" }) {
 
             <hr />
 
-            <div className="d-flex flex-column gap-2">
-                {menuItems.map((item) => (
-                    <Link
-                        key={item.key}
-                        href={item.href}
-                        className={
-                            "btn text-start rounded-2 fw-semibold " +
-                            (active === item.key
-                                ? "btn-primary"
-                                : "btn-light")
-                        }
-                    >
-                        <i className={"bi " + item.icon + " me-2"}></i>
-                        {item.label}
-                    </Link>
-                ))}
+            <nav aria-label="Admin navigation">
+                {menuGroups.map((group, groupIndex) => (
+                    <div key={group[0].key}>
+                        {groupIndex > 0 && (
+                            <hr
+                                className="my-2"
+                                style={{
+                                    borderTop: "1px solid #dfe3e8",
+                                    opacity: 1,
+                                }}
+                            />
+                        )}
 
-            </div>
+                        <div className="d-flex flex-column gap-2">
+                            {group.map((item) => {
+                                const isActive = active === item.key;
+
+                                return (
+                                    <Link
+                                        key={item.key}
+                                        href={item.href}
+                                        aria-current={isActive ? "page" : undefined}
+                                        className={
+                                            "btn text-start rounded-2 fw-semibold " +
+                                            (isActive ? "btn-primary" : "btn-light")
+                                        }
+                                    >
+                                        <i className={"bi " + item.icon + " me-2"}></i>
+                                        {item.label}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </nav>
         </aside>
     );
 }

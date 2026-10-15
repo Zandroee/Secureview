@@ -1,6 +1,7 @@
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
+import AdminPagination from "../../Components/Admin/AdminPagination";
 import { router, useForm } from "@inertiajs/react";
 import { useEffect, useState } from "react";
 
@@ -264,7 +265,7 @@ export default function AdminProducts({
     const [stockValues, setStockValues] = useState(
         () =>
             Object.fromEntries(
-                products.map((product) => [
+                (products.data ?? []).map((product) => [
                     product.id,
                     Number(product.stock_quantity ?? 0),
                 ])
@@ -333,7 +334,7 @@ export default function AdminProducts({
     useEffect(() => {
         setStockValues(
             Object.fromEntries(
-                products.map((product) => [
+                (products.data ?? []).map((product) => [
                     product.id,
                     Number(product.stock_quantity ?? 0),
                 ])
@@ -594,7 +595,7 @@ export default function AdminProducts({
                                     </thead>
 
                                     <tbody>
-                                        {products.length === 0 ? (
+                                        {(products.data ?? []).length === 0 ? (
                                             <tr>
                                                 <td
                                                     colSpan="5"
@@ -604,7 +605,7 @@ export default function AdminProducts({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            products.map((product) => {
+                                            (products.data ?? []).map((product) => {
                                                 const value =
                                                     stockValues[product.id] ??
                                                     0;
@@ -625,7 +626,10 @@ export default function AdminProducts({
                                                             {product.category}
                                                         </td>
 
-                                                        <td style={{ minWidth: "150px" }}>
+                                                        <td
+                                                            style={{ minWidth: "150px" }}
+                                                            data-sort-value={Number(value || 0)}
+                                                        >
                                                             <input
                                                                 type="number"
                                                                 min="0"
@@ -697,6 +701,7 @@ export default function AdminProducts({
                                     </tbody>
                                 </table>
                             </div>
+                            <AdminPagination pagination={products} label="products" insideCard />
                         </div>
 
                         <div

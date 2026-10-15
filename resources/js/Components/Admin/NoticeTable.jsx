@@ -1,9 +1,13 @@
 // for the lowStockTable.jsx and WarrantyTable.jsx
 
+import AdminPagination from "./AdminPagination";
+
 export default function NoticeTable({
     title,
     headers,
-    rows
+    rows = [],
+    pagination = null,
+    paginationLabel = "records",
 }){
 
     return(
@@ -54,6 +58,7 @@ export default function NoticeTable({
                         }
                     </tbody>
                 </table>
+                <AdminPagination pagination={pagination} label={paginationLabel} compact />
             </div>
         </div>
     );
