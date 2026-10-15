@@ -39,8 +39,8 @@ export default function Dashboard({
         );
     };
 
-    const changeChartPeriod = (value) =>
-        updateDashboardFilter("chart_period", value);
+    const changeChartPeriod = (event) =>
+        updateDashboardFilter("chart_period", event.target.value);
 
     return (
         <>
