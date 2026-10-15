@@ -626,7 +626,10 @@ export default function AdminProducts({
                                                             {product.category}
                                                         </td>
 
-                                                        <td style={{ minWidth: "150px" }}>
+                                                        <td
+                                                            style={{ minWidth: "150px" }}
+                                                            data-sort-value={Number(value || 0)}
+                                                        >
                                                             <input
                                                                 type="number"
                                                                 min="0"
