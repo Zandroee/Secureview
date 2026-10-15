@@ -471,9 +471,9 @@ export default function AdminInquiries({
                                     </tbody>
                                 </table>
                             </div>
+                            <AdminPagination pagination={inquiries} label="inquiries" insideCard />
                         </div>
 
-                        <AdminPagination pagination={inquiries} label="inquiries" />
 
                     </main>
                 </div>
