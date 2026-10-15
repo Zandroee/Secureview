@@ -323,7 +323,13 @@ class DashboardController extends Controller
             'stats' => $stats,
             'revenueData' => $revenueData,
             'chartPeriod' => $chartPeriod,
-            'dashboardFilters' => array_merge($metricPeriods, ['chart' => $chartPeriod]),
+            'dashboardFilters' => [
+                'sales_period' => $metricPeriods['sales'],
+                'orders_period' => $metricPeriods['orders'],
+                'installations_period' => $metricPeriods['installations'],
+                'customers_period' => $metricPeriods['customers'],
+                'chart_period' => $chartPeriod,
+            ],
             'chartPeriodOptions' => collect(self::CHART_PERIOD_OPTIONS)
                 ->map(fn (string $label, string $value) => ['value' => $value, 'label' => $label])
                 ->values(),
@@ -613,7 +619,7 @@ class DashboardController extends Controller
             ->whereBetween('preferred_date', [$start->toDateString(), $end->toDateString()]);
     }
 
-    private function growthPercentage(float|int $current, float|int $previous): ?float
+    private function growthPercentage(float|int $current, float|int|null $previous): ?float
     {
         if ($previous <= 0) {
             return $current > 0 ? null : 0.0;
