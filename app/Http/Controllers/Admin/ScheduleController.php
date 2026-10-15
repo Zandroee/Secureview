@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BlockedBookingDate;
 use App\Models\Inquiry;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -78,8 +79,22 @@ class ScheduleController extends Controller
             ->values();
             
 
+        $blockedBookingDates = BlockedBookingDate::query()
+            ->whereDate('booking_date', '>=', today())
+            ->orderBy('booking_date')
+            ->get()
+            ->map(fn (BlockedBookingDate $blockedDate) => [
+                'id' => $blockedDate->id,
+                'booking_date' => $blockedDate->booking_date->format('Y-m-d'),
+                'formatted_date' => $blockedDate->booking_date->format('F j, Y'),
+                'reason' => $blockedDate->reason,
+            ])
+            ->values();
+
         return Inertia::render('Admin/Schedules', [
             'schedules' => $schedules,
+            'blockedBookingDates' => $blockedBookingDates,
+            'todayDate' => today()->toDateString(),
             'technicians' => $technicians,
             'filters' => [
                 'search' => $filters['search'] ?? '',
@@ -95,5 +110,34 @@ class ScheduleController extends Controller
                     ->count(),
             ],
         ]);
+    }
+
+    public function storeBookingDateBlock(Request $request)
+    {
+        $validated = $request->validate([
+            'booking_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        BlockedBookingDate::query()->updateOrCreate(
+            ['booking_date' => $validated['booking_date']],
+            [
+                'reason' => filled($validated['reason'] ?? null) ? $validated['reason'] : null,
+                'blocked_by' => $request->user()->id,
+            ]
+        );
+
+        return redirect()
+            ->route('admin.schedules.index')
+            ->with('success', 'The selected date is now marked fully booked.');
+    }
+
+    public function destroyBookingDateBlock(Request $request, BlockedBookingDate $blockedBookingDate)
+    {
+        $blockedBookingDate->delete();
+
+        return redirect()
+            ->route('admin.schedules.index')
+            ->with('success', 'The selected date is available for booking again.');
     }
 }
