@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BlockedBookingDate;
+use App\Models\BlockedBookingTimeSlot;
 use App\Models\Inquiry;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -11,6 +12,12 @@ use Inertia\Inertia;
 
 class ScheduleController extends Controller
 {
+    private const BOOKING_TIME_SLOTS = [
+        '08:00 AM - 11:00 AM',
+        '11:00 AM - 02:00 PM',
+        '02:00 PM - 05:00 PM',
+    ];
+
     public function index(Request $request)
     {
         $filters = $request->validate([
@@ -91,9 +98,25 @@ class ScheduleController extends Controller
             ])
             ->values();
 
+        $blockedBookingTimeSlots = BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', '>=', today())
+            ->orderBy('booking_date')
+            ->orderBy('booking_time')
+            ->get()
+            ->map(fn (BlockedBookingTimeSlot $blockedSlot) => [
+                'id' => $blockedSlot->id,
+                'booking_date' => $blockedSlot->booking_date->format('Y-m-d'),
+                'formatted_date' => $blockedSlot->booking_date->format('F j, Y'),
+                'booking_time' => $blockedSlot->booking_time,
+                'reason' => $blockedSlot->reason,
+            ])
+            ->values();
+
         return Inertia::render('Admin/Schedules', [
             'schedules' => $schedules,
             'blockedBookingDates' => $blockedBookingDates,
+            'blockedBookingTimeSlots' => $blockedBookingTimeSlots,
+            'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
             'todayDate' => today()->toDateString(),
             'technicians' => $technicians,
             'filters' => [
@@ -114,10 +137,45 @@ class ScheduleController extends Controller
 
     public function storeBookingDateBlock(Request $request)
     {
+        $blockType = $request->input('block_type', 'full_date');
+
         $validated = $request->validate([
+            'block_type' => ['nullable', 'in:full_date,time_slot'],
             'booking_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'booking_time' => ['nullable', 'in:' . implode(',', self::BOOKING_TIME_SLOTS)],
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
+
+        if ($blockType === 'time_slot') {
+            if (empty($validated['booking_time'])) {
+                return redirect()
+                    ->route('admin.schedules.index')
+                    ->withErrors(['booking_time' => 'Choose a time slot to mark fully booked.']);
+            }
+
+            if (BlockedBookingDate::query()
+                ->whereDate('booking_date', $validated['booking_date'])
+                ->exists()) {
+                return redirect()
+                    ->route('admin.schedules.index')
+                    ->withErrors(['booking_date' => 'This entire date is already marked fully booked.']);
+            }
+
+            BlockedBookingTimeSlot::query()->updateOrCreate(
+                [
+                    'booking_date' => $validated['booking_date'],
+                    'booking_time' => $validated['booking_time'],
+                ],
+                [
+                    'reason' => filled($validated['reason'] ?? null) ? $validated['reason'] : null,
+                    'blocked_by' => $request->user()->id,
+                ]
+            );
+
+            return redirect()
+                ->route('admin.schedules.index')
+                ->with('success', 'The selected time slot is now fully booked.');
+        }
 
         BlockedBookingDate::query()->updateOrCreate(
             ['booking_date' => $validated['booking_date']],
@@ -139,5 +197,14 @@ class ScheduleController extends Controller
         return redirect()
             ->route('admin.schedules.index')
             ->with('success', 'The selected date is available for booking again.');
+    }
+
+    public function destroyBookingTimeSlot(Request $request, BlockedBookingTimeSlot $blockedBookingTimeSlot)
+    {
+        $blockedBookingTimeSlot->delete();
+
+        return redirect()
+            ->route('admin.schedules.index')
+            ->with('success', 'The selected time slot is available for booking again.');
     }
 }
