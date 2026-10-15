@@ -55,7 +55,7 @@ const formatDateLabel = (value) => {
     });
 };
 
-export default function Inquiry({ customer, item, unavailableDates = [] }) {
+export default function Inquiry({ customer, item, unavailableDates = [], unavailableTimeSlots = {} }) {
     const today = new Date();
     const [showDateModal, setShowDateModal] = useState(false);
 
@@ -135,6 +135,10 @@ export default function Inquiry({ customer, item, unavailableDates = [] }) {
     const isFullyBookedDate = (dateValue) =>
         Boolean(dateValue) && unavailableDates.includes(dateValue);
 
+    const isTimeSlotFullyBooked = (timeSlot) =>
+        Boolean(selectedDate) &&
+        (unavailableTimeSlots[selectedDate] ?? []).includes(timeSlot);
+
     const openDateModal = () => {
         if (data.preferred_date) {
             const existing = new Date(
@@ -144,8 +148,11 @@ export default function Inquiry({ customer, item, unavailableDates = [] }) {
             setCalendarMonth(
                 new Date(existing.getFullYear(), existing.getMonth(), 1)
             );
-            if (isFullyBookedDate(data.preferred_date)) {
-                setSelectedDate("");
+            if (
+                isFullyBookedDate(data.preferred_date) ||
+                (unavailableTimeSlots[data.preferred_date] ?? []).includes(data.preferred_time)
+            ) {
+                setSelectedDate(isFullyBookedDate(data.preferred_date) ? "" : data.preferred_date);
                 setSelectedTime("");
             } else {
                 setSelectedDate(data.preferred_date);
@@ -178,7 +185,12 @@ export default function Inquiry({ customer, item, unavailableDates = [] }) {
     };
 
     const confirmDateTime = () => {
-        if (!selectedDate || !selectedTime || isFullyBookedDate(selectedDate)) {
+        if (
+            !selectedDate ||
+            !selectedTime ||
+            isFullyBookedDate(selectedDate) ||
+            isTimeSlotFullyBooked(selectedTime)
+        ) {
             return;
         }
 
@@ -993,6 +1005,8 @@ export default function Inquiry({ customer, item, unavailableDates = [] }) {
                                         {timeSlots.map((slot) => {
                                             const selected =
                                                 selectedTime === slot.label;
+                                            const fullyBooked =
+                                                isTimeSlotFullyBooked(slot.label);
 
                                             return (
                                                 <button
@@ -1000,7 +1014,8 @@ export default function Inquiry({ customer, item, unavailableDates = [] }) {
                                                     type="button"
                                                     disabled={
                                                         !selectedDate ||
-                                                        !slot.available
+                                                        !slot.available ||
+                                                        fullyBooked
                                                     }
                                                     onClick={() =>
                                                         setSelectedTime(
@@ -1014,12 +1029,18 @@ export default function Inquiry({ customer, item, unavailableDates = [] }) {
                                                             : "1px solid #e2e3e6",
                                                         backgroundColor: selected
                                                             ? "#edf5ff"
-                                                            : slot.available
-                                                              ? "#fff"
-                                                              : "#f6f6f7",
-                                                        color: slot.available
-                                                            ? "#212529"
-                                                            : "#b0b0b4",
+                                                            : fullyBooked
+                                                              ? "#fde7e7"
+                                                              : slot.available
+                                                                ? "#fff"
+                                                                : "#f6f6f7",
+                                                        color: selected
+                                                            ? "#0d6efd"
+                                                            : fullyBooked
+                                                              ? "#bd3a3a"
+                                                              : slot.available
+                                                                ? "#212529"
+                                                                : "#b0b0b4",
                                                         borderRadius: "8px",
                                                         fontSize: "0.72rem",
                                                     }}
@@ -1028,14 +1049,14 @@ export default function Inquiry({ customer, item, unavailableDates = [] }) {
 
                                                     <span
                                                         className={
-                                                            slot.available
+                                                            slot.available && !fullyBooked
                                                                 ? "text-success"
                                                                 : "text-danger"
                                                         }
                                                     >
-                                                        {slot.available
-                                                            ? "Available"
-                                                            : "Full"}
+                                                        {!slot.available || fullyBooked
+                                                            ? "Fully booked"
+                                                            : "Available"}
                                                     </span>
                                                 </button>
                                             );
