@@ -103,23 +103,33 @@ class BookingDateAvailabilityTest extends TestCase
 
         $this->actingAs($customer)
             ->post(route('inquiries.store'), array_merge(
-                $this->validInquiryPayload($date),
+                $this->validInquiryPayload($date, $customer->email),
                 ['preferred_time' => '08:00 AM - 09:00 AM']
             ))
             ->assertSessionHasErrors('preferred_time');
 
-        $this->actingAs($customer)
-            ->post(route('inquiries.store'), array_merge(
-                $this->validInquiryPayload($date),
-                ['preferred_time' => '08:00 AM - 11:00 AM']
-            ))
-            ->assertRedirect();
+        $timeSlots = [
+            '08:00 AM - 11:00 AM',
+            '11:00 AM - 02:00 PM',
+            '02:00 PM - 05:00 PM',
+        ];
 
-        $this->assertDatabaseHas('inquiries', [
-            'customer_email' => $customer->email,
-            'preferred_date' => $date,
-            'preferred_time' => '08:00 AM - 11:00 AM',
-        ]);
+        foreach ($timeSlots as $index => $timeSlot) {
+            $slotDate = today()->addDays($index + 3)->toDateString();
+
+            $this->actingAs($customer)
+                ->post(route('inquiries.store'), array_merge(
+                    $this->validInquiryPayload($slotDate, $customer->email),
+                    ['preferred_time' => $timeSlot]
+                ))
+                ->assertRedirect();
+
+            $this->assertDatabaseHas('inquiries', [
+                'customer_email' => $customer->email,
+                'preferred_date' => $slotDate,
+                'preferred_time' => $timeSlot,
+            ]);
+        }
     }
 
     private function validInquiryPayload(string $date, string $email = 'booking-test@example.com'): array
