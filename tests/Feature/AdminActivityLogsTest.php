@@ -28,6 +28,35 @@ class AdminActivityLogsTest extends TestCase
             );
     }
 
+
+    public function test_activity_logs_keep_pagination_and_filters(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        for ($index = 1; $index <= 21; $index++) {
+            AdminActivityLog::create([
+                'admin_id' => $admin->id,
+                'admin_name' => $admin->name,
+                'action' => 'product_created',
+                'description' => 'Pagination test event ' . $index,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('admin.activity-logs.index', [
+                'action' => 'product_created',
+                'page' => 2,
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/ActivityLogs')
+                ->has('logs.data', 1)
+                ->where('logs.total', 21)
+                ->where('logs.current_page', 2)
+                ->where('filters.action', 'product_created')
+            );
+    }
+
     public function test_non_admin_cannot_view_the_activity_logs_page(): void
     {
         $user = User::factory()->create(['role' => 'user']);
