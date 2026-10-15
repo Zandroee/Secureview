@@ -143,6 +143,34 @@ class BookingDateAvailabilityTest extends TestCase
             );
     }
 
+    public function test_day_is_marked_unavailable_when_all_three_time_slots_are_blocked(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $date = today()->addDays(9)->toDateString();
+
+        foreach ([
+            '08:00 AM - 11:00 AM',
+            '11:00 AM - 02:00 PM',
+            '02:00 PM - 05:00 PM',
+        ] as $timeSlot) {
+            BlockedBookingTimeSlot::create([
+                'booking_date' => $date,
+                'booking_time' => $timeSlot,
+                'reason' => 'No availability',
+                'blocked_by' => null,
+            ]);
+        }
+
+        $this->actingAs($customer)
+            ->get(route('inquiries.create'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('inquiry')
+                ->where('unavailableDates.0', $date)
+                ->where("unavailableTimeSlots.{$date}.2", '02:00 PM - 05:00 PM')
+            );
+    }
+
     public function test_customer_cannot_submit_an_individually_blocked_time_slot(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
