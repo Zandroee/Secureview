@@ -179,6 +179,131 @@ class AdminDashboardTest extends TestCase
             );
     }
 
+
+    public function test_dashboard_metric_cards_can_use_independent_time_filters(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $currentCustomer = User::factory()->create(['role' => 'user']);
+        $oldCustomer = User::factory()->create(['role' => 'user']);
+        $oldCustomer->forceFill([
+            'created_at' => now()->subMonths(2),
+            'updated_at' => now()->subMonths(2),
+        ])->save();
+
+        Order::create([
+            'user_id' => $currentCustomer->id,
+            'order_number' => 'ORD-FILTER-CURRENT',
+            'subtotal' => 1500,
+            'shipping_fee' => 0,
+            'total' => 1500,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+            'order_status' => 'processing',
+            'paid_at' => now(),
+            'customer_name' => $currentCustomer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $currentCustomer->email,
+            'delivery_address' => '123 Test Street',
+        ]);
+
+        $oldOrder = Order::create([
+            'user_id' => $oldCustomer->id,
+            'order_number' => 'ORD-FILTER-OLD',
+            'subtotal' => 2000,
+            'shipping_fee' => 0,
+            'total' => 2000,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+            'order_status' => 'processing',
+            'paid_at' => now(),
+            'customer_name' => $oldCustomer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $oldCustomer->email,
+            'delivery_address' => '123 Test Street',
+        ]);
+        $oldOrder->forceFill([
+            'created_at' => now()->subMonths(2),
+            'updated_at' => now()->subMonths(2),
+            'paid_at' => now()->subMonths(2),
+        ])->save();
+
+        $currentInquiry = Inquiry::create([
+            'user_id' => $currentCustomer->id,
+            'technician_id' => null,
+            'inquiry_number' => 'INQ-FILTER-CURRENT',
+            'item_name' => 'CCTV Camera',
+            'customer_name' => $currentCustomer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $currentCustomer->email,
+            'street_address' => '123 Test Street',
+            'city' => 'Taguig',
+            'service_type' => 'CCTV Installation',
+            'urgency' => 'normal',
+            'preferred_date' => today(),
+            'preferred_time' => '10:00',
+            'notes' => null,
+            'status' => 'confirmed',
+        ]);
+
+        Inquiry::create([
+            'user_id' => $oldCustomer->id,
+            'technician_id' => null,
+            'inquiry_number' => 'INQ-FILTER-OLD',
+            'item_name' => 'CCTV Camera',
+            'customer_name' => $oldCustomer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $oldCustomer->email,
+            'street_address' => '123 Test Street',
+            'city' => 'Taguig',
+            'service_type' => 'CCTV Installation',
+            'urgency' => 'normal',
+            'preferred_date' => today()->subMonths(2),
+            'preferred_time' => '10:00',
+            'notes' => null,
+            'status' => 'confirmed',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard', [
+                'sales_period' => 'all_time',
+                'orders_period' => 'today',
+                'installations_period' => 'today',
+                'customers_period' => 'today',
+                'chart_period' => 'last_30_days',
+            ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('stats.0.value', '₱3,500.00')
+                ->where('stats.0.period', 'all_time')
+                ->where('stats.1.value', '1')
+                ->where('stats.1.period', 'today')
+                ->where('stats.2.value', '1')
+                ->where('stats.2.period', 'today')
+                ->where('stats.3.value', '1')
+                ->where('stats.3.period', 'today')
+                ->where('dashboardFilters.sales_period', 'all_time')
+                ->where('dashboardFilters.chart_period', 'last_30_days')
+                ->has('revenueData', 30)
+            );
+    }
+
+    public function test_dashboard_chart_supports_multi_year_and_all_time_ranges(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard', ['chart_period' => 'five_years']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('chartPeriod', 'five_years')
+                ->has('revenueData', 60)
+                ->has('chartPeriodOptions', 12)
+                ->where('chartPeriodOptions.11.value', 'all_time')
+            );
+    }
+
     public function test_non_admin_cannot_view_dashboard(): void
     {
         $user = User::factory()->create(['role' => 'user']);
