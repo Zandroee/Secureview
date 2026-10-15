@@ -263,6 +263,12 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/admin/schedules', [AdminScheduleController::class, 'index'])
         ->name('admin.schedules.index');
 
+    Route::post('/admin/booking-availability', [AdminScheduleController::class, 'storeBookingDateBlock'])
+        ->name('admin.booking-availability.store');
+
+    Route::delete('/admin/booking-availability/{blockedBookingDate}', [AdminScheduleController::class, 'destroyBookingDateBlock'])
+        ->name('admin.booking-availability.destroy');
+
     Route::get('/admin/purchases', [AdminPurchaseController::class, 'index'])
         ->name('admin.purchases.index');
 
