@@ -27,6 +27,7 @@ export default function RevenueChart({
     title,
     data = [],
     period = "year",
+    periodOptions = [],
     onPeriodChange,
 }) {
     const chartData = {
@@ -81,9 +82,11 @@ export default function RevenueChart({
                         value={period}
                         onChange={onPeriodChange}
                     >
-                        <option value="year">This year</option>
-                        <option value="six_months">Last 6 months</option>
-                        <option value="twelve_months">Last 12 months</option>
+                        {periodOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
                     </select>
                 </div>
 
