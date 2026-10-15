@@ -16,58 +16,146 @@ class DashboardController extends Controller
 {
     private const LOW_STOCK_THRESHOLD = 5;
 
+    private const METRIC_PERIOD_OPTIONS = [
+        'today' => 'Today',
+        'yesterday' => 'Yesterday',
+        'week' => 'This week',
+        'last_7_days' => 'Last 7 days',
+        'month' => 'This month',
+        'last_30_days' => 'Last 30 days',
+        'year' => 'This year',
+        'last_90_days' => 'Last 90 days',
+        'last_12_months' => 'Last 12 months',
+        'all_time' => 'All time',
+    ];
+
+    private const CHART_PERIOD_OPTIONS = [
+        'today' => 'Today (hourly)',
+        'last_7_days' => 'Last 7 days',
+        'last_30_days' => 'Last 30 days',
+        'this_month' => 'This month',
+        'last_90_days' => 'Last 90 days',
+        'last_3_months' => 'Last 3 months',
+        'six_months' => 'Last 6 months',
+        'twelve_months' => 'Last 12 months',
+        'year' => 'This year',
+        'two_years' => 'Last 2 years',
+        'five_years' => 'Last 5 years',
+        'all_time' => 'All time',
+    ];
+
     public function index(Request $request)
     {
-        $currentWeekStart = now()->startOfWeek();
-        $currentWeekEnd = now()->endOfWeek();
-        $previousWeekStart = $currentWeekStart->copy()->subWeek();
-        $previousWeekEnd = $currentWeekEnd->copy()->subWeek();
+        $filters = $request->validate([
+            'sales_period' => ['nullable', 'in:' . implode(',', array_keys(self::METRIC_PERIOD_OPTIONS))],
+            'orders_period' => ['nullable', 'in:' . implode(',', array_keys(self::METRIC_PERIOD_OPTIONS))],
+            'installations_period' => ['nullable', 'in:' . implode(',', array_keys(self::METRIC_PERIOD_OPTIONS))],
+            'customers_period' => ['nullable', 'in:' . implode(',', array_keys(self::METRIC_PERIOD_OPTIONS))],
+            'chart_period' => ['nullable', 'in:' . implode(',', array_keys(self::CHART_PERIOD_OPTIONS))],
+        ]);
 
-        $currentSales = (float) $this->paidOrdersBetween($currentWeekStart, $currentWeekEnd)
-            ->sum('total');
-        $previousSales = (float) $this->paidOrdersBetween($previousWeekStart, $previousWeekEnd)
-            ->sum('total');
+        $metricPeriods = [
+            'sales' => $filters['sales_period'] ?? 'week',
+            'orders' => $filters['orders_period'] ?? 'week',
+            'installations' => $filters['installations_period'] ?? 'week',
+            'customers' => $filters['customers_period'] ?? 'week',
+        ];
 
+        $metricOptions = collect(self::METRIC_PERIOD_OPTIONS)
+            ->map(fn (string $label, string $value) => [
+                'value' => $value,
+                'label' => $label,
+            ])
+            ->values()
+            ->all();
+
+        $salesWindow = $this->periodWindow($metricPeriods['sales']);
+        $currentSales = (float) $this->paidOrdersBetween(
+            $salesWindow['start'],
+            $salesWindow['end']
+        )->sum('total');
+        $previousSales = $salesWindow['previous_start']
+            ? (float) $this->paidOrdersBetween(
+                $salesWindow['previous_start'],
+                $salesWindow['previous_end']
+            )->sum('total')
+            : null;
+
+        $ordersWindow = $this->periodWindow($metricPeriods['orders']);
         $currentOrders = Order::query()
-            ->whereBetween('created_at', [$currentWeekStart, $currentWeekEnd])
+            ->whereBetween('created_at', [$ordersWindow['start'], $ordersWindow['end']])
             ->count();
-        $previousOrders = Order::query()
-            ->whereBetween('created_at', [$previousWeekStart, $previousWeekEnd])
-            ->count();
+        $previousOrders = $ordersWindow['previous_start']
+            ? Order::query()
+                ->whereBetween('created_at', [$ordersWindow['previous_start'], $ordersWindow['previous_end']])
+                ->count()
+            : null;
 
-        $currentInstallations = $this->installationInquiriesBetween($currentWeekStart, $currentWeekEnd)->count();
-        $previousInstallations = $this->installationInquiriesBetween($previousWeekStart, $previousWeekEnd)->count();
+        $installationsWindow = $this->periodWindow($metricPeriods['installations']);
+        $currentInstallations = $this->installationInquiriesBetween(
+            $installationsWindow['start'],
+            $installationsWindow['end']
+        )->count();
+        $previousInstallations = $installationsWindow['previous_start']
+            ? $this->installationInquiriesBetween(
+                $installationsWindow['previous_start'],
+                $installationsWindow['previous_end']
+            )->count()
+            : null;
 
+        $customersWindow = $this->periodWindow($metricPeriods['customers']);
         $currentCustomers = User::query()
             ->where('role', 'user')
-            ->whereBetween('created_at', [$currentWeekStart, $currentWeekEnd])
+            ->whereBetween('created_at', [$customersWindow['start'], $customersWindow['end']])
             ->count();
-        $previousCustomers = User::query()
-            ->where('role', 'user')
-            ->whereBetween('created_at', [$previousWeekStart, $previousWeekEnd])
-            ->count();
+        $previousCustomers = $customersWindow['previous_start']
+            ? User::query()
+                ->where('role', 'user')
+                ->whereBetween('created_at', [$customersWindow['previous_start'], $customersWindow['previous_end']])
+                ->count()
+            : null;
 
         $stats = [
-            [
-                'title' => 'Total Sales',
-                'value' => '₱' . number_format($currentSales, 2),
-                'growth' => $this->growthPercentage($currentSales, $previousSales),
-            ],
-            [
-                'title' => 'Total Orders',
-                'value' => (string) $currentOrders,
-                'growth' => $this->growthPercentage($currentOrders, $previousOrders),
-            ],
-            [
-                'title' => 'Total Installation',
-                'value' => (string) $currentInstallations,
-                'growth' => $this->growthPercentage($currentInstallations, $previousInstallations),
-            ],
-            [
-                'title' => 'New Customers',
-                'value' => (string) $currentCustomers,
-                'growth' => $this->growthPercentage($currentCustomers, $previousCustomers),
-            ],
+            $this->makeStat(
+                'Total Sales',
+                '₱' . number_format($currentSales, 2),
+                $currentSales,
+                $previousSales,
+                $salesWindow,
+                'sales_period',
+                $metricPeriods['sales'],
+                $metricOptions
+            ),
+            $this->makeStat(
+                'Total Orders',
+                (string) $currentOrders,
+                $currentOrders,
+                $previousOrders,
+                $ordersWindow,
+                'orders_period',
+                $metricPeriods['orders'],
+                $metricOptions
+            ),
+            $this->makeStat(
+                'Total Installation',
+                (string) $currentInstallations,
+                $currentInstallations,
+                $previousInstallations,
+                $installationsWindow,
+                'installations_period',
+                $metricPeriods['installations'],
+                $metricOptions
+            ),
+            $this->makeStat(
+                'New Customers',
+                (string) $currentCustomers,
+                $currentCustomers,
+                $previousCustomers,
+                $customersWindow,
+                'customers_period',
+                $metricPeriods['customers'],
+                $metricOptions
+            ),
         ];
 
         $lowStockData = Product::query()
@@ -129,52 +217,42 @@ class DashboardController extends Controller
             ])
             ->values();
 
-        $chartFilters = $request->validate([
-            'chart_period' => ['nullable', 'in:year,six_months,twelve_months'],
-        ]);
-        $chartPeriod = $chartFilters['chart_period'] ?? 'year';
-        $chartMonthCount = match ($chartPeriod) {
-            'six_months' => 6,
-            'twelve_months' => 12,
-            default => 12,
-        };
-        $chartStart = match ($chartPeriod) {
-            'six_months' => now()->copy()->startOfMonth()->subMonths(5),
-            'twelve_months' => now()->copy()->startOfMonth()->subMonths(11),
-            default => now()->copy()->startOfYear(),
-        };
-        $chartEnd = now();
-        $paidOrdersForChart = $this->paidOrdersBetween($chartStart, $chartEnd)
+        $chartPeriod = $filters['chart_period'] ?? 'year';
+        $chartConfiguration = $this->revenueChartConfiguration($chartPeriod);
+        $chartStart = $chartConfiguration['start'];
+        $paidOrdersForChart = $this->paidOrdersBetween($chartStart, now()->copy())
             ->get(['total', 'paid_at', 'created_at']);
 
-        $revenueByMonth = [];
-        foreach (range(0, $chartMonthCount - 1) as $offset) {
-            $month = $chartStart->copy()->addMonths($offset);
-            $revenueByMonth[$month->format('Y-m')] = 0.0;
+        $revenueByBucket = [];
+        foreach ($chartConfiguration['bins'] as $bin) {
+            $revenueByBucket[$bin['key']] = 0.0;
         }
 
         foreach ($paidOrdersForChart as $order) {
             $recognizedAt = $order->paid_at ?? $order->created_at;
 
-            if ($recognizedAt) {
-                $monthKey = $recognizedAt->format('Y-m');
+            if (!$recognizedAt) {
+                continue;
+            }
 
-                if (array_key_exists($monthKey, $revenueByMonth)) {
-                    $revenueByMonth[$monthKey] += (float) $order->total;
-                }
+            $bucketKey = match ($chartConfiguration['unit']) {
+                'hour' => $recognizedAt->format('Y-m-d H'),
+                'day' => $recognizedAt->format('Y-m-d'),
+                'week' => $recognizedAt->format('o-W'),
+                'month' => $recognizedAt->format('Y-m'),
+                default => $recognizedAt->format('Y'),
+            };
+
+            if (array_key_exists($bucketKey, $revenueByBucket)) {
+                $revenueByBucket[$bucketKey] += (float) $order->total;
             }
         }
 
-        $revenueData = collect(range(0, $chartMonthCount - 1))
-            ->map(function (int $offset) use ($chartStart, $chartPeriod, $revenueByMonth) {
-                $month = $chartStart->copy()->addMonths($offset);
-                $labelFormat = $chartPeriod === 'year' ? 'M' : 'M y';
-
-                return [
-                    'month' => $month->format($labelFormat),
-                    'revenue' => round($revenueByMonth[$month->format('Y-m')] ?? 0, 2),
-                ];
-            })
+        $revenueData = collect($chartConfiguration['bins'])
+            ->map(fn (array $bin) => [
+                'month' => $bin['label'],
+                'revenue' => round($revenueByBucket[$bin['key']] ?? 0, 2),
+            ])
             ->values();
 
         $orderStatusDefinitions = [
@@ -245,6 +323,10 @@ class DashboardController extends Controller
             'stats' => $stats,
             'revenueData' => $revenueData,
             'chartPeriod' => $chartPeriod,
+            'dashboardFilters' => array_merge($metricPeriods, ['chart' => $chartPeriod]),
+            'chartPeriodOptions' => collect(self::CHART_PERIOD_OPTIONS)
+                ->map(fn (string $label, string $value) => ['value' => $value, 'label' => $label])
+                ->values(),
             'orderStatusData' => $orderStatusData,
             'lowStockData' => $lowStockData,
             'pendingPaymentData' => $pendingPaymentData,
@@ -252,6 +334,265 @@ class DashboardController extends Controller
             'recentInquiries' => $recentInquiries,
             'lowStockThreshold' => self::LOW_STOCK_THRESHOLD,
         ]);
+    }
+
+    /**
+     * Return a current date window and its directly-preceding comparison window.
+     *
+     * @return array{start: Carbon, end: Carbon, previous_start: ?Carbon, previous_end: ?Carbon, comparison_label: string}
+     */
+    private function periodWindow(string $period): array
+    {
+        $now = now()->copy();
+        $previousStart = null;
+        $previousEnd = null;
+        $comparisonLabel = 'No comparison available';
+
+        switch ($period) {
+            case 'today':
+                $start = $now->copy()->startOfDay();
+                $end = $now->copy()->endOfDay();
+                $previousStart = $start->copy()->subDay();
+                $previousEnd = $previousStart->copy()->endOfDay();
+                $comparisonLabel = 'vs yesterday';
+                break;
+
+            case 'yesterday':
+                $start = $now->copy()->subDay()->startOfDay();
+                $end = $start->copy()->endOfDay();
+                $previousStart = $start->copy()->subDay();
+                $previousEnd = $previousStart->copy()->endOfDay();
+                $comparisonLabel = 'vs previous day';
+                break;
+
+            case 'week':
+                $start = $now->copy()->startOfWeek();
+                $end = $now->copy()->endOfWeek();
+                $previousStart = $start->copy()->subWeek();
+                $previousEnd = $end->copy()->subWeek();
+                $comparisonLabel = 'vs last week';
+                break;
+
+            case 'last_7_days':
+                $start = $now->copy()->startOfDay()->subDays(6);
+                $end = $now->copy()->endOfDay();
+                $previousStart = $start->copy()->subDays(7);
+                $previousEnd = $start->copy()->subSecond();
+                $comparisonLabel = 'vs previous 7 days';
+                break;
+
+            case 'month':
+                $start = $now->copy()->startOfMonth();
+                $end = $now->copy()->endOfMonth();
+                $previousStart = $start->copy()->subMonth()->startOfMonth();
+                $previousEnd = $start->copy()->subSecond();
+                $comparisonLabel = 'vs last month';
+                break;
+
+            case 'last_30_days':
+                $start = $now->copy()->startOfDay()->subDays(29);
+                $end = $now->copy()->endOfDay();
+                $previousStart = $start->copy()->subDays(30);
+                $previousEnd = $start->copy()->subSecond();
+                $comparisonLabel = 'vs previous 30 days';
+                break;
+
+            case 'year':
+                $start = $now->copy()->startOfYear();
+                $end = $now->copy()->endOfYear();
+                $previousStart = $start->copy()->subYear()->startOfYear();
+                $previousEnd = $start->copy()->subSecond();
+                $comparisonLabel = 'vs last year';
+                break;
+
+            case 'last_90_days':
+                $start = $now->copy()->startOfDay()->subDays(89);
+                $end = $now->copy()->endOfDay();
+                $previousStart = $start->copy()->subDays(90);
+                $previousEnd = $start->copy()->subSecond();
+                $comparisonLabel = 'vs previous 90 days';
+                break;
+
+            case 'last_12_months':
+                $start = $now->copy()->startOfMonth()->subMonths(11);
+                $end = $now->copy()->endOfDay();
+                $previousStart = $start->copy()->subMonths(12);
+                $previousEnd = $start->copy()->subSecond();
+                $comparisonLabel = 'vs previous 12 months';
+                break;
+
+            case 'all_time':
+                $start = Carbon::create(1970, 1, 1)->startOfDay();
+                $end = $now->copy()->endOfDay();
+                $comparisonLabel = 'all time';
+                break;
+
+            default:
+                $start = $now->copy()->startOfWeek();
+                $end = $now->copy()->endOfWeek();
+                $previousStart = $start->copy()->subWeek();
+                $previousEnd = $end->copy()->subWeek();
+                $comparisonLabel = 'vs last week';
+                break;
+        }
+
+        return [
+            'start' => $start,
+            'end' => $end,
+            'previous_start' => $previousStart,
+            'previous_end' => $previousEnd,
+            'comparison_label' => $comparisonLabel,
+        ];
+    }
+
+    private function makeStat(
+        string $title,
+        string $value,
+        float|int $current,
+        float|int|null $previous,
+        array $window,
+        string $filterKey,
+        string $period,
+        array $periodOptions
+    ): array {
+        return [
+            'title' => $title,
+            'value' => $value,
+            'growth' => $previous === null ? null : $this->growthPercentage($current, $previous),
+            'growthLabel' => $window['comparison_label'],
+            'filterKey' => $filterKey,
+            'period' => $period,
+            'periodOptions' => $periodOptions,
+        ];
+    }
+
+    /**
+     * Build a compact revenue time series with suitable bucket sizes for each range.
+     *
+     * @return array{start: Carbon, unit: string, bins: array<int, array{key: string, label: string}>}
+     */
+    private function revenueChartConfiguration(string $period): array
+    {
+        $now = now()->copy();
+
+        switch ($period) {
+            case 'today':
+                $unit = 'hour';
+                $start = $now->copy()->startOfDay();
+                $count = 24;
+                break;
+
+            case 'last_7_days':
+                $unit = 'day';
+                $start = $now->copy()->startOfDay()->subDays(6);
+                $count = 7;
+                break;
+
+            case 'last_30_days':
+                $unit = 'day';
+                $start = $now->copy()->startOfDay()->subDays(29);
+                $count = 30;
+                break;
+
+            case 'this_month':
+                $unit = 'day';
+                $start = $now->copy()->startOfMonth();
+                $count = (int) $now->format('j');
+                break;
+
+            case 'last_90_days':
+                $unit = 'week';
+                $start = $now->copy()->startOfWeek()->subWeeks(12);
+                $count = 13;
+                break;
+
+            case 'last_3_months':
+                $unit = 'month';
+                $start = $now->copy()->startOfMonth()->subMonths(2);
+                $count = 3;
+                break;
+
+            case 'six_months':
+                $unit = 'month';
+                $start = $now->copy()->startOfMonth()->subMonths(5);
+                $count = 6;
+                break;
+
+            case 'twelve_months':
+                $unit = 'month';
+                $start = $now->copy()->startOfMonth()->subMonths(11);
+                $count = 12;
+                break;
+
+            case 'two_years':
+                $unit = 'month';
+                $start = $now->copy()->startOfMonth()->subMonths(23);
+                $count = 24;
+                break;
+
+            case 'five_years':
+                $unit = 'month';
+                $start = $now->copy()->startOfMonth()->subMonths(59);
+                $count = 60;
+                break;
+
+            case 'all_time':
+                $unit = 'year';
+                $firstPaidOrder = Order::query()
+                    ->where('payment_status', 'paid')
+                    ->orderByRaw('COALESCE(paid_at, created_at) ASC')
+                    ->first(['paid_at', 'created_at']);
+                $firstPaidDate = $firstPaidOrder
+                    ? ($firstPaidOrder->paid_at ?? $firstPaidOrder->created_at)
+                    : $now;
+                $start = $firstPaidDate->copy()->startOfYear();
+                $count = max(1, (int) $now->format('Y') - (int) $start->format('Y') + 1);
+                break;
+
+            case 'year':
+            default:
+                $unit = 'month';
+                $start = $now->copy()->startOfYear();
+                $count = 12;
+                break;
+        }
+
+        $bins = [];
+        $cursor = $start->copy();
+
+        for ($index = 0; $index < $count; $index++) {
+            $key = match ($unit) {
+                'hour' => $cursor->format('Y-m-d H'),
+                'day' => $cursor->format('Y-m-d'),
+                'week' => $cursor->format('o-W'),
+                'month' => $cursor->format('Y-m'),
+                default => $cursor->format('Y'),
+            };
+
+            $label = match ($unit) {
+                'hour' => $cursor->format('g A'),
+                'day' => $cursor->format('M j'),
+                'week' => 'Week of ' . $cursor->format('M j'),
+                'month' => $period === 'year' ? $cursor->format('M') : $cursor->format('M y'),
+                default => $cursor->format('Y'),
+            };
+
+            $bins[] = ['key' => $key, 'label' => $label];
+
+            $cursor = match ($unit) {
+                'hour' => $cursor->addHour(),
+                'day' => $cursor->addDay(),
+                'week' => $cursor->addWeek(),
+                'month' => $cursor->addMonth(),
+                default => $cursor->addYear(),
+            };
+        }
+
+        return [
+            'start' => $start,
+            'unit' => $unit,
+            'bins' => $bins,
+        ];
     }
 
     private function paidOrdersBetween(Carbon $start, Carbon $end): Builder
