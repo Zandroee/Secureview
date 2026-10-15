@@ -269,6 +269,9 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::delete('/admin/booking-availability/{blockedBookingDate}', [AdminScheduleController::class, 'destroyBookingDateBlock'])
         ->name('admin.booking-availability.destroy');
 
+    Route::delete('/admin/booking-time-slots/{blockedBookingTimeSlot}', [AdminScheduleController::class, 'destroyBookingTimeSlot'])
+        ->name('admin.booking-time-slots.destroy');
+
     Route::get('/admin/purchases', [AdminPurchaseController::class, 'index'])
         ->name('admin.purchases.index');
 
