@@ -84,8 +84,10 @@ class BookingDateAvailabilityTest extends TestCase
             'blocked_by' => null,
         ]);
 
+        $payload = $this->validInquiryPayload($date, $customer->email);
+
         $this->actingAs($customer)
-            ->post(route('inquiries.store'), $this->validInquiryPayload($date))
+            ->post(route('inquiries.store'), $payload)
             ->assertSessionHasErrors('preferred_date');
 
         $this->assertDatabaseMissing('inquiries', [
@@ -120,14 +122,14 @@ class BookingDateAvailabilityTest extends TestCase
         ]);
     }
 
-    private function validInquiryPayload(string $date): array
+    private function validInquiryPayload(string $date, string $email = 'booking-test@example.com'): array
     {
         return [
             'item_type' => null,
             'item_id' => null,
             'customer_name' => 'Test Customer',
             'customer_phone' => '09171234567',
-            'customer_email' => 'booking-test@example.com',
+            'customer_email' => $email,
             'street_address' => '123 Test Street',
             'city' => 'Taguig',
             'service_type' => 'Installation',
