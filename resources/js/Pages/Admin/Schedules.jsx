@@ -399,9 +399,9 @@ export default function AdminSchedules({
                                     </tbody>
                                 </table>
                             </div>
+                            <AdminPagination pagination={schedules} label="schedules" insideCard />
                         </div>
 
-                        <AdminPagination pagination={schedules} label="schedules" />
 
                         <div className="small text-muted mt-3">
                             Use the inquiry details page to change the
