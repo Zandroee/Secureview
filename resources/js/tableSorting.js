@@ -66,8 +66,11 @@ function enhanceTables(root) {
 }
 
 function sortValue(cell) {
+    const explicitValue = cell?.getAttribute("data-sort-value");
+    const control = cell?.querySelector("input:not([type='checkbox']):not([type='radio']), select, textarea");
     const raw = (
-        cell?.getAttribute("data-sort-value") ??
+        explicitValue ??
+        control?.value ??
         cell?.innerText ??
         cell?.textContent ??
         ""
