@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\BlockedBookingDate;
+use App\Models\BlockedBookingTimeSlot;
 use App\Models\Inquiry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -71,6 +72,102 @@ class BookingDateAvailabilityTest extends TestCase
                 ->component('inquiry')
                 ->where('unavailableDates.0', $date)
             );
+    }
+
+    public function test_admin_can_block_and_reopen_a_specific_booking_time_slot(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $date = today()->addDays(6)->toDateString();
+        $timeSlot = '11:00 AM - 02:00 PM';
+
+        $this->actingAs($admin)
+            ->post(route('admin.booking-availability.store'), [
+                'block_type' => 'time_slot',
+                'booking_date' => $date,
+                'booking_time' => $timeSlot,
+                'reason' => 'Technician unavailable',
+            ])
+            ->assertRedirect(route('admin.schedules.index'));
+
+        $this->assertDatabaseHas('blocked_booking_time_slots', [
+            'booking_date' => $date,
+            'booking_time' => $timeSlot,
+            'reason' => 'Technician unavailable',
+            'blocked_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.schedules.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Schedules')
+                ->where('blockedBookingTimeSlots.0.booking_date', $date)
+                ->where('blockedBookingTimeSlots.0.booking_time', $timeSlot)
+                ->where('blockedBookingTimeSlots.0.reason', 'Technician unavailable')
+            );
+
+        $blockedSlot = BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', $date)
+            ->where('booking_time', $timeSlot)
+            ->firstOrFail();
+
+        $this->actingAs($admin)
+            ->delete(route('admin.booking-time-slots.destroy', $blockedSlot))
+            ->assertRedirect(route('admin.schedules.index'));
+
+        $this->assertDatabaseMissing('blocked_booking_time_slots', [
+            'booking_date' => $date,
+            'booking_time' => $timeSlot,
+        ]);
+    }
+
+    public function test_booking_page_receives_individually_blocked_time_slots(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $date = today()->addDays(7)->toDateString();
+        $timeSlot = '02:00 PM - 05:00 PM';
+
+        BlockedBookingTimeSlot::create([
+            'booking_date' => $date,
+            'booking_time' => $timeSlot,
+            'reason' => 'No technician available',
+            'blocked_by' => null,
+        ]);
+
+        $this->actingAs($customer)
+            ->get(route('inquiries.create'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('inquiry')
+                ->where("unavailableTimeSlots.{$date}.0", $timeSlot)
+            );
+    }
+
+    public function test_customer_cannot_submit_an_individually_blocked_time_slot(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $date = today()->addDays(8)->toDateString();
+        $timeSlot = '11:00 AM - 02:00 PM';
+
+        BlockedBookingTimeSlot::create([
+            'booking_date' => $date,
+            'booking_time' => $timeSlot,
+            'reason' => 'Technician unavailable',
+            'blocked_by' => null,
+        ]);
+
+        $this->actingAs($customer)
+            ->post(route('inquiries.store'), array_merge(
+                $this->validInquiryPayload($date, $customer->email),
+                ['preferred_time' => $timeSlot]
+            ))
+            ->assertSessionHasErrors('preferred_time');
+
+        $this->assertDatabaseMissing('inquiries', [
+            'customer_email' => $customer->email,
+            'preferred_date' => $date,
+            'preferred_time' => $timeSlot,
+        ]);
     }
 
     public function test_customer_cannot_submit_an_inquiry_for_a_fully_booked_date(): void
