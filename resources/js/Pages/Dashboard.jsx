@@ -13,16 +13,24 @@ export default function Dashboard({
     stats = [],
     revenueData = [],
     chartPeriod = "year",
+    chartPeriodOptions = [],
+    dashboardFilters = {
+        sales_period: "week",
+        orders_period: "week",
+        installations_period: "week",
+        customers_period: "week",
+        chart_period: "year",
+    },
     orderStatusData = [],
     lowStockData = { data: [] },
     pendingPaymentData = { data: [] },
     scheduleData = [],
     recentInquiries = [],
 }) {
-    const changeChartPeriod = (event) => {
+    const updateDashboardFilter = (key, value) => {
         router.get(
             "/dashboard",
-            { chart_period: event.target.value },
+            { ...dashboardFilters, [key]: value },
             {
                 preserveScroll: true,
                 preserveState: true,
@@ -30,6 +38,9 @@ export default function Dashboard({
             }
         );
     };
+
+    const changeChartPeriod = (value) =>
+        updateDashboardFilter("chart_period", value);
 
     return (
         <>
@@ -67,6 +78,12 @@ export default function Dashboard({
                                                 title={stat.title}
                                                 value={stat.value}
                                                 growth={stat.growth}
+                                                growthLabel={stat.growthLabel}
+                                                period={stat.period}
+                                                periodOptions={stat.periodOptions}
+                                                onPeriodChange={(value) =>
+                                                    updateDashboardFilter(stat.filterKey, value)
+                                                }
                                             />
                                         </div>
                                     ))}
@@ -76,6 +93,7 @@ export default function Dashboard({
                                     title="Total Revenue"
                                     data={revenueData}
                                     period={chartPeriod}
+                                    periodOptions={chartPeriodOptions}
                                     onPeriodChange={changeChartPeriod}
                                 />
 
