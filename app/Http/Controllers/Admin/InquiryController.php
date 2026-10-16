@@ -12,6 +12,7 @@ use App\Services\AdminActivityLogger;
 use App\Services\JobNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class InquiryController extends Controller
@@ -236,6 +237,31 @@ class InquiryController extends Controller
             $activityLogger,
             $jobNotifications
         ) {
+            if (in_array($inquiry->status, ['confirmed', 'in_progress'], true) && $technicianIds) {
+                User::query()
+                    ->whereIn('id', $technicianIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+
+                $conflictsAfterLock = User::query()
+                    ->whereIn('id', $technicianIds)
+                    ->whereHas('assignedInquiries', function ($query) use ($inquiry) {
+                        $query->whereDate('preferred_date', $inquiry->preferred_date)
+                            ->where('preferred_time', $inquiry->preferred_time)
+                            ->whereIn('status', ['confirmed', 'in_progress'])
+                            ->where('inquiries.id', '!=', $inquiry->getKey());
+                    })
+                    ->pluck('name')
+                    ->all();
+
+                if ($conflictsAfterLock) {
+                    throw ValidationException::withMessages([
+                        'technician_ids' => 'These technicians were assigned to conflicting jobs while you were updating the team: ' . implode(', ', $conflictsAfterLock) . '.',
+                    ]);
+                }
+            }
+
             $sync = [];
             foreach ($technicianIds as $technicianId) {
                 $sync[$technicianId] = [
@@ -375,6 +401,29 @@ class InquiryController extends Controller
             $activityLogger,
             $jobNotifications
         ) {
+            User::query()
+                ->whereIn('id', $technicianIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            $conflictsAfterLock = User::query()
+                ->whereIn('id', $technicianIds)
+                ->whereHas('assignedInquiries', function ($query) use ($bookingDate, $bookingTime, $inquiry) {
+                    $query->whereDate('preferred_date', $bookingDate)
+                        ->where('preferred_time', $bookingTime)
+                        ->whereIn('status', ['confirmed', 'in_progress'])
+                        ->where('inquiries.id', '!=', $inquiry->getKey());
+                })
+                ->pluck('name')
+                ->all();
+
+            if ($conflictsAfterLock) {
+                throw ValidationException::withMessages([
+                    'technician_ids' => 'These technicians were assigned to conflicting jobs while you were confirming: ' . implode(', ', $conflictsAfterLock) . '.',
+                ]);
+            }
+
             $inquiry->update([
                 'preferred_date' => $bookingDate,
                 'preferred_time' => $bookingTime,
