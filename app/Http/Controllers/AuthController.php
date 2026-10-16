@@ -244,8 +244,14 @@ class AuthController extends Controller
             $user
         );
 
-        return $user->isAdmin()
-            ? redirect()->route('dashboard')
-            : redirect('/');
+        if ($user->isAdmin()) {
+            return redirect()->route('dashboard');
+        }
+
+        if ($user->isTechnician()) {
+            return redirect()->route('staff.jobs.index');
+        }
+
+        return redirect('/');
     }
 }
