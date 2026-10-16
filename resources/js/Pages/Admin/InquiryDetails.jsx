@@ -254,7 +254,7 @@ export default function AdminInquiryDetails({
                                     }}
                                 >
                                     <div className="small text-primary fw-bold mb-1">
-                                        JOB STATUS
+                                        TECHNICIAN ASSIGNMENT
                                     </div>
 
                                     <h2 className="h5 fw-bold mb-3">
