@@ -627,7 +627,8 @@ class InquiryController extends Controller
     public function updateStatus(
         Request $request,
         Inquiry $inquiry,
-        AdminActivityLogger $activityLogger
+        AdminActivityLogger $activityLogger,
+        JobNotificationService $notifications
     ) {
         $validated = $request->validate([
             'status' => ['required', 'in:pending,confirmed,in_progress,completed,cancelled'],
@@ -666,11 +667,26 @@ class InquiryController extends Controller
                 $inquiry,
                 $oldStatus,
                 $newStatus,
-                $activityLogger
+                $activityLogger,
+                $notifications
             ) {
                 $inquiry->update([
                     'status' => $newStatus,
                 ]);
+
+                $notificationType = match ($newStatus) {
+                    'in_progress' => 'job_ongoing',
+                    'completed' => 'job_completed',
+                    'cancelled' => 'job_cancelled',
+                    default => 'job_status',
+                };
+
+                $notifications->notifyJobTeam(
+                    $inquiry,
+                    $notificationType,
+                    'Service job ' . str_replace('_', ' ', $newStatus),
+                    'Inquiry ' . $inquiry->inquiry_number . ' is now ' . str_replace('_', ' ', $newStatus) . '.'
+                );
 
                 CustomerNotification::create([
                     'user_id' => $inquiry->user_id,
