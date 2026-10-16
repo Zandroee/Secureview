@@ -14,11 +14,12 @@ export default function ManageTechnicianTeamModal({ inquiry, technicians = [], o
     const [processing, setProcessing] = useState(false);
 
     const toggleTechnician = (id) => {
-        setSelectedIds((current) => {
-            const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
-            if (!next.includes(leadId)) setLeadId(next[0] ?? "");
-            return next;
-        });
+        const next = selectedIds.includes(id)
+            ? selectedIds.filter((item) => item !== id)
+            : [...selectedIds, id];
+
+        setSelectedIds(next);
+        if (!next.includes(leadId)) setLeadId(next[0] ?? "");
     };
 
     const submit = (event) => {
