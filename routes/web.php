@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\PackageController as AdminPackageController;
 use App\Http\Controllers\Admin\CatalogOptionController as AdminCatalogOptionController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\StockAdjustmentController as AdminStockAdjustmentController;
 use App\Http\Controllers\Staff\JobController as StaffJobController;
 use App\Http\Controllers\Staff\InventoryController as StaffInventoryController;
 use Illuminate\Http\Request;
@@ -248,6 +249,9 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/products', [AdminProductController::class, 'index'])
         ->name('admin.products.index');
+
+    Route::get('/admin/stock-adjustments', [AdminStockAdjustmentController::class, 'index'])
+        ->name('admin.stock-adjustments.index');
 
     Route::post('/admin/products', [AdminProductController::class, 'store'])
         ->name('admin.products.store');
