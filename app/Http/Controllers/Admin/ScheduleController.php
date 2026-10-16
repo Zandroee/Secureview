@@ -26,7 +26,7 @@ class ScheduleController extends Controller
             'technician' => ['nullable', 'integer', 'exists:users,id'],
         ]);
 
-        $query = Inquiry::with(['user', 'technician'])
+        $query = Inquiry::with(['user', 'technician', 'technicians'])
             ->whereIn('status', ['confirmed', 'in_progress']);
 
         if (!empty($filters['search'])) {
@@ -38,7 +38,8 @@ class ScheduleController extends Controller
                     ->orWhere('customer_name', 'like', '%' . $search . '%')
                     ->orWhere('customer_email', 'like', '%' . $search . '%')
                     ->orWhere('service_type', 'like', '%' . $search . '%')
-                    ->orWhere('item_name', 'like', '%' . $search . '%');
+                    ->orWhere('item_name', 'like', '%' . $search . '%')
+                    ->orWhereHas('technicians', fn ($team) => $team->where('users.name', 'like', '%' . $search . '%'));
             });
         }
 
@@ -47,7 +48,11 @@ class ScheduleController extends Controller
         }
 
         if (!empty($filters['technician'])) {
-            $query->where('technician_id', $filters['technician']);
+            $technicianId = (int) $filters['technician'];
+            $query->where(function ($builder) use ($technicianId) {
+                $builder->where('technician_id', $technicianId)
+                    ->orWhereHas('technicians', fn ($team) => $team->where('users.id', $technicianId));
+            });
         }
 
         $schedules = $query
@@ -77,6 +82,12 @@ class ScheduleController extends Controller
                             'email' => $inquiry->technician->email,
                         ]
                         : null,
+                    'technicians' => $inquiry->technicians->map(fn (User $technician) => [
+                        'id' => $technician->id,
+                        'name' => $technician->name,
+                        'email' => $technician->email,
+                        'is_lead' => (bool) $technician->pivot->is_lead,
+                    ])->values(),
                 ];
             });
 
