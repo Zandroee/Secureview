@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -64,6 +65,13 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isTechnician(): bool
     {
         return $this->role === 'technician';
+    }
+
+    public function assignedInquiries(): BelongsToMany
+    {
+        return $this->belongsToMany(Inquiry::class, 'inquiry_technician', 'technician_id', 'inquiry_id')
+            ->withPivot(['is_lead', 'assigned_by'])
+            ->withTimestamps();
     }
 
     public function customerNotifications(): HasMany
