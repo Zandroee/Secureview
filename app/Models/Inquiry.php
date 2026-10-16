@@ -13,6 +13,7 @@ class Inquiry extends Model
         'user_id',
         'technician_id',
         'accepting_technician_signups',
+        'max_technicians',
         'inquiry_number',
         'inquirable_type',
         'inquirable_id',
@@ -33,6 +34,7 @@ class Inquiry extends Model
     protected $casts = [
         'preferred_date' => 'date',
         'accepting_technician_signups' => 'boolean',
+        'max_technicians' => 'integer',
     ];
 
     public function user(): BelongsTo
