@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\JobNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class TechnicianWorkspaceController extends Controller
@@ -177,13 +178,14 @@ class TechnicianWorkspaceController extends Controller
             $next = $previous + $change;
 
             if ($next < 0) {
-                abort(422, 'Stock cannot be reduced below zero.');
+                throw ValidationException::withMessages(['quantity_change' => 'Stock cannot be reduced below zero.']);
             }
 
             $lockedProduct->update(['stock_quantity' => $next]);
 
             InventoryAdjustment::create([
                 'product_id' => $lockedProduct->id,
+                'product_name' => $lockedProduct->name,
                 'user_id' => $request->user()->id,
                 'previous_quantity' => $previous,
                 'new_quantity' => $next,
