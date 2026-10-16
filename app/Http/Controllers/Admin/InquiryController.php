@@ -222,6 +222,7 @@ class InquiryController extends Controller
         }
 
         $oldTechnicianIds = $inquiry->technicians()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+        $oldLeadTechnicianId = $inquiry->technician_id;
         $allowAdditional = (bool) ($validated['allow_additional_technicians'] ?? $inquiry->allow_additional_technicians);
 
         DB::transaction(function () use (
@@ -231,6 +232,7 @@ class InquiryController extends Controller
             $leadTechnicianId,
             $allowAdditional,
             $oldTechnicianIds,
+            $oldLeadTechnicianId,
             $activityLogger,
             $jobNotifications
         ) {
@@ -251,7 +253,9 @@ class InquiryController extends Controller
             $inquiry->load('technicians');
             $names = $inquiry->technicians->pluck('name')->join(', ');
             $newIds = array_values(array_diff($technicianIds, $oldTechnicianIds));
+            $removedIds = array_values(array_diff($oldTechnicianIds, $technicianIds));
             $jobNotifications->notifyAssignmentsChanged($inquiry, $newIds);
+            $jobNotifications->notifyAssignmentsRemoved($removedIds, $inquiry);
 
             if ($inquiry->user_id) {
                 CustomerNotification::create([
@@ -270,7 +274,7 @@ class InquiryController extends Controller
                 'inquiry_technician_team_updated',
                 "Updated technician team for inquiry {$inquiry->inquiry_number}: {$names}.",
                 $inquiry,
-                ['technician_id' => $inquiry->getOriginal('technician_id')],
+                ['technician_id' => $oldLeadTechnicianId ?: null],
                 ['technician_id' => $leadTechnicianId ?: null]
             );
         });
