@@ -25,7 +25,7 @@ class TechnicianWorkspaceController extends Controller
             ->orderBy('preferred_date')
             ->limit(100)
             ->get()
-            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, true))
+            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, true, $technician->id))
             ->values();
 
         $openJobs = Inquiry::query()
@@ -38,7 +38,7 @@ class TechnicianWorkspaceController extends Controller
             ->orderBy('preferred_time')
             ->limit(50)
             ->get()
-            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, false))
+            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, false, $technician->id))
             ->values();
 
         $inventory = Product::query()
@@ -208,7 +208,7 @@ class TechnicianWorkspaceController extends Controller
         return back()->with('success', 'Inventory adjustment saved with an audit record.');
     }
 
-    private function jobData(Inquiry $inquiry, bool $includeCustomerDetails): array
+    private function jobData(Inquiry $inquiry, bool $includeCustomerDetails, int $currentTechnicianId): array
     {
         $data = [
             'id' => $inquiry->id,
@@ -226,6 +226,7 @@ class TechnicianWorkspaceController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'is_lead' => (bool) $user->pivot->is_lead,
+                'is_current_user' => $user->id === $currentTechnicianId,
             ])->values(),
         ];
 
