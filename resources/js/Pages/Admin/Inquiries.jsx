@@ -203,13 +203,13 @@ export default function AdminInquiries({
                                         }
                                     >
                                         <option value="">All statuses</option>
-                                        <option value="pending">
+                                        <option value="pending" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
                                             Pending
                                         </option>
                                         <option value="confirmed" disabled={inquiry.status !== "pending" && inquiry.status !== "confirmed"}>
                                             Confirmed
                                         </option>
-                                        <option value="in_progress">
+                                        <option value="in_progress" disabled={inquiry.status === "pending"}>
                                             In Progress
                                         </option>
                                         <option value="completed">
