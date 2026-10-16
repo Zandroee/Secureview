@@ -16,6 +16,7 @@ class CustomerNotification extends Model
         'related_type',
         'related_id',
         'read_at',
+        'dedupe_key',
     ];
 
     protected $casts = [
