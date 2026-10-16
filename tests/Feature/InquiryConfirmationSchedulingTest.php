@@ -103,7 +103,8 @@ class InquiryConfirmationSchedulingTest extends TestCase
             ->patch(route('admin.inquiries.confirm', $inquiry), [
                 'preferred_date' => $date,
                 'preferred_time' => self::AFTERNOON_SLOT,
-                'technician_id' => $technician->id,
+                'technician_ids' => [$technician->id],
+                'lead_technician_id' => $technician->id,
             ])
             ->assertSessionHasErrors('preferred_date');
 
@@ -136,7 +137,8 @@ class InquiryConfirmationSchedulingTest extends TestCase
             ->patch(route('admin.inquiries.confirm', $newInquiry), [
                 'preferred_date' => $date,
                 'preferred_time' => self::MORNING_SLOT,
-                'technician_id' => $technician->id,
+                'technician_ids' => [$technician->id],
+                'lead_technician_id' => $technician->id,
             ])
             ->assertSessionHasErrors('technician_ids');
 
