@@ -197,8 +197,8 @@ export default function AdminInquiries({
                                         <option value="pending">Pending</option>
                                         <option value="confirmed">Confirmed</option>
                                         <option value="in_progress">In Progress</option>
-                                        <option value="completed">Completed</option>
-                                        <option value="cancelled">Cancelled</option>
+                                        <option value="completed" disabled={inquiry.status !== "in_progress" && inquiry.status !== "completed"}>Completed</option>
+                                        <option value="cancelled" disabled={inquiry.status === "completed" || inquiry.status === "cancelled"}>Cancelled</option>
                                     </select>
                                 </div>
 
