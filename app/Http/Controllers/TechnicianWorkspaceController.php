@@ -129,6 +129,7 @@ class TechnicianWorkspaceController extends Controller
                 ->whereDate('preferred_date', $lockedInquiry->preferred_date)
                 ->where('preferred_time', $lockedInquiry->preferred_time)
                 ->whereIn('status', ['confirmed', 'in_progress'])
+                ->where('inquiries.id', '!=', $lockedInquiry->getKey())
                 ->exists();
 
             if ($hasConflictAfterLock) {
