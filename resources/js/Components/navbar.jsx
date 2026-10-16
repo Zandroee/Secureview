@@ -14,6 +14,7 @@ export default function Navbar() {
     const isLoggedIn = isAuthenticated && isVerified;
     const isUnverified = isAuthenticated && !isVerified;
     const isAdmin = isLoggedIn && user?.role === "admin";
+    const isTechnician = isLoggedIn && user?.role === "technician";
 
     const [hoveredButton, setHoveredButton] = useState(null);
     const [showUserMenu, setShowUserMenu] = useState(false);
@@ -366,6 +367,18 @@ export default function Navbar() {
                                         </Link>
                                     )}
 
+                                    {isTechnician && (
+                                        <Link
+                                            href="/staff/jobs"
+                                            className="btn btn-primary fw-bold w-100"
+                                            style={{
+                                                fontFamily: "Outfit, sans-serif",
+                                            }}
+                                        >
+                                            STAFF WORKSPACE
+                                        </Link>
+                                    )}
+
                                     <Link
                                         href="/settings"
                                         className="btn btn-outline-primary fw-bold w-100"
@@ -665,6 +678,27 @@ export default function Navbar() {
                                                 }}
                                             >
                                                 ADMIN DASHBOARD
+                                            </Link>
+                                        )}
+
+                                        {isTechnician && (
+                                            <Link
+                                                href="/staff/jobs"
+                                                className="d-block text-dark text-decoration-none fw-semibold text-center"
+                                                style={{
+                                                    padding: "9px 12px",
+                                                    fontFamily: "Outfit, sans-serif",
+                                                    fontSize: "0.88rem",
+                                                    transition: "background-color 0.15s ease",
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "#f8f9fa";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = "transparent";
+                                                }}
+                                            >
+                                                STAFF WORKSPACE
                                             </Link>
                                         )}
 
