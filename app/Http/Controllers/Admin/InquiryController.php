@@ -9,6 +9,7 @@ use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\User;
 use App\Services\AdminActivityLogger;
+use App\Services\JobNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -29,7 +30,7 @@ class InquiryController extends Controller
             'urgency' => ['nullable', 'in:normal,urgent,emergency'],
         ]);
 
-        $query = Inquiry::with(['user', 'inquirable', 'technician']);
+        $query = Inquiry::with(['user', 'inquirable', 'technician', 'assignedTechnicians']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -72,6 +73,9 @@ class InquiryController extends Controller
                             'email' => $inquiry->technician->email,
                         ]
                         : null,
+                    'technicians' => $this->technicianTeam($inquiry),
+                    'allow_technician_self_assignment' => (bool) $inquiry->allow_technician_self_assignment,
+                    'max_technicians' => (int) ($inquiry->max_technicians ?? 3),
                     'service_type' => $inquiry->service_type,
                     'urgency' => $inquiry->urgency,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
@@ -105,7 +109,7 @@ class InquiryController extends Controller
 
     public function show(Inquiry $inquiry)
     {
-        $inquiry->load(['user', 'inquirable', 'technician']);
+        $inquiry->load(['user', 'inquirable', 'technician', 'assignedTechnicians']);
 
         $technicians = User::where('role', 'technician')
             ->orderBy('name')
@@ -131,6 +135,9 @@ class InquiryController extends Controller
                         'email' => $inquiry->technician->email,
                     ]
                     : null,
+                'technicians' => $this->technicianTeam($inquiry),
+                'allow_technician_self_assignment' => (bool) $inquiry->allow_technician_self_assignment,
+                'max_technicians' => (int) ($inquiry->max_technicians ?? 3),
                 'street_address' => $inquiry->street_address,
                 'city' => $inquiry->city,
                 'service_type' => $inquiry->service_type,
@@ -427,5 +434,25 @@ class InquiryController extends Controller
         }
 
         return back()->with('success', 'Inquiry status updated successfully.');
+    }
+    private function technicianTeam(Inquiry $inquiry): array
+    {
+        $team = $inquiry->assignedTechnicians->map(fn (User $technician) => [
+            'id' => $technician->id,
+            'name' => $technician->name,
+            'email' => $technician->email,
+            'is_lead' => (bool) $technician->pivot->is_lead,
+        ])->values();
+
+        if ($team->isEmpty() && $inquiry->technician) {
+            return [[
+                'id' => $inquiry->technician->id,
+                'name' => $inquiry->technician->name,
+                'email' => $inquiry->technician->email,
+                'is_lead' => true,
+            ]];
+        }
+
+        return $team->all();
     }
 }
