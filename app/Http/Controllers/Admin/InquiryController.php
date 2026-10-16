@@ -465,7 +465,8 @@ class InquiryController extends Controller
                 $inquiry,
                 $oldStatus,
                 $newStatus,
-                $activityLogger
+                $activityLogger,
+                $jobNotifications
             ) {
                 $inquiry->update([
                     'status' => $newStatus,
