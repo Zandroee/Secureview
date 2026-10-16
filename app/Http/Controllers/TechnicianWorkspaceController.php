@@ -30,6 +30,12 @@ class TechnicianWorkspaceController extends Controller
             ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, true, $technician->id))
             ->values();
 
+        $busySlots = $technician->assignedInquiries()
+            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->get(['preferred_date', 'preferred_time'])
+            ->map(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d') . '|' . $job->preferred_time)
+            ->all();
+
         $openJobs = Inquiry::query()
             ->with('technicians:id,name,email')
             ->where('status', 'confirmed')
@@ -40,6 +46,7 @@ class TechnicianWorkspaceController extends Controller
             ->orderBy('preferred_time')
             ->limit(50)
             ->get()
+            ->filter(fn (Inquiry $inquiry) => !in_array($inquiry->preferred_date?->format('Y-m-d') . '|' . $inquiry->preferred_time, $busySlots, true))
             ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, false, $technician->id))
             ->values();
 
