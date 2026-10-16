@@ -8,6 +8,7 @@ use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Package;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
