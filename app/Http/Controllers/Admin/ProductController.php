@@ -175,6 +175,8 @@ class ProductController extends Controller
 
         $oldSnapshot = $this->snapshot($product);
         $oldName = $product->name;
+        $oldStockQuantity = (int) $product->stock_quantity;
+        $stockReason = trim((string) ($validated['stock_reason'] ?? 'Updated via product editor')) ?: 'Updated via product editor';
         $priceChanged = (float) $product->price !== (float) $fields['price'];
 
         DB::transaction(function () use (
@@ -183,10 +185,24 @@ class ProductController extends Controller
             $fields,
             $oldSnapshot,
             $oldName,
+            $oldStockQuantity,
+            $stockReason,
             $priceChanged,
             $activityLogger
         ) {
             $product->update($fields);
+
+            if ($oldStockQuantity !== (int) $product->stock_quantity) {
+                InventoryAdjustment::create([
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'user_id' => $request->user()->id,
+                    'previous_quantity' => $oldStockQuantity,
+                    'new_quantity' => (int) $product->stock_quantity,
+                    'quantity_change' => (int) $product->stock_quantity - $oldStockQuantity,
+                    'reason' => $stockReason,
+                ]);
+            }
 
             // Keep items already in carts consistent with the updated product price.
             // Completed order items remain unchanged as purchase-history snapshots.
@@ -324,6 +340,7 @@ class ProductController extends Controller
             'warranty' => ['required', 'string', 'max:120'],
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
             'stock_quantity' => ['required', 'integer', 'min:0'],
+            'stock_reason' => ['nullable', 'string', 'max:255'],
             'badge' => ['nullable', 'string', 'max:80'],
             'image' => ['nullable', 'string', 'max:2048'],
             'image_file' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
