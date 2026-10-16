@@ -463,6 +463,12 @@ class InquiryController extends Controller
             ]);
         }
 
+        if (in_array($oldStatus, ['completed', 'cancelled'], true) && $newStatus !== $oldStatus) {
+            return back()->withErrors([
+                'status' => 'Completed or cancelled inquiries cannot be reopened through a status change.',
+            ]);
+        }
+
         if (in_array($oldStatus, ['confirmed', 'in_progress'], true) && $newStatus === 'pending') {
             return back()->withErrors([
                 'status' => 'An active scheduled job cannot be moved back to pending. Cancel the inquiry if the service will not proceed.',
