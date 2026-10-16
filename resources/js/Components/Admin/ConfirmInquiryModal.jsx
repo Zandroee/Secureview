@@ -94,7 +94,7 @@ export default function ConfirmInquiryModal({
                             Confirm &amp; Schedule Service
                         </h2>
                         <p className="text-muted small mb-0">
-                            Choose the final appointment slot and the technician who will handle this job.
+                            Choose the final appointment slot, assign the technician team, and select a lead technician.
                         </p>
                     </div>
                     <button
