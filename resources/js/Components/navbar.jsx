@@ -55,6 +55,8 @@ export default function Navbar() {
     }, [url]);
 
     useEffect(() => {
+        if (!isLoggedIn) return;
+
         const pollNotifications = () => {
             router.reload({
                 only: ["notificationCount", "latestNotification"],
@@ -75,7 +77,7 @@ export default function Navbar() {
 
         const interval = window.setInterval(pollNotifications, 30000);
         return () => window.clearInterval(interval);
-    }, []);
+    }, [isLoggedIn]);
 
     return (
         <>
