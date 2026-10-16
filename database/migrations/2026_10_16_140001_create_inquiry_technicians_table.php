@@ -13,6 +13,9 @@ return new class extends Migration
             $table->boolean('accepting_technician_signups')
                 ->default(false)
                 ->after('technician_id');
+            $table->unsignedTinyInteger('max_technicians')
+                ->default(3)
+                ->after('accepting_technician_signups');
         });
 
         Schema::create('inquiry_technicians', function (Blueprint $table) {
@@ -51,7 +54,7 @@ return new class extends Migration
         Schema::dropIfExists('inquiry_technicians');
 
         Schema::table('inquiries', function (Blueprint $table) {
-            $table->dropColumn('accepting_technician_signups');
+            $table->dropColumn(['accepting_technician_signups', 'max_technicians']);
         });
     }
 };
