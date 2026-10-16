@@ -3,6 +3,7 @@ import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import { Link, router } from "@inertiajs/react";
 import AdminPagination from "../../Components/Admin/AdminPagination";
+import ConfirmInquiryModal from "../../Components/Admin/ConfirmInquiryModal";
 import { useState } from "react";
 
 function urgencyClass(urgency) {
@@ -45,11 +46,14 @@ export default function AdminInquiries({
     inquiries = [],
     technicians = [],
     filters = {},
+    bookingTimeSlots = [],
+    todayDate = "",
 }) {
     const inquiryRows = inquiries.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
     const [urgency, setUrgency] = useState(filters.urgency ?? "");
+    const [confirmingInquiry, setConfirmingInquiry] = useState(null);
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -86,6 +90,11 @@ export default function AdminInquiries({
     };
 
     const updateStatus = (inquiry, nextStatus) => {
+        if (nextStatus === "confirmed" && inquiry.status !== "confirmed") {
+            setConfirmingInquiry(inquiry);
+            return;
+        }
+
         router.patch(
             "/admin/inquiries/" + inquiry.id + "/status",
             {
@@ -197,7 +206,7 @@ export default function AdminInquiries({
                                         <option value="pending">
                                             Pending
                                         </option>
-                                        <option value="confirmed">
+                                        <option value="confirmed" disabled={inquiry.status !== "pending" && inquiry.status !== "confirmed"}>
                                             Confirmed
                                         </option>
                                         <option value="in_progress">
@@ -480,6 +489,16 @@ export default function AdminInquiries({
             </div>
 
             <Footer />
+
+            {confirmingInquiry && (
+                <ConfirmInquiryModal
+                    inquiry={confirmingInquiry}
+                    technicians={technicians}
+                    bookingTimeSlots={bookingTimeSlots}
+                    todayDate={todayDate}
+                    onClose={() => setConfirmingInquiry(null)}
+                />
+            )}
         </div>
     );
 }
