@@ -22,6 +22,7 @@ class InquiryConfirmationSchedulingTest extends TestCase
         $customer = User::factory()->create(['role' => 'user']);
         $admin = User::factory()->create(['role' => 'admin']);
         $technician = User::factory()->create(['role' => 'technician']);
+        $supportingTechnician = User::factory()->create(['role' => 'technician']);
         $requestedDate = today()->addDays(4)->toDateString();
         $confirmedDate = today()->addDays(6)->toDateString();
         $inquiry = $this->createPendingInquiry($customer, $requestedDate);
@@ -30,17 +31,32 @@ class InquiryConfirmationSchedulingTest extends TestCase
             ->patch(route('admin.inquiries.confirm', $inquiry), [
                 'preferred_date' => $confirmedDate,
                 'preferred_time' => self::AFTERNOON_SLOT,
-                'technician_id' => $technician->id,
+                'technician_ids' => [$technician->id, $supportingTechnician->id],
+                'lead_technician_id' => $technician->id,
+                'accepting_technician_signups' => true,
+                'max_technicians' => 3,
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
+        $this->assertDatabaseHas('inquiry_technicians', [
+            'inquiry_id' => $inquiry->id,
+            'technician_id' => $technician->id,
+            'is_lead' => 1,
+        ]);
+        $this->assertDatabaseHas('inquiry_technicians', [
+            'inquiry_id' => $inquiry->id,
+            'technician_id' => $supportingTechnician->id,
+            'is_lead' => 0,
+        ]);
         $this->assertDatabaseHas('inquiries', [
             'id' => $inquiry->id,
             'preferred_date' => $confirmedDate,
             'preferred_time' => self::AFTERNOON_SLOT,
             'technician_id' => $technician->id,
             'status' => 'confirmed',
+            'accepting_technician_signups' => 1,
+            'max_technicians' => 3,
         ]);
     }
 
@@ -55,9 +71,12 @@ class InquiryConfirmationSchedulingTest extends TestCase
             ->patch(route('admin.inquiries.confirm', $inquiry), [
                 'preferred_date' => $date,
                 'preferred_time' => self::MORNING_SLOT,
-                'technician_id' => '',
+                'technician_ids' => [],
+                'lead_technician_id' => '',
+                'accepting_technician_signups' => false,
+                'max_technicians' => 3,
             ])
-            ->assertSessionHasErrors('technician_id');
+            ->assertSessionHasErrors('technician_ids');
 
         $this->assertDatabaseHas('inquiries', [
             'id' => $inquiry->id,
@@ -85,7 +104,10 @@ class InquiryConfirmationSchedulingTest extends TestCase
             ->patch(route('admin.inquiries.confirm', $inquiry), [
                 'preferred_date' => $date,
                 'preferred_time' => self::MIDDAY_SLOT,
-                'technician_id' => $technician->id,
+                'technician_ids' => [$technician->id],
+                'lead_technician_id' => $technician->id,
+                'accepting_technician_signups' => false,
+                'max_technicians' => 1,
             ])
             ->assertSessionHasErrors('preferred_time');
 
@@ -99,7 +121,10 @@ class InquiryConfirmationSchedulingTest extends TestCase
             ->patch(route('admin.inquiries.confirm', $inquiry), [
                 'preferred_date' => $date,
                 'preferred_time' => self::AFTERNOON_SLOT,
-                'technician_id' => $technician->id,
+                'technician_ids' => [$technician->id],
+                'lead_technician_id' => $technician->id,
+                'accepting_technician_signups' => false,
+                'max_technicians' => 1,
             ])
             ->assertSessionHasErrors('preferred_date');
 
@@ -131,9 +156,12 @@ class InquiryConfirmationSchedulingTest extends TestCase
             ->patch(route('admin.inquiries.confirm', $newInquiry), [
                 'preferred_date' => $date,
                 'preferred_time' => self::MORNING_SLOT,
-                'technician_id' => $technician->id,
+                'technician_ids' => [$technician->id],
+                'lead_technician_id' => $technician->id,
+                'accepting_technician_signups' => false,
+                'max_technicians' => 1,
             ])
-            ->assertSessionHasErrors('technician_id');
+            ->assertSessionHasErrors('technician_ids');
 
         $this->assertDatabaseHas('inquiries', [
             'id' => $newInquiry->id,
