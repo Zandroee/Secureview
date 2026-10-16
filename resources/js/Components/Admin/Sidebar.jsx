@@ -36,6 +36,12 @@ const menuGroups = [
             key: "packages",
             icon: "bi-box-seam",
         },
+        {
+            label: "Stock Adjustments",
+            href: "/admin/stock-adjustments",
+            key: "stock-adjustments",
+            icon: "bi-boxes",
+        },
     ],
     [
         {
