@@ -158,6 +158,28 @@ class InquiryController extends Controller
             }
         }
 
+        if (in_array($inquiry->status, ['confirmed', 'in_progress'], true) && !$technicianId) {
+            return back()->withErrors([
+                'technician_id' => 'Confirmed and in-progress jobs must have an assigned technician.',
+            ]);
+        }
+
+        if ($technicianId && in_array($inquiry->status, ['confirmed', 'in_progress'], true)) {
+            $technicianHasConflict = Inquiry::query()
+                ->where('technician_id', $technicianId)
+                ->whereDate('preferred_date', $inquiry->preferred_date)
+                ->where('preferred_time', $inquiry->preferred_time)
+                ->whereIn('status', ['confirmed', 'in_progress'])
+                ->whereKeyNot($inquiry->getKey())
+                ->exists();
+
+            if ($technicianHasConflict) {
+                return back()->withErrors([
+                    'technician_id' => 'This technician is already assigned to another job during that time slot.',
+                ]);
+            }
+        }
+
         $oldTechnicianId = $inquiry->technician_id;
 
         if ((int) $oldTechnicianId !== (int) $technicianId) {
@@ -218,6 +240,24 @@ class InquiryController extends Controller
 
         $oldStatus = $inquiry->status;
         $newStatus = $validated['status'];
+
+        if ($newStatus === 'confirmed' && $oldStatus !== 'confirmed') {
+            return back()->withErrors([
+                'status' => 'Use Confirm & Assign Technician to set the schedule before confirming this inquiry.',
+            ]);
+        }
+
+        if ($oldStatus === 'pending' && $newStatus === 'in_progress') {
+            return back()->withErrors([
+                'status' => 'Confirm and schedule this inquiry before marking the job in progress.',
+            ]);
+        }
+
+        if (in_array($newStatus, ['confirmed', 'in_progress'], true) && !$inquiry->technician_id) {
+            return back()->withErrors([
+                'status' => 'Assign a technician before confirming or starting this job.',
+            ]);
+        }
 
         if ($oldStatus !== $newStatus) {
             DB::transaction(function () use (
