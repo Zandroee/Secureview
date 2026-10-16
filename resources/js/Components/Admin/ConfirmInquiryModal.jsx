@@ -147,7 +147,7 @@ export default function ConfirmInquiryModal({
                                     {String(technician.id) === leadId && <span className="badge bg-primary-subtle text-primary">Lead</span>}
                                 </label>
                             ))}
-                            {technicians.length === 0 && <div className="small text-danger mt-2">No technician accounts exist. Add a technician before confirming an inquiry.</>}
+                            {technicians.length === 0 && <div className="small text-danger mt-2">No technician accounts exist. Add a technician before confirming an inquiry.</div>}
                             {selectedIds.length === 0 && <div className="small text-danger mt-2">At least one technician must be selected.</div>}
 
                             <div className="mt-3">
