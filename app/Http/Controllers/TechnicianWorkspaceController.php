@@ -201,7 +201,7 @@ class TechnicianWorkspaceController extends Controller
                 'reason' => trim($validated['reason']),
             ]);
 
-            if ($previous > 5 && $next <= 5) {
+            if (($previous > 5 && $next <= 5) || ($previous > 0 && $next === 0)) {
                 User::query()->where('role', 'admin')->get()->each(function (User $admin) use ($lockedProduct, $next) {
                     $admin->customerNotifications()->create([
                         'type' => 'inventory_low_stock',
