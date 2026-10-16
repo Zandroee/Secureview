@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CatalogOption;
+use App\Models\InventoryStockMovement;
 use App\Models\Package;
 use App\Models\Product;
 use App\Services\AdminActivityLogger;
@@ -266,7 +267,8 @@ class ProductController extends Controller
         AdminActivityLogger $activityLogger
     ) {
         $validated = $request->validate([
-            'stock_quantity' => ['required', 'integer', 'min:0'],
+            'stock_quantity' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
         $oldQuantity = (int) $product->stock_quantity;
@@ -284,6 +286,17 @@ class ProductController extends Controller
             ]);
 
             if ($oldQuantity !== $newQuantity) {
+                InventoryStockMovement::create([
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'user_id' => $request->user()->id,
+                    'previous_quantity' => $oldQuantity,
+                    'new_quantity' => $newQuantity,
+                    'reason' => filled($request->input('reason'))
+                        ? trim((string) $request->input('reason'))
+                        : 'Administrator stock adjustment',
+                    'source' => 'admin',
+                ]);
                 $activityLogger->record(
                     $request,
                     'product_stock_updated',
