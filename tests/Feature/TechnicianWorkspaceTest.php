@@ -73,6 +73,8 @@ class TechnicianWorkspaceTest extends TestCase
         $this->actingAs($technician)->get(route('admin.users.index'))->assertForbidden();
         $this->actingAs($technician)->get(route('admin.transactions.index'))->assertForbidden();
         $this->actingAs($technician)->get(route('admin.activity-logs.index'))->assertForbidden();
+        $this->actingAs($technician)->get(route('admin.products.index'))->assertForbidden();
+        $this->actingAs($technician)->get(route('admin.inventory-adjustments.index'))->assertForbidden();
         $this->actingAs($technician)->get(route('technician.dashboard'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
