@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CatalogOption;
 use App\Models\Package;
 use App\Models\Product;
+use App\Models\StockAdjustment;
 use App\Services\AdminActivityLogger;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
@@ -266,17 +267,22 @@ class ProductController extends Controller
         AdminActivityLogger $activityLogger
     ) {
         $validated = $request->validate([
-            'stock_quantity' => ['required', 'integer', 'min:0'],
+            'stock_quantity' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
         $oldQuantity = (int) $product->stock_quantity;
         $newQuantity = (int) $validated['stock_quantity'];
+        $reason = filled($validated['reason'] ?? null)
+            ? trim($validated['reason'])
+            : 'Admin inventory adjustment';
 
         DB::transaction(function () use (
             $request,
             $product,
             $oldQuantity,
             $newQuantity,
+            $reason,
             $activityLogger
         ) {
             $product->update([
@@ -284,10 +290,20 @@ class ProductController extends Controller
             ]);
 
             if ($oldQuantity !== $newQuantity) {
+                StockAdjustment::create([
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'changed_by' => $request->user()->id,
+                    'previous_quantity' => $oldQuantity,
+                    'new_quantity' => $newQuantity,
+                    'quantity_change' => $newQuantity - $oldQuantity,
+                    'reason' => $reason,
+                ]);
+
                 $activityLogger->record(
                     $request,
                     'product_stock_updated',
-                    "Changed stock for {$product->name} from {$oldQuantity} to {$newQuantity} units.",
+                    "Changed stock for {$product->name} from {$oldQuantity} to {$newQuantity} units. Reason: {$reason}",
                     $product,
                     ['stock_quantity' => $oldQuantity],
                     ['stock_quantity' => $newQuantity]
