@@ -253,28 +253,63 @@ class InquiryController extends Controller
     public function confirm(
         Request $request,
         Inquiry $inquiry,
-        AdminActivityLogger $activityLogger
+        AdminActivityLogger $activityLogger,
+        JobNotificationService $notifications
     ) {
         if ($inquiry->status !== 'pending') {
             return back()->withErrors([
-                'status' => 'Only pending inquiries can use the confirmation workflow. Completed or cancelled inquiries cannot be confirmed.',
+                'status' => 'Only pending inquiries can use the confirmation workflow.',
             ]);
         }
+
+        $ids = $request->input('technician_ids');
+        if (!is_array($ids)) {
+            $legacyId = $request->input('technician_id');
+            $ids = $legacyId ? [$legacyId] : [];
+        }
+
+        $request->merge([
+            'technician_ids' => $ids,
+            'lead_technician_id' => $request->input('lead_technician_id', $request->input('technician_id')),
+            'allow_technician_self_assignment' => $request->input('allow_technician_self_assignment', false),
+            'max_technicians' => $request->input('max_technicians', max(count($ids), 1)),
+        ]);
 
         $validated = $request->validate([
             'preferred_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'preferred_time' => ['required', 'in:' . implode(',', self::BOOKING_TIME_SLOTS)],
-            'technician_id' => ['required', 'integer', 'exists:users,id'],
+            'technician_ids' => ['required', 'array', 'min:1', 'max:10'],
+            'technician_ids.*' => ['required', 'integer', 'distinct', 'exists:users,id'],
+            'lead_technician_id' => ['required', 'integer', 'exists:users,id'],
+            'allow_technician_self_assignment' => ['required', 'boolean'],
+            'max_technicians' => ['required', 'integer', 'min:1', 'max:10'],
         ]);
 
-        $technician = User::query()
-            ->whereKey($validated['technician_id'])
-            ->where('role', 'technician')
-            ->first();
+        $technicianIds = array_values(array_unique(array_map('intval', $validated['technician_ids'])));
+        $leadTechnicianId = (int) $validated['lead_technician_id'];
+        $allowSelfAssignment = (bool) $validated['allow_technician_self_assignment'];
+        $maxTechnicians = $allowSelfAssignment ? (int) $validated['max_technicians'] : count($technicianIds);
 
-        if (!$technician) {
+        if (!in_array($leadTechnicianId, $technicianIds, true)) {
             return back()->withErrors([
-                'technician_id' => 'Choose a valid technician account.',
+                'lead_technician_id' => 'The lead technician must be part of the selected team.',
+            ]);
+        }
+
+        if (count($technicianIds) > $maxTechnicians) {
+            return back()->withErrors([
+                'max_technicians' => 'Maximum team size cannot be smaller than the selected team.',
+            ]);
+        }
+
+        $technicians = User::query()
+            ->where('role', 'technician')
+            ->whereIn('id', $technicianIds)
+            ->get(['id', 'name', 'email']);
+
+        if ($technicians->count() !== count($technicianIds)) {
+            return back()->withErrors([
+                'technician_ids' => 'Every selected team member must be a technician account.',
             ]);
         }
 
@@ -296,39 +331,68 @@ class InquiryController extends Controller
             ]);
         }
 
-        $technicianHasConflict = Inquiry::query()
-            ->where('technician_id', $technician->id)
-            ->whereDate('preferred_date', $bookingDate)
-            ->where('preferred_time', $bookingTime)
-            ->whereIn('status', ['confirmed', 'in_progress'])
-            ->where('id', '!=', $inquiry->getKey())
-            ->exists();
+        foreach ($technicianIds as $technicianId) {
+            $hasConflict = Inquiry::query()
+                ->whereIn('status', ['confirmed', 'in_progress'])
+                ->whereDate('preferred_date', $bookingDate)
+                ->where('preferred_time', $bookingTime)
+                ->where('id', '!=', $inquiry->getKey())
+                ->where(function ($builder) use ($technicianId) {
+                    $builder->where('technician_id', $technicianId)
+                        ->orWhereHas('assignedTechnicians', fn ($team) => $team->where('users.id', $technicianId));
+                })
+                ->exists();
 
-        if ($technicianHasConflict) {
-            return back()->withErrors([
-                'technician_id' => 'This technician already has a job scheduled for that date and time. Choose another technician or time slot.',
-            ]);
+            if ($hasConflict) {
+                $technician = $technicians->firstWhere('id', $technicianId);
+
+                return back()->withErrors([
+                    'technician_ids' => ($technician?->name ?? 'A selected technician')
+                        . ' already has a job scheduled for this date and time. Choose another technician or time slot.',
+                ]);
+            }
         }
 
         $oldStatus = $inquiry->status;
         $oldTechnicianId = $inquiry->technician_id;
+        $leadTechnician = $technicians->firstWhere('id', $leadTechnicianId);
+        $teamNames = $technicians->pluck('name')->join(', ');
 
         DB::transaction(function () use (
             $request,
             $inquiry,
-            $technician,
+            $technicianIds,
+            $leadTechnicianId,
+            $allowSelfAssignment,
+            $maxTechnicians,
             $bookingDate,
             $bookingTime,
             $oldStatus,
             $oldTechnicianId,
-            $activityLogger
+            $leadTechnician,
+            $teamNames,
+            $activityLogger,
+            $notifications
         ) {
+            $team = [];
+            foreach ($technicianIds as $technicianId) {
+                $team[$technicianId] = [
+                    'is_lead' => $technicianId === $leadTechnicianId,
+                    'assigned_by' => $request->user()->id,
+                    'assignment_source' => 'admin',
+                    'assigned_at' => now(),
+                ];
+            }
+
             $inquiry->update([
                 'preferred_date' => $bookingDate,
                 'preferred_time' => $bookingTime,
-                'technician_id' => $technician->id,
+                'technician_id' => $leadTechnicianId,
+                'allow_technician_self_assignment' => $allowSelfAssignment,
+                'max_technicians' => $maxTechnicians,
                 'status' => 'confirmed',
             ]);
+            $inquiry->assignedTechnicians()->sync($team);
 
             CustomerNotification::create([
                 'user_id' => $inquiry->user_id,
@@ -336,32 +400,46 @@ class InquiryController extends Controller
                 'title' => 'Service inquiry confirmed',
                 'message' => 'Your inquiry ' . $inquiry->inquiry_number
                     . ' has been confirmed for ' . $inquiry->preferred_date->format('F j, Y')
-                    . ' (' . $inquiry->preferred_time . '). Assigned technician: ' . $technician->name . '.',
+                    . ' (' . $inquiry->preferred_time . '). Assigned team: ' . $teamNames
+                    . '. Lead technician: ' . ($leadTechnician?->name ?? 'Not available') . '.',
                 'action_url' => route('inquiries.show', $inquiry),
                 'related_type' => Inquiry::class,
                 'related_id' => $inquiry->id,
             ]);
 
+            $notifications->notifyAdmins(
+                $inquiry,
+                'job_upcoming',
+                'Service job confirmed',
+                'Inquiry ' . $inquiry->inquiry_number . ' is scheduled for '
+                    . $inquiry->preferred_date->format('F j, Y') . ' (' . $inquiry->preferred_time
+                    . '). Lead technician: ' . ($leadTechnician?->name ?? 'Not available') . '.'
+            );
+
+            $notifications->notifyTechnicians(
+                $inquiry,
+                $technicianIds,
+                'job_assigned',
+                'New service assignment',
+                'You have been assigned to inquiry ' . $inquiry->inquiry_number
+                    . ' on ' . $inquiry->preferred_date->format('F j, Y')
+                    . ' (' . $inquiry->preferred_time . '). Lead technician: '
+                    . ($leadTechnician?->name ?? 'Not available') . '.'
+            );
+
             $activityLogger->record(
                 $request,
                 'inquiry_confirmed_and_scheduled',
-                "Confirmed inquiry {$inquiry->inquiry_number} for {$bookingDate} {$bookingTime} and assigned technician {$technician->name}.",
+                'Confirmed inquiry ' . $inquiry->inquiry_number . ' for '
+                    . $bookingDate . ' ' . $bookingTime . '; lead technician '
+                    . $leadTechnicianId . '; team size ' . count($technicianIds) . '.',
                 $inquiry,
-                [
-                    'status' => $oldStatus,
-                    'technician_id' => $oldTechnicianId,
-                ],
-                [
-                    'status' => 'confirmed',
-                    'technician_id' => $technician->id,
-                ]
+                ['status' => $oldStatus, 'technician_id' => $oldTechnicianId],
+                ['status' => 'confirmed', 'technician_id' => $leadTechnicianId, 'items_count' => count($technicianIds)]
             );
         });
 
-        return back()->with(
-            'success',
-            'Inquiry confirmed, schedule saved, and technician assigned successfully.'
-        );
+        return back()->with('success', 'Inquiry confirmed, schedule saved, and technician team assigned successfully.');
     }
 
     public function updateStatus(
