@@ -816,7 +816,7 @@ export default function Navbar() {
         {liveNotification && (
             <div
                 className="position-fixed top-0 end-0 m-3 bg-white border rounded-3 shadow-lg p-3"
-                style={{ zIndex: 3000, width: "min(380px, calc(100vw - 2rem)" }}
+                style={{ zIndex: 3000, width: "min(380px, calc(100vw - 2rem))" }}
                 role="status"
                 aria-live="polite"
             >
