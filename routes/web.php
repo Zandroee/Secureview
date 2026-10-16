@@ -273,6 +273,9 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::patch('/admin/inquiries/{inquiry}/technician', [AdminInquiryController::class, 'assignTechnician'])
         ->name('admin.inquiries.technician');
 
+    Route::patch('/admin/inquiries/{inquiry}/technicians', [AdminInquiryController::class, 'updateTechnicians'])
+        ->name('admin.inquiries.technicians');
+
     Route::get('/admin/users', [AdminUserController::class, 'index'])
         ->name('admin.users.index');
 
