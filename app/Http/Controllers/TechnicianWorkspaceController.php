@@ -104,14 +104,53 @@ class TechnicianWorkspaceController extends Controller
         }
 
         DB::transaction(function () use ($inquiry, $technician, $notifications) {
-            $inquiry->technicians()->attach($technician->id, [
+            $lockedTechnician = User::query()
+                ->whereKey($technician->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $lockedInquiry = Inquiry::query()
+                ->whereKey($inquiry->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (
+                $lockedInquiry->status !== 'confirmed'
+                || !$lockedInquiry->allow_additional_technicians
+                || !$lockedInquiry->preferred_date
+                || $lockedInquiry->preferred_date->lt(today())
+            ) {
+                throw ValidationException::withMessages([
+                    'job' => 'This job is no longer open for additional technicians.',
+                ]);
+            }
+
+            $hasConflictAfterLock = $lockedTechnician->assignedInquiries()
+                ->whereDate('preferred_date', $lockedInquiry->preferred_date)
+                ->where('preferred_time', $lockedInquiry->preferred_time)
+                ->whereIn('status', ['confirmed', 'in_progress'])
+                ->exists();
+
+            if ($hasConflictAfterLock) {
+                throw ValidationException::withMessages([
+                    'job' => 'You now have another job in this time slot and cannot join this one.',
+                ]);
+            }
+
+            if ($lockedInquiry->technicians()->where('users.id', $lockedTechnician->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'job' => 'You are already assigned to this job.',
+                ]);
+            }
+
+            $lockedInquiry->technicians()->attach($lockedTechnician->id, [
                 'is_lead' => false,
-                'assigned_by' => $technician->id,
+                'assigned_by' => $lockedTechnician->id,
             ]);
 
-            $inquiry->load('technicians');
-            $notifications->notifyAssignmentsChanged($inquiry, [$technician->id]);
-            $notifications->notifyTechnicianJoined($inquiry, $technician);
+            $lockedInquiry->load('technicians');
+            $notifications->notifyAssignmentsChanged($lockedInquiry, [$lockedTechnician->id]);
+            $notifications->notifyTechnicianJoined($lockedInquiry, $lockedTechnician);
         });
 
         return back()->with('success', 'You have joined the service team.');
