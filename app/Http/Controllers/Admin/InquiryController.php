@@ -248,9 +248,9 @@ class InquiryController extends Controller
         Inquiry $inquiry,
         AdminActivityLogger $activityLogger
     ) {
-        if (!in_array($inquiry->status, ['pending', 'confirmed'], true)) {
+        if ($inquiry->status !== 'pending') {
             return back()->withErrors([
-                'status' => 'Only pending inquiries can be confirmed, and completed or cancelled inquiries cannot be rescheduled here.',
+                'status' => 'Only pending inquiries can use the confirmation workflow. Completed or cancelled inquiries cannot be confirmed.',
             ]);
         }
 
@@ -378,6 +378,12 @@ class InquiryController extends Controller
         if ($oldStatus === 'pending' && $newStatus === 'in_progress') {
             return back()->withErrors([
                 'status' => 'Confirm and schedule this inquiry before marking the job in progress.',
+            ]);
+        }
+
+        if (in_array($oldStatus, ['confirmed', 'in_progress'], true) && $newStatus === 'pending') {
+            return back()->withErrors([
+                'status' => 'An active scheduled job cannot be moved back to pending. Cancel the inquiry if the service will not proceed.',
             ]);
         }
 
