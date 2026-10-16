@@ -447,6 +447,18 @@ class InquiryController extends Controller
             ]);
         }
 
+        if ($newStatus === 'in_progress' && $oldStatus !== 'confirmed') {
+            return back()->withErrors([
+                'status' => 'Only a confirmed job can be marked in progress.',
+            ]);
+        }
+
+        if ($newStatus === 'completed' && $oldStatus !== 'in_progress') {
+            return back()->withErrors([
+                'status' => 'A job must be in progress before it can be completed.',
+            ]);
+        }
+
         if (in_array($oldStatus, ['confirmed', 'in_progress'], true) && $newStatus === 'pending') {
             return back()->withErrors([
                 'status' => 'An active scheduled job cannot be moved back to pending. Cancel the inquiry if the service will not proceed.',
