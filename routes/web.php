@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\PackageController as AdminPackageController;
 use App\Http\Controllers\Admin\CatalogOptionController as AdminCatalogOptionController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\InventoryAdjustmentController as AdminInventoryAdjustmentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -243,6 +244,9 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/products', [AdminProductController::class, 'index'])
         ->name('admin.products.index');
+
+    Route::get('/admin/inventory-adjustments', [AdminInventoryAdjustmentController::class, 'index'])
+        ->name('admin.inventory-adjustments.index');
 
     Route::post('/admin/products', [AdminProductController::class, 'store'])
         ->name('admin.products.store');
