@@ -25,8 +25,17 @@ export default function ConfirmInquiryModal({
         inquiry.preferred_date_value || todayDate || ""
     );
     const [preferredTime, setPreferredTime] = useState(initialTime);
-    const [technicianId, setTechnicianId] = useState(
-        inquiry.technician?.id ? String(inquiry.technician.id) : ""
+    const [technicianIds, setTechnicianIds] = useState(() => {
+        const existing = (inquiry.technicians ?? []).map((technician) => String(technician.id));
+        if (existing.length) return existing;
+        return inquiry.technician?.id ? [String(inquiry.technician.id)] : [];
+    });
+    const [leadTechnicianId, setLeadTechnicianId] = useState(() => {
+        const lead = (inquiry.technicians ?? []).find((technician) => technician.is_lead);
+        return String(lead?.id ?? inquiry.technician?.id ?? "");
+    });
+    const [allowAdditionalTechnicians, setAllowAdditionalTechnicians] = useState(
+        Boolean(inquiry.allow_additional_technicians)
     );
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
@@ -41,7 +50,9 @@ export default function ConfirmInquiryModal({
             {
                 preferred_date: preferredDate,
                 preferred_time: preferredTime,
-                technician_id: technicianId,
+                technician_ids: technicianIds,
+                lead_technician_id: leadTechnicianId,
+                allow_additional_technicians: allowAdditionalTechnicians,
             },
             {
                 preserveScroll: true,
@@ -144,33 +155,75 @@ export default function ConfirmInquiryModal({
                             )}
                         </div>
 
-                        <div className="mb-1">
-                            <label htmlFor="confirm-technician" className="form-label fw-semibold">
-                                Assign technician <span className="text-danger">*</span>
+                        <div className="mb-3">
+                            <label htmlFor="confirm-technicians" className="form-label fw-semibold">
+                                Assign technician team <span className="text-danger">*</span>
                             </label>
                             <select
-                                id="confirm-technician"
-                                className={"form-select" + (errors.technician_id ? " is-invalid" : "")}
-                                value={technicianId}
+                                id="confirm-technicians"
+                                multiple
+                                size={Math.min(Math.max(technicians.length, 3), 6)}
+                                className={"form-select" + (errors.technician_ids ? " is-invalid" : "")}
+                                value={technicianIds}
                                 required
-                                onChange={(event) => setTechnicianId(event.target.value)}
+                                onChange={(event) => {
+                                    const selected = Array.from(event.target.selectedOptions, (option) => option.value);
+                                    setTechnicianIds(selected);
+                                    if (!selected.includes(leadTechnicianId)) {
+                                        setLeadTechnicianId(selected[0] ?? "");
+                                    }
+                                }}
                             >
-                                <option value="">Choose a technician</option>
                                 {technicians.map((technician) => (
-                                    <option key={technician.id} value={technician.id}>
-                                        {technician.name}
-                                        {technician.email ? " — " + technician.email : ""}
+                                    <option key={technician.id} value={String(technician.id)}>
+                                        {technician.name}{technician.email ? " — " + technician.email : ""}
                                     </option>
                                 ))}
                             </select>
-                            {errors.technician_id && (
-                                <div className="invalid-feedback">{errors.technician_id}</div>
+                            <div className="form-text">Select one or more technicians. Use Ctrl (Windows) or Command (Mac) to select multiple names.</div>
+                            {errors.technician_ids && (
+                                <div className="small text-danger mt-1">{errors.technician_ids}</div>
+                            )}
+                        </div>
+
+                        <div className="mb-3">
+                            <label htmlFor="confirm-lead-technician" className="form-label fw-semibold">
+                                Lead technician <span className="text-danger">*</span>
+                            </label>
+                            <select
+                                id="confirm-lead-technician"
+                                className={"form-select" + (errors.lead_technician_id ? " is-invalid" : "")}
+                                value={leadTechnicianId}
+                                required
+                                onChange={(event) => setLeadTechnicianId(event.target.value)}
+                            >
+                                <option value="">Choose lead technician</option>
+                                {technicians.filter((technician) => technicianIds.includes(String(technician.id))).map((technician) => (
+                                    <option key={technician.id} value={String(technician.id)}>{technician.name}</option>
+                                ))}
+                            </select>
+                            {errors.lead_technician_id && (
+                                <div className="invalid-feedback">{errors.lead_technician_id}</div>
                             )}
                             {technicians.length === 0 && (
                                 <div className="form-text text-danger">
-                                    No technicians are available in the system. Add a technician before confirming this inquiry.
+                                    No technicians are available. Add a technician account before confirming this inquiry.
                                 </div>
                             )}
+                        </div>
+
+                        <div className="form-check mb-1">
+                            <input
+                                id="allow-additional-technicians"
+                                type="checkbox"
+                                className="form-check-input"
+                                checked={allowAdditionalTechnicians}
+                                onChange={(event) => setAllowAdditionalTechnicians(event.target.checked)}
+                            />
+                            <label className="form-check-label fw-semibold" htmlFor="allow-additional-technicians">
+                                Allow other eligible technicians to join this job
+                            </label>
+                            <div className="form-text">When enabled, technicians can volunteer to join this scheduled service if they have no conflicting job.</div>
                         </div>
 
                         {errors.availability && (
@@ -192,9 +245,9 @@ export default function ConfirmInquiryModal({
                         <button
                             type="submit"
                             className="btn btn-primary fw-bold"
-                            disabled={processing || technicians.length === 0 || !technicianId}
+                            disabled={processing || technicians.length === 0 || technicianIds.length === 0 || !technicianIds.includes(leadTechnicianId)}
                         >
-                            {processing ? "CONFIRMING..." : "CONFIRM & ASSIGN TECHNICIAN"}
+                            {processing ? "CONFIRMING..." : "CONFIRM & ASSIGN TEAM"}
                         </button>
                     </div>
                 </form>
