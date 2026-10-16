@@ -201,6 +201,12 @@ class InquiryController extends Controller
             }
         }
 
+        if ($inquiry->status !== 'pending') {
+            return back()->withErrors([
+                'technician_id' => 'Use Manage Technician Team to change the staff assigned to an active job.',
+            ]);
+        }
+
         $oldTechnicianId = $inquiry->technician_id;
 
         if ((int) $oldTechnicianId !== (int) $technicianId) {
@@ -221,6 +227,17 @@ class InquiryController extends Controller
                 $inquiry->update([
                     'technician_id' => $technicianId,
                 ]);
+
+                $team = [];
+                if ($technicianId) {
+                    $team[$technicianId] = [
+                        'is_lead' => true,
+                        'assigned_by' => $request->user()->id,
+                        'assignment_source' => 'admin',
+                        'assigned_at' => now(),
+                    ];
+                }
+                $inquiry->assignedTechnicians()->sync($team);
 
                 $message = $technicianId
                     ? 'A technician has been assigned to your inquiry ' . $inquiry->inquiry_number . '.'
@@ -440,6 +457,171 @@ class InquiryController extends Controller
         });
 
         return back()->with('success', 'Inquiry confirmed, schedule saved, and technician team assigned successfully.');
+    }
+
+    public function syncTechnicians(
+        Request $request,
+        Inquiry $inquiry,
+        AdminActivityLogger $activityLogger,
+        JobNotificationService $notifications
+    ) {
+        if (!in_array($inquiry->status, ['confirmed', 'in_progress'], true)) {
+            return back()->withErrors([
+                'status' => 'Use the confirmation workflow to assign the initial team. Only active scheduled jobs can be edited here.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'technician_ids' => ['required', 'array', 'min:1', 'max:10'],
+            'technician_ids.*' => ['required', 'integer', 'distinct', 'exists:users,id'],
+            'lead_technician_id' => ['required', 'integer', 'exists:users,id'],
+            'allow_technician_self_assignment' => ['required', 'boolean'],
+            'max_technicians' => ['required', 'integer', 'min:1', 'max:10'],
+        ]);
+
+        $technicianIds = array_values(array_unique(array_map('intval', $validated['technician_ids'])));
+        $leadTechnicianId = (int) $validated['lead_technician_id'];
+        $allowSelfAssignment = (bool) $validated['allow_technician_self_assignment'];
+        $maxTechnicians = $allowSelfAssignment ? (int) $validated['max_technicians'] : count($technicianIds);
+
+        if (!in_array($leadTechnicianId, $technicianIds, true)) {
+            return back()->withErrors([
+                'lead_technician_id' => 'The lead technician must be part of the selected team.',
+            ]);
+        }
+
+        if (count($technicianIds) > $maxTechnicians) {
+            return back()->withErrors([
+                'max_technicians' => 'Maximum team size cannot be smaller than the selected team.',
+            ]);
+        }
+
+        $technicians = User::query()
+            ->where('role', 'technician')
+            ->whereIn('id', $technicianIds)
+            ->get(['id', 'name', 'email']);
+
+        if ($technicians->count() !== count($technicianIds)) {
+            return back()->withErrors([
+                'technician_ids' => 'Every selected team member must be a technician account.',
+            ]);
+        }
+
+        foreach ($technicianIds as $technicianId) {
+            $conflict = Inquiry::query()
+                ->whereIn('status', ['confirmed', 'in_progress'])
+                ->whereDate('preferred_date', $inquiry->preferred_date)
+                ->where('preferred_time', $inquiry->preferred_time)
+                ->where('id', '!=', $inquiry->id)
+                ->where(function ($builder) use ($technicianId) {
+                    $builder->where('technician_id', $technicianId)
+                        ->orWhereHas('assignedTechnicians', fn ($team) => $team->where('users.id', $technicianId));
+                })
+                ->exists();
+
+            if ($conflict) {
+                $conflicted = $technicians->firstWhere('id', $technicianId);
+                return back()->withErrors([
+                    'technician_ids' => ($conflicted?->name ?? 'A selected technician')
+                        . ' already has another job at this date and time.',
+                ]);
+            }
+        }
+
+        $oldTechnicianIds = $inquiry->assignedTechnicians()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+        if ($inquiry->technician_id && !in_array((int) $inquiry->technician_id, $oldTechnicianIds, true)) {
+            $oldTechnicianIds[] = (int) $inquiry->technician_id;
+        }
+
+        $addedIds = array_values(array_diff($technicianIds, $oldTechnicianIds));
+        $removedIds = array_values(array_diff($oldTechnicianIds, $technicianIds));
+        $leadTechnician = $technicians->firstWhere('id', $leadTechnicianId);
+        $teamNames = $technicians->pluck('name')->join(', ');
+        $oldLeadId = $inquiry->technician_id;
+
+        DB::transaction(function () use (
+            $request,
+            $inquiry,
+            $technicianIds,
+            $leadTechnicianId,
+            $allowSelfAssignment,
+            $maxTechnicians,
+            $oldLeadId,
+            $teamNames,
+            $activityLogger,
+            $notifications,
+            $addedIds,
+            $removedIds,
+            $leadTechnician
+        ) {
+            $pivot = [];
+            foreach ($technicianIds as $technicianId) {
+                $pivot[$technicianId] = [
+                    'is_lead' => $technicianId === $leadTechnicianId,
+                    'assigned_by' => $request->user()->id,
+                    'assignment_source' => 'admin',
+                    'assigned_at' => now(),
+                ];
+            }
+
+            $inquiry->assignedTechnicians()->sync($pivot);
+            $inquiry->update([
+                'technician_id' => $leadTechnicianId,
+                'allow_technician_self_assignment' => $allowSelfAssignment,
+                'max_technicians' => $maxTechnicians,
+            ]);
+
+            if ($addedIds) {
+                $notifications->notifyTechnicians(
+                    $inquiry,
+                    $addedIds,
+                    'job_assigned',
+                    'Added to service team',
+                    'You have been assigned to inquiry ' . $inquiry->inquiry_number
+                        . ' for ' . $inquiry->preferred_date->format('F j, Y')
+                        . ' (' . $inquiry->preferred_time . ').'
+                );
+            }
+
+            if ($removedIds) {
+                $notifications->notifyTechnicians(
+                    $inquiry,
+                    $removedIds,
+                    'job_unassigned',
+                    'Service assignment updated',
+                    'You are no longer assigned to inquiry ' . $inquiry->inquiry_number . '.'
+                );
+            }
+
+            $notifications->notifyAdmins(
+                $inquiry,
+                'job_team_updated',
+                'Service team updated',
+                'The assigned team for inquiry ' . $inquiry->inquiry_number . ' is now ' . $teamNames . '.'
+            );
+
+            CustomerNotification::create([
+                'user_id' => $inquiry->user_id,
+                'type' => 'technician_assignment',
+                'title' => 'Service team updated',
+                'message' => 'The technician team for inquiry ' . $inquiry->inquiry_number
+                    . ' has been updated. Lead technician: ' . ($leadTechnician?->name ?? 'Not available') . '.',
+                'action_url' => route('inquiries.show', $inquiry),
+                'related_type' => Inquiry::class,
+                'related_id' => $inquiry->id,
+            ]);
+
+            $activityLogger->record(
+                $request,
+                'inquiry_technician_team_updated',
+                'Updated technician team for inquiry ' . $inquiry->inquiry_number . '.',
+                $inquiry,
+                ['technician_id' => $oldLeadId, 'items_count' => count($removedIds)],
+                ['technician_id' => $leadTechnicianId, 'items_count' => count($technicianIds)]
+            );
+        });
+
+        return back()->with('success', 'Technician team updated successfully.');
     }
 
     public function updateStatus(
