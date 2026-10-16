@@ -86,6 +86,26 @@ class JobNotificationService
         }
     }
 
+    public function notifyAssignmentsRemoved(array $technicianIds, Inquiry $inquiry): void
+    {
+        if (!$technicianIds) {
+            return;
+        }
+
+        $date = $inquiry->preferred_date?->format('F j, Y') ?? 'the scheduled date';
+        User::query()->whereIn('id', $technicianIds)->where('role', 'technician')->get()
+            ->each(function (User $technician) use ($inquiry, $date) {
+                $this->notify(
+                    $technician,
+                    'job_assignment_removed',
+                    'You were removed from a service team',
+                    "You are no longer assigned to job {$inquiry->inquiry_number} scheduled for {$date}.",
+                    $inquiry,
+                    route('technician.dashboard')
+                );
+            });
+    }
+
     public function notifyTechnicianJoined(Inquiry $inquiry, User $technician): void
     {
         $message = "{$technician->name} joined the technician team for job {$inquiry->inquiry_number}.";
