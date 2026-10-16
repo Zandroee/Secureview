@@ -2,6 +2,7 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import ConfirmInquiryModal from "../../Components/Admin/ConfirmInquiryModal";
+import ManageInquiryTeamModal from "../../Components/Admin/ManageInquiryTeamModal";
 import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
@@ -44,6 +45,7 @@ export default function AdminInquiryDetails({
     todayDate = "",
 }) {
     const [confirming, setConfirming] = useState(false);
+    const [managingTeam, setManagingTeam] = useState(false);
 
     const updateStatus = (event) => {
         if (event.target.value === "confirmed" && inquiry.status !== "confirmed") {
@@ -267,32 +269,40 @@ export default function AdminInquiryDetails({
                                     </div>
 
                                     <h2 className="h5 fw-bold mb-3">
-                                        Technician Assignment
+                                        Assigned Technician Team
                                     </h2>
 
-                                    <select
-                                        className="form-select mb-3"
-                                        value={inquiry.technician?.id ?? ""}
-                                        onChange={assignTechnician}
-                                    >
-                                        <option value="" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
-                                            Unassigned
-                                        </option>
+                                    <div className="border rounded-3 p-3 mb-3">
+                                        {(inquiry.technicians?.length
+                                            ? inquiry.technicians
+                                            : inquiry.technician ? [inquiry.technician] : []
+                                        ).length === 0 ? (
+                                            <div className="text-muted small">No technicians assigned yet.</div>
+                                        ) : (
+                                            (inquiry.technicians?.length
+                                                ? inquiry.technicians
+                                                : [inquiry.technician]
+                                            ).map((technician) => (
+                                                <div key={technician.id} className="d-flex align-items-center justify-content-between gap-2 py-1">
+                                                    <span className="small fw-semibold">{technician.name}</span>
+                                                    {technician.is_lead && <span className="badge text-bg-primary">Lead</span>}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
 
-                                        {technicians.map((technician) => (
-                                            <option
-                                                key={technician.id}
-                                                value={technician.id}
-                                            >
-                                                {technician.name}
-                                            </option>
-                                        ))}
-                                    </select>
-
-                                    {inquiry.technician && (
-                                        <div className="small text-muted mb-4">
-                                            {inquiry.technician.email}
+                                    {inquiry.status === "pending" ? (
+                                        <div className="small text-muted mb-3">
+                                            The service team will be assigned as part of confirmation.
                                         </div>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary fw-semibold w-100 mb-4"
+                                            onClick={() => setManagingTeam(true)}
+                                        >
+                                            MANAGE TECHNICIAN TEAM
+                                        </button>
                                     )}
 
                                     <div className="small text-primary fw-bold mb-1">
@@ -371,6 +381,14 @@ export default function AdminInquiryDetails({
                     bookingTimeSlots={bookingTimeSlots}
                     todayDate={todayDate}
                     onClose={() => setConfirming(false)}
+                />
+            )}
+
+            {managingTeam && (
+                <ManageInquiryTeamModal
+                    inquiry={inquiry}
+                    technicians={technicians}
+                    onClose={() => setManagingTeam(false)}
                 />
             )}
         </div>
