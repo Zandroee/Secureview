@@ -172,34 +172,35 @@ class ProductController extends Controller
         $legacyImage = filled($fields['image'] ?? null) ? $fields['image'] : null;
         $fields['images'] = $this->resolveImages($request, $existingImages, $legacyImage, 'products');
         $fields['image'] = $fields['images'][0] ?? null;
-
-        $oldSnapshot = $this->snapshot($product);
-        $oldName = $product->name;
-        $oldStockQuantity = (int) $product->stock_quantity;
         $stockReason = trim((string) ($validated['stock_reason'] ?? 'Updated via product editor')) ?: 'Updated via product editor';
-        $priceChanged = (float) $product->price !== (float) $fields['price'];
 
         DB::transaction(function () use (
             $request,
             $product,
             $fields,
-            $oldSnapshot,
-            $oldName,
-            $oldStockQuantity,
             $stockReason,
-            $priceChanged,
             $activityLogger
         ) {
-            $product->update($fields);
+            $lockedProduct = Product::query()
+                ->whereKey($product->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            if ($oldStockQuantity !== (int) $product->stock_quantity) {
+            $oldSnapshot = $this->snapshot($lockedProduct);
+            $oldName = $lockedProduct->name;
+            $oldStockQuantity = (int) $lockedProduct->stock_quantity;
+            $priceChanged = (float) $lockedProduct->price !== (float) $fields['price'];
+
+            $lockedProduct->update($fields);
+
+            if ($oldStockQuantity !== (int) $lockedProduct->stock_quantity) {
                 InventoryAdjustment::create([
-                    'product_id' => $product->id,
-                    'product_name' => $product->name,
+                    'product_id' => $lockedProduct->id,
+                    'product_name' => $lockedProduct->name,
                     'user_id' => $request->user()->id,
                     'previous_quantity' => $oldStockQuantity,
-                    'new_quantity' => (int) $product->stock_quantity,
-                    'quantity_change' => (int) $product->stock_quantity - $oldStockQuantity,
+                    'new_quantity' => (int) $lockedProduct->stock_quantity,
+                    'quantity_change' => (int) $lockedProduct->stock_quantity - $oldStockQuantity,
                     'reason' => $stockReason,
                 ]);
             }
@@ -207,8 +208,8 @@ class ProductController extends Controller
             // Keep items already in carts consistent with the updated product price.
             // Completed order items remain unchanged as purchase-history snapshots.
             if ($priceChanged) {
-                $product->cartItems()->update([
-                    'price' => $product->price,
+                $lockedProduct->cartItems()->update([
+                    'price' => $lockedProduct->price,
                 ]);
             }
 
@@ -216,9 +217,9 @@ class ProductController extends Controller
                 $request,
                 'product_updated',
                 "Updated product {$oldName}.",
-                $product,
+                $lockedProduct,
                 $oldSnapshot,
-                $this->snapshot($product)
+                $this->snapshot($lockedProduct)
             );
         });
 
