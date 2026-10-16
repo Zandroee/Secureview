@@ -190,7 +190,7 @@ class InquiryController extends Controller
             ]);
         }
 
-        $leadTechnicianId = (int) ($validated['lead_technician_id'] ?? ($technicianIds[0] ?? 0));
+        $leadTechnicianId = $technicianIds ? (int) ($validated['lead_technician_id'] ?? $technicianIds[0]) : 0;
         if ($technicianIds && !in_array($leadTechnicianId, $technicianIds, true)) {
             return back()->withErrors([
                 'lead_technician_id' => 'The lead technician must be included in the assigned team.',
