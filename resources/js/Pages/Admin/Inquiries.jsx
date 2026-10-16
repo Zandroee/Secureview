@@ -373,7 +373,7 @@ export default function AdminInquiries({
                                                                 )
                                                             }
                                                         >
-                                                            <option value="">
+                                                            <option value="" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
                                                                 Unassigned
                                                             </option>
 
