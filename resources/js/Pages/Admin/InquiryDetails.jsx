@@ -312,11 +312,11 @@ export default function AdminInquiryDetails({
                                             In Progress
                                         </option>
 
-                                        <option value="completed">
+                                        <option value="completed" disabled={inquiry.status !== "in_progress" && inquiry.status !== "completed"}>
                                             Completed
                                         </option>
 
-                                        <option value="cancelled">
+                                        <option value="cancelled" disabled={inquiry.status === "completed" || inquiry.status === "cancelled"}>
                                             Cancelled
                                         </option>
                                     </select>
