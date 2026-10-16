@@ -154,8 +154,9 @@ export default function InquiryDetails({ inquiry, success }) {
                                     </div>
 
                                     <div className="fw-semibold">
-                                        {inquiry.technician?.name ||
-                                            "Not assigned yet"}
+                                        {(inquiry.technicians ?? []).length
+                                            ? inquiry.technicians.map((technician) => technician.name + (technician.is_lead ? " (Lead)" : "")).join(", ")
+                                            : "Not assigned yet"}
                                     </div>
 
                                     {inquiry.item_image && (
