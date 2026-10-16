@@ -113,9 +113,15 @@ class AuthController extends Controller
             $user
         );
 
-        return $user->isAdmin()
-            ? redirect()->route('dashboard')
-            : redirect()->intended('/');
+        if ($user->isAdmin()) {
+            return redirect()->route('dashboard');
+        }
+
+        if ($user->isTechnician()) {
+            return redirect()->route('technician.dashboard');
+        }
+
+        return redirect()->intended('/');
     }
 
     public function logout(Request $request, AdminActivityLogger $activityLogger)
@@ -180,9 +186,15 @@ class AuthController extends Controller
             $user
         );
 
-        return $user->isAdmin()
-            ? redirect()->route('dashboard')
-            : redirect('/');
+        if ($user->isAdmin()) {
+            return redirect()->route('dashboard');
+        }
+
+        if ($user->isTechnician()) {
+            return redirect()->route('technician.dashboard');
+        }
+
+        return redirect('/');
     }
 
     public function redirectFacebook()
