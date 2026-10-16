@@ -1,7 +1,9 @@
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
+import ConfirmInquiryModal from "../../Components/Admin/ConfirmInquiryModal";
 import { Link, router } from "@inertiajs/react";
+import { useState } from "react";
 
 function urgencyClass(urgency) {
     if (urgency === "emergency") {
@@ -35,8 +37,20 @@ function statusClass(status) {
     return "bg-warning-subtle text-warning-emphasis";
 }
 
-export default function AdminInquiryDetails({ inquiry, technicians = [] }) {
+export default function AdminInquiryDetails({
+    inquiry,
+    technicians = [],
+    bookingTimeSlots = [],
+    todayDate = "",
+}) {
+    const [confirming, setConfirming] = useState(false);
+
     const updateStatus = (event) => {
+        if (event.target.value === "confirmed" && inquiry.status !== "confirmed") {
+            setConfirming(true);
+            return;
+        }
+
         router.patch(
             "/admin/inquiries/" + inquiry.id + "/status",
             {
@@ -261,7 +275,7 @@ export default function AdminInquiryDetails({ inquiry, technicians = [] }) {
                                         value={inquiry.technician?.id ?? ""}
                                         onChange={assignTechnician}
                                     >
-                                        <option value="">
+                                        <option value="" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
                                             Unassigned
                                         </option>
 
@@ -298,7 +312,7 @@ export default function AdminInquiryDetails({ inquiry, technicians = [] }) {
                                             Pending
                                         </option>
 
-                                        <option value="confirmed">
+                                        <option value="confirmed" disabled={inquiry.status !== "pending" && inquiry.status !== "confirmed"}>
                                             Confirmed
                                         </option>
 
@@ -349,6 +363,16 @@ export default function AdminInquiryDetails({ inquiry, technicians = [] }) {
             </div>
 
             <Footer />
+
+            {confirming && (
+                <ConfirmInquiryModal
+                    inquiry={inquiry}
+                    technicians={technicians}
+                    bookingTimeSlots={bookingTimeSlots}
+                    todayDate={todayDate}
+                    onClose={() => setConfirming(false)}
+                />
+            )}
         </div>
     );
 }
