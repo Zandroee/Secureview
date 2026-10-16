@@ -184,7 +184,7 @@ class InquiryController extends Controller
                 ->whereDate('preferred_date', $inquiry->preferred_date)
                 ->where('preferred_time', $inquiry->preferred_time)
                 ->whereIn('status', ['confirmed', 'in_progress'])
-                ->whereKeyNot($inquiry->getKey())
+                ->where('id', '!=', $inquiry->getKey())
                 ->exists();
 
             if ($technicianHasConflict) {
@@ -294,7 +294,7 @@ class InquiryController extends Controller
             ->whereDate('preferred_date', $bookingDate)
             ->where('preferred_time', $bookingTime)
             ->whereIn('status', ['confirmed', 'in_progress'])
-            ->whereKeyNot($inquiry->getKey())
+            ->where('id', '!=', $inquiry->getKey())
             ->exists();
 
         if ($technicianHasConflict) {
