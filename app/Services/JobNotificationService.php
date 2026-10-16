@@ -124,8 +124,8 @@ class JobNotificationService
         $now = now();
 
         foreach ([24, 1] as $hours) {
-            $start = $now->copy()->addHours($hours);
-            $end = $start->copy()->addMinutes(15);
+            $end = $now->copy()->addHours($hours);
+            $start = $end->copy()->subMinutes(15);
 
             Inquiry::query()
                 ->with('technicians')
