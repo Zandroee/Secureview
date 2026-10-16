@@ -203,21 +203,11 @@ export default function AdminInquiries({
                                         }
                                     >
                                         <option value="">All statuses</option>
-                                        <option value="pending" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
-                                            Pending
-                                        </option>
-                                        <option value="confirmed" disabled={inquiry.status !== "pending" && inquiry.status !== "confirmed"}>
-                                            Confirmed
-                                        </option>
-                                        <option value="in_progress" disabled={inquiry.status === "pending"}>
-                                            In Progress
-                                        </option>
-                                        <option value="completed">
-                                            Completed
-                                        </option>
-                                        <option value="cancelled">
-                                            Cancelled
-                                        </option>
+                                        <option value="pending">Pending</option>
+                                        <option value="confirmed">Confirmed</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="cancelled">Cancelled</option>
                                     </select>
                                 </div>
 
@@ -432,13 +422,13 @@ export default function AdminInquiries({
                                                                 )
                                                             }
                                                         >
-                                                            <option value="pending">
+                                                            <option value="pending" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
                                                                 Pending
                                                             </option>
-                                                            <option value="confirmed">
+                                                            <option value="confirmed" disabled={inquiry.status !== "pending" && inquiry.status !== "confirmed"}>
                                                                 Confirmed
                                                             </option>
-                                                            <option value="in_progress">
+                                                            <option value="in_progress" disabled={inquiry.status === "pending"}>
                                                                 In Progress
                                                             </option>
                                                             <option value="completed">
