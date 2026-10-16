@@ -14,22 +14,57 @@ export default function ConfirmInquiryModal({
     todayDate,
     onClose,
 }) {
-    const timeSlots = bookingTimeSlots.length > 0
-        ? bookingTimeSlots
-        : DEFAULT_TIME_SLOTS;
-    const initialTime = timeSlots.includes(inquiry.preferred_time)
-        ? inquiry.preferred_time
-        : timeSlots[0];
+    const timeSlots = bookingTimeSlots.length > 0 ? bookingTimeSlots : DEFAULT_TIME_SLOTS;
+    const initialTeam = inquiry.technicians?.length
+        ? inquiry.technicians.map((technician) => String(technician.id))
+        : inquiry.technician?.id
+            ? [String(inquiry.technician.id)]
+            : [];
+    const initialLead = inquiry.technicians?.find((technician) => technician.is_lead)?.id
+        ?? inquiry.technician?.id
+        ?? initialTeam[0]
+        ?? "";
 
-    const [preferredDate, setPreferredDate] = useState(
-        inquiry.preferred_date_value || todayDate || ""
+    const [preferredDate, setPreferredDate] = useState(inquiry.preferred_date_value || todayDate || "");
+    const [preferredTime, setPreferredTime] = useState(
+        timeSlots.includes(inquiry.preferred_time) ? inquiry.preferred_time : timeSlots[0]
     );
-    const [preferredTime, setPreferredTime] = useState(initialTime);
-    const [technicianId, setTechnicianId] = useState(
-        inquiry.technician?.id ? String(inquiry.technician.id) : ""
+    const [technicianIds, setTechnicianIds] = useState(initialTeam);
+    const [leadTechnicianId, setLeadTechnicianId] = useState(String(initialLead || ""));
+    const [allowAdditionalTechnicians, setAllowAdditionalTechnicians] = useState(
+        Boolean(inquiry.accepting_technician_signups)
+    );
+    const [maxTechnicians, setMaxTechnicians] = useState(
+        String(inquiry.max_technicians || Math.max(3, initialTeam.length || 1))
     );
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
+
+    const toggleTechnician = (id) => {
+        const key = String(id);
+        setTechnicianIds((current) => {
+            if (current.includes(key)) {
+                const next = current.filter((value) => value !== key);
+                if (leadTechnicianId === key) {
+                    setLeadTechnicianId(next[0] || "");
+                }
+                return next;
+            }
+
+            if (current.length >= 8) {
+                setErrors((existing) => ({
+                    ...existing,
+                    technician_ids: "A job can have up to 8 assigned technicians.",
+                }));
+                return current;
+            }
+
+            const next = [...current, key];
+            if (!leadTechnicianId) setLeadTechnicianId(key);
+            return next;
+        });
+        setErrors((existing) => ({ ...existing, technician_ids: undefined }));
+    };
 
     const submit = (event) => {
         event.preventDefault();
@@ -41,7 +76,10 @@ export default function ConfirmInquiryModal({
             {
                 preferred_date: preferredDate,
                 preferred_time: preferredTime,
-                technician_id: technicianId,
+                technician_ids: technicianIds,
+                lead_technician_id: leadTechnicianId,
+                accepting_technician_signups: allowAdditionalTechnicians,
+                max_technicians: Number(maxTechnicians),
             },
             {
                 preserveScroll: true,
@@ -51,6 +89,14 @@ export default function ConfirmInquiryModal({
             }
         );
     };
+
+    const canSubmit =
+        !processing &&
+        technicians.length > 0 &&
+        technicianIds.length > 0 &&
+        technicianIds.includes(leadTechnicianId) &&
+        Number(maxTechnicians) >= technicianIds.length &&
+        Number(maxTechnicians) <= 8;
 
     return (
         <div
@@ -62,14 +108,12 @@ export default function ConfirmInquiryModal({
             }}
             role="presentation"
             onMouseDown={(event) => {
-                if (event.target === event.currentTarget && !processing) {
-                    onClose();
-                }
+                if (event.target === event.currentTarget && !processing) onClose();
             }}
         >
             <div
                 className="bg-white rounded-4 shadow-lg w-100"
-                style={{ maxWidth: "600px", maxHeight: "92vh", overflowY: "auto" }}
+                style={{ maxWidth: "650px", maxHeight: "92vh", overflowY: "auto" }}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="confirm-inquiry-title"
@@ -83,7 +127,7 @@ export default function ConfirmInquiryModal({
                             Confirm &amp; Schedule Service
                         </h2>
                         <p className="text-muted small mb-0">
-                            Choose the final appointment slot and the technician who will handle this job.
+                            Set the appointment, assign a lead technician, and optionally let more technicians join.
                         </p>
                     </div>
                     <button
@@ -124,7 +168,7 @@ export default function ConfirmInquiryModal({
                             )}
                         </div>
 
-                        <div className="mb-3">
+                        <div className="mb-4">
                             <label htmlFor="confirm-preferred-time" className="form-label fw-semibold">
                                 Service time slot
                             </label>
@@ -144,32 +188,106 @@ export default function ConfirmInquiryModal({
                             )}
                         </div>
 
-                        <div className="mb-1">
-                            <label htmlFor="confirm-technician" className="form-label fw-semibold">
-                                Assign technician <span className="text-danger">*</span>
-                            </label>
-                            <select
-                                id="confirm-technician"
-                                className={"form-select" + (errors.technician_id ? " is-invalid" : "")}
-                                value={technicianId}
-                                required
-                                onChange={(event) => setTechnicianId(event.target.value)}
-                            >
-                                <option value="">Choose a technician</option>
-                                {technicians.map((technician) => (
-                                    <option key={technician.id} value={technician.id}>
-                                        {technician.name}
-                                        {technician.email ? " — " + technician.email : ""}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.technician_id && (
-                                <div className="invalid-feedback">{errors.technician_id}</div>
-                            )}
+                        <div className="mb-3">
+                            <div className="form-label fw-semibold mb-2">
+                                Assign technicians <span className="text-danger">*</span>
+                            </div>
+                            <div className="border rounded-3 p-2" style={{ maxHeight: "230px", overflowY: "auto" }}>
+                                {technicians.map((technician) => {
+                                    const id = String(technician.id);
+                                    const selected = technicianIds.includes(id);
+                                    return (
+                                        <label
+                                            key={technician.id}
+                                            className="d-flex align-items-center gap-3 rounded-2 p-2"
+                                            style={{ cursor: "pointer", background: selected ? "#eff6ff" : "transparent" }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                className="form-check-input mt-0"
+                                                checked={selected}
+                                                onChange={() => toggleTechnician(technician.id)}
+                                                disabled={processing}
+                                            />
+                                            <span className="flex-grow-1">
+                                                <span className="d-block fw-semibold">{technician.name}</span>
+                                                <span className="d-block small text-muted">{technician.email}</span>
+                                            </span>
+                                            {String(leadTechnicianId) === id && (
+                                                <span className="badge text-bg-primary">Lead</span>
+                                            )}
+                                        </label>
+                                    );
+                                })}
+                            </div>
                             {technicians.length === 0 && (
                                 <div className="form-text text-danger">
-                                    No technicians are available in the system. Add a technician before confirming this inquiry.
+                                    No technicians are available. Add a technician account before confirming this inquiry.
                                 </div>
+                            )}
+                            {errors.technician_ids && (
+                                <div className="small text-danger mt-1">{errors.technician_ids}</div>
+                            )}
+                        </div>
+
+                        <div className="mb-3">
+                            <label htmlFor="lead-technician" className="form-label fw-semibold">
+                                Lead technician
+                            </label>
+                            <select
+                                id="lead-technician"
+                                className={"form-select" + (errors.lead_technician_id ? " is-invalid" : "")}
+                                value={leadTechnicianId}
+                                onChange={(event) => setLeadTechnicianId(event.target.value)}
+                                required
+                            >
+                                <option value="">Choose the lead technician</option>
+                                {technicians
+                                    .filter((technician) => technicianIds.includes(String(technician.id)))
+                                    .map((technician) => (
+                                        <option key={technician.id} value={String(technician.id)}>
+                                            {technician.name}
+                                        </option>
+                                    ))}
+                            </select>
+                            {errors.lead_technician_id && (
+                                <div className="invalid-feedback">{errors.lead_technician_id}</div>
+                            )}
+                        </div>
+
+                        <div className="form-check mb-3">
+                            <input
+                                id="allow-technician-signups"
+                                type="checkbox"
+                                className="form-check-input"
+                                checked={allowAdditionalTechnicians}
+                                onChange={(event) => setAllowAdditionalTechnicians(event.target.checked)}
+                            />
+                            <label htmlFor="allow-technician-signups" className="form-check-label fw-semibold">
+                                Allow other technicians to join this job
+                            </label>
+                            <div className="form-text">
+                                If enabled, eligible technicians can volunteer from their staff workspace. They cannot see customer contact details until assigned.
+                            </div>
+                        </div>
+
+                        <div className="mb-1">
+                            <label htmlFor="max-technicians" className="form-label fw-semibold">
+                                Maximum team size
+                            </label>
+                            <select
+                                id="max-technicians"
+                                className={"form-select" + (errors.max_technicians ? " is-invalid" : "")}
+                                value={maxTechnicians}
+                                onChange={(event) => setMaxTechnicians(event.target.value)}
+                                required
+                            >
+                                {[1, 2, 3, 4, 5, 6, 7, 8].map((count) => (
+                                    <option key={count} value={String(count)}>{count} technician{count === 1 ? "" : "s"}</option>
+                                ))}
+                            </select>
+                            {errors.max_technicians && (
+                                <div className="invalid-feedback">{errors.max_technicians}</div>
                             )}
                         </div>
 
@@ -189,12 +307,8 @@ export default function ConfirmInquiryModal({
                         >
                             CANCEL
                         </button>
-                        <button
-                            type="submit"
-                            className="btn btn-primary fw-bold"
-                            disabled={processing || technicians.length === 0 || !technicianId}
-                        >
-                            {processing ? "CONFIRMING..." : "CONFIRM & ASSIGN TECHNICIAN"}
+                        <button type="submit" className="btn btn-primary fw-bold" disabled={!canSubmit}>
+                            {processing ? "CONFIRMING..." : "CONFIRM & ASSIGN TEAM"}
                         </button>
                     </div>
                 </form>
