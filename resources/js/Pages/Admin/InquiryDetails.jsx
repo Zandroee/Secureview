@@ -2,6 +2,7 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import ConfirmInquiryModal from "../../Components/Admin/ConfirmInquiryModal";
+import ManageTechnicianTeam from "../../Components/Admin/ManageTechnicianTeam";
 import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
@@ -44,6 +45,7 @@ export default function AdminInquiryDetails({
     todayDate = "",
 }) {
     const [confirming, setConfirming] = useState(false);
+    const [managingTeam, setManagingTeam] = useState(false);
 
     const updateStatus = (event) => {
         if (event.target.value === "confirmed" && inquiry.status !== "confirmed") {
@@ -266,33 +268,40 @@ export default function AdminInquiryDetails({
                                         JOB STATUS
                                     </div>
 
+                                    <div className="small text-primary fw-bold mb-1">
+                                        JOB TEAM
+                                    </div>
+
                                     <h2 className="h5 fw-bold mb-3">
-                                        Technician Assignment
+                                        Technician Team
                                     </h2>
 
-                                    <select
-                                        className="form-select mb-3"
-                                        value={inquiry.technician?.id ?? ""}
-                                        onChange={assignTechnician}
-                                    >
-                                        <option value="" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
-                                            Unassigned
-                                        </option>
-
-                                        {technicians.map((technician) => (
-                                            <option
-                                                key={technician.id}
-                                                value={technician.id}
-                                            >
-                                                {technician.name}
-                                            </option>
-                                        ))}
-                                    </select>
-
-                                    {inquiry.technician && (
-                                        <div className="small text-muted mb-4">
-                                            {inquiry.technician.email}
+                                    {inquiry.technicians?.length ? (
+                                        <div className="d-flex flex-column gap-2 mb-3">
+                                            {inquiry.technicians.map((technician) => (
+                                                <div key={technician.id} className="d-flex justify-content-between align-items-center gap-2 border rounded-3 p-2">
+                                                    <div className="min-w-0">
+                                                        <div className="fw-semibold">{technician.name}</div>
+                                                        <div className="small text-muted text-break">{technician.email}</div>
+                                                    </div>
+                                                    {technician.is_lead && <span className="badge bg-primary-subtle text-primary">Lead</span>}
+                                                </div>
+                                            ))}
                                         </div>
+                                    ) : (
+                                        <div className="small text-muted mb-3">No technicians assigned yet.</div>
+                                    )}
+
+                                    <div className="small text-muted mb-3">
+                                        {inquiry.allow_technician_self_assignment
+                                            ? `Open for additional technicians · Maximum team size: ${inquiry.max_technicians}`
+                                            : "Self-assignment is disabled for this job."}
+                                    </div>
+
+                                    {["confirmed", "in_progress"].includes(inquiry.status) && (
+                                        <button type="button" className="btn btn-outline-primary fw-bold w-100 mb-4" onClick={() => setManagingTeam(true)}>
+                                            <i className="bi bi-people me-1"></i> MANAGE TEAM
+                                        </button>
                                     )}
 
                                     <div className="small text-primary fw-bold mb-1">
@@ -371,6 +380,14 @@ export default function AdminInquiryDetails({
                     bookingTimeSlots={bookingTimeSlots}
                     todayDate={todayDate}
                     onClose={() => setConfirming(false)}
+                />
+            )}
+
+            {managingTeam && (
+                <ManageTechnicianTeam
+                    inquiry={inquiry}
+                    technicians={technicians}
+                    onClose={() => setManagingTeam(false)}
                 />
             )}
         </div>
