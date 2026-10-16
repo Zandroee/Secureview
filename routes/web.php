@@ -22,6 +22,8 @@ use App\Http\Controllers\Admin\PackageController as AdminPackageController;
 use App\Http\Controllers\Admin\CatalogOptionController as AdminCatalogOptionController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Staff\JobController as StaffJobController;
+use App\Http\Controllers\Staff\InventoryController as StaffInventoryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -201,6 +203,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
+});
+
+
+Route::middleware(['auth', 'verified', 'technician'])->prefix('staff')->name('staff.')->group(function () {
+    Route::get('/jobs', [StaffJobController::class, 'index'])->name('jobs.index');
+    Route::get('/jobs/{inquiry}', [StaffJobController::class, 'show'])->name('jobs.show');
+    Route::post('/jobs/{inquiry}/join', [StaffJobController::class, 'join'])->name('jobs.join');
+    Route::patch('/jobs/{inquiry}/status', [StaffJobController::class, 'updateStatus'])->name('jobs.status');
+
+    Route::get('/inventory', [StaffInventoryController::class, 'index'])->name('inventory.index');
+    Route::patch('/inventory/{product}/stock', [StaffInventoryController::class, 'updateStock'])->name('inventory.stock');
 });
 
 Route::middleware(['auth', 'verified', 'admin'])->group(function () {
