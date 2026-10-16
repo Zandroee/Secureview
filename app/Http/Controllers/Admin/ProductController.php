@@ -271,42 +271,49 @@ class ProductController extends Controller
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $oldQuantity = (int) $product->stock_quantity;
         $newQuantity = (int) $validated['stock_quantity'];
+        $reason = trim((string) ($validated['reason'] ?? 'Admin stock adjustment')) ?: 'Admin stock adjustment';
 
-        DB::transaction(function () use (
+        $updatedProduct = DB::transaction(function () use (
             $request,
             $product,
-            $oldQuantity,
             $newQuantity,
+            $reason,
             $activityLogger
         ) {
-            $product->update([
-                'stock_quantity' => $newQuantity,
-            ]);
+            $lockedProduct = Product::query()
+                ->whereKey($product->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $oldQuantity = (int) $lockedProduct->stock_quantity;
+            $lockedProduct->update(['stock_quantity' => $newQuantity]);
 
             if ($oldQuantity !== $newQuantity) {
                 InventoryAdjustment::create([
-                    'product_id' => $product->id,
-                    'product_name' => $product->name,
+                    'product_id' => $lockedProduct->id,
+                    'product_name' => $lockedProduct->name,
                     'user_id' => $request->user()->id,
                     'previous_quantity' => $oldQuantity,
                     'new_quantity' => $newQuantity,
                     'quantity_change' => $newQuantity - $oldQuantity,
-                    'reason' => trim($request->input('reason', 'Admin stock adjustment')) ?: 'Admin stock adjustment',
+                    'reason' => $reason,
                 ]);
+
                 $activityLogger->record(
                     $request,
                     'product_stock_updated',
-                    "Changed stock for {$product->name} from {$oldQuantity} to {$newQuantity} units.",
-                    $product,
+                    "Changed stock for {$lockedProduct->name} from {$oldQuantity} to {$newQuantity} units.",
+                    $lockedProduct,
                     ['stock_quantity' => $oldQuantity],
                     ['stock_quantity' => $newQuantity]
                 );
             }
+
+            return $lockedProduct;
         });
 
-        return back()->with('success', $product->name . ' stock was updated successfully.');
+        return back()->with('success', $updatedProduct->name . ' stock was updated successfully.');
     }
 
     private function validateProduct(Request $request): array
