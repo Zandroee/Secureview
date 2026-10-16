@@ -171,8 +171,12 @@ class JobNotificationService
 
     private function notifyAdmins(string $type, string $title, string $message, Inquiry $inquiry): void
     {
-        User::query()->where('role', 'admin')->get()->each(function (User $admin) use ($type, $title, $message, $inquiry) {
-            $this->notify($admin, $type, $title, $message, $inquiry, route('admin.schedules.index'));
+        $url = in_array($type, ['job_completed', 'job_cancelled'], true)
+            ? route('admin.inquiries.show', $inquiry)
+            : route('admin.schedules.index');
+
+        User::query()->where('role', 'admin')->get()->each(function (User $admin) use ($type, $title, $message, $inquiry, $url) {
+            $this->notify($admin, $type, $title, $message, $inquiry, $url);
         });
     }
 
