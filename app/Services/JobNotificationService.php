@@ -86,6 +86,18 @@ class JobNotificationService
         }
     }
 
+    public function notifyTechnicianJoined(Inquiry $inquiry, User $technician): void
+    {
+        $message = "{$technician->name} joined the technician team for job {$inquiry->inquiry_number}.";
+
+        $this->notifyAdmins(
+            'job_team_updated',
+            'Technician joined a service team',
+            $message,
+            $inquiry
+        );
+    }
+
     public function sendUpcomingReminders(): int
     {
         $sent = 0;
