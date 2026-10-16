@@ -189,7 +189,7 @@ class InquiryController extends Controller
     {
         $inquiries = $request->user()
             ->inquiries()
-            ->with('technician')
+            ->with(['technician', 'technicians'])
             ->latest()
             ->get()
             ->map(function (Inquiry $inquiry) {
@@ -205,6 +205,11 @@ class InquiryController extends Controller
                             'email' => $inquiry->technician->email,
                         ]
                         : null,
+                    'technicians' => $inquiry->technicians->map(fn (User $technician) => [
+                        'name' => $technician->name,
+                        'email' => $technician->email,
+                        'is_lead' => (bool) $technician->pivot->is_lead,
+                    ])->values(),
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_time' => $inquiry->preferred_time,
                     'city' => $inquiry->city,
@@ -224,7 +229,7 @@ class InquiryController extends Controller
             abort(404);
         }
 
-        $inquiry->load(['inquirable', 'technician']);
+        $inquiry->load(['inquirable', 'technician', 'technicians']);
 
         return Inertia::render('inquiry_details', [
             'inquiry' => [
@@ -248,6 +253,11 @@ class InquiryController extends Controller
                         'email' => $inquiry->technician->email,
                     ]
                     : null,
+                'technicians' => $inquiry->technicians->map(fn (User $technician) => [
+                    'name' => $technician->name,
+                    'email' => $technician->email,
+                    'is_lead' => (bool) $technician->pivot->is_lead,
+                ])->values(),
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                 'preferred_time' => $inquiry->preferred_time,
                 'notes' => $inquiry->notes,
