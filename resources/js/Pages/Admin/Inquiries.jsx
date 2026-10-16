@@ -106,17 +106,6 @@ export default function AdminInquiries({
         );
     };
 
-    const assignTechnician = (inquiry, technicianId) => {
-        router.patch(
-            "/admin/inquiries/" + inquiry.id + "/technician",
-            {
-                technician_id: technicianId || null,
-            },
-            {
-                preserveScroll: true,
-            }
-        );
-    };
 
     return (
         <div>
@@ -349,65 +338,23 @@ export default function AdminInquiries({
                                                     </td>
 
                                                     <td>
-                                                        <select
-                                                            className="form-select form-select-sm"
-                                                            value={
-                                                                inquiry.technician?.id ??
-                                                                ""
-                                                            }
-                                                            onChange={(event) =>
-                                                                assignTechnician(
-                                                                    inquiry,
-                                                                    event.target
-                                                                        .value
-                                                                )
-                                                            }
-                                                        >
-                                                            <option value="" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
-                                                                Unassigned
-                                                            </option>
-
-                                                            {technicians.map(
-                                                                (technician) => (
-                                                                    <option
-                                                                        key={
-                                                                            technician.id
-                                                                        }
-                                                                        value={
-                                                                            technician.id
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            technician.name
-                                                                        }
-                                                                    </option>
-                                                                )
-                                                            )}
-                                                        </select>
-
-                                                        {inquiry.technician && (
+                                                        {inquiry.technicians?.length ? (
+                                                            <div className="d-flex flex-column gap-1">
+                                                                {inquiry.technicians.map((technician) => (
+                                                                    <div key={technician.id} className="small">
+                                                                        <span className="fw-semibold">{technician.name}</span>
+                                                                        {technician.is_lead && <span className="badge bg-primary-subtle text-primary ms-1">Lead</span>}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="small text-muted">No team assigned</span>
+                                                        )}
+                                                        {inquiry.technicians?.length > 0 && (
                                                             <div className="small text-muted mt-1">
-                                                                {
-                                                                    inquiry
-                                                                        .technician
-                                                                        .email
-                                                                }
+                                                                {inquiry.technicians.length} assigned
                                                             </div>
                                                         )}
-                                                    </td>
-
-                                                    <td>
-                                                        <div className="small fw-semibold">
-                                                            {
-                                                                inquiry.preferred_date
-                                                            }
-                                                        </div>
-
-                                                        <div className="small text-muted">
-                                                            {
-                                                                inquiry.preferred_time
-                                                            }
-                                                        </div>
                                                     </td>
 
                                                     <td>
