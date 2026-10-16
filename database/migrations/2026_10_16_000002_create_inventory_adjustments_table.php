@@ -10,7 +10,8 @@ return new class extends Migration
     {
         Schema::create('inventory_adjustments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained()->restrictOnDelete();
+            $table->foreignId('product_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('product_name');
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
             $table->integer('previous_quantity');
             $table->integer('new_quantity');
