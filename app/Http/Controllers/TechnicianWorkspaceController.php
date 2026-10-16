@@ -152,6 +152,16 @@ class TechnicianWorkspaceController extends Controller
             $lockedInquiry->load('technicians');
             $notifications->notifyAssignmentsChanged($lockedInquiry, [$lockedTechnician->id]);
             $notifications->notifyTechnicianJoined($lockedInquiry, $lockedTechnician);
+
+            CustomerNotification::create([
+                'user_id' => $lockedInquiry->user_id,
+                'type' => 'technician_assignment',
+                'title' => 'Technician team updated',
+                'message' => $lockedTechnician->name . ' joined the team for service ' . $lockedInquiry->inquiry_number . '.',
+                'action_url' => route('inquiries.show', $lockedInquiry),
+                'related_type' => Inquiry::class,
+                'related_id' => $lockedInquiry->id,
+            ]);
         });
 
         return back()->with('success', 'You have joined the service team.');
