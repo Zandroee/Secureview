@@ -312,6 +312,34 @@ class TechnicianWorkspaceTest extends TestCase
         $this->travelBack();
     }
 
+    public function test_technician_cannot_join_a_job_after_its_start_time_today(): void
+    {
+        $this->travelTo(now()->startOfDay()->setTime(9, 0, 0));
+
+        $customer = User::factory()->create(['role' => 'user']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $lead = User::factory()->create(['role' => 'technician']);
+        $helper = User::factory()->create(['role' => 'technician']);
+        $inquiry = $this->makeInquiry($customer, today()->toDateString(), 'confirmed', true);
+        $inquiry->update(['technician_id' => $lead->id]);
+        $inquiry->technicians()->attach($lead->id, [
+            'is_lead' => true,
+            'assigned_by' => $admin->id,
+        ]);
+
+        $this->actingAs($helper)
+            ->post(route('technician.jobs.claim', $inquiry))
+            ->assertRedirect()
+            ->assertSessionHasErrors('job');
+
+        $this->assertDatabaseMissing('inquiry_technician', [
+            'inquiry_id' => $inquiry->id,
+            'technician_id' => $helper->id,
+        ]);
+
+        $this->travelBack();
+    }
+
     private function makeInquiry(User $customer, string $date, string $status = 'pending', bool $allowHelpers = false): Inquiry
     {
         return Inquiry::create([
