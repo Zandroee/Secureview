@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BlockedBookingDate;
+use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\User;
@@ -13,6 +15,12 @@ use Inertia\Inertia;
 
 class InquiryController extends Controller
 {
+    private const BOOKING_TIME_SLOTS = [
+        '08:00 AM - 11:00 AM',
+        '11:00 AM - 02:00 PM',
+        '02:00 PM - 05:00 PM',
+    ];
+
     public function index(Request $request)
     {
         $filters = $request->validate([
@@ -67,6 +75,7 @@ class InquiryController extends Controller
                     'service_type' => $inquiry->service_type,
                     'urgency' => $inquiry->urgency,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
+                    'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                     'preferred_time' => $inquiry->preferred_time,
                     'city' => $inquiry->city,
                     'status' => $inquiry->status,
@@ -84,6 +93,8 @@ class InquiryController extends Controller
         return Inertia::render('Admin/Inquiries', [
             'inquiries' => $inquiries,
             'technicians' => $technicians,
+            'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
+            'todayDate' => today()->toDateString(),
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
@@ -125,6 +136,7 @@ class InquiryController extends Controller
                 'service_type' => $inquiry->service_type,
                 'urgency' => $inquiry->urgency,
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
+                'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                 'preferred_time' => $inquiry->preferred_time,
                 'notes' => $inquiry->notes,
                 'status' => $inquiry->status,
@@ -132,6 +144,8 @@ class InquiryController extends Controller
                 'user_id' => $inquiry->user_id,
             ],
             'technicians' => $technicians,
+            'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
+            'todayDate' => today()->toDateString(),
         ]);
     }
 
@@ -154,6 +168,28 @@ class InquiryController extends Controller
             if (!$technicianExists) {
                 return back()->withErrors([
                     'technician_id' => 'Selected user is not a technician.',
+                ]);
+            }
+        }
+
+        if (in_array($inquiry->status, ['confirmed', 'in_progress'], true) && !$technicianId) {
+            return back()->withErrors([
+                'technician_id' => 'Confirmed and in-progress jobs must have an assigned technician.',
+            ]);
+        }
+
+        if ($technicianId && in_array($inquiry->status, ['confirmed', 'in_progress'], true)) {
+            $technicianHasConflict = Inquiry::query()
+                ->where('technician_id', $technicianId)
+                ->whereDate('preferred_date', $inquiry->preferred_date)
+                ->where('preferred_time', $inquiry->preferred_time)
+                ->whereIn('status', ['confirmed', 'in_progress'])
+                ->where('id', '!=', $inquiry->getKey())
+                ->exists();
+
+            if ($technicianHasConflict) {
+                return back()->withErrors([
+                    'technician_id' => 'This technician is already assigned to another job during that time slot.',
                 ]);
             }
         }
@@ -207,6 +243,120 @@ class InquiryController extends Controller
         return back()->with('success', 'Technician assignment updated successfully.');
     }
 
+    public function confirm(
+        Request $request,
+        Inquiry $inquiry,
+        AdminActivityLogger $activityLogger
+    ) {
+        if ($inquiry->status !== 'pending') {
+            return back()->withErrors([
+                'status' => 'Only pending inquiries can use the confirmation workflow. Completed or cancelled inquiries cannot be confirmed.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'preferred_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'preferred_time' => ['required', 'in:' . implode(',', self::BOOKING_TIME_SLOTS)],
+            'technician_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $technician = User::query()
+            ->whereKey($validated['technician_id'])
+            ->where('role', 'technician')
+            ->first();
+
+        if (!$technician) {
+            return back()->withErrors([
+                'technician_id' => 'Choose a valid technician account.',
+            ]);
+        }
+
+        $bookingDate = $validated['preferred_date'];
+        $bookingTime = $validated['preferred_time'];
+
+        if (BlockedBookingDate::query()->whereDate('booking_date', $bookingDate)->exists()) {
+            return back()->withErrors([
+                'preferred_date' => 'This date is marked fully booked. Choose another date.',
+            ]);
+        }
+
+        if (BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', $bookingDate)
+            ->where('booking_time', $bookingTime)
+            ->exists()) {
+            return back()->withErrors([
+                'preferred_time' => 'This time slot is marked fully booked. Choose another time.',
+            ]);
+        }
+
+        $technicianHasConflict = Inquiry::query()
+            ->where('technician_id', $technician->id)
+            ->whereDate('preferred_date', $bookingDate)
+            ->where('preferred_time', $bookingTime)
+            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->where('id', '!=', $inquiry->getKey())
+            ->exists();
+
+        if ($technicianHasConflict) {
+            return back()->withErrors([
+                'technician_id' => 'This technician already has a job scheduled for that date and time. Choose another technician or time slot.',
+            ]);
+        }
+
+        $oldStatus = $inquiry->status;
+        $oldTechnicianId = $inquiry->technician_id;
+
+        DB::transaction(function () use (
+            $request,
+            $inquiry,
+            $technician,
+            $bookingDate,
+            $bookingTime,
+            $oldStatus,
+            $oldTechnicianId,
+            $activityLogger
+        ) {
+            $inquiry->update([
+                'preferred_date' => $bookingDate,
+                'preferred_time' => $bookingTime,
+                'technician_id' => $technician->id,
+                'status' => 'confirmed',
+            ]);
+
+            CustomerNotification::create([
+                'user_id' => $inquiry->user_id,
+                'type' => 'inquiry_status',
+                'title' => 'Service inquiry confirmed',
+                'message' => 'Your inquiry ' . $inquiry->inquiry_number
+                    . ' has been confirmed for ' . $inquiry->preferred_date->format('F j, Y')
+                    . ' (' . $inquiry->preferred_time . '). Assigned technician: ' . $technician->name . '.',
+                'action_url' => route('inquiries.show', $inquiry),
+                'related_type' => Inquiry::class,
+                'related_id' => $inquiry->id,
+            ]);
+
+            $activityLogger->record(
+                $request,
+                'inquiry_confirmed_and_scheduled',
+                "Confirmed inquiry {$inquiry->inquiry_number} for {$bookingDate} {$bookingTime} and assigned technician {$technician->name}.",
+                $inquiry,
+                [
+                    'status' => $oldStatus,
+                    'technician_id' => $oldTechnicianId,
+                ],
+                [
+                    'status' => 'confirmed',
+                    'technician_id' => $technician->id,
+                ]
+            );
+        });
+
+        return back()->with(
+            'success',
+            'Inquiry confirmed, schedule saved, and technician assigned successfully.'
+        );
+    }
+
     public function updateStatus(
         Request $request,
         Inquiry $inquiry,
@@ -218,6 +368,30 @@ class InquiryController extends Controller
 
         $oldStatus = $inquiry->status;
         $newStatus = $validated['status'];
+
+        if ($newStatus === 'confirmed' && $oldStatus !== 'confirmed') {
+            return back()->withErrors([
+                'status' => 'Use Confirm & Assign Technician to set the schedule before confirming this inquiry.',
+            ]);
+        }
+
+        if ($oldStatus === 'pending' && $newStatus === 'in_progress') {
+            return back()->withErrors([
+                'status' => 'Confirm and schedule this inquiry before marking the job in progress.',
+            ]);
+        }
+
+        if (in_array($oldStatus, ['confirmed', 'in_progress'], true) && $newStatus === 'pending') {
+            return back()->withErrors([
+                'status' => 'An active scheduled job cannot be moved back to pending. Cancel the inquiry if the service will not proceed.',
+            ]);
+        }
+
+        if (in_array($newStatus, ['confirmed', 'in_progress'], true) && !$inquiry->technician_id) {
+            return back()->withErrors([
+                'status' => 'Assign a technician before confirming or starting this job.',
+            ]);
+        }
 
         if ($oldStatus !== $newStatus) {
             DB::transaction(function () use (
