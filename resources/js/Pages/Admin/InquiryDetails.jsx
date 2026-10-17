@@ -281,7 +281,7 @@ export default function AdminInquiryDetails({
                                     </button>
 
                                     <div className="small text-muted mb-4">
-                                        Eligible technicians can join this job when their schedules are available.
+                                        Upcoming confirmed jobs appear automatically to eligible technicians. They can join only if their schedule is free and the team has room.
                                     </div>
 
                                     <div className="small text-primary fw-bold mb-1">
