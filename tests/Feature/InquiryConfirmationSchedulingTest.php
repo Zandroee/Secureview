@@ -37,24 +37,17 @@ class InquiryConfirmationSchedulingTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
-        // Validate the persisted schedule independently from the request payload.
-        // The date assertion below uses Eloquent to avoid database-specific formatting.
-        // The legacy technician_id field remains for compatibility with older screens.
-        // Actual team membership is verified in the inquiry_technician pivot table.
-        // Keeping these checks grouped makes confirmation failures easier to diagnose.
-
-        $this->assertDatabaseHas('inquiries', [
-            'id' => $inquiry->id,
-            'preferred_time' => self::AFTERNOON_SLOT,
-            'technician_id' => $technician->id,
-            'status' => 'confirmed',
-        ]);
-
-        $this->assertSame($confirmedDate, $inquiry->fresh()->preferred_date?->toDateString());
-
         $this->assertDatabaseHas('inquiry_technician', [
             'inquiry_id' => $inquiry->id,
             'technician_id' => $technician->id,
+        ]);
+
+        $this->assertDatabaseHas('inquiries', [
+            'id' => $inquiry->id,
+            'preferred_date' => $confirmedDate,
+            'preferred_time' => self::AFTERNOON_SLOT,
+            'technician_id' => $technician->id,
+            'status' => 'confirmed',
         ]);
     }
 
