@@ -76,7 +76,9 @@ class InquiryController extends Controller
             ->get(['booking_date', 'booking_time'])
             ->groupBy(fn (BlockedBookingTimeSlot $blockedSlot) => $blockedSlot->booking_date->format('Y-m-d'))
             ->map(fn ($slots) => collect(self::BOOKING_TIME_SLOTS)
-                ->filter(fn (string $slot) => $slots->contains('booking_time', $slot))
+                ->filter(fn (string $slot) => $slots->contains(
+                    fn (BlockedBookingTimeSlot $blockedSlot) => $blockedSlot->booking_time === $slot
+                ))
                 ->values())
             ->all();
 
