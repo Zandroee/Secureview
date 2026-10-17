@@ -268,7 +268,6 @@ export default function AdminInquiryDetails({
                                                     <div className="fw-semibold">{technician.name}</div>
                                                     <div className="small text-muted">{technician.email}</div>
                                                 </div>
-                                                {technician.is_lead && <span className="badge text-bg-primary">Lead</span>}
                                             </div>
                                         )) : <div className="small text-muted">No technicians assigned yet.</div>}
                                     </div>
@@ -282,9 +281,7 @@ export default function AdminInquiryDetails({
                                     </button>
 
                                     <div className="small text-muted mb-4">
-                                        {inquiry.allow_additional_technicians
-                                            ? "Self-assignment is open to eligible technicians."
-                                            : "Additional technician self-assignment is closed."}
+                                        Eligible technicians can join this job when their schedules are available.
                                     </div>
 
                                     <div className="small text-primary fw-bold mb-1">
