@@ -46,7 +46,7 @@ function JobCard({ job, open = false }) {
                     <div className="small text-muted">{job.item_name || "General service"}</div>
                 </div>
                 {!open && <span className={"badge rounded-pill text-capitalize px-3 py-2 " + statusClass(job.status)}>{formatStatus(job.status)}</span>}
-                {open && <span className="badge rounded-pill text-bg-success">Open to helpers</span>}
+                {open && <span className="badge rounded-pill text-bg-success">Available to join</span>}
             </div>
 
             <div className="row g-2 small mb-3">
@@ -74,7 +74,7 @@ function JobCard({ job, open = false }) {
                     <div className="d-flex flex-wrap gap-2">
                         {job.technicians.map((technician) => (
                             <span key={technician.id} className="badge rounded-pill text-bg-light border text-dark">
-                                {technician.name}{technician.is_lead ? " · Lead" : ""}
+                                {technician.name}
                             </span>
                         ))}
                     </div>
@@ -101,12 +101,10 @@ function JobCard({ job, open = false }) {
                 <button className="btn btn-primary w-100 fw-bold" disabled={working} onClick={() => updateStatus("in_progress")}>
                     {working ? "UPDATING..." : "START JOB"}
                 </button>
-            ) : job.status === "in_progress" && job.technicians?.some((technician) => technician.is_lead && technician.is_current_user) ? (
+            ) : job.status === "in_progress" ? (
                 <button className="btn btn-success w-100 fw-bold" disabled={working} onClick={() => updateStatus("completed")}>
                     {working ? "UPDATING..." : "MARK JOB COMPLETED"}
                 </button>
-            ) : job.status === "in_progress" ? (
-                <div className="small text-muted">The lead technician marks this job complete.</div>
             ) : (
                 <div className="small text-success fw-semibold">This job is completed.</div>
             )}
@@ -200,8 +198,8 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                     </section>
 
                     <section className="mb-5">
-                        <h2 className="h3 fw-bold mb-1">Open Team Jobs</h2>
-                        <p className="text-muted mb-3">These services were opened by an administrator for additional help. You can join only if your schedule is free.</p>
+                        <h2 className="h3 fw-bold mb-1">Available Jobs</h2>
+                        <p className="text-muted mb-3">Upcoming confirmed services are available to join when your schedule is free and the team has room.</p>
                         {openJobs.length ? (
                             <div className="row g-3">{openJobs.map((job) => <div className="col-md-6 col-xl-4" key={job.id}><JobCard job={job} open /></div>)}</div>
                         ) : <div className="bg-white border rounded-4 p-4 text-muted">There are no open team jobs right now.</div>}
