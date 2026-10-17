@@ -113,6 +113,11 @@ class TechnicianWorkspaceTest extends TestCase
             'type' => 'job_team_updated',
             'related_id' => $inquiry->id,
         ]);
+        $this->assertDatabaseHas('customer_notifications', [
+            'user_id' => $lead->id,
+            'type' => 'job_team_updated',
+            'related_id' => $inquiry->id,
+        ]);
     }
 
     public function test_technician_cannot_join_a_job_when_they_have_a_time_conflict(): void
