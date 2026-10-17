@@ -15,6 +15,7 @@ class CustomerNotification extends Model
         'action_url',
         'related_type',
         'related_id',
+        'dedupe_key',
         'read_at',
     ];
 

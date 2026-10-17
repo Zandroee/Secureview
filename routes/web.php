@@ -12,6 +12,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\TechnicianWorkspaceController;
 use App\Http\Controllers\Admin\InquiryController as AdminInquiryController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\ScheduleController as AdminScheduleController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\Admin\PackageController as AdminPackageController;
 use App\Http\Controllers\Admin\CatalogOptionController as AdminCatalogOptionController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\InventoryAdjustmentController as AdminInventoryAdjustmentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -203,6 +205,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 });
 
+Route::middleware(['auth', 'verified', 'technician'])->prefix('technician')->name('technician.')->group(function () {
+    Route::get('/dashboard', [TechnicianWorkspaceController::class, 'index'])->name('dashboard');
+    Route::post('/jobs/{inquiry}/claim', [TechnicianWorkspaceController::class, 'claimJob'])->name('jobs.claim');
+    Route::patch('/jobs/{inquiry}/status', [TechnicianWorkspaceController::class, 'updateJobStatus'])->name('jobs.status');
+    Route::patch('/inventory/{product}', [TechnicianWorkspaceController::class, 'adjustStock'])->name('inventory.adjust');
+});
+
 Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::post('/admin/catalog-options', [AdminCatalogOptionController::class, 'store'])
         ->name('admin.catalog-options.store');
@@ -235,6 +244,9 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/products', [AdminProductController::class, 'index'])
         ->name('admin.products.index');
+
+    Route::get('/admin/inventory-adjustments', [AdminInventoryAdjustmentController::class, 'index'])
+        ->name('admin.inventory-adjustments.index');
 
     Route::post('/admin/products', [AdminProductController::class, 'store'])
         ->name('admin.products.store');

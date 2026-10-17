@@ -7,15 +7,19 @@ function iconForType(type) {
     if (type === "payment_paid") return "bi bi-credit-card";
     if (type === "order") return "bi bi-bag-check";
     if (type === "inquiry") return "bi bi-chat-left-text";
-    if (type === "schedule") return "bi bi-calendar-check";
+    if (type === "schedule" || type === "job_upcoming" || type.startsWith("job_reminder")) return "bi bi-calendar-check";
+    if (type === "job_in_progress") return "bi bi-tools";
+    if (type === "job_completed") return "bi bi-check-circle";
+    if (type === "job_assignment" || type === "job_assignment_removed" || type === "job_team_updated") return "bi bi-people";
+    if (type === "inventory_low_stock") return "bi bi-box-seam";
     return "bi bi-bell";
 }
 
 function iconBackground(type) {
-    if (type === "payment_paid") return "#eaf8f0";
-    if (type === "order") return "#edf5ff";
-    if (type === "inquiry") return "#fff6e8";
-    if (type === "schedule") return "#f1edff";
+    if (type === "payment_paid" || type === "job_completed") return "#eaf8f0";
+    if (type === "order" || type === "job_in_progress") return "#edf5ff";
+    if (type === "inquiry" || type === "inventory_low_stock") return "#fff6e8";
+    if (type === "schedule" || type.startsWith("job_")) return "#f1edff";
     return "#f2f2f4";
 }
 

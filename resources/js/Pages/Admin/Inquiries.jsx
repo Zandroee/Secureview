@@ -4,6 +4,7 @@ import Sidebar from "../../Components/Admin/Sidebar";
 import { Link, router } from "@inertiajs/react";
 import AdminPagination from "../../Components/Admin/AdminPagination";
 import ConfirmInquiryModal from "../../Components/Admin/ConfirmInquiryModal";
+import ManageTechnicianTeamModal from "../../Components/Admin/ManageTechnicianTeamModal";
 import { useState } from "react";
 
 function urgencyClass(urgency) {
@@ -54,6 +55,7 @@ export default function AdminInquiries({
     const [status, setStatus] = useState(filters.status ?? "");
     const [urgency, setUrgency] = useState(filters.urgency ?? "");
     const [confirmingInquiry, setConfirmingInquiry] = useState(null);
+    const [managingInquiry, setManagingInquiry] = useState(null);
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -106,17 +108,6 @@ export default function AdminInquiries({
         );
     };
 
-    const assignTechnician = (inquiry, technicianId) => {
-        router.patch(
-            "/admin/inquiries/" + inquiry.id + "/technician",
-            {
-                technician_id: technicianId || null,
-            },
-            {
-                preserveScroll: true,
-            }
-        );
-    };
 
     return (
         <div>
@@ -349,41 +340,16 @@ export default function AdminInquiries({
                                                     </td>
 
                                                     <td>
-                                                        <select
-                                                            className="form-select form-select-sm"
-                                                            value={
-                                                                inquiry.technician?.id ??
-                                                                ""
-                                                            }
-                                                            onChange={(event) =>
-                                                                assignTechnician(
-                                                                    inquiry,
-                                                                    event.target
-                                                                        .value
-                                                                )
-                                                            }
-                                                        >
-                                                            <option value="" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
-                                                                Unassigned
-                                                            </option>
-
-                                                            {technicians.map(
-                                                                (technician) => (
-                                                                    <option
-                                                                        key={
-                                                                            technician.id
-                                                                        }
-                                                                        value={
-                                                                            technician.id
-                                                                        }
-                                                                    >
-                                                                        {
-                                                                            technician.name
-                                                                        }
-                                                                    </option>
-                                                                )
-                                                            )}
-                                                        </select>
+                                                        <div className="d-flex flex-column gap-2">
+                                                            {(inquiry.technicians ?? []).length ? inquiry.technicians.map((technician) => (
+                                                                <div key={technician.id} className="small">
+                                                                    {technician.name}
+                                                                </div>
+                                                            )) : <span className="small text-muted">Unassigned</span>}
+                                                            <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setManagingInquiry(inquiry)}>
+                                                                Manage team
+                                                            </button>
+                                                        </div>
 
                                                         {inquiry.technician && (
                                                             <div className="small text-muted mt-1">
@@ -487,6 +453,14 @@ export default function AdminInquiries({
                     bookingTimeSlots={bookingTimeSlots}
                     todayDate={todayDate}
                     onClose={() => setConfirmingInquiry(null)}
+                />
+            )}
+
+            {managingInquiry && (
+                <ManageTechnicianTeamModal
+                    inquiry={managingInquiry}
+                    technicians={technicians}
+                    onClose={() => setManagingInquiry(null)}
                 />
             )}
         </div>

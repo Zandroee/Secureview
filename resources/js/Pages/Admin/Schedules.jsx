@@ -665,28 +665,16 @@ export default function AdminSchedules({
                                                     </td>
 
                                                     <td>
-                                                        {schedule.technician ? (
-                                                            <>
-                                                                <div className="fw-semibold">
-                                                                    {
-                                                                        schedule
-                                                                            .technician
-                                                                            .name
-                                                                    }
-                                                                </div>
-
-                                                                <div className="small text-muted">
-                                                                    {
-                                                                        schedule
-                                                                            .technician
-                                                                            .email
-                                                                    }
-                                                                </div>
-                                                            </>
+                                                        {(schedule.technicians ?? []).length ? (
+                                                            <div className="d-flex flex-column gap-1">
+                                                                {schedule.technicians.map((technician) => (
+                                                                    <div key={technician.id} className="small">
+                                                                        <span className="fw-semibold">{technician.name}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
                                                         ) : (
-                                                            <span className="text-warning-emphasis small fw-semibold">
-                                                                Unassigned
-                                                            </span>
+                                                            <span className="text-warning-emphasis small fw-semibold">Unassigned</span>
                                                         )}
                                                     </td>
 

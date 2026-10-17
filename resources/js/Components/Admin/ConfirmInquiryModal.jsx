@@ -25,9 +25,11 @@ export default function ConfirmInquiryModal({
         inquiry.preferred_date_value || todayDate || ""
     );
     const [preferredTime, setPreferredTime] = useState(initialTime);
-    const [technicianId, setTechnicianId] = useState(
-        inquiry.technician?.id ? String(inquiry.technician.id) : ""
-    );
+    const [technicianIds, setTechnicianIds] = useState(() => {
+        const existing = (inquiry.technicians ?? []).map((technician) => String(technician.id));
+        if (existing.length) return existing;
+        return inquiry.technician?.id ? [String(inquiry.technician.id)] : [];
+    });
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
 
@@ -41,7 +43,7 @@ export default function ConfirmInquiryModal({
             {
                 preferred_date: preferredDate,
                 preferred_time: preferredTime,
-                technician_id: technicianId,
+                technician_ids: technicianIds,
             },
             {
                 preserveScroll: true,
@@ -83,7 +85,7 @@ export default function ConfirmInquiryModal({
                             Confirm &amp; Schedule Service
                         </h2>
                         <p className="text-muted small mb-0">
-                            Choose the final appointment slot and the technician who will handle this job.
+                            Choose the final appointment slot and assign one or more technicians to this job.
                         </p>
                     </div>
                     <button
@@ -144,34 +146,39 @@ export default function ConfirmInquiryModal({
                             )}
                         </div>
 
-                        <div className="mb-1">
-                            <label htmlFor="confirm-technician" className="form-label fw-semibold">
-                                Assign technician <span className="text-danger">*</span>
+                        <div className="mb-3">
+                            <label htmlFor="confirm-technicians" className="form-label fw-semibold">
+                                Assign technician team <span className="text-danger">*</span>
                             </label>
                             <select
-                                id="confirm-technician"
-                                className={"form-select" + (errors.technician_id ? " is-invalid" : "")}
-                                value={technicianId}
+                                id="confirm-technicians"
+                                multiple
+                                size={Math.min(Math.max(technicians.length, 3), 6)}
+                                className={"form-select" + (errors.technician_ids ? " is-invalid" : "")}
+                                value={technicianIds}
                                 required
-                                onChange={(event) => setTechnicianId(event.target.value)}
+                                onChange={(event) => {
+                                    const selected = Array.from(event.target.selectedOptions, (option) => option.value);
+                                    setTechnicianIds(selected);
+                                }}
                             >
-                                <option value="">Choose a technician</option>
                                 {technicians.map((technician) => (
-                                    <option key={technician.id} value={technician.id}>
-                                        {technician.name}
-                                        {technician.email ? " — " + technician.email : ""}
+                                    <option key={technician.id} value={String(technician.id)}>
+                                        {technician.name}{technician.email ? " — " + technician.email : ""}
                                     </option>
                                 ))}
                             </select>
-                            {errors.technician_id && (
-                                <div className="invalid-feedback">{errors.technician_id}</div>
-                            )}
-                            {technicians.length === 0 && (
-                                <div className="form-text text-danger">
-                                    No technicians are available in the system. Add a technician before confirming this inquiry.
-                                </div>
+                            <div className="form-text">Select one or more technicians. Use Ctrl (Windows) or Command (Mac) to select multiple names.</div>
+                            {errors.technician_ids && (
+                                <div className="small text-danger mt-1">{errors.technician_ids}</div>
                             )}
                         </div>
+
+                        {technicians.length === 0 && (
+                            <div className="small text-danger mt-2">
+                                No technicians are available. Add a technician account before confirming this inquiry.
+                            </div>
+                        )}
 
                         {errors.availability && (
                             <div className="alert alert-danger mt-3 mb-0" role="alert">
@@ -192,9 +199,9 @@ export default function ConfirmInquiryModal({
                         <button
                             type="submit"
                             className="btn btn-primary fw-bold"
-                            disabled={processing || technicians.length === 0 || !technicianId}
+                            disabled={processing || technicians.length === 0 || technicianIds.length === 0}
                         >
-                            {processing ? "CONFIRMING..." : "CONFIRM & ASSIGN TECHNICIAN"}
+                            {processing ? "CONFIRMING..." : "CONFIRM & ASSIGN TEAM"}
                         </button>
                     </div>
                 </form>

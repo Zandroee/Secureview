@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CatalogOption;
+use App\Models\InventoryAdjustment;
 use App\Models\Package;
 use App\Models\Product;
 use App\Services\AdminActivityLogger;
@@ -171,27 +172,44 @@ class ProductController extends Controller
         $legacyImage = filled($fields['image'] ?? null) ? $fields['image'] : null;
         $fields['images'] = $this->resolveImages($request, $existingImages, $legacyImage, 'products');
         $fields['image'] = $fields['images'][0] ?? null;
-
-        $oldSnapshot = $this->snapshot($product);
-        $oldName = $product->name;
-        $priceChanged = (float) $product->price !== (float) $fields['price'];
+        $stockReason = trim((string) ($validated['stock_reason'] ?? 'Updated via product editor')) ?: 'Updated via product editor';
 
         DB::transaction(function () use (
             $request,
             $product,
             $fields,
-            $oldSnapshot,
-            $oldName,
-            $priceChanged,
+            $stockReason,
             $activityLogger
         ) {
-            $product->update($fields);
+            $lockedProduct = Product::query()
+                ->whereKey($product->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $oldSnapshot = $this->snapshot($lockedProduct);
+            $oldName = $lockedProduct->name;
+            $oldStockQuantity = (int) $lockedProduct->stock_quantity;
+            $priceChanged = (float) $lockedProduct->price !== (float) $fields['price'];
+
+            $lockedProduct->update($fields);
+
+            if ($oldStockQuantity !== (int) $lockedProduct->stock_quantity) {
+                InventoryAdjustment::create([
+                    'product_id' => $lockedProduct->id,
+                    'product_name' => $lockedProduct->name,
+                    'user_id' => $request->user()->id,
+                    'previous_quantity' => $oldStockQuantity,
+                    'new_quantity' => (int) $lockedProduct->stock_quantity,
+                    'quantity_change' => (int) $lockedProduct->stock_quantity - $oldStockQuantity,
+                    'reason' => $stockReason,
+                ]);
+            }
 
             // Keep items already in carts consistent with the updated product price.
             // Completed order items remain unchanged as purchase-history snapshots.
             if ($priceChanged) {
-                $product->cartItems()->update([
-                    'price' => $product->price,
+                $lockedProduct->cartItems()->update([
+                    'price' => $lockedProduct->price,
                 ]);
             }
 
@@ -199,9 +217,9 @@ class ProductController extends Controller
                 $request,
                 'product_updated',
                 "Updated product {$oldName}.",
-                $product,
+                $lockedProduct,
                 $oldSnapshot,
-                $this->snapshot($product)
+                $this->snapshot($lockedProduct)
             );
         });
 
@@ -267,35 +285,52 @@ class ProductController extends Controller
     ) {
         $validated = $request->validate([
             'stock_quantity' => ['required', 'integer', 'min:0'],
+            'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $oldQuantity = (int) $product->stock_quantity;
         $newQuantity = (int) $validated['stock_quantity'];
+        $reason = trim((string) ($validated['reason'] ?? 'Admin stock adjustment')) ?: 'Admin stock adjustment';
 
-        DB::transaction(function () use (
+        $updatedProduct = DB::transaction(function () use (
             $request,
             $product,
-            $oldQuantity,
             $newQuantity,
+            $reason,
             $activityLogger
         ) {
-            $product->update([
-                'stock_quantity' => $newQuantity,
-            ]);
+            $lockedProduct = Product::query()
+                ->whereKey($product->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $oldQuantity = (int) $lockedProduct->stock_quantity;
+            $lockedProduct->update(['stock_quantity' => $newQuantity]);
 
             if ($oldQuantity !== $newQuantity) {
+                InventoryAdjustment::create([
+                    'product_id' => $lockedProduct->id,
+                    'product_name' => $lockedProduct->name,
+                    'user_id' => $request->user()->id,
+                    'previous_quantity' => $oldQuantity,
+                    'new_quantity' => $newQuantity,
+                    'quantity_change' => $newQuantity - $oldQuantity,
+                    'reason' => $reason,
+                ]);
+
                 $activityLogger->record(
                     $request,
                     'product_stock_updated',
-                    "Changed stock for {$product->name} from {$oldQuantity} to {$newQuantity} units.",
-                    $product,
+                    "Changed stock for {$lockedProduct->name} from {$oldQuantity} to {$newQuantity} units.",
+                    $lockedProduct,
                     ['stock_quantity' => $oldQuantity],
                     ['stock_quantity' => $newQuantity]
                 );
             }
+
+            return $lockedProduct;
         });
 
-        return back()->with('success', $product->name . ' stock was updated successfully.');
+        return back()->with('success', $updatedProduct->name . ' stock was updated successfully.');
     }
 
     private function validateProduct(Request $request): array
@@ -306,6 +341,7 @@ class ProductController extends Controller
             'warranty' => ['required', 'string', 'max:120'],
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
             'stock_quantity' => ['required', 'integer', 'min:0'],
+            'stock_reason' => ['nullable', 'string', 'max:255'],
             'badge' => ['nullable', 'string', 'max:80'],
             'image' => ['nullable', 'string', 'max:2048'],
             'image_file' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],

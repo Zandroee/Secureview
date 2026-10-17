@@ -8,17 +8,21 @@ export default function Navbar() {
 
     const cartCount = props.cartCount ?? 0;
     const notificationCount = props.notificationCount ?? 0;
+    const latestNotification = props.latestNotification ?? null;
 
     const isAuthenticated = Boolean(user);
     const isVerified = Boolean(user?.email_verified_at);
     const isLoggedIn = isAuthenticated && isVerified;
     const isUnverified = isAuthenticated && !isVerified;
     const isAdmin = isLoggedIn && user?.role === "admin";
+    const isTechnician = isLoggedIn && user?.role === "technician";
 
     const [hoveredButton, setHoveredButton] = useState(null);
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [liveNotification, setLiveNotification] = useState(null);
 
     const userMenuRef = useRef(null);
+    const lastNotificationId = useRef(latestNotification?.id ?? null);
 
     const isActive = (path) => {
         return path === "/" ? url === "/" : url.startsWith(path);
@@ -50,7 +54,33 @@ export default function Navbar() {
         setShowUserMenu(false);
     }, [url]);
 
+    useEffect(() => {
+        if (!isLoggedIn) return;
+
+        const pollNotifications = () => {
+            router.reload({
+                only: ["notificationCount", "latestNotification"],
+                preserveState: true,
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    const latest = page.props.latestNotification;
+                    const latestId = latest?.id ? Number(latest.id) : null;
+                    const previousId = lastNotificationId.current ? Number(lastNotificationId.current) : null;
+
+                    if (latest && (!previousId || latestId > previousId)) {
+                        lastNotificationId.current = latest.id;
+                        setLiveNotification(latest);
+                    }
+                },
+            });
+        };
+
+        const interval = window.setInterval(pollNotifications, 30000);
+        return () => window.clearInterval(interval);
+    }, [isLoggedIn]);
+
     return (
+        <>
         <nav className="navbar navbar-expand-lg bg-body-tertiary shadow-sm p-3">
             <div className="container-fluid">
 
@@ -366,6 +396,16 @@ export default function Navbar() {
                                         </Link>
                                     )}
 
+                                    {isTechnician && (
+                                        <Link
+                                            href="/technician/dashboard"
+                                            className="btn btn-primary fw-bold w-100"
+                                            style={{ fontFamily: "Outfit, sans-serif" }}
+                                        >
+                                            TECHNICIAN WORKSPACE
+                                        </Link>
+                                    )}
+
                                     <Link
                                         href="/settings"
                                         className="btn btn-outline-primary fw-bold w-100"
@@ -668,6 +708,16 @@ export default function Navbar() {
                                             </Link>
                                         )}
 
+                                        {isTechnician && (
+                                            <Link
+                                                href="/technician/dashboard"
+                                                className="d-block text-dark text-decoration-none fw-semibold text-center"
+                                                style={{ padding: "9px 12px", fontFamily: "Outfit, sans-serif", fontSize: "0.88rem" }}
+                                            >
+                                                TECHNICIAN WORKSPACE
+                                            </Link>
+                                        )}
+
                                         <Link
                                             href="/settings"
                                             className="d-block text-dark text-decoration-none fw-semibold text-center"
@@ -765,5 +815,37 @@ export default function Navbar() {
                 </div>
             </div>
         </nav>
+
+        {liveNotification && (
+            <div
+                className="position-fixed top-0 end-0 m-3 bg-white border rounded-3 shadow-lg p-3"
+                style={{ zIndex: 3000, width: "min(380px, calc(100vw - 2rem))" }}
+                role="status"
+                aria-live="polite"
+            >
+                <div className="d-flex align-items-start gap-3">
+                    <div className="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 40, height: 40 }}>
+                        <i className="bi bi-bell-fill"></i>
+                    </div>
+                    <div className="flex-grow-1">
+                        <div className="fw-bold">{liveNotification.title}</div>
+                        <div className="small text-muted mt-1">{liveNotification.message}</div>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-primary fw-semibold mt-3"
+                            onClick={() => {
+                                const notificationId = liveNotification.id;
+                                setLiveNotification(null);
+                                router.post("/notifications/" + notificationId + "/read");
+                            }}
+                        >
+                            OPEN NOTIFICATION
+                        </button>
+                    </div>
+                    <button type="button" className="btn-close" aria-label="Dismiss notification" onClick={() => setLiveNotification(null)} />
+                </div>
+            </div>
+        )}
+        </>
     );
 }

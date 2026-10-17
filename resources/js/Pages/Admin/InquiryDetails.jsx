@@ -2,6 +2,7 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import ConfirmInquiryModal from "../../Components/Admin/ConfirmInquiryModal";
+import ManageTechnicianTeamModal from "../../Components/Admin/ManageTechnicianTeamModal";
 import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
@@ -44,6 +45,7 @@ export default function AdminInquiryDetails({
     todayDate = "",
 }) {
     const [confirming, setConfirming] = useState(false);
+    const [managingTeam, setManagingTeam] = useState(false);
 
     const updateStatus = (event) => {
         if (event.target.value === "confirmed" && inquiry.status !== "confirmed") {
@@ -62,17 +64,6 @@ export default function AdminInquiryDetails({
         );
     };
 
-    const assignTechnician = (event) => {
-        router.patch(
-            "/admin/inquiries/" + inquiry.id + "/technician",
-            {
-                technician_id: event.target.value || null,
-            },
-            {
-                preserveScroll: true,
-            }
-        );
-    };
 
     return (
         <div>
@@ -263,37 +254,35 @@ export default function AdminInquiryDetails({
                                     }}
                                 >
                                     <div className="small text-primary fw-bold mb-1">
-                                        JOB STATUS
+                                        TECHNICIAN ASSIGNMENT
                                     </div>
 
                                     <h2 className="h5 fw-bold mb-3">
-                                        Technician Assignment
+                                        Technician Team
                                     </h2>
 
-                                    <select
-                                        className="form-select mb-3"
-                                        value={inquiry.technician?.id ?? ""}
-                                        onChange={assignTechnician}
+                                    <div className="d-flex flex-column gap-2 mb-3">
+                                        {(inquiry.technicians ?? []).length > 0 ? inquiry.technicians.map((technician) => (
+                                            <div key={technician.id} className="d-flex align-items-center justify-content-between gap-2 border rounded-3 p-2">
+                                                <div>
+                                                    <div className="fw-semibold">{technician.name}</div>
+                                                    <div className="small text-muted">{technician.email}</div>
+                                                </div>
+                                            </div>
+                                        )) : <div className="small text-muted">No technicians assigned yet.</div>}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-primary w-100 fw-semibold mb-4"
+                                        onClick={() => setManagingTeam(true)}
                                     >
-                                        <option value="" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
-                                            Unassigned
-                                        </option>
+                                        MANAGE TECHNICIAN TEAM
+                                    </button>
 
-                                        {technicians.map((technician) => (
-                                            <option
-                                                key={technician.id}
-                                                value={technician.id}
-                                            >
-                                                {technician.name}
-                                            </option>
-                                        ))}
-                                    </select>
-
-                                    {inquiry.technician && (
-                                        <div className="small text-muted mb-4">
-                                            {inquiry.technician.email}
-                                        </div>
-                                    )}
+                                    <div className="small text-muted mb-4">
+                                        Upcoming confirmed jobs appear automatically to eligible technicians. They can join only if their schedule is free and the team has room.
+                                    </div>
 
                                     <div className="small text-primary fw-bold mb-1">
                                         JOB STATUS
@@ -320,11 +309,11 @@ export default function AdminInquiryDetails({
                                             In Progress
                                         </option>
 
-                                        <option value="completed">
+                                        <option value="completed" disabled={inquiry.status !== "in_progress" && inquiry.status !== "completed"}>
                                             Completed
                                         </option>
 
-                                        <option value="cancelled">
+                                        <option value="cancelled" disabled={inquiry.status === "completed" || inquiry.status === "cancelled"}>
                                             Cancelled
                                         </option>
                                     </select>
@@ -371,6 +360,14 @@ export default function AdminInquiryDetails({
                     bookingTimeSlots={bookingTimeSlots}
                     todayDate={todayDate}
                     onClose={() => setConfirming(false)}
+                />
+            )}
+
+            {managingTeam && (
+                <ManageTechnicianTeamModal
+                    inquiry={inquiry}
+                    technicians={technicians}
+                    onClose={() => setManagingTeam(false)}
                 />
             )}
         </div>

@@ -26,7 +26,7 @@ class ScheduleController extends Controller
             'technician' => ['nullable', 'integer', 'exists:users,id'],
         ]);
 
-        $query = Inquiry::with(['user', 'technician'])
+        $query = Inquiry::with(['user', 'technicians'])
             ->whereIn('status', ['confirmed', 'in_progress']);
 
         if (!empty($filters['search'])) {
@@ -47,7 +47,7 @@ class ScheduleController extends Controller
         }
 
         if (!empty($filters['technician'])) {
-            $query->where('technician_id', $filters['technician']);
+            $query->whereHas('technicians', fn ($builder) => $builder->where('users.id', $filters['technician']));
         }
 
         $schedules = $query
@@ -70,13 +70,18 @@ class ScheduleController extends Controller
                     'preferred_time' => $inquiry->preferred_time,
                     'city' => $inquiry->city,
                     'status' => $inquiry->status,
-                    'technician' => $inquiry->technician
+                    'technician' => $inquiry->technicians->first()
                         ? [
-                            'id' => $inquiry->technician->id,
-                            'name' => $inquiry->technician->name,
-                            'email' => $inquiry->technician->email,
+                            'id' => $inquiry->technicians->first()->id,
+                            'name' => $inquiry->technicians->first()->name,
+                            'email' => $inquiry->technicians->first()->email,
                         ]
                         : null,
+                    'technicians' => $inquiry->technicians->map(fn (User $technician) => [
+                        'id' => $technician->id,
+                        'name' => $technician->name,
+                        'email' => $technician->email,
+                    ])->values(),
                 ];
             });
 
@@ -129,7 +134,7 @@ class ScheduleController extends Controller
                 'confirmed' => Inquiry::where('status', 'confirmed')->count(),
                 'in_progress' => Inquiry::where('status', 'in_progress')->count(),
                 'unassigned' => Inquiry::whereIn('status', ['confirmed', 'in_progress'])
-                    ->whereNull('technician_id')
+                    ->whereDoesntHave('technicians')
                     ->count(),
             ],
         ]);

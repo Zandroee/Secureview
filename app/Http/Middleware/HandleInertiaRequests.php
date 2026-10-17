@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\CustomerNotification;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -39,12 +40,18 @@ class HandleInertiaRequests extends Middleware
 
         $cartCount = 0;
         $notificationCount = 0;
+        $latestNotification = null;
 
         if ($user) {
             $cartCount = $user->cart?->items()->sum('quantity') ?? 0;
             $notificationCount = $user->customerNotifications()
                 ->whereNull('read_at')
                 ->count();
+
+            $latestNotification = $user->customerNotifications()
+                ->whereNull('read_at')
+                ->latest('id')
+                ->first(['id', 'title', 'message', 'action_url']);
         }
 
         return array_merge(parent::share($request), [
@@ -53,6 +60,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'cartCount' => $cartCount,
             'notificationCount' => $notificationCount,
+            'latestNotification' => $latestNotification,
         ]);
     }
 }

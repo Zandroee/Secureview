@@ -16,6 +16,7 @@ class AdminActivityLogger
         'role',
         'stock_quantity',
         'technician_id',
+        'technician_ids',
         'status',
         'name',
         'category',

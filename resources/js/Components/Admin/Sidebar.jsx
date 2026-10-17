@@ -31,6 +31,12 @@ const menuGroups = [
             icon: "bi-camera-video",
         },
         {
+            label: "Stock History",
+            href: "/admin/inventory-adjustments",
+            key: "inventory-adjustments",
+            icon: "bi-clipboard-data",
+        },
+        {
             label: "Packages",
             href: "/admin/packages",
             key: "packages",

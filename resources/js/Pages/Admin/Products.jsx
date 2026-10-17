@@ -37,6 +37,7 @@ function emptyProduct() {
         warranty: "1 year",
         price: "",
         stock_quantity: 0,
+        stock_reason: "",
         badge: "",
         image: "",
         gallery_managed: true,
@@ -292,6 +293,7 @@ export default function AdminProducts({
             warranty: product.warranty ?? "1 year",
             price: String(product.price ?? ""),
             stock_quantity: Number(product.stock_quantity ?? 0),
+            stock_reason: "",
             badge: product.badge ?? "",
             image: product.image ?? "",
             gallery_managed: true,
@@ -877,6 +879,21 @@ export default function AdminProducts({
                                             />
                                             <FieldError message={productForm.errors.stock_quantity} />
                                         </div>
+
+                                        {editingProductId && (
+                                            <div className="col-12">
+                                                <label className="form-label fw-semibold">Stock change reason (optional)</label>
+                                                <input
+                                                    type="text"
+                                                    className="form-control"
+                                                    value={productForm.data.stock_reason ?? ""}
+                                                    onChange={(event) => productForm.setData("stock_reason", event.target.value)}
+                                                    maxLength={255}
+                                                    placeholder="e.g. Replenished stock, damaged units, or used for installation"
+                                                />
+                                                <FieldError message={productForm.errors.stock_reason} />
+                                            </div>
+                                        )}
 
                                         <div className="col-md-4">
                                             <label className="form-label fw-semibold">Warranty *</label>

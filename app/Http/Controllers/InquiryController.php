@@ -8,6 +8,7 @@ use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Package;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -189,7 +190,7 @@ class InquiryController extends Controller
     {
         $inquiries = $request->user()
             ->inquiries()
-            ->with('technician')
+            ->with(['technician', 'technicians'])
             ->latest()
             ->get()
             ->map(function (Inquiry $inquiry) {
@@ -205,6 +206,10 @@ class InquiryController extends Controller
                             'email' => $inquiry->technician->email,
                         ]
                         : null,
+                    'technicians' => $inquiry->technicians->map(fn (User $technician) => [
+                        'name' => $technician->name,
+                        'email' => $technician->email,
+                    ])->values(),
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_time' => $inquiry->preferred_time,
                     'city' => $inquiry->city,
@@ -224,7 +229,7 @@ class InquiryController extends Controller
             abort(404);
         }
 
-        $inquiry->load(['inquirable', 'technician']);
+        $inquiry->load(['inquirable', 'technician', 'technicians']);
 
         return Inertia::render('inquiry_details', [
             'inquiry' => [
@@ -248,6 +253,10 @@ class InquiryController extends Controller
                         'email' => $inquiry->technician->email,
                     ]
                     : null,
+                'technicians' => $inquiry->technicians->map(fn (User $technician) => [
+                    'name' => $technician->name,
+                    'email' => $technician->email,
+                ])->values(),
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                 'preferred_time' => $inquiry->preferred_time,
                 'notes' => $inquiry->notes,
