@@ -63,10 +63,12 @@ class InquiryController extends Controller
             ->pluck('booking_date')
             ->map(fn ($date) => Carbon::parse($date)->toDateString());
 
-        $unavailableDates = $unavailableDates
-            ->concat($blockedSlotDates)
-            ->unique()
-            ->values();
+        // map() on an Eloquent collection preserves its model-aware collection type,
+        // but these items are strings. Convert to a base Support collection before unique().
+        $unavailableDates = collect(array_merge(
+            $unavailableDates->all(),
+            $blockedSlotDates->all()
+        ))->unique()->values();
 
         $unavailableTimeSlots = BlockedBookingTimeSlot::query()
             ->whereDate('booking_date', '>=', today())
