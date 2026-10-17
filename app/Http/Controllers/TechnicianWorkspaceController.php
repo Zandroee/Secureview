@@ -42,7 +42,6 @@ class TechnicianWorkspaceController extends Controller
         $openJobs = Inquiry::query()
             ->with('technicians:id,name,email')
             ->where('status', 'confirmed')
-            ->where('allow_additional_technicians', true)
             ->whereDate('preferred_date', '>=', today())
             ->whereDoesntHave('technicians', fn ($query) => $query->where('users.id', $technician->id))
             ->orderBy('preferred_date')
@@ -88,12 +87,11 @@ class TechnicianWorkspaceController extends Controller
 
         if (
             $inquiry->status !== 'confirmed'
-            || !$inquiry->allow_additional_technicians
             || !$appointmentStart
             || !$appointmentStart->isFuture()
         ) {
             return back()->withErrors([
-                'job' => 'This job is no longer open for additional technicians.',
+                'job' => 'This job is no longer available to join.',
             ]);
         }
 
@@ -136,7 +134,6 @@ class TechnicianWorkspaceController extends Controller
 
             if (
                 $lockedInquiry->status !== 'confirmed'
-                || !$lockedInquiry->allow_additional_technicians
                 || !$lockedAppointmentStart
                 || !$lockedAppointmentStart->isFuture()
             ) {
@@ -171,7 +168,6 @@ class TechnicianWorkspaceController extends Controller
             }
 
             $lockedInquiry->technicians()->attach($lockedTechnician->id, [
-                'is_lead' => false,
                 'assigned_by' => $lockedTechnician->id,
             ]);
 
@@ -220,10 +216,6 @@ class TechnicianWorkspaceController extends Controller
 
         if ($newStatus === 'completed' && $oldStatus !== 'in_progress') {
             return back()->withErrors(['status' => 'Start the job before marking it completed.']);
-        }
-
-        if ($newStatus === 'completed' && !(bool) $assignment->pivot->is_lead) {
-            return back()->withErrors(['status' => 'Only the lead technician can complete the job.']);
         }
 
         DB::transaction(function () use ($request, $inquiry, $oldStatus, $newStatus, $notifications) {
@@ -322,11 +314,9 @@ class TechnicianWorkspaceController extends Controller
             'city' => $inquiry->city,
             'street_address' => $includeCustomerDetails ? $inquiry->street_address : null,
             'status' => $inquiry->status,
-            'allow_additional_technicians' => $inquiry->allow_additional_technicians,
             'technicians' => $inquiry->technicians->map(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
-                'is_lead' => (bool) $user->pivot->is_lead,
                 'is_current_user' => $user->id === $currentTechnicianId,
             ])->values(),
         ];
