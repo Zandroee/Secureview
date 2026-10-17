@@ -192,7 +192,7 @@ export default function Inquiries({ inquiries = [] }) {
 
                                                         <div className="fw-semibold small">
                                                             {(inquiry.technicians ?? []).length
-                                                                ? inquiry.technicians.map((technician) => technician.name + (technician.is_lead ? " (Lead)" : "")).join(", ")
+                                                                ? inquiry.technicians.map((technician) => technician.name).join(", ")
                                                                 : "Not assigned yet"}
                                                         </div>
 
