@@ -30,13 +30,6 @@ export default function ConfirmInquiryModal({
         if (existing.length) return existing;
         return inquiry.technician?.id ? [String(inquiry.technician.id)] : [];
     });
-    const [leadTechnicianId, setLeadTechnicianId] = useState(() => {
-        const lead = (inquiry.technicians ?? []).find((technician) => technician.is_lead);
-        return String(lead?.id ?? inquiry.technician?.id ?? "");
-    });
-    const [allowAdditionalTechnicians, setAllowAdditionalTechnicians] = useState(
-        Boolean(inquiry.allow_additional_technicians)
-    );
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
 
@@ -51,8 +44,6 @@ export default function ConfirmInquiryModal({
                 preferred_date: preferredDate,
                 preferred_time: preferredTime,
                 technician_ids: technicianIds,
-                lead_technician_id: leadTechnicianId,
-                allow_additional_technicians: allowAdditionalTechnicians,
             },
             {
                 preserveScroll: true,
@@ -94,7 +85,7 @@ export default function ConfirmInquiryModal({
                             Confirm &amp; Schedule Service
                         </h2>
                         <p className="text-muted small mb-0">
-                            Choose the final appointment slot, assign the technician team, and select a lead technician.
+                            Choose the final appointment slot and assign one or more technicians to this job.
                         </p>
                     </div>
                     <button
@@ -169,9 +160,6 @@ export default function ConfirmInquiryModal({
                                 onChange={(event) => {
                                     const selected = Array.from(event.target.selectedOptions, (option) => option.value);
                                     setTechnicianIds(selected);
-                                    if (!selected.includes(leadTechnicianId)) {
-                                        setLeadTechnicianId(selected[0] ?? "");
-                                    }
                                 }}
                             >
                                 {technicians.map((technician) => (
@@ -186,45 +174,11 @@ export default function ConfirmInquiryModal({
                             )}
                         </div>
 
-                        <div className="mb-3">
-                            <label htmlFor="confirm-lead-technician" className="form-label fw-semibold">
-                                Lead technician <span className="text-danger">*</span>
-                            </label>
-                            <select
-                                id="confirm-lead-technician"
-                                className={"form-select" + (errors.lead_technician_id ? " is-invalid" : "")}
-                                value={leadTechnicianId}
-                                required
-                                onChange={(event) => setLeadTechnicianId(event.target.value)}
-                            >
-                                <option value="">Choose lead technician</option>
-                                {technicians.filter((technician) => technicianIds.includes(String(technician.id))).map((technician) => (
-                                    <option key={technician.id} value={String(technician.id)}>{technician.name}</option>
-                                ))}
-                            </select>
-                            {errors.lead_technician_id && (
-                                <div className="invalid-feedback">{errors.lead_technician_id}</div>
-                            )}
-                            {technicians.length === 0 && (
-                                <div className="form-text text-danger">
-                                    No technicians are available. Add a technician account before confirming this inquiry.
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="form-check mb-1">
-                            <input
-                                id="allow-additional-technicians"
-                                type="checkbox"
-                                className="form-check-input"
-                                checked={allowAdditionalTechnicians}
-                                onChange={(event) => setAllowAdditionalTechnicians(event.target.checked)}
-                            />
-                            <label className="form-check-label fw-semibold" htmlFor="allow-additional-technicians">
-                                Allow other eligible technicians to join this job
-                            </label>
-                            <div className="form-text">When enabled, technicians can volunteer to join this scheduled service if they have no conflicting job.</div>
-                        </div>
+                        {technicians.length === 0 && (
+                            <div className="small text-danger mt-2">
+                                No technicians are available. Add a technician account before confirming this inquiry.
+                            </div>
+                        )}
 
                         {errors.availability && (
                             <div className="alert alert-danger mt-3 mb-0" role="alert">
@@ -245,7 +199,7 @@ export default function ConfirmInquiryModal({
                         <button
                             type="submit"
                             className="btn btn-primary fw-bold"
-                            disabled={processing || technicians.length === 0 || technicianIds.length === 0 || !technicianIds.includes(leadTechnicianId)}
+                            disabled={processing || technicians.length === 0 || technicianIds.length === 0}
                         >
                             {processing ? "CONFIRMING..." : "CONFIRM & ASSIGN TEAM"}
                         </button>
