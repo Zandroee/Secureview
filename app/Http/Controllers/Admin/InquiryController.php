@@ -78,9 +78,7 @@ class InquiryController extends Controller
                         'id' => $technician->id,
                         'name' => $technician->name,
                         'email' => $technician->email,
-                        'is_lead' => (bool) $technician->pivot->is_lead,
                     ])->values(),
-                    'allow_additional_technicians' => $inquiry->allow_additional_technicians,
                     'service_type' => $inquiry->service_type,
                     'urgency' => $inquiry->urgency,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
@@ -144,9 +142,7 @@ class InquiryController extends Controller
                     'id' => $technician->id,
                     'name' => $technician->name,
                     'email' => $technician->email,
-                    'is_lead' => (bool) $technician->pivot->is_lead,
                 ])->values(),
-                'allow_additional_technicians' => $inquiry->allow_additional_technicians,
                 'street_address' => $inquiry->street_address,
                 'city' => $inquiry->city,
                 'service_type' => $inquiry->service_type,
@@ -174,13 +170,12 @@ class InquiryController extends Controller
         $validated = $request->validate([
             'technician_ids' => ['sometimes', 'array', 'max:10'],
             'technician_ids.*' => ['required', 'integer', 'distinct', 'exists:users,id'],
-            'lead_technician_id' => ['nullable', 'integer', 'exists:users,id'],
+            // Backward compatibility for older clients that submit one technician.
             'technician_id' => ['nullable', 'integer', 'exists:users,id'],
-            'allow_additional_technicians' => ['sometimes', 'boolean'],
         ]);
 
         $technicianIds = array_map('intval', $validated['technician_ids'] ?? []);
-        if (!$technicianIds && !empty($validated['technician_id'])) {
+        if (!array_key_exists('technician_ids', $validated) && !empty($validated['technician_id'])) {
             $technicianIds = [(int) $validated['technician_id']];
         }
 
@@ -191,17 +186,14 @@ class InquiryController extends Controller
             ]);
         }
 
-        $leadTechnicianId = $technicianIds ? (int) ($validated['lead_technician_id'] ?? $technicianIds[0]) : 0;
-        if ($technicianIds && !in_array($leadTechnicianId, $technicianIds, true)) {
-            return back()->withErrors([
-                'lead_technician_id' => 'The lead technician must be included in the assigned team.',
-            ]);
-        }
+        $technicians = User::query()
+            ->whereIn('id', $technicianIds)
+            ->where('role', 'technician')
+            ->get();
 
-        $technicians = User::query()->whereIn('id', $technicianIds)->where('role', 'technician')->get();
         if ($technicians->count() !== count($technicianIds)) {
             return back()->withErrors([
-                'technician_ids' => 'Every selected team member must have a technician account.',
+                'technician_ids' => 'Every assigned team member must have a technician account.',
             ]);
         }
 
@@ -222,18 +214,20 @@ class InquiryController extends Controller
             ]);
         }
 
-        $oldTechnicianIds = $inquiry->technicians()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
-        $oldLeadTechnicianId = $inquiry->technician_id;
-        $allowAdditional = (bool) ($validated['allow_additional_technicians'] ?? $inquiry->allow_additional_technicians);
+        $oldTechnicianIds = $inquiry->technicians()
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        // Keep the legacy single-technician column populated for older parts of the application.
+        // It does not designate a lead or confer additional permissions.
+        $compatibilityTechnicianId = $technicianIds[0] ?? null;
 
         DB::transaction(function () use (
             $request,
             $inquiry,
             $technicianIds,
-            $leadTechnicianId,
-            $allowAdditional,
+            $compatibilityTechnicianId,
             $oldTechnicianIds,
-            $oldLeadTechnicianId,
             $activityLogger,
             $jobNotifications
         ) {
@@ -265,15 +259,13 @@ class InquiryController extends Controller
             $sync = [];
             foreach ($technicianIds as $technicianId) {
                 $sync[$technicianId] = [
-                    'is_lead' => $technicianId === $leadTechnicianId,
                     'assigned_by' => $request->user()->id,
                 ];
             }
 
             $inquiry->technicians()->sync($sync);
             $inquiry->update([
-                'technician_id' => $leadTechnicianId ?: null,
-                'allow_additional_technicians' => $allowAdditional,
+                'technician_id' => $compatibilityTechnicianId,
             ]);
 
             $inquiry->load('technicians');
@@ -300,8 +292,8 @@ class InquiryController extends Controller
                 'inquiry_technician_team_updated',
                 "Updated technician team for inquiry {$inquiry->inquiry_number}: {$names}.",
                 $inquiry,
-                ['technician_id' => $oldLeadTechnicianId ?: null],
-                ['technician_id' => $leadTechnicianId ?: null]
+                ['technician_ids' => $oldTechnicianIds],
+                ['technician_ids' => $technicianIds]
             );
         });
 
@@ -325,19 +317,9 @@ class InquiryController extends Controller
             'preferred_time' => ['required', 'in:' . implode(',', self::BOOKING_TIME_SLOTS)],
             'technician_ids' => ['required', 'array', 'min:1', 'max:10'],
             'technician_ids.*' => ['required', 'integer', 'distinct', 'exists:users,id'],
-            'lead_technician_id' => ['required', 'integer', 'exists:users,id'],
-            'allow_additional_technicians' => ['sometimes', 'boolean'],
         ]);
 
         $technicianIds = array_map('intval', $validated['technician_ids']);
-        $leadTechnicianId = (int) $validated['lead_technician_id'];
-
-        if (!in_array($leadTechnicianId, $technicianIds, true)) {
-            return back()->withErrors([
-                'lead_technician_id' => 'The lead technician must be included in the assigned team.',
-            ]);
-        }
-
         $technicians = User::query()
             ->whereIn('id', $technicianIds)
             ->where('role', 'technician')
@@ -345,7 +327,7 @@ class InquiryController extends Controller
 
         if ($technicians->count() !== count($technicianIds)) {
             return back()->withErrors([
-                'technician_ids' => 'Every selected team member must have a technician account.',
+                'technician_ids' => 'Every assigned team member must have a technician account.',
             ]);
         }
 
@@ -385,17 +367,17 @@ class InquiryController extends Controller
         }
 
         $oldStatus = $inquiry->status;
-        $oldTechnicianIds = $inquiry->technicians()->pluck('users.id')->all();
-        $allowAdditionalTechnicians = (bool) ($validated['allow_additional_technicians'] ?? false);
+        $oldTechnicianIds = $inquiry->technicians()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+        // Retain the legacy technician_id field for compatibility with older application screens.
+        $compatibilityTechnicianId = $technicianIds[0];
 
         DB::transaction(function () use (
             $request,
             $inquiry,
             $technicianIds,
-            $leadTechnicianId,
+            $compatibilityTechnicianId,
             $bookingDate,
             $bookingTime,
-            $allowAdditionalTechnicians,
             $oldStatus,
             $oldTechnicianIds,
             $activityLogger,
@@ -427,15 +409,13 @@ class InquiryController extends Controller
             $inquiry->update([
                 'preferred_date' => $bookingDate,
                 'preferred_time' => $bookingTime,
-                'technician_id' => $leadTechnicianId,
-                'allow_additional_technicians' => $allowAdditionalTechnicians,
+                'technician_id' => $compatibilityTechnicianId,
                 'status' => 'confirmed',
             ]);
 
             $sync = [];
             foreach ($technicianIds as $technicianId) {
                 $sync[$technicianId] = [
-                    'is_lead' => $technicianId === $leadTechnicianId,
                     'assigned_by' => $request->user()->id,
                 ];
             }
@@ -452,7 +432,7 @@ class InquiryController extends Controller
                 'title' => 'Service inquiry confirmed',
                 'message' => 'Your inquiry ' . $inquiry->inquiry_number
                     . ' has been confirmed for ' . $inquiry->preferred_date->format('F j, Y')
-                    . ' (' . $inquiry->preferred_time . '). Assigned team: ' . $technicianNames . '.',
+                    . ' (' . $inquiry->preferred_time . '). Assigned technicians: ' . $technicianNames . '.',
                 'action_url' => route('inquiries.show', $inquiry),
                 'related_type' => Inquiry::class,
                 'related_id' => $inquiry->id,
@@ -463,13 +443,12 @@ class InquiryController extends Controller
             $activityLogger->record(
                 $request,
                 'inquiry_confirmed_and_scheduled',
-                "Confirmed inquiry {$inquiry->inquiry_number} for {$bookingDate} {$bookingTime}; lead technician ID {$leadTechnicianId}; team: {$technicianNames}.",
+                "Confirmed inquiry {$inquiry->inquiry_number} for {$bookingDate} {$bookingTime}; assigned technicians: {$technicianNames}.",
                 $inquiry,
-                ['status' => $oldStatus],
+                ['status' => $oldStatus, 'technician_ids' => $oldTechnicianIds],
                 [
                     'status' => 'confirmed',
-                    'technician_id' => $leadTechnicianId,
-                    'allow_additional_technicians' => $allowAdditionalTechnicians,
+                    'technician_ids' => $technicianIds,
                 ]
             );
         });
