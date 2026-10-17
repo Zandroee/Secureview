@@ -108,8 +108,10 @@ class AuthController extends Controller
 
         $activityLogger->record(
             $request,
-            'admin_logged_in',
-            'Administrator signed in successfully.',
+            $user->isAdmin() ? 'admin_logged_in' : ($user->isTechnician() ? 'technician_logged_in' : 'user_logged_in'),
+            $user->isAdmin()
+                ? 'Administrator signed in successfully.'
+                : ($user->isTechnician() ? 'Technician signed in successfully.' : 'User signed in successfully.'),
             $user
         );
 
@@ -126,11 +128,15 @@ class AuthController extends Controller
 
     public function logout(Request $request, AdminActivityLogger $activityLogger)
     {
+        $actor = $request->user();
+
         $activityLogger->record(
             $request,
-            'admin_logged_out',
-            'Administrator signed out.',
-            $request->user()
+            $actor?->isAdmin() ? 'admin_logged_out' : ($actor?->isTechnician() ? 'technician_logged_out' : 'user_logged_out'),
+            $actor?->isAdmin()
+                ? 'Administrator signed out.'
+                : ($actor?->isTechnician() ? 'Technician signed out.' : 'User signed out.'),
+            $actor
         );
 
         Auth::logout();
@@ -181,8 +187,10 @@ class AuthController extends Controller
 
         $activityLogger->record(
             $request,
-            'admin_logged_in',
-            'Administrator signed in successfully with Google.',
+            $user->isAdmin() ? 'admin_logged_in' : ($user->isTechnician() ? 'technician_logged_in' : 'user_logged_in'),
+            $user->isAdmin()
+                ? 'Administrator signed in successfully with Google.'
+                : ($user->isTechnician() ? 'Technician signed in successfully with Google.' : 'User signed in successfully with Google.'),
             $user
         );
 
@@ -239,8 +247,10 @@ class AuthController extends Controller
 
         $activityLogger->record(
             $request,
-            'admin_logged_in',
-            'Administrator signed in successfully with Facebook.',
+            $user->isAdmin() ? 'admin_logged_in' : ($user->isTechnician() ? 'technician_logged_in' : 'user_logged_in'),
+            $user->isAdmin()
+                ? 'Administrator signed in successfully with Facebook.'
+                : ($user->isTechnician() ? 'Technician signed in successfully with Facebook.' : 'User signed in successfully with Facebook.'),
             $user
         );
 
