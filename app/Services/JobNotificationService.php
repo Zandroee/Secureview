@@ -130,7 +130,8 @@ class JobNotificationService
             Inquiry::query()
                 ->with('technicians')
                 ->where('status', 'confirmed')
-                ->whereDate('preferred_date', $start->toDateString())
+                ->whereDate('preferred_date', '>=', $start->toDateString())
+                ->whereDate('preferred_date', '<=', $end->toDateString())
                 ->get()
                 ->filter(function (Inquiry $inquiry) use ($start, $end) {
                     $appointment = $this->appointmentDateTime($inquiry);
@@ -205,19 +206,30 @@ class JobNotificationService
 
     private function notifyOnce(User $user, string $type, string $title, string $message, Inquiry $inquiry, string $url): int
     {
-        $exists = $user->customerNotifications()
-            ->where('type', $type)
-            ->where('related_type', Inquiry::class)
-            ->where('related_id', $inquiry->id)
-            ->where('created_at', '>=', now()->subDay())
-            ->exists();
+        $date = $inquiry->preferred_date?->format('Y-m-d') ?? 'no-date';
+        $time = md5((string) ($inquiry->preferred_time ?? 'no-time'));
+        $dedupeKey = implode(':', [
+            'job-reminder',
+            $type,
+            $inquiry->id,
+            $date,
+            $time,
+            $user->id,
+        ]);
 
-        if ($exists) {
-            return 0;
-        }
+        $notification = CustomerNotification::firstOrCreate(
+            ['dedupe_key' => $dedupeKey],
+            [
+                'user_id' => $user->id,
+                'type' => $type,
+                'title' => $title,
+                'message' => $message,
+                'action_url' => $url,
+                'related_type' => Inquiry::class,
+                'related_id' => $inquiry->id,
+            ]
+        );
 
-        $this->notify($user, $type, $title, $message, $inquiry, $url);
-
-        return 1;
+        return $notification->wasRecentlyCreated ? 1 : 0;
     }
 }
