@@ -443,6 +443,8 @@ class InquiryController extends Controller
 
             $inquiry->load('technicians');
             $technicianNames = $inquiry->technicians->pluck('name')->join(', ');
+            $removedTechnicianIds = array_values(array_diff($oldTechnicianIds, $technicianIds));
+            $jobNotifications->notifyAssignmentsRemoved($removedTechnicianIds, $inquiry);
 
             CustomerNotification::create([
                 'user_id' => $inquiry->user_id,
