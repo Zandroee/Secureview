@@ -209,7 +209,6 @@ class InquiryController extends Controller
                     'technicians' => $inquiry->technicians->map(fn (User $technician) => [
                         'name' => $technician->name,
                         'email' => $technician->email,
-                        'is_lead' => (bool) $technician->pivot->is_lead,
                     ])->values(),
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_time' => $inquiry->preferred_time,
@@ -257,7 +256,6 @@ class InquiryController extends Controller
                 'technicians' => $inquiry->technicians->map(fn (User $technician) => [
                     'name' => $technician->name,
                     'email' => $technician->email,
-                    'is_lead' => (bool) $technician->pivot->is_lead,
                 ])->values(),
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                 'preferred_time' => $inquiry->preferred_time,
