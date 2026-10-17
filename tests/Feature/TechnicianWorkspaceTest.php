@@ -340,6 +340,35 @@ class TechnicianWorkspaceTest extends TestCase
         $this->travelBack();
     }
 
+    public function test_technician_cannot_join_when_job_team_is_at_capacity(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $team = User::factory()->count(10)->create(['role' => 'technician']);
+        $extraTechnician = User::factory()->create(['role' => 'technician']);
+        $inquiry = $this->makeInquiry($customer, today()->addDays(4)->toDateString(), 'confirmed', true);
+        $inquiry->update(['technician_id' => $team->first()->id]);
+
+        $pivot = $team->values()->mapWithKeys(function (User $technician, int $index) use ($admin) {
+            return [$technician->id => [
+                'is_lead' => $index === 0,
+                'assigned_by' => $admin->id,
+            ]];
+        })->all();
+        $inquiry->technicians()->attach($pivot);
+
+        $this->actingAs($extraTechnician)
+            ->post(route('technician.jobs.claim', $inquiry))
+            ->assertRedirect()
+            ->assertSessionHasErrors('job');
+
+        $this->assertDatabaseMissing('inquiry_technician', [
+            'inquiry_id' => $inquiry->id,
+            'technician_id' => $extraTechnician->id,
+        ]);
+        $this->assertSame(10, $inquiry->technicians()->count());
+    }
+
     private function makeInquiry(User $customer, string $date, string $status = 'pending', bool $allowHelpers = false): Inquiry
     {
         return Inquiry::create([
