@@ -70,18 +70,17 @@ class ScheduleController extends Controller
                     'preferred_time' => $inquiry->preferred_time,
                     'city' => $inquiry->city,
                     'status' => $inquiry->status,
-                    'technician' => $inquiry->technicians->firstWhere('pivot.is_lead', true)
+                    'technician' => $inquiry->technicians->first()
                         ? [
-                            'id' => $inquiry->technicians->firstWhere('pivot.is_lead', true)->id,
-                            'name' => $inquiry->technicians->firstWhere('pivot.is_lead', true)->name,
-                            'email' => $inquiry->technicians->firstWhere('pivot.is_lead', true)->email,
+                            'id' => $inquiry->technicians->first()->id,
+                            'name' => $inquiry->technicians->first()->name,
+                            'email' => $inquiry->technicians->first()->email,
                         ]
                         : null,
                     'technicians' => $inquiry->technicians->map(fn (User $technician) => [
                         'id' => $technician->id,
                         'name' => $technician->name,
                         'email' => $technician->email,
-                        'is_lead' => (bool) $technician->pivot->is_lead,
                     ])->values(),
                 ];
             });
