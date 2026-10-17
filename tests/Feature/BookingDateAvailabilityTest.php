@@ -26,11 +26,13 @@ class BookingDateAvailabilityTest extends TestCase
             ])
             ->assertRedirect(route('admin.schedules.index'));
 
-        $this->assertDatabaseHas('blocked_booking_dates', [
-            'booking_date' => $date,
-            'reason' => 'No technicians available',
-            'blocked_by' => $admin->id,
-        ]);
+        $this->assertTrue(
+            BlockedBookingDate::query()
+                ->whereDate('booking_date', $date)
+                ->where('reason', 'No technicians available')
+                ->where('blocked_by', $admin->id)
+                ->exists()
+        );
 
         $this->actingAs($admin)
             ->get(route('admin.schedules.index'))
@@ -49,9 +51,11 @@ class BookingDateAvailabilityTest extends TestCase
             ->delete(route('admin.booking-availability.destroy', $blockedDate))
             ->assertRedirect(route('admin.schedules.index'));
 
-        $this->assertDatabaseMissing('blocked_booking_dates', [
-            'booking_date' => $date,
-        ]);
+        $this->assertFalse(
+            BlockedBookingDate::query()
+                ->whereDate('booking_date', $date)
+                ->exists()
+        );
     }
 
     public function test_booking_page_receives_dates_blocked_by_admin(): void
@@ -89,12 +93,14 @@ class BookingDateAvailabilityTest extends TestCase
             ])
             ->assertRedirect(route('admin.schedules.index'));
 
-        $this->assertDatabaseHas('blocked_booking_time_slots', [
-            'booking_date' => $date,
-            'booking_time' => $timeSlot,
-            'reason' => 'Technician unavailable',
-            'blocked_by' => $admin->id,
-        ]);
+        $this->assertTrue(
+            BlockedBookingTimeSlot::query()
+                ->whereDate('booking_date', $date)
+                ->where('booking_time', $timeSlot)
+                ->where('reason', 'Technician unavailable')
+                ->where('blocked_by', $admin->id)
+                ->exists()
+        );
 
         $this->actingAs($admin)
             ->get(route('admin.schedules.index'))
@@ -115,10 +121,12 @@ class BookingDateAvailabilityTest extends TestCase
             ->delete(route('admin.booking-time-slots.destroy', $blockedSlot))
             ->assertRedirect(route('admin.schedules.index'));
 
-        $this->assertDatabaseMissing('blocked_booking_time_slots', [
-            'booking_date' => $date,
-            'booking_time' => $timeSlot,
-        ]);
+        $this->assertFalse(
+            BlockedBookingTimeSlot::query()
+                ->whereDate('booking_date', $date)
+                ->where('booking_time', $timeSlot)
+                ->exists()
+        );
     }
 
     public function test_booking_page_receives_individually_blocked_time_slots(): void
@@ -191,11 +199,13 @@ class BookingDateAvailabilityTest extends TestCase
             ))
             ->assertSessionHasErrors('preferred_time');
 
-        $this->assertDatabaseMissing('inquiries', [
-            'customer_email' => $customer->email,
-            'preferred_date' => $date,
-            'preferred_time' => $timeSlot,
-        ]);
+        $this->assertFalse(
+            Inquiry::query()
+                ->where('customer_email', $customer->email)
+                ->whereDate('preferred_date', $date)
+                ->where('preferred_time', $timeSlot)
+                ->exists()
+        );
     }
 
     public function test_customer_cannot_submit_an_inquiry_for_a_fully_booked_date(): void
@@ -215,10 +225,12 @@ class BookingDateAvailabilityTest extends TestCase
             ->post(route('inquiries.store'), $payload)
             ->assertSessionHasErrors('preferred_date');
 
-        $this->assertDatabaseMissing('inquiries', [
-            'customer_email' => $customer->email,
-            'preferred_date' => $date,
-        ]);
+        $this->assertFalse(
+            Inquiry::query()
+                ->where('customer_email', $customer->email)
+                ->whereDate('preferred_date', $date)
+                ->exists()
+        );
     }
 
     public function test_booking_accepts_three_hour_slots_and_rejects_old_one_hour_slots(): void
@@ -249,11 +261,13 @@ class BookingDateAvailabilityTest extends TestCase
                 ))
                 ->assertRedirect();
 
-            $this->assertDatabaseHas('inquiries', [
-                'customer_email' => $customer->email,
-                'preferred_date' => $slotDate,
-                'preferred_time' => $timeSlot,
-            ]);
+            $this->assertTrue(
+                Inquiry::query()
+                    ->where('customer_email', $customer->email)
+                    ->whereDate('preferred_date', $slotDate)
+                    ->where('preferred_time', $timeSlot)
+                    ->exists()
+            );
         }
     }
 
