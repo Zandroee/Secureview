@@ -16,6 +16,8 @@ use Inertia\Inertia;
 
 class TechnicianWorkspaceController extends Controller
 {
+    private const MAX_TECHNICIANS_PER_JOB = 10;
+
     public function index(Request $request)
     {
         $technician = $request->user();
@@ -52,6 +54,7 @@ class TechnicianWorkspaceController extends Controller
 
                 return $start
                     && $start->isFuture()
+                    && $inquiry->technicians->count() < self::MAX_TECHNICIANS_PER_JOB
                     && !in_array($inquiry->preferred_date?->format('Y-m-d') . '|' . $inquiry->preferred_time, $busySlots, true);
             })
             ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, false, $technician->id))
@@ -97,6 +100,12 @@ class TechnicianWorkspaceController extends Controller
         if ($inquiry->technicians()->where('users.id', $technician->id)->exists()) {
             return back()->withErrors([
                 'job' => 'You are already assigned to this job.',
+            ]);
+        }
+
+        if ($inquiry->technicians()->count() >= self::MAX_TECHNICIANS_PER_JOB) {
+            return back()->withErrors([
+                'job' => 'This job has reached the maximum team size.',
             ]);
         }
 
@@ -152,6 +161,12 @@ class TechnicianWorkspaceController extends Controller
             if ($lockedInquiry->technicians()->where('users.id', $lockedTechnician->id)->exists()) {
                 throw ValidationException::withMessages([
                     'job' => 'You are already assigned to this job.',
+                ]);
+            }
+
+            if ($lockedInquiry->technicians()->count() >= self::MAX_TECHNICIANS_PER_JOB) {
+                throw ValidationException::withMessages([
+                    'job' => 'This job has reached the maximum team size.',
                 ]);
             }
 
