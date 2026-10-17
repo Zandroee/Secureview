@@ -2,16 +2,27 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BlockedBookingDate;
+use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Package;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class InquiryController extends Controller
 {
+    private const BOOKING_TIME_SLOTS = [
+        '08:00 AM - 11:00 AM',
+        '11:00 AM - 02:00 PM',
+        '02:00 PM - 05:00 PM',
+    ];
+
     public function create(Request $request)
     {
         $item = null;
@@ -36,7 +47,37 @@ class InquiryController extends Controller
             ];
         }
 
+        $unavailableDates = BlockedBookingDate::query()
+            ->whereDate('booking_date', '>=', today())
+            ->orderBy('booking_date')
+            ->get()
+            ->map(fn (BlockedBookingDate $blockedDate) => $blockedDate->booking_date->format('Y-m-d'))
+            ->values();
+
+        $blockedSlotDates = BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', '>=', today())
+            ->select('booking_date')
+            ->groupBy('booking_date')
+            ->havingRaw('COUNT(DISTINCT booking_time) >= ?', [count(self::BOOKING_TIME_SLOTS)])
+            ->pluck('booking_date')
+            ->map(fn ($date) => Carbon::parse($date)->toDateString());
+
+        $unavailableDates = $unavailableDates
+            ->concat($blockedSlotDates)
+            ->unique()
+            ->values();
+
+        $unavailableTimeSlots = BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', '>=', today())
+            ->orderBy('booking_date')
+            ->get(['booking_date', 'booking_time'])
+            ->groupBy(fn (BlockedBookingTimeSlot $blockedSlot) => $blockedSlot->booking_date->format('Y-m-d'))
+            ->map(fn ($slots) => $slots->pluck('booking_time')->values())
+            ->all();
+
         return Inertia::render('inquiry', [
+            'unavailableDates' => $unavailableDates,
+            'unavailableTimeSlots' => $unavailableTimeSlots,
             'customer' => [
                 'name' => $request->user()->name,
                 'email' => $request->user()->email,
@@ -74,9 +115,26 @@ class InquiryController extends Controller
                 'date',
                 'after_or_equal:today',
             ],
-            'preferred_time' => ['required', 'string', 'max:50'],
+            'preferred_time' => ['required', 'string', Rule::in(self::BOOKING_TIME_SLOTS)],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        if (BlockedBookingDate::query()
+            ->whereDate('booking_date', $validated['preferred_date'])
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'preferred_date' => 'This date is fully booked. Please choose another date.',
+            ]);
+        }
+
+        if (BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', $validated['preferred_date'])
+            ->where('booking_time', $validated['preferred_time'])
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'preferred_time' => 'This time slot is fully booked. Please choose another time.',
+            ]);
+        }
 
         $inquirable = null;
 

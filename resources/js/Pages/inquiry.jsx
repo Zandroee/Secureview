@@ -13,14 +13,9 @@ const serviceTypes = [
 ];
 
 const timeSlots = [
-    { label: "08:00 AM - 09:00 AM", available: true },
-    { label: "09:00 AM - 10:00 AM", available: true },
-    { label: "10:00 AM - 11:00 AM", available: true },
-    { label: "11:00 AM - 12:00 PM", available: false },
-    { label: "01:00 PM - 02:00 PM", available: true },
-    { label: "02:00 PM - 03:00 PM", available: true },
-    { label: "03:00 PM - 04:00 PM", available: false },
-    { label: "04:00 PM - 05:00 PM", available: true },
+    { label: "08:00 AM - 11:00 AM", available: true },
+    { label: "11:00 AM - 02:00 PM", available: true },
+    { label: "02:00 PM - 05:00 PM", available: true },
 ];
 
 const sectionTitleStyle = {
@@ -38,6 +33,16 @@ const fieldStyle = {
     fontSize: "0.85rem",
 };
 
+const localDateString = (date) => {
+    if (!date) return "";
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return year + "-" + month + "-" + day;
+};
+
 const formatDateLabel = (value) => {
     if (!value) {
         return "";
@@ -50,7 +55,7 @@ const formatDateLabel = (value) => {
     });
 };
 
-export default function Inquiry({ customer, item }) {
+export default function Inquiry({ customer, item, unavailableDates = [], unavailableTimeSlots = {} }) {
     const today = new Date();
     const [showDateModal, setShowDateModal] = useState(false);
 
@@ -127,6 +132,13 @@ export default function Inquiry({ customer, item }) {
         return date < startOfToday;
     };
 
+    const isFullyBookedDate = (dateValue) =>
+        Boolean(dateValue) && unavailableDates.includes(dateValue);
+
+    const isTimeSlotFullyBooked = (timeSlot) =>
+        Boolean(selectedDate) &&
+        (unavailableTimeSlots[selectedDate] ?? []).includes(timeSlot);
+
     const openDateModal = () => {
         if (data.preferred_date) {
             const existing = new Date(
@@ -136,8 +148,16 @@ export default function Inquiry({ customer, item }) {
             setCalendarMonth(
                 new Date(existing.getFullYear(), existing.getMonth(), 1)
             );
-            setSelectedDate(data.preferred_date);
-            setSelectedTime(data.preferred_time);
+            if (
+                isFullyBookedDate(data.preferred_date) ||
+                (unavailableTimeSlots[data.preferred_date] ?? []).includes(data.preferred_time)
+            ) {
+                setSelectedDate(isFullyBookedDate(data.preferred_date) ? "" : data.preferred_date);
+                setSelectedTime("");
+            } else {
+                setSelectedDate(data.preferred_date);
+                setSelectedTime(data.preferred_time);
+            }
         } else {
             setCalendarMonth(
                 new Date(today.getFullYear(), today.getMonth(), 1)
@@ -154,16 +174,23 @@ export default function Inquiry({ customer, item }) {
             return;
         }
 
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
+        const value = localDateString(date);
 
-        setSelectedDate(year + "-" + month + "-" + day);
+        if (isFullyBookedDate(value)) {
+            return;
+        }
+
+        setSelectedDate(value);
         setSelectedTime("");
     };
 
     const confirmDateTime = () => {
-        if (!selectedDate || !selectedTime) {
+        if (
+            !selectedDate ||
+            !selectedTime ||
+            isFullyBookedDate(selectedDate) ||
+            isTimeSlotFullyBooked(selectedTime)
+        ) {
             return;
         }
 
@@ -897,14 +924,13 @@ export default function Inquiry({ customer, item }) {
 
                                         {calendarDays.map((date, index) => {
                                             const value = date
-                                                ? date
-                                                      .toISOString()
-                                                      .split("T")[0]
+                                                ? localDateString(date)
                                                 : "";
 
                                             const selected =
                                                 selectedDate === value;
                                             const past = isPastDate(date);
+                                            const fullyBooked = isFullyBookedDate(value);
 
                                             return (
                                                 <button
@@ -912,7 +938,16 @@ export default function Inquiry({ customer, item }) {
                                                     key={
                                                         value || "empty-" + index
                                                     }
-                                                    disabled={!date || past}
+                                                    disabled={!date || past || fullyBooked}
+                                                    title={
+                                                        fullyBooked
+                                                            ? "Fully booked"
+                                                            : past
+                                                              ? "Past date"
+                                                              : date
+                                                                ? "Available"
+                                                                : undefined
+                                                    }
                                                     onClick={() =>
                                                         selectDate(date)
                                                     }
@@ -926,14 +961,18 @@ export default function Inquiry({ customer, item }) {
                                                             : "1px solid transparent",
                                                         backgroundColor: selected
                                                             ? "#0d6efd"
-                                                            : past
-                                                              ? "#f1f1f3"
-                                                              : "#fff",
+                                                            : fullyBooked
+                                                              ? "#fde7e7"
+                                                              : past
+                                                                ? "#f1f1f3"
+                                                                : "#fff",
                                                         color: selected
                                                             ? "#fff"
-                                                            : past
-                                                              ? "#b7b8bd"
-                                                              : "#212529",
+                                                            : fullyBooked
+                                                              ? "#bd3a3a"
+                                                              : past
+                                                                ? "#b7b8bd"
+                                                                : "#212529",
                                                         fontSize: "0.78rem",
                                                         position: "relative",
                                                     }}
@@ -966,6 +1005,8 @@ export default function Inquiry({ customer, item }) {
                                         {timeSlots.map((slot) => {
                                             const selected =
                                                 selectedTime === slot.label;
+                                            const fullyBooked =
+                                                isTimeSlotFullyBooked(slot.label);
 
                                             return (
                                                 <button
@@ -973,7 +1014,8 @@ export default function Inquiry({ customer, item }) {
                                                     type="button"
                                                     disabled={
                                                         !selectedDate ||
-                                                        !slot.available
+                                                        !slot.available ||
+                                                        fullyBooked
                                                     }
                                                     onClick={() =>
                                                         setSelectedTime(
@@ -987,12 +1029,18 @@ export default function Inquiry({ customer, item }) {
                                                             : "1px solid #e2e3e6",
                                                         backgroundColor: selected
                                                             ? "#edf5ff"
-                                                            : slot.available
-                                                              ? "#fff"
-                                                              : "#f6f6f7",
-                                                        color: slot.available
-                                                            ? "#212529"
-                                                            : "#b0b0b4",
+                                                            : fullyBooked
+                                                              ? "#fde7e7"
+                                                              : slot.available
+                                                                ? "#fff"
+                                                                : "#f6f6f7",
+                                                        color: selected
+                                                            ? "#0d6efd"
+                                                            : fullyBooked
+                                                              ? "#bd3a3a"
+                                                              : slot.available
+                                                                ? "#212529"
+                                                                : "#b0b0b4",
                                                         borderRadius: "8px",
                                                         fontSize: "0.72rem",
                                                     }}
@@ -1001,14 +1049,14 @@ export default function Inquiry({ customer, item }) {
 
                                                     <span
                                                         className={
-                                                            slot.available
+                                                            slot.available && !fullyBooked
                                                                 ? "text-success"
                                                                 : "text-danger"
                                                         }
                                                     >
-                                                        {slot.available
-                                                            ? "Available"
-                                                            : "Full"}
+                                                        {!slot.available || fullyBooked
+                                                            ? "Fully booked"
+                                                            : "Available"}
                                                     </span>
                                                 </button>
                                             );

@@ -34,11 +34,21 @@ export default function AdminSchedules({
     technicians = [],
     summary = {},
     filters = {},
+    blockedBookingDates = [],
+    blockedBookingTimeSlots = [],
+    bookingTimeSlots = [],
+    todayDate = "",
 }) {
     const scheduleRows = schedules.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
     const [technician, setTechnician] = useState(filters.technician ?? "");
+    const [bookingDate, setBookingDate] = useState("");
+    const [bookingType, setBookingType] = useState("full_date");
+    const [bookingTime, setBookingTime] = useState("");
+    const [bookingReason, setBookingReason] = useState("");
+    const [availabilityMessage, setAvailabilityMessage] = useState("");
+    const [availabilityError, setAvailabilityError] = useState("");
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -74,6 +84,108 @@ export default function AdminSchedules({
         );
     };
 
+    const markDateFullyBooked = (event) => {
+        event.preventDefault();
+        setAvailabilityMessage("");
+        setAvailabilityError("");
+
+        router.post(
+            "/admin/booking-availability",
+            {
+                booking_date: bookingDate,
+                block_type: bookingType,
+                booking_time: bookingType === "time_slot" ? bookingTime : "",
+                reason: bookingReason,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setBookingDate("");
+                    setBookingTime("");
+                    setBookingReason("");
+                    setAvailabilityMessage(
+                        bookingType === "time_slot"
+                            ? "The selected time slot is now fully booked."
+                            : "The selected date is now fully booked."
+                    );
+                },
+                onError: (errors) => {
+                    const firstError = Object.values(errors)[0];
+                    setAvailabilityError(
+                        Array.isArray(firstError)
+                            ? firstError[0]
+                            : firstError || "Could not update booking availability."
+                    );
+                },
+            }
+        );
+    };
+
+    const reopenBookingTimeSlot = (blockedSlot) => {
+        const confirmed = window.confirm(
+            "Make " +
+                blockedSlot.formatted_date +
+                " (" +
+                blockedSlot.booking_time +
+                ") available for booking again?"
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setAvailabilityMessage("");
+        setAvailabilityError("");
+
+        router.delete(
+            "/admin/booking-time-slots/" + blockedSlot.id,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setAvailabilityMessage(
+                        blockedSlot.formatted_date +
+                            " · " +
+                            blockedSlot.booking_time +
+                            " is available again."
+                    );
+                },
+                onError: () => {
+                    setAvailabilityError(
+                        "Could not reopen this time slot. Please try again."
+                    );
+                },
+            }
+        );
+    };
+
+    const reopenBookingDate = (blockedDate) => {
+        const confirmed = window.confirm(
+            "Make " + blockedDate.formatted_date + " available for booking again?"
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        setAvailabilityMessage("");
+        setAvailabilityError("");
+
+        router.delete(
+            "/admin/booking-availability/" + blockedDate.id,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setAvailabilityMessage(
+                        blockedDate.formatted_date + " is available again."
+                    );
+                },
+                onError: () => {
+                    setAvailabilityError("Could not reopen this date. Please try again.");
+                },
+            }
+        );
+    };
+
     return (
         <div>
             <Navbar />
@@ -105,6 +217,217 @@ export default function AdminSchedules({
                                 Monitor confirmed and in-progress service jobs.
                             </div>
                         </div>
+
+                        <section
+                            className="bg-white border rounded-3 p-3 mb-3"
+                            aria-labelledby="booking-availability-title"
+                            style={{ boxShadow: "0 3px 12px rgba(0,0,0,0.05)" }}
+                        >
+                            <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                                <div>
+                                    <h2 id="booking-availability-title" className="h5 fw-bold mb-1">
+                                        BOOKING DATE AVAILABILITY
+                                    </h2>
+                                    <p className="small text-muted mb-0">
+                                        Block an entire date or one of its three-hour time slots. Customers cannot select blocked options until you reopen them.
+                                    </p>
+                                </div>
+                                <span className="badge rounded-pill bg-danger-subtle text-danger px-3 py-2">
+                                    {blockedBookingDates.length} blocked date{blockedBookingDates.length === 1 ? "" : "s"}
+                                </span>
+                            </div>
+
+                            {availabilityMessage && (
+                                <div className="alert alert-success py-2 small" role="status">
+                                    {availabilityMessage}
+                                </div>
+                            )}
+                            {availabilityError && (
+                                <div className="alert alert-danger py-2 small" role="alert">
+                                    {availabilityError}
+                                </div>
+                            )}
+
+                            <div className="row g-3">
+                                <div className="col-lg-5">
+                                    <form onSubmit={markDateFullyBooked} className="border rounded-3 p-3 h-100">
+                                        <h3 className="h6 fw-bold mb-3">Mark availability as full</h3>
+                                        <div className="mb-2">
+                                            <label htmlFor="booking-block-type" className="form-label small fw-semibold">
+                                                WHAT SHOULD BE BLOCKED?
+                                            </label>
+                                            <select
+                                                id="booking-block-type"
+                                                className="form-select"
+                                                value={bookingType}
+                                                onChange={(event) => {
+                                                    setBookingType(event.target.value);
+                                                    setBookingTime("");
+                                                }}
+                                            >
+                                                <option value="full_date">Entire date</option>
+                                                <option value="time_slot">Specific 3-hour time slot</option>
+                                            </select>
+                                        </div>
+                                        <div className="mb-2">
+                                            <label htmlFor="booking-block-date" className="form-label small fw-semibold">
+                                                DATE
+                                            </label>
+                                            <input
+                                                id="booking-block-date"
+                                                type="date"
+                                                className="form-control"
+                                                value={bookingDate}
+                                                min={todayDate}
+                                                required
+                                                onChange={(event) => setBookingDate(event.target.value)}
+                                            />
+                                        </div>
+                                        {bookingType === "time_slot" && (
+                                            <div className="mb-2">
+                                                <label htmlFor="booking-block-time" className="form-label small fw-semibold">
+                                                    3-HOUR TIME SLOT
+                                                </label>
+                                                <select
+                                                    id="booking-block-time"
+                                                    className="form-select"
+                                                    value={bookingTime}
+                                                    required
+                                                    onChange={(event) => setBookingTime(event.target.value)}
+                                                >
+                                                    <option value="">Choose a time slot</option>
+                                                    {bookingTimeSlots.map((slot) => (
+                                                        <option key={slot} value={slot}>
+                                                            {slot}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+                                        <div className="mb-3">
+                                            <label htmlFor="booking-block-reason" className="form-label small fw-semibold">
+                                                REASON (OPTIONAL)
+                                            </label>
+                                            <input
+                                                id="booking-block-reason"
+                                                type="text"
+                                                className="form-control"
+                                                maxLength={255}
+                                                placeholder="e.g. No technicians available"
+                                                value={bookingReason}
+                                                onChange={(event) => setBookingReason(event.target.value)}
+                                            />
+                                        </div>
+                                        <button
+                                            type="submit"
+                                            className="btn btn-danger fw-bold w-100"
+                                            disabled={
+                                                !bookingDate ||
+                                                (bookingType === "time_slot" && !bookingTime)
+                                            }
+                                        >
+                                            <i className="bi bi-calendar-x me-2" />
+                                            {bookingType === "time_slot"
+                                                ? "MARK TIME FULLY BOOKED"
+                                                : "MARK DATE FULLY BOOKED"}
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <div className="col-lg-7">
+                                    <div className="border rounded-3 p-3 h-100">
+                                        <h3 className="h6 fw-bold mb-3">Fully booked dates</h3>
+                                        {blockedBookingDates.length === 0 ? (
+                                            <div className="bg-light rounded-3 p-4 text-center">
+                                                <i className="bi bi-calendar-check text-success fs-4" />
+                                                <p className="small text-muted mt-2 mb-0">
+                                                    No upcoming dates are blocked. All dates are available for booking.
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="d-flex flex-column gap-2" style={{ maxHeight: "285px", overflowY: "auto" }}>
+                                                {blockedBookingDates.map((blockedDate) => (
+                                                    <div
+                                                        key={blockedDate.id}
+                                                        className="d-flex flex-wrap align-items-center justify-content-between gap-2 border rounded-3 px-3 py-2"
+                                                    >
+                                                        <div className="d-flex align-items-start gap-2">
+                                                            <i className="bi bi-calendar-x text-danger mt-1" />
+                                                            <div>
+                                                                <div className="fw-semibold small">
+                                                                    {blockedDate.formatted_date}
+                                                                </div>
+                                                                <div className="small text-muted">
+                                                                    {blockedDate.reason || "Marked fully booked by admin"}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-outline-success btn-sm fw-bold"
+                                                            onClick={() => reopenBookingDate(blockedDate)}
+                                                        >
+                                                            <i className="bi bi-calendar-check me-1" />
+                                                            REOPEN
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <hr className="my-3" />
+                                        <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                            <h3 className="h6 fw-bold mb-0">
+                                                Fully booked time slots
+                                            </h3>
+                                            <span className="small text-muted">
+                                                {blockedBookingTimeSlots.length} blocked
+                                            </span>
+                                        </div>
+
+                                        {blockedBookingTimeSlots.length === 0 ? (
+                                            <div className="small text-muted bg-light rounded-3 p-3">
+                                                No individual time slots are blocked.
+                                            </div>
+                                        ) : (
+                                            <div className="d-flex flex-column gap-2" style={{ maxHeight: "285px", overflowY: "auto" }}>
+                                                {blockedBookingTimeSlots.map((blockedSlot) => (
+                                                    <div
+                                                        key={blockedSlot.id}
+                                                        className="d-flex flex-wrap align-items-center justify-content-between gap-2 border rounded-3 px-3 py-2"
+                                                    >
+                                                        <div className="d-flex align-items-start gap-2">
+                                                            <i className="bi bi-clock text-danger mt-1" />
+                                                            <div>
+                                                                <div className="fw-semibold small">
+                                                                    {blockedSlot.formatted_date}
+                                                                </div>
+                                                                <div className="small text-muted">
+                                                                    {blockedSlot.booking_time}
+                                                                </div>
+                                                                {blockedSlot.reason && (
+                                                                    <div className="small text-muted">
+                                                                        {blockedSlot.reason}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-outline-success btn-sm fw-bold"
+                                                            onClick={() => reopenBookingTimeSlot(blockedSlot)}
+                                                        >
+                                                            <i className="bi bi-clock me-1" />
+                                                            REOPEN
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
 
                         <div className="row g-3 mb-3">
                             <div className="col-6 col-xl-3">
