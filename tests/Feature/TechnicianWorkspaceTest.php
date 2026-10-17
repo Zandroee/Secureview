@@ -293,16 +293,21 @@ class TechnicianWorkspaceTest extends TestCase
             ->where('related_id', $inquiry->id)
             ->count());
 
-        $inquiry->update(['preferred_time' => '02:00 AM - 05:00 AM']);
-        $this->travelTo($now->copy()->addHour());
+        $inquiry->update(['preferred_time' => '12:30 AM - 03:30 AM']);
+        $this->travelTo($now->copy()->addMinutes(30));
 
         $notifications->sendUpcomingReminders();
 
-        $this->assertDatabaseHas('customer_notifications', [
-            'user_id' => $admin->id,
-            'type' => 'job_reminder_1h',
-            'related_id' => $inquiry->id,
-        ]);
+        $this->assertSame(2, CustomerNotification::query()
+            ->where('user_id', $admin->id)
+            ->where('type', 'job_reminder_1h')
+            ->where('related_id', $inquiry->id)
+            ->count());
+        $this->assertSame(2, CustomerNotification::query()
+            ->where('user_id', $technician->id)
+            ->where('type', 'job_reminder_1h')
+            ->where('related_id', $inquiry->id)
+            ->count());
 
         $this->travelBack();
     }
