@@ -31,7 +31,6 @@ class InquiryConfirmationSchedulingTest extends TestCase
                 'preferred_date' => $confirmedDate,
                 'preferred_time' => self::AFTERNOON_SLOT,
                 'technician_ids' => [$technician->id],
-                'lead_technician_id' => $technician->id,
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
@@ -48,7 +47,6 @@ class InquiryConfirmationSchedulingTest extends TestCase
         $this->assertDatabaseHas('inquiry_technician', [
             'inquiry_id' => $inquiry->id,
             'technician_id' => $technician->id,
-            'is_lead' => true,
         ]);
     }
 
@@ -64,7 +62,6 @@ class InquiryConfirmationSchedulingTest extends TestCase
                 'preferred_date' => $date,
                 'preferred_time' => self::MORNING_SLOT,
                 'technician_ids' => [],
-                'lead_technician_id' => '',
             ])
             ->assertSessionHasErrors('technician_ids');
 
@@ -95,7 +92,6 @@ class InquiryConfirmationSchedulingTest extends TestCase
                 'preferred_date' => $date,
                 'preferred_time' => self::MIDDAY_SLOT,
                 'technician_ids' => [$technician->id],
-                'lead_technician_id' => $technician->id,
             ])
             ->assertSessionHasErrors('preferred_time');
 
@@ -110,7 +106,6 @@ class InquiryConfirmationSchedulingTest extends TestCase
                 'preferred_date' => $date,
                 'preferred_time' => self::AFTERNOON_SLOT,
                 'technician_ids' => [$technician->id],
-                'lead_technician_id' => $technician->id,
             ])
             ->assertSessionHasErrors('preferred_date');
 
@@ -135,7 +130,7 @@ class InquiryConfirmationSchedulingTest extends TestCase
             'technician_id' => $technician->id,
             'preferred_time' => self::MORNING_SLOT,
         ]);
-        $existingJob->technicians()->attach($technician->id, ['is_lead' => true, 'assigned_by' => $admin->id]);
+        $existingJob->technicians()->attach($technician->id, ['assigned_by' => $admin->id]);
 
         $newInquiry = $this->createPendingInquiry($secondCustomer, $date);
 
@@ -144,7 +139,6 @@ class InquiryConfirmationSchedulingTest extends TestCase
                 'preferred_date' => $date,
                 'preferred_time' => self::MORNING_SLOT,
                 'technician_ids' => [$technician->id],
-                'lead_technician_id' => $technician->id,
             ])
             ->assertSessionHasErrors('technician_ids');
 
