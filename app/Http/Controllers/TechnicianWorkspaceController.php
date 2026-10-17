@@ -138,7 +138,7 @@ class TechnicianWorkspaceController extends Controller
                 || !$lockedAppointmentStart->isFuture()
             ) {
                 throw ValidationException::withMessages([
-                    'job' => 'This job is no longer open for additional technicians.',
+                    'job' => 'This job is no longer available to join.',
                 ]);
             }
 
