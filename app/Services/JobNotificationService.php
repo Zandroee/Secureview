@@ -104,10 +104,25 @@ class JobNotificationService
                     route('technician.dashboard')
                 );
             });
+
+        $inquiry->loadMissing('technicians');
+        $remainingMessage = 'The technician team for job ' . $inquiry->inquiry_number . ' was updated.';
+
+        foreach ($inquiry->technicians as $teamMember) {
+            $this->notify(
+                $teamMember,
+                'job_team_updated',
+                'Your service team was updated',
+                $remainingMessage,
+                $inquiry,
+                route('technician.dashboard')
+            );
+        }
     }
 
     public function notifyTechnicianJoined(Inquiry $inquiry, User $technician): void
     {
+        $inquiry->loadMissing('technicians');
         $message = "{$technician->name} joined the technician team for job {$inquiry->inquiry_number}.";
 
         $this->notifyAdmins(
@@ -116,6 +131,21 @@ class JobNotificationService
             $message,
             $inquiry
         );
+
+        foreach ($inquiry->technicians as $teamMember) {
+            if ($teamMember->id === $technician->id) {
+                continue;
+            }
+
+            $this->notify(
+                $teamMember,
+                'job_team_updated',
+                'A technician joined your service team',
+                $message,
+                $inquiry,
+                route('technician.dashboard')
+            );
+        }
     }
 
     public function sendUpcomingReminders(): int
