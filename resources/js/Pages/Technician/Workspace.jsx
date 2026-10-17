@@ -176,7 +176,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         </div>
                         <div className="col-6 col-lg-3">
                             <div className="bg-white border rounded-4 p-3 h-100">
-                                <div className="small text-muted">OPEN TEAM JOBS</div>
+                                <div className="small text-muted">AVAILABLE JOBS</div>
                                 <div className="display-6 fw-bold">{openJobs.length}</div>
                             </div>
                         </div>
@@ -202,7 +202,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         <p className="text-muted mb-3">Upcoming confirmed services are available to join when your schedule is free and the team has room.</p>
                         {openJobs.length ? (
                             <div className="row g-3">{openJobs.map((job) => <div className="col-md-6 col-xl-4" key={job.id}><JobCard job={job} open /></div>)}</div>
-                        ) : <div className="bg-white border rounded-4 p-4 text-muted">There are no open team jobs right now.</div>}
+                        ) : <div className="bg-white border rounded-4 p-4 text-muted">There are no available jobs right now.</div>}
                     </section>
 
                     <section>
