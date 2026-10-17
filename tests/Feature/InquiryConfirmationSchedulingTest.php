@@ -38,11 +38,17 @@ class InquiryConfirmationSchedulingTest extends TestCase
 
         $this->assertDatabaseHas('inquiries', [
             'id' => $inquiry->id,
-            'preferred_date' => $confirmedDate,
             'preferred_time' => self::AFTERNOON_SLOT,
-            'technician_ids' => [$technician->id],
-                'lead_technician_id' => $technician->id,
+            'technician_id' => $technician->id,
             'status' => 'confirmed',
+        ]);
+
+        $this->assertSame($confirmedDate, $inquiry->fresh()->preferred_date?->toDateString());
+
+        $this->assertDatabaseHas('inquiry_technician', [
+            'inquiry_id' => $inquiry->id,
+            'technician_id' => $technician->id,
+            'is_lead' => true,
         ]);
     }
 
