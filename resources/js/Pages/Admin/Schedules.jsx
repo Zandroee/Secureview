@@ -670,7 +670,6 @@ export default function AdminSchedules({
                                                                 {schedule.technicians.map((technician) => (
                                                                     <div key={technician.id} className="small">
                                                                         <span className="fw-semibold">{technician.name}</span>
-                                                                        {technician.is_lead && <span className="badge text-bg-primary ms-1">Lead</span>}
                                                                     </div>
                                                                 ))}
                                                             </div>
