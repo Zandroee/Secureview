@@ -148,7 +148,7 @@ class TechnicianWorkspaceTest extends TestCase
             $technicianTwo->id => ['assigned_by' => $admin->id],
         ]);
 
-        // All assigned technicians have the same permissions; there is no lead role.
+        // Any member of the assigned team can complete the job.
         $this->actingAs($technicianTwo)->patch(route('technician.jobs.status', $inquiry), [
             'status' => 'completed',
         ])->assertRedirect()->assertSessionHasNoErrors();
