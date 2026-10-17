@@ -35,7 +35,7 @@ class TechnicianWorkspaceTest extends TestCase
         $this->assertDatabaseHas('inquiries', [
             'id' => $inquiry->id,
             'status' => 'confirmed',
-            // Compatibility field only; this does not designate a lead technician.
+            // Legacy compatibility field; the full team is stored in the pivot table.
             'technician_id' => $technicianOne->id,
         ]);
 
