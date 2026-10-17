@@ -30,6 +30,8 @@ class InquiryConfirmationSchedulingTest extends TestCase
             ->patch(route('admin.inquiries.confirm', $inquiry), [
                 'preferred_date' => $confirmedDate,
                 'preferred_time' => self::AFTERNOON_SLOT,
+                // Retain the legacy field while submitting the team-assignment payload.
+                'technician_id' => $technician->id,
                 'technician_ids' => [$technician->id],
             ])
             ->assertRedirect()
