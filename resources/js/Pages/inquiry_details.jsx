@@ -155,7 +155,7 @@ export default function InquiryDetails({ inquiry, success }) {
 
                                     <div className="fw-semibold">
                                         {(inquiry.technicians ?? []).length
-                                            ? inquiry.technicians.map((technician) => technician.name + (technician.is_lead ? " (Lead)" : "")).join(", ")
+                                            ? inquiry.technicians.map((technician) => technician.name).join(", ")
                                             : "Not assigned yet"}
                                     </div>
 
