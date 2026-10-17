@@ -22,44 +22,35 @@ class TechnicianWorkspaceTest extends TestCase
     {
         $customer = User::factory()->create(['role' => 'user']);
         $admin = User::factory()->create(['role' => 'admin']);
-        $lead = User::factory()->create(['role' => 'technician']);
-        $helper = User::factory()->create(['role' => 'technician']);
+        $technicianOne = User::factory()->create(['role' => 'technician']);
+        $technicianTwo = User::factory()->create(['role' => 'technician']);
         $inquiry = $this->makeInquiry($customer, today()->addDays(3)->toDateString());
 
         $this->actingAs($admin)->patch(route('admin.inquiries.confirm', $inquiry), [
             'preferred_date' => today()->addDays(3)->toDateString(),
             'preferred_time' => self::SLOT,
-            'technician_ids' => [$lead->id, $helper->id],
-            'lead_technician_id' => $lead->id,
-            'allow_additional_technicians' => true,
+            'technician_ids' => [$technicianOne->id, $technicianTwo->id],
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('inquiries', [
             'id' => $inquiry->id,
             'status' => 'confirmed',
-            'technician_id' => $lead->id,
-            'allow_additional_technicians' => true,
+            // Compatibility field only; this does not designate a lead technician.
+            'technician_id' => $technicianOne->id,
         ]);
-        $this->assertDatabaseHas('inquiry_technician', [
-            'inquiry_id' => $inquiry->id,
-            'technician_id' => $lead->id,
-            'is_lead' => true,
-        ]);
-        $this->assertDatabaseHas('inquiry_technician', [
-            'inquiry_id' => $inquiry->id,
-            'technician_id' => $helper->id,
-            'is_lead' => false,
-        ]);
-        $this->assertDatabaseHas('customer_notifications', [
-            'user_id' => $lead->id,
-            'type' => 'job_upcoming',
-            'related_id' => $inquiry->id,
-        ]);
-        $this->assertDatabaseHas('customer_notifications', [
-            'user_id' => $helper->id,
-            'type' => 'job_upcoming',
-            'related_id' => $inquiry->id,
-        ]);
+
+        foreach ([$technicianOne, $technicianTwo] as $technician) {
+            $this->assertDatabaseHas('inquiry_technician', [
+                'inquiry_id' => $inquiry->id,
+                'technician_id' => $technician->id,
+            ]);
+            $this->assertDatabaseHas('customer_notifications', [
+                'user_id' => $technician->id,
+                'type' => 'job_upcoming',
+                'related_id' => $inquiry->id,
+            ]);
+        }
+
         $this->assertDatabaseHas('customer_notifications', [
             'user_id' => $admin->id,
             'type' => 'job_upcoming',
@@ -89,24 +80,22 @@ class TechnicianWorkspaceTest extends TestCase
     {
         $customer = User::factory()->create(['role' => 'user']);
         $admin = User::factory()->create(['role' => 'admin']);
-        $lead = User::factory()->create(['role' => 'technician']);
-        $helper = User::factory()->create(['role' => 'technician']);
+        $technicianOne = User::factory()->create(['role' => 'technician']);
+        $technicianTwo = User::factory()->create(['role' => 'technician']);
         $date = today()->addDays(4)->toDateString();
-        $inquiry = $this->makeInquiry($customer, $date, 'confirmed', true);
-        $inquiry->update(['technician_id' => $lead->id]);
-        $inquiry->technicians()->attach($lead->id, [
-            'is_lead' => true,
+        $inquiry = $this->makeInquiry($customer, $date, 'confirmed');
+        $inquiry->update(['technician_id' => $technicianOne->id]);
+        $inquiry->technicians()->attach($technicianOne->id, [
             'assigned_by' => $admin->id,
         ]);
 
-        $this->actingAs($helper)->post(route('technician.jobs.claim', $inquiry))
+        $this->actingAs($technicianTwo)->post(route('technician.jobs.claim', $inquiry))
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('inquiry_technician', [
             'inquiry_id' => $inquiry->id,
-            'technician_id' => $helper->id,
-            'is_lead' => false,
+            'technician_id' => $technicianTwo->id,
         ]);
         $this->assertDatabaseHas('customer_notifications', [
             'user_id' => $admin->id,
@@ -114,7 +103,7 @@ class TechnicianWorkspaceTest extends TestCase
             'related_id' => $inquiry->id,
         ]);
         $this->assertDatabaseHas('customer_notifications', [
-            'user_id' => $lead->id,
+            'user_id' => $technicianOne->id,
             'type' => 'job_team_updated',
             'related_id' => $inquiry->id,
         ]);
@@ -125,45 +114,42 @@ class TechnicianWorkspaceTest extends TestCase
         $customer = User::factory()->create(['role' => 'user']);
         $otherCustomer = User::factory()->create(['role' => 'user']);
         $admin = User::factory()->create(['role' => 'admin']);
-        $lead = User::factory()->create(['role' => 'technician']);
-        $helper = User::factory()->create(['role' => 'technician']);
+        $technicianOne = User::factory()->create(['role' => 'technician']);
+        $technicianTwo = User::factory()->create(['role' => 'technician']);
         $date = today()->addDays(5)->toDateString();
 
-        $openJob = $this->makeInquiry($customer, $date, 'confirmed', true);
-        $openJob->update(['technician_id' => $lead->id]);
-        $openJob->technicians()->attach($lead->id, ['is_lead' => true, 'assigned_by' => $admin->id]);
+        $openJob = $this->makeInquiry($customer, $date, 'confirmed');
+        $openJob->update(['technician_id' => $technicianOne->id]);
+        $openJob->technicians()->attach($technicianOne->id, ['assigned_by' => $admin->id]);
 
         $conflictingJob = $this->makeInquiry($otherCustomer, $date, 'confirmed');
-        $conflictingJob->update(['technician_id' => $helper->id]);
-        $conflictingJob->technicians()->attach($helper->id, ['is_lead' => true, 'assigned_by' => $admin->id]);
+        $conflictingJob->update(['technician_id' => $technicianTwo->id]);
+        $conflictingJob->technicians()->attach($technicianTwo->id, ['assigned_by' => $admin->id]);
 
-        $this->actingAs($helper)->post(route('technician.jobs.claim', $openJob))
+        $this->actingAs($technicianTwo)->post(route('technician.jobs.claim', $openJob))
             ->assertSessionHasErrors('job');
 
         $this->assertDatabaseMissing('inquiry_technician', [
             'inquiry_id' => $openJob->id,
-            'technician_id' => $helper->id,
+            'technician_id' => $technicianTwo->id,
         ]);
     }
 
-    public function test_only_lead_technician_can_complete_a_job_and_admin_is_notified(): void
+    public function test_any_assigned_technician_can_complete_a_job_and_admin_is_notified(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
         $admin = User::factory()->create(['role' => 'admin']);
-        $lead = User::factory()->create(['role' => 'technician']);
-        $helper = User::factory()->create(['role' => 'technician']);
+        $technicianOne = User::factory()->create(['role' => 'technician']);
+        $technicianTwo = User::factory()->create(['role' => 'technician']);
         $inquiry = $this->makeInquiry($customer, today()->addDays(2)->toDateString(), 'in_progress');
-        $inquiry->update(['technician_id' => $lead->id]);
+        $inquiry->update(['technician_id' => $technicianOne->id]);
         $inquiry->technicians()->attach([
-            $lead->id => ['is_lead' => true, 'assigned_by' => $admin->id],
-            $helper->id => ['is_lead' => false, 'assigned_by' => $admin->id],
+            $technicianOne->id => ['assigned_by' => $admin->id],
+            $technicianTwo->id => ['assigned_by' => $admin->id],
         ]);
 
-        $this->actingAs($helper)->patch(route('technician.jobs.status', $inquiry), [
-            'status' => 'completed',
-        ])->assertSessionHasErrors('status');
-
-        $this->actingAs($lead)->patch(route('technician.jobs.status', $inquiry), [
+        // All assigned technicians have the same permissions; there is no lead role.
+        $this->actingAs($technicianTwo)->patch(route('technician.jobs.status', $inquiry), [
             'status' => 'completed',
         ])->assertRedirect()->assertSessionHasNoErrors();
 
@@ -228,7 +214,6 @@ class TechnicianWorkspaceTest extends TestCase
         $inquiry = $this->makeInquiry($customer, $appointmentDate, 'confirmed');
         $inquiry->update(['technician_id' => $technician->id]);
         $inquiry->technicians()->attach($technician->id, [
-            'is_lead' => true,
             'assigned_by' => $admin->id,
         ]);
 
@@ -279,7 +264,6 @@ class TechnicianWorkspaceTest extends TestCase
             'preferred_time' => '12:00 AM - 03:00 AM',
         ]);
         $inquiry->technicians()->attach($technician->id, [
-            'is_lead' => true,
             'assigned_by' => $admin->id,
         ]);
 
@@ -323,23 +307,22 @@ class TechnicianWorkspaceTest extends TestCase
 
         $customer = User::factory()->create(['role' => 'user']);
         $admin = User::factory()->create(['role' => 'admin']);
-        $lead = User::factory()->create(['role' => 'technician']);
-        $helper = User::factory()->create(['role' => 'technician']);
-        $inquiry = $this->makeInquiry($customer, today()->toDateString(), 'confirmed', true);
-        $inquiry->update(['technician_id' => $lead->id]);
-        $inquiry->technicians()->attach($lead->id, [
-            'is_lead' => true,
+        $technicianOne = User::factory()->create(['role' => 'technician']);
+        $technicianTwo = User::factory()->create(['role' => 'technician']);
+        $inquiry = $this->makeInquiry($customer, today()->toDateString(), 'confirmed');
+        $inquiry->update(['technician_id' => $technicianOne->id]);
+        $inquiry->technicians()->attach($technicianOne->id, [
             'assigned_by' => $admin->id,
         ]);
 
-        $this->actingAs($helper)
+        $this->actingAs($technicianTwo)
             ->post(route('technician.jobs.claim', $inquiry))
             ->assertRedirect()
             ->assertSessionHasErrors('job');
 
         $this->assertDatabaseMissing('inquiry_technician', [
             'inquiry_id' => $inquiry->id,
-            'technician_id' => $helper->id,
+            'technician_id' => $technicianTwo->id,
         ]);
 
         $this->travelBack();
@@ -351,12 +334,11 @@ class TechnicianWorkspaceTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $team = User::factory()->count(10)->create(['role' => 'technician']);
         $extraTechnician = User::factory()->create(['role' => 'technician']);
-        $inquiry = $this->makeInquiry($customer, today()->addDays(4)->toDateString(), 'confirmed', true);
+        $inquiry = $this->makeInquiry($customer, today()->addDays(4)->toDateString(), 'confirmed');
         $inquiry->update(['technician_id' => $team->first()->id]);
 
         $pivot = $team->values()->mapWithKeys(function (User $technician, int $index) use ($admin) {
             return [$technician->id => [
-                'is_lead' => $index === 0,
                 'assigned_by' => $admin->id,
             ]];
         })->all();
@@ -374,7 +356,7 @@ class TechnicianWorkspaceTest extends TestCase
         $this->assertSame(10, $inquiry->technicians()->count());
     }
 
-    private function makeInquiry(User $customer, string $date, string $status = 'pending', bool $allowHelpers = false): Inquiry
+    private function makeInquiry(User $customer, string $date, string $status = 'pending'): Inquiry
     {
         return Inquiry::create([
             'user_id' => $customer->id,
@@ -393,7 +375,6 @@ class TechnicianWorkspaceTest extends TestCase
             'preferred_time' => self::SLOT,
             'notes' => null,
             'status' => $status,
-            'allow_additional_technicians' => $allowHelpers,
         ]);
     }
 }
