@@ -259,6 +259,54 @@ class TechnicianWorkspaceTest extends TestCase
         $this->travelBack();
     }
 
+    public function test_upcoming_reminder_handles_midnight_and_does_not_duplicate_after_rescheduling(): void
+    {
+        $now = now()->startOfDay()->setTime(23, 0, 0);
+        $this->travelTo($now);
+
+        $customer = User::factory()->create(['role' => 'user']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $appointmentDate = today()->addDay()->toDateString();
+        $inquiry = $this->makeInquiry($customer, $appointmentDate, 'confirmed');
+        $inquiry->update([
+            'technician_id' => $technician->id,
+            'preferred_time' => '12:00 AM - 03:00 AM',
+        ]);
+        $inquiry->technicians()->attach($technician->id, [
+            'is_lead' => true,
+            'assigned_by' => $admin->id,
+        ]);
+
+        $notifications = app(JobNotificationService::class);
+        $notifications->sendUpcomingReminders();
+        $notifications->sendUpcomingReminders();
+
+        $this->assertSame(1, CustomerNotification::query()
+            ->where('user_id', $admin->id)
+            ->where('type', 'job_reminder_1h')
+            ->where('related_id', $inquiry->id)
+            ->count());
+        $this->assertSame(1, CustomerNotification::query()
+            ->where('user_id', $technician->id)
+            ->where('type', 'job_reminder_1h')
+            ->where('related_id', $inquiry->id)
+            ->count());
+
+        $inquiry->update(['preferred_time' => '02:00 AM - 05:00 AM']);
+        $this->travelTo($now->copy()->addHour());
+
+        $notifications->sendUpcomingReminders();
+
+        $this->assertDatabaseHas('customer_notifications', [
+            'user_id' => $admin->id,
+            'type' => 'job_reminder_1h',
+            'related_id' => $inquiry->id,
+        ]);
+
+        $this->travelBack();
+    }
+
     private function makeInquiry(User $customer, string $date, string $status = 'pending', bool $allowHelpers = false): Inquiry
     {
         return Inquiry::create([
