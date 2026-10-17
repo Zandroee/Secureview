@@ -37,11 +37,12 @@ class InquiryConfirmationSchedulingTest extends TestCase
 
         $this->assertDatabaseHas('inquiries', [
             'id' => $inquiry->id,
-            'preferred_date' => $confirmedDate,
             'preferred_time' => self::AFTERNOON_SLOT,
             'technician_id' => $technician->id,
             'status' => 'confirmed',
         ]);
+
+        $this->assertSame($confirmedDate, $inquiry->fresh()->preferred_date?->toDateString());
     }
 
     public function test_admin_cannot_confirm_without_assigning_a_technician(): void
