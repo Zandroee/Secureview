@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\JobNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -46,7 +47,13 @@ class TechnicianWorkspaceController extends Controller
             ->orderBy('preferred_time')
             ->limit(50)
             ->get()
-            ->filter(fn (Inquiry $inquiry) => !in_array($inquiry->preferred_date?->format('Y-m-d') . '|' . $inquiry->preferred_time, $busySlots, true))
+            ->filter(function (Inquiry $inquiry) use ($busySlots) {
+                $start = $this->appointmentDateTime($inquiry);
+
+                return $start
+                    && $start->isFuture()
+                    && !in_array($inquiry->preferred_date?->format('Y-m-d') . '|' . $inquiry->preferred_time, $busySlots, true);
+            })
             ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, false, $technician->id))
             ->values();
 
@@ -74,11 +81,13 @@ class TechnicianWorkspaceController extends Controller
     {
         $technician = $request->user();
 
+        $appointmentStart = $this->appointmentDateTime($inquiry);
+
         if (
             $inquiry->status !== 'confirmed'
             || !$inquiry->allow_additional_technicians
-            || !$inquiry->preferred_date
-            || $inquiry->preferred_date->lt(today())
+            || !$appointmentStart
+            || !$appointmentStart->isFuture()
         ) {
             return back()->withErrors([
                 'job' => 'This job is no longer open for additional technicians.',
@@ -114,11 +123,13 @@ class TechnicianWorkspaceController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            $lockedAppointmentStart = $this->appointmentDateTime($lockedInquiry);
+
             if (
                 $lockedInquiry->status !== 'confirmed'
                 || !$lockedInquiry->allow_additional_technicians
-                || !$lockedInquiry->preferred_date
-                || $lockedInquiry->preferred_date->lt(today())
+                || !$lockedAppointmentStart
+                || !$lockedAppointmentStart->isFuture()
             ) {
                 throw ValidationException::withMessages([
                     'job' => 'This job is no longer open for additional technicians.',
@@ -266,6 +277,21 @@ class TechnicianWorkspaceController extends Controller
         });
 
         return back()->with('success', 'Inventory adjustment saved with an audit record.');
+    }
+
+    private function appointmentDateTime(Inquiry $inquiry): ?Carbon
+    {
+        if (!$inquiry->preferred_date || !$inquiry->preferred_time) {
+            return null;
+        }
+
+        $start = trim(explode('-', $inquiry->preferred_time)[0] ?? '');
+
+        try {
+            return Carbon::parse($inquiry->preferred_date->format('Y-m-d') . ' ' . $start);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function jobData(Inquiry $inquiry, bool $includeCustomerDetails, int $currentTechnicianId): array
