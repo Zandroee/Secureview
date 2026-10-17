@@ -9,19 +9,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('inquiries', function (Blueprint $table) {
-            $table->boolean('allow_additional_technicians')->default(false)->after('technician_id');
-        });
-
         Schema::create('inquiry_technician', function (Blueprint $table) {
             $table->id();
             $table->foreignId('inquiry_id')->constrained()->cascadeOnDelete();
             $table->foreignId('technician_id')->constrained('users')->cascadeOnDelete();
-            $table->boolean('is_lead')->default(false);
             $table->foreignId('assigned_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->unique(['inquiry_id', 'technician_id']);
-            $table->index(['technician_id', 'is_lead']);
+            $table->index('technician_id');
         });
 
         $now = now();
@@ -33,7 +28,6 @@ return new class extends Migration
                 DB::table('inquiry_technician')->insertOrIgnore([
                     'inquiry_id' => $inquiry->id,
                     'technician_id' => $inquiry->technician_id,
-                    'is_lead' => true,
                     'assigned_by' => null,
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -45,8 +39,5 @@ return new class extends Migration
     {
         Schema::dropIfExists('inquiry_technician');
 
-        Schema::table('inquiries', function (Blueprint $table) {
-            $table->dropColumn('allow_additional_technicians');
-        });
     }
 };
