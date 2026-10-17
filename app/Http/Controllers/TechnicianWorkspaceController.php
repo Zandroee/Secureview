@@ -30,7 +30,7 @@ class TechnicianWorkspaceController extends Controller
             ->orderByRaw("CASE WHEN status != 'completed' THEN preferred_date END ASC")
             ->limit(100)
             ->get()
-            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, true, $technician->id))
+            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, true))
             ->values();
 
         $busySlots = $technician->assignedInquiries()
@@ -56,7 +56,7 @@ class TechnicianWorkspaceController extends Controller
                     && $inquiry->technicians->count() < self::MAX_TECHNICIANS_PER_JOB
                     && !in_array($inquiry->preferred_date?->format('Y-m-d') . '|' . $inquiry->preferred_time, $busySlots, true);
             })
-            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, false, $technician->id))
+            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, false))
             ->values();
 
         $inventory = Product::query()
@@ -301,7 +301,7 @@ class TechnicianWorkspaceController extends Controller
         }
     }
 
-    private function jobData(Inquiry $inquiry, bool $includeCustomerDetails, int $currentTechnicianId): array
+    private function jobData(Inquiry $inquiry, bool $includeCustomerDetails): array
     {
         $data = [
             'id' => $inquiry->id,
@@ -317,7 +317,6 @@ class TechnicianWorkspaceController extends Controller
             'technicians' => $inquiry->technicians->map(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
-                'is_current_user' => $user->id === $currentTechnicianId,
             ])->values(),
         ];
 
