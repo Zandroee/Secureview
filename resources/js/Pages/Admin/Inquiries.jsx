@@ -343,7 +343,7 @@ export default function AdminInquiries({
                                                         <div className="d-flex flex-column gap-2">
                                                             {(inquiry.technicians ?? []).length ? inquiry.technicians.map((technician) => (
                                                                 <div key={technician.id} className="small">
-                                                                    {technician.name}{technician.is_lead ? <span className="badge text-bg-primary ms-1">Lead</span> : null}
+                                                                    {technician.name}
                                                                 </div>
                                                             )) : <span className="small text-muted">Unassigned</span>}
                                                             <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setManagingInquiry(inquiry)}>
