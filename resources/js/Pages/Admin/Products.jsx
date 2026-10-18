@@ -29,6 +29,13 @@ function stockLabel(quantity) {
     return "In Stock";
 }
 
+function money(value) {
+    return "₱" + Number(value ?? 0).toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
 
 function emptyProduct() {
     return {
