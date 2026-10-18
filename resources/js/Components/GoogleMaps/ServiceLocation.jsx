@@ -178,6 +178,8 @@ export default function ServiceLocationPicker({
     const mapInstanceRef = useRef(null);
     const markerRecordRef = useRef(null);
     const onChangeRef = useRef(onChange);
+    const streetAddressRef = useRef(streetAddress);
+    const cityRef = useRef(city);
     const placeSelectCleanupRef = useRef(null);
     const [mapsReady, setMapsReady] = useState(false);
     const [mapsError, setMapsError] = useState("");
@@ -187,6 +189,8 @@ export default function ServiceLocationPicker({
     );
 
     onChangeRef.current = onChange;
+    streetAddressRef.current = streetAddress;
+    cityRef.current = city;
 
     useEffect(() => {
         if (!MAPS_API_KEY) {
@@ -312,8 +316,9 @@ export default function ServiceLocationPicker({
                         setLocationMessage("Address selected. Confirm the pin is at the service entrance; click the map or drag the pin to save a precise point.");
 
                         onChangeRef.current?.({
-                            street_address: place.formattedAddress || streetAddress,
-                            city: extractCity(place.addressComponents) || city,
+                            street_address: place.formattedAddress || streetAddressRef.current,
+                            city: extractCity(place.addressComponents) || cityRef.current,
+                            address_details: "",
                             google_place_id: place.id || "",
                             service_latitude: "",
                             service_longitude: "",
