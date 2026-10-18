@@ -138,7 +138,6 @@ export default function ServiceLocationPicker({
                 { draggable: true, title: "Service entrance" }
             );
             if (savedPosition) marker.addTo(map);
-            else marker.setOpacity(0);
 
             marker.on("dragend", () => {
                 const position = positionFromLeaflet(marker.getLatLng());
