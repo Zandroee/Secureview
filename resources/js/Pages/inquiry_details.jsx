@@ -1,5 +1,6 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
+import { ServiceLocationMap } from "../Components/GoogleMaps/ServiceLocation";
 import { Link } from "@inertiajs/react";
 
 function statusClass(status) {
@@ -240,6 +241,27 @@ export default function InquiryDetails({ inquiry, success }) {
                                             {inquiry.city}
                                         </div>
                                     </div>
+
+                                    {inquiry.address_details && (
+                                        <div className="col-12">
+                                            <div className="small text-muted mb-1">HOUSE / UNIT / LANDMARK</div>
+                                            <div className="fw-semibold">{inquiry.address_details}</div>
+                                        </div>
+                                    )}
+
+                                    {(inquiry.street_address || inquiry.city || inquiry.google_place_id || inquiry.service_latitude !== null && inquiry.service_latitude !== undefined) && (
+                                        <div className="col-12">
+                                            <div className="small text-muted fw-semibold mb-2">SERVICE LOCATION MAP</div>
+                                            <ServiceLocationMap
+                                                latitude={inquiry.service_latitude}
+                                                longitude={inquiry.service_longitude}
+                                                placeId={inquiry.google_place_id}
+                                                streetAddress={inquiry.street_address}
+                                                city={inquiry.city}
+                                                addressDetails={inquiry.address_details}
+                                            />
+                                        </div>
+                                    )}
 
                                     {inquiry.notes && (
                                         <div className="col-12">
