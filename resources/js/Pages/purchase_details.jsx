@@ -335,6 +335,15 @@ export default function PurchaseDetails({ order }) {
                                     </span>
                                 </div>
 
+                                {Number(order.installation_fee ?? 0) > 0 && (
+                                    <div className="d-flex justify-content-between mb-2">
+                                        <span className="text-muted">Installation Fee</span>
+                                        <span className="fw-semibold">
+                                            ₱{Number(order.installation_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                )}
+
                                 <div className="d-flex justify-content-between mb-3">
                                     <span className="text-muted">
                                         Shipping
