@@ -107,7 +107,11 @@ class InquiryController extends Controller
             ],
             'customer_email' => ['required', 'email', 'max:255'],
             'street_address' => ['required', 'string', 'max:255'],
+            'address_details' => ['nullable', 'string', 'max:500'],
             'city' => ['required', 'string', 'max:120'],
+            'service_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'service_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'google_place_id' => ['nullable', 'string', 'max:255'],
             'service_type' => [
                 'required',
                 'string',
@@ -125,6 +129,15 @@ class InquiryController extends Controller
             'preferred_time' => ['required', 'string', Rule::in(self::BOOKING_TIME_SLOTS)],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        $hasLatitude = filled($validated['service_latitude'] ?? null);
+        $hasLongitude = filled($validated['service_longitude'] ?? null);
+
+        if ($hasLatitude !== $hasLongitude) {
+            throw ValidationException::withMessages([
+                'service_location' => 'Choose a point on the map or leave the map pin unset.',
+            ]);
+        }
 
         if (BlockedBookingDate::query()
             ->whereDate('booking_date', $validated['preferred_date'])
@@ -167,7 +180,11 @@ class InquiryController extends Controller
             'customer_phone' => $validated['customer_phone'],
             'customer_email' => $validated['customer_email'],
             'street_address' => $validated['street_address'],
+            'address_details' => $validated['address_details'] ?? null,
             'city' => $validated['city'],
+            'service_latitude' => $validated['service_latitude'] ?? null,
+            'service_longitude' => $validated['service_longitude'] ?? null,
+            'google_place_id' => $validated['google_place_id'] ?? null,
             'service_type' => $validated['service_type'],
             'urgency' => $validated['urgency'],
             'preferred_date' => $validated['preferred_date'],
@@ -219,6 +236,11 @@ class InquiryController extends Controller
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_time' => $inquiry->preferred_time,
                     'city' => $inquiry->city,
+                    'address_details' => $inquiry->address_details,
+                    'service_latitude' => $inquiry->service_latitude,
+                    'service_longitude' => $inquiry->service_longitude,
+                    'google_place_id' => $inquiry->google_place_id,
+                    'street_address' => $inquiry->street_address,
                     'status' => $inquiry->status,
                     'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
                 ];
@@ -250,7 +272,11 @@ class InquiryController extends Controller
                 'customer_phone' => $inquiry->customer_phone,
                 'customer_email' => $inquiry->customer_email,
                 'street_address' => $inquiry->street_address,
+                'address_details' => $inquiry->address_details,
                 'city' => $inquiry->city,
+                'service_latitude' => $inquiry->service_latitude,
+                'service_longitude' => $inquiry->service_longitude,
+                'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
                 'urgency' => $inquiry->urgency,
                 'technician' => $inquiry->technician
