@@ -313,6 +313,10 @@ class TechnicianWorkspaceController extends Controller
             'preferred_time' => $inquiry->preferred_time,
             'city' => $inquiry->city,
             'street_address' => $includeCustomerDetails ? $inquiry->street_address : null,
+            'address_details' => $includeCustomerDetails ? $inquiry->address_details : null,
+            'service_latitude' => $includeCustomerDetails ? $inquiry->service_latitude : null,
+            'service_longitude' => $includeCustomerDetails ? $inquiry->service_longitude : null,
+            'google_place_id' => $includeCustomerDetails ? $inquiry->google_place_id : null,
             'status' => $inquiry->status,
             'technicians' => $inquiry->technicians->map(fn (User $user) => [
                 'id' => $user->id,
