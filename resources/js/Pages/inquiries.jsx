@@ -1,6 +1,7 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import CustomerSidebar from "../Components/customerSidebar";
+import { googleMapsSearchUrl } from "../Components/GoogleMaps/ServiceLocation";
 import { Link } from "@inertiajs/react";
 
 function statusClass(status) {
@@ -204,6 +205,30 @@ export default function Inquiries({ inquiries = [] }) {
                                                             {inquiry.item_name ||
                                                                 "General Inquiry"}
                                                         </div>
+
+                                                        {(inquiry.street_address || inquiry.city) && (
+                                                            <div className="small text-muted mt-2 text-truncate">
+                                                                {inquiry.street_address || inquiry.city}
+                                                            </div>
+                                                        )}
+
+                                                        {(inquiry.google_place_id || inquiry.service_latitude !== null && inquiry.service_latitude !== undefined || inquiry.street_address || inquiry.city) && (
+                                                            <a
+                                                                href={googleMapsSearchUrl({
+                                                                    latitude: inquiry.service_latitude,
+                                                                    longitude: inquiry.service_longitude,
+                                                                    placeId: inquiry.google_place_id,
+                                                                    streetAddress: inquiry.street_address,
+                                                                    city: inquiry.city,
+                                                                    addressDetails: inquiry.address_details,
+                                                                })}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="small text-decoration-none"
+                                                            >
+                                                                <i className="bi bi-map me-1" />View service location
+                                                            </a>
+                                                        )}
                                                     </div>
 
                                                     <div className="col-md-2">
