@@ -1,7 +1,7 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import ServiceLocationPicker from "../Components/GoogleMaps/ServiceLocation";
-import { useForm } from "@inertiajs/react";
+import { router, useForm } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 
 const serviceTypes = [
@@ -56,7 +56,7 @@ const formatDateLabel = (value) => {
     });
 };
 
-export default function Inquiry({ customer, item, catalogItems = [], initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {} }) {
+export default function Inquiry({ customer, item, catalogItems = [], cartItems = [], initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {} }) {
     const today = new Date();
     const [showDateModal, setShowDateModal] = useState(false);
 
@@ -70,6 +70,9 @@ export default function Inquiry({ customer, item, catalogItems = [], initialServ
     const { data, setData, post, processing, errors } = useForm({
         item_type: item?.type ?? "",
         item_id: item?.id ?? "",
+        item_quantity: cartItems.find((cartItem) =>
+            cartItem.type === item?.type && String(cartItem.id) === String(item?.id)
+        )?.quantity ?? 1,
         customer_name: customer?.name ?? "",
         customer_phone: customer?.phone ?? "",
         customer_email: customer?.email ?? "",
@@ -96,7 +99,8 @@ export default function Inquiry({ customer, item, catalogItems = [], initialServ
                 : null
         );
     const installationFee = Number(selectedCatalogItem?.installation_fee ?? 0);
-    const selectedItemTotal = Number(selectedCatalogItem?.price ?? 0) + installationFee;
+    const selectedItemQuantity = Math.max(1, Number(data.item_quantity ?? 1));
+    const selectedItemTotal = (Number(selectedCatalogItem?.price ?? 0) + installationFee) * selectedItemQuantity;
 
     const monthLabel = calendarMonth.toLocaleDateString("en-US", {
         month: "long",
@@ -375,197 +379,6 @@ export default function Inquiry({ customer, item, catalogItems = [], initialServ
                                     </div>
 
                                     <div className="mb-3">
-                                        <div style={sectionTitleStyle}>PRODUCT / PACKAGE</div>
-                                        <div className="small text-muted mb-2">
-                                            {data.service_type === "Installation"
-                                                ? "Select the product or package to be installed. Payment is required before an installation inquiry is submitted."
-                                                : "Optional: attach a product or package to this service inquiry."}
-                                        </div>
-
-                                        <select
-                                            className={"form-select " + (errors.item_id ? "is-invalid" : "")}
-                                            style={fieldStyle}
-                                            value={data.item_type && data.item_id ? data.item_type + ":" + data.item_id : ""}
-                                            onChange={(event) => {
-                                                const value = event.target.value;
-                                                if (!value) {
-                                                    setData((current) => ({ ...current, item_type: "", item_id: "" }));
-                                                    return;
-                                                }
-                                                const [type, id] = value.split(":");
-                                                setData((current) => ({ ...current, item_type: type, item_id: Number(id) }));
-                                            }}
-                                        >
-                                            <option value="">Choose a product or package</option>
-                                            {catalogItems.map((catalogItem) => (
-                                                <option
-                                                    key={catalogItem.type + ":" + catalogItem.id}
-                                                    value={catalogItem.type + ":" + catalogItem.id}
-                                                    disabled={Number(catalogItem.available_stock ?? 0) <= 0}
-                                                >
-                                                    {catalogItem.type === "package" ? "Package" : "Product"}: {catalogItem.name}
-                                                    {" — ₱"}{Number(catalogItem.price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                    {Number(catalogItem.available_stock ?? 0) <= 0 ? " — Out of stock" : ""}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {errors.item_id && <div className="small text-danger mt-1">{errors.item_id}</div>}
-
-                                        {selectedCatalogItem ? (
-                                            <div className="border rounded-3 p-3 mt-2" style={{ backgroundColor: "#fbfcff" }}>
-                                                <div className="d-flex align-items-start gap-3">
-                                                    {selectedCatalogItem.image ? (
-                                                        <img
-                                                            src={selectedCatalogItem.image}
-                                                            alt={selectedCatalogItem.name}
-                                                            className="rounded-2 flex-shrink-0"
-                                                            style={{ width: 68, height: 68, objectFit: "cover" }}
-                                                        />
-                                                    ) : (
-                                                        <div className="rounded-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 68, height: 68 }}>
-                                                            <i className="bi bi-camera-video fs-4" />
-                                                        </div>
-                                                    )}
-                                                    <div className="flex-grow-1 min-w-0">
-                                                        <div className="small text-primary fw-bold text-uppercase">
-                                                            {selectedCatalogItem.type} {selectedCatalogItem.category ? "· " + selectedCatalogItem.category : ""}
-                                                        </div>
-                                                        <div className="fw-bold">{selectedCatalogItem.name}</div>
-                                                        <div className="small text-muted mt-1">
-                                                            Item price: ₱{Number(selectedCatalogItem.price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                        </div>
-                                                        <div className="small text-muted">
-                                                            Installation: {installationFee > 0
-                                                                ? "₱" + installationFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                                                                : "Free"}
-                                                        </div>
-                                                        {data.service_type === "Installation" && (
-                                                            <div className="small fw-bold text-primary mt-1">
-                                                                Total due: ₱{selectedItemTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-sm btn-outline-danger flex-shrink-0"
-                                                        onClick={() => setData((current) => ({ ...current, item_type: "", item_id: "" }))}
-                                                        aria-label="Remove selected product or package"
-                                                        title="Remove selected item"
-                                                    >
-                                                        <i className="bi bi-x-lg me-1" />Remove
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="small text-muted border rounded-3 p-3 mt-2">
-                                                No product or package selected.
-                                            </div>
-                                        )}
-
-                                        {data.service_type === "Installation" && !selectedCatalogItem && (
-                                            <div className="alert alert-warning small mt-2 mb-0">
-                                                <i className="bi bi-exclamation-circle me-1" />
-                                                Installation bookings require a product or package. Select one above before continuing to payment.
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="mb-3">
-                                        <div style={sectionTitleStyle}>
-                                            CUSTOMER'S ADDRESS
-                                        </div>
-
-                                        <div className="row g-2">
-                                            <div className="col-12">
-                                                <label className="form-label small fw-semibold mb-1">
-                                                    Full Service Address *
-                                                </label>
-
-                                                <input
-                                                    type="text"
-                                                    className={"form-control " + (errors.street_address ? "is-invalid" : "")}
-                                                    style={fieldStyle}
-                                                    placeholder="House/Unit, Street, Barangay"
-                                                    value={data.street_address}
-                                                    onChange={(event) => setData((current) => ({
-                                                        ...current,
-                                                        street_address: event.target.value,
-                                                        service_latitude: "",
-                                                        service_longitude: "",
-                                                        google_place_id: "",
-                                                    }))}
-                                                />
-
-                                                {errors.street_address && (
-                                                    <div className="invalid-feedback">{errors.street_address}</div>
-                                                )}
-                                            </div>
-
-                                            <div className="col-12">
-                                                <label className="form-label small fw-semibold mb-1">
-                                                    City / Municipality *
-                                                </label>
-
-                                                <input
-                                                    type="text"
-                                                    className={"form-control " + (errors.city ? "is-invalid" : "")}
-                                                    style={fieldStyle}
-                                                    placeholder="City / Municipality"
-                                                    value={data.city}
-                                                    onChange={(event) => setData((current) => ({
-                                                        ...current,
-                                                        city: event.target.value,
-                                                        service_latitude: "",
-                                                        service_longitude: "",
-                                                        google_place_id: "",
-                                                    }))}
-                                                />
-
-                                                {errors.city && (
-                                                    <div className="invalid-feedback">{errors.city}</div>
-                                                )}
-                                            </div>
-
-                                            <div className="col-12">
-                                                <label className="form-label small fw-semibold mb-1">
-                                                    House / Unit / Gate / Landmark (Optional)
-                                                </label>
-
-                                                <input
-                                                    type="text"
-                                                    className={"form-control " + (errors.address_details ? "is-invalid" : "")}
-                                                    style={fieldStyle}
-                                                    placeholder="e.g. Unit 4B, blue gate beside the corner store"
-                                                    value={data.address_details}
-                                                    onChange={(event) => setData("address_details", event.target.value)}
-                                                />
-
-                                                {errors.address_details && (
-                                                    <div className="invalid-feedback">{errors.address_details}</div>
-                                                )}
-                                                <div className="form-text small">
-                                                    Add details that help the technician find the correct entrance or unit.
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <ServiceLocationPicker
-                                            streetAddress={data.street_address}
-                                            city={data.city}
-                                            latitude={data.service_latitude}
-                                            longitude={data.service_longitude}
-                                            placeId={data.google_place_id}
-                                            apiErrors={errors}
-                                            onChange={(changes) =>
-                                                setData((current) => ({
-                                                    ...current,
-                                                    ...changes,
-                                                }))
-                                            }
-                                        />
-
-                                    </div>
-
-                                    <div className="mb-3">
                                         <div style={sectionTitleStyle}>
                                             SERVICE DETAILS
                                         </div>
@@ -829,31 +642,37 @@ export default function Inquiry({ customer, item, catalogItems = [], initialServ
                                     boxShadow: "0 3px 12px rgba(0,0,0,0.08)",
                                 }}
                             >
-                                <div className="d-flex justify-content-between align-items-center mb-3">
-                                    <h4 className="fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif", fontSize: "1.15rem" }}>CART</h4>
-                                    <span className="small text-muted">{selectedCatalogItem ? "1 item selected" : "No selected item"}</span>
+                                                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h4 className="fw-bold mb-1" style={{ fontFamily: "Outfit, sans-serif", fontSize: "1.15rem" }}>CART</h4>
+                                        <div className="small text-muted">Choose the cart item for this service.</div>
+                                    </div>
+                                    <span className="small text-muted">{cartItems.length} {cartItems.length === 1 ? "item" : "items"}</span>
                                 </div>
 
                                 {selectedCatalogItem ? (
-                                    <div className="border rounded-3 p-3 mb-3" style={{ backgroundColor: "#fafbfc" }}>
-                                        <div className="d-flex gap-3 align-items-start">
+                                    <div className="border rounded-3 p-3 mb-3" style={{ backgroundColor: "#eef7ff", borderColor: "#cfe2ff" }}>
+                                        <div className="d-flex align-items-start gap-3">
                                             {selectedCatalogItem.image ? (
-                                                <img src={selectedCatalogItem.image} alt={selectedCatalogItem.name} className="rounded-2" style={{ width: 72, height: 72, objectFit: "cover" }} />
+                                                <img src={selectedCatalogItem.image} alt={selectedCatalogItem.name} className="rounded-2" style={{ width: 64, height: 64, objectFit: "cover" }} />
                                             ) : (
-                                                <div className="rounded-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style={{ width: 72, height: 72 }}>
+                                                <div className="rounded-2 bg-white text-primary d-flex align-items-center justify-content-center" style={{ width: 64, height: 64 }}>
                                                     <i className="bi bi-camera-video fs-4" />
                                                 </div>
                                             )}
-                                            <div className="flex-grow-1">
-                                                <div className="small text-primary text-uppercase fw-bold">{selectedCatalogItem.type}</div>
+                                            <div className="flex-grow-1 min-w-0">
+                                                <div className="small text-primary text-uppercase fw-bold">Selected for {data.service_type}</div>
                                                 <div className="fw-bold">{selectedCatalogItem.name}</div>
-                                                <div className="small text-muted mt-1">
-                                                    Item: ₱{Number(selectedCatalogItem.price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                <div className="small text-muted">Quantity: {selectedItemQuantity}</div>
+                                                <div className="small text-muted">
+                                                    Item: ₱{(Number(selectedCatalogItem.price) * selectedItemQuantity).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </div>
                                                 {data.service_type === "Installation" && (
                                                     <>
                                                         <div className="small text-muted">
-                                                            Installation: {installationFee > 0 ? "₱" + installationFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "Free"}
+                                                            Installation: {installationFee > 0
+                                                                ? "₱" + (installationFee * selectedItemQuantity).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                                                : "Free"}
                                                         </div>
                                                         <div className="d-flex justify-content-between align-items-center border-top mt-2 pt-2">
                                                             <span className="small fw-bold">Total due</span>
@@ -865,23 +684,97 @@ export default function Inquiry({ customer, item, catalogItems = [], initialServ
                                         </div>
                                         <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
                                             <a href={selectedCatalogItem.type === "package" ? "/packages/" + selectedCatalogItem.id : "/products/" + selectedCatalogItem.id} className="small text-decoration-none">View details</a>
-                                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setData((current) => ({ ...current, item_type: "", item_id: "" }))}>
+                                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setData((current) => ({ ...current, item_type: "", item_id: "", item_quantity: 1 }))}>
                                                 <i className="bi bi-x-circle me-1" />Cancel item
                                             </button>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="rounded-3 p-3 mb-3" style={{ backgroundColor: "#f6f6f7" }}>
-                                        <div className="fw-bold small">{data.service_type === "Installation" ? "Product/package required" : "General Service Inquiry"}</div>
+                                        <div className="fw-bold small">{data.service_type === "Installation" ? "Choose an item from your cart" : "No item selected"}</div>
                                         <div className="small text-muted mt-1">
                                             {data.service_type === "Installation"
-                                                ? "Choose a product or package to calculate the total and continue to payment."
-                                                : "No product or package has been attached to this service."}
+                                                ? "An installation requires a product or package. Select one of the cart items below."
+                                                : "Selecting a cart item is optional for this service."}
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="d-flex justify-content-between small fw-semibold mb-3">
+                                {errors.item_id && <div className="small text-danger mb-2">{errors.item_id}</div>}
+
+                                {cartItems.length > 0 ? (
+                                    <div className="d-flex flex-column gap-2 mb-3">
+                                        <div className="small text-muted fw-semibold text-uppercase">Items in your cart</div>
+                                        {cartItems.map((cartItem) => {
+                                            const isSelected = cartItem.type === data.item_type && String(cartItem.id) === String(data.item_id);
+                                            const unavailable = Number(cartItem.available_stock ?? 0) < Number(cartItem.quantity ?? 1);
+                                            return (
+                                                <div key={cartItem.cart_item_id} className="border rounded-3 p-2">
+                                                    <div className="d-flex align-items-start gap-2">
+                                                        {cartItem.image ? (
+                                                            <img src={cartItem.image} alt={cartItem.name} className="rounded-2 flex-shrink-0" style={{ width: 58, height: 58, objectFit: "cover" }} />
+                                                        ) : (
+                                                            <div className="rounded-2 bg-light text-primary d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 58, height: 58 }}>
+                                                                <i className="bi bi-camera-video fs-5" />
+                                                            </div>
+                                                        )}
+                                                        <div className="flex-grow-1 min-w-0">
+                                                            <div className="small text-primary text-uppercase fw-bold">{cartItem.type}{cartItem.category ? " · " + cartItem.category : ""}</div>
+                                                            <div className="small fw-bold">{cartItem.name}</div>
+                                                            <div className="small text-muted">Qty {cartItem.quantity} · ₱{(Number(cartItem.price) * Number(cartItem.quantity)).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                            {data.service_type === "Installation" && (
+                                                                <div className="small text-muted">Installation: {Number(cartItem.installation_fee ?? 0) > 0 ? "₱" + (Number(cartItem.installation_fee) * Number(cartItem.quantity)).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "Free"}</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="d-flex justify-content-between align-items-center gap-2 mt-2 pt-2 border-top">
+                                                        <button
+                                                            type="button"
+                                                            className={isSelected ? "btn btn-sm btn-primary" : "btn btn-sm btn-outline-primary"}
+                                                            disabled={isSelected || unavailable}
+                                                            onClick={() => setData((current) => ({
+                                                                ...current,
+                                                                item_type: cartItem.type,
+                                                                item_id: Number(cartItem.id),
+                                                                item_quantity: Number(cartItem.quantity ?? 1),
+                                                            }))}
+                                                        >
+                                                            <i className={"bi " + (isSelected ? "bi-check-circle me-1" : "bi-box-arrow-in-down-right me-1")} />
+                                                            {isSelected ? "Selected" : data.service_type === "Installation" ? "Use for installation" : "Attach to inquiry"}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-sm btn-link text-danger text-decoration-none px-1"
+                                                            onClick={() => router.delete("/cart/items/" + cartItem.cart_item_id, {
+                                                                preserveScroll: true,
+                                                                onSuccess: () => {
+                                                                    if (isSelected) {
+                                                                        setData((current) => ({ ...current, item_type: "", item_id: "", item_quantity: 1 }));
+                                                                    }
+                                                                },
+                                                            })}
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                    {unavailable && <div className="small text-danger mt-1">Quantity exceeds available stock.</div>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="border rounded-3 p-3 mb-3 text-center">
+                                        <i className="bi bi-cart3 text-muted fs-3" />
+                                        <div className="small fw-semibold mt-2">Your cart is empty</div>
+                                        <div className="small text-muted mt-1 mb-2">Add a product or package from its details page, then return here to select it.</div>
+                                        <div className="d-flex justify-content-center gap-2">
+                                            <a href="/products" className="btn btn-sm btn-outline-primary">Browse products</a>
+                                            <a href="/packages" className="btn btn-sm btn-outline-primary">Browse packages</a>
+                                        </div>
+                                    </div>
+                                )}
+
+<div className="d-flex justify-content-between small fw-semibold mb-3">
                                     <span>Service</span>
                                     <span>{data.service_type}</span>
                                 </div>
