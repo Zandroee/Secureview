@@ -186,7 +186,7 @@ class InstallationInquiryPaymentTest extends TestCase
         $order = Order::query()->where('order_number', 'like', 'SV-%')->firstOrFail();
         $this->actingAs($customer)->get(route('checkout.payment.success', $order));
 
-        Http::assertSent(function (\\Illuminate\\Http\\Client\\Request $request) {
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
             if (!str_ends_with($request->url(), '/v2/checkout_sessions')) {
                 return false;
             }
