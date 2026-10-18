@@ -276,7 +276,7 @@ export default function ServiceLocationPicker({
 
                 const onMarkerDragEnd = () => reportManualPin(markerPosition(markerRecordRef.current));
                 if (markerRecord.kind === "advanced") {
-                    markerRecord.marker.addEventListener("dragend", onMarkerDragEnd);
+                    markerRecord.marker.addEventListener("gmp-dragend", onMarkerDragEnd);
                 } else {
                     markerRecord.marker.addListener("dragend", onMarkerDragEnd);
                 }
