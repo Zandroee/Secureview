@@ -207,6 +207,106 @@ class InstallationInquiryPaymentTest extends TestCase
         $this->assertEquals(2500.00, (float) $order->fresh()->total);
     }
 
+    public function test_paid_installation_webhook_creates_inquiry_without_customer_returning_and_keeps_cart_items(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+
+        $product = Product::create([
+            'name' => 'Webhook Installation Camera',
+            'category' => 'CCTV',
+            'warranty' => '1 year',
+            'price' => 1800,
+            'installation_fee' => null,
+            'stock_quantity' => 5,
+            'is_featured' => false,
+        ]);
+
+        $cart = $customer->cart()->create();
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => $product->price,
+        ]);
+
+        Http::fake([
+            'https://api.paymongo.com/v2/checkout_sessions' => Http::response([
+                'data' => [
+                    'id' => 'cs_installation_webhook_test',
+                    'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_installation_webhook_test'],
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs($customer)->post('/inquiries', $this->inquiryPayload([
+            'item_type' => 'product',
+            'item_id' => $product->id,
+        ]));
+
+        $order = Order::query()->where('order_number', 'like', 'SV-%')->firstOrFail();
+        $this->assertDatabaseCount('inquiries', 0);
+        $this->assertSame('pending', $order->fresh()->payment_status);
+
+        $webhookSecret = 'whsec_secureview_installation_test';
+        config(['services.paymongo.webhook_secret' => $webhookSecret]);
+
+        $rawBody = json_encode([
+            'data' => [
+                'type' => 'checkout_session.payment.paid',
+                'data' => [
+                    'id' => 'cs_installation_webhook_test',
+                    'type' => 'checkout_session',
+                    'attributes' => [
+                        'reference_number' => $order->order_number,
+                        'payments' => [
+                            ['id' => 'pay_installation_webhook_test'],
+                        ],
+                    ],
+                ],
+            ],
+        ], JSON_UNESCAPED_SLASHES);
+
+        $timestamp = (string) time();
+        $signature = hash_hmac('sha256', $timestamp . '.' . $rawBody, $webhookSecret);
+        $server = [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_ACCEPT' => 'application/json',
+            'HTTP_PAYMONGO_SIGNATURE' => 't=' . $timestamp . ',te=' . $signature,
+        ];
+
+        $this->call('POST', '/api/webhooks/paymongo', [], [], [], $server, $rawBody)
+            ->assertOk();
+
+        $this->assertDatabaseCount('inquiries', 1);
+        $this->assertDatabaseHas('inquiries', [
+            'user_id' => $customer->id,
+            'inquiry_number' => Inquiry::query()->value('inquiry_number'),
+            'service_type' => 'Installation',
+            'item_name' => $product->name,
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'order_id' => $order->id,
+            'status' => 'paid',
+        ]);
+        $this->assertSame('paid', $order->fresh()->payment_status);
+
+        // The webhook must not clear unrelated items from the customer's cart.
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $cart->id,
+            'purchasable_id' => $product->id,
+        ]);
+
+        // Duplicate webhook delivery is safe and cannot create a second inquiry.
+        $this->call('POST', '/api/webhooks/paymongo', [], [], [], $server, $rawBody)
+            ->assertOk();
+
+        $this->assertDatabaseCount('inquiries', 1);
+    }
+
     private function inquiryPayload(array $overrides = []): array
     {
         return array_merge([
