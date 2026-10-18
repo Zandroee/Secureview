@@ -444,18 +444,18 @@ export default function Inquiry({ customer, item, unavailableDates = [], unavail
                                             </div>
                                         </div>
                                         <ServiceLocationPicker
-                                        streetAddress={data.street_address}
-                                        city={data.city}
-                                        latitude={data.service_latitude}
-                                        longitude={data.service_longitude}
-                                        placeId={data.google_place_id}
-                                        apiErrors={errors}
-                                        onChange={(changes) =>
-                                        setData((current) => ({
-                                        ...current,
-                                        ...changes,
-                                        }))
-                                        }
+                                            streetAddress={data.street_address}
+                                            city={data.city}
+                                            latitude={data.service_latitude}
+                                            longitude={data.service_longitude}
+                                            placeId={data.google_place_id}
+                                            apiErrors={errors}
+                                            onChange={(changes) =>
+                                                setData((current) => ({
+                                                    ...current,
+                                                    ...changes,
+                                                }))
+                                            }
                                         />
 
                                     </div>
