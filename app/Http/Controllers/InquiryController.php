@@ -6,12 +6,17 @@ use App\Models\BlockedBookingDate;
 use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
+use App\Models\Order;
+use App\Models\PendingInquiryCheckout;
 use App\Models\Package;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -24,29 +29,36 @@ class InquiryController extends Controller
         '02:00 PM - 05:00 PM',
     ];
 
-    public function create(Request $request)
+    public function create(Request $request, InventoryService $inventory)
     {
         $item = null;
 
-        if ($request->filled('item_type') && $request->filled('item_id')) {
-            $validated = $request->validate([
+        if ($request->filled('item_type') || $request->filled('item_id')) {
+            $itemQuery = $request->validate([
                 'item_type' => ['required', 'in:product,package'],
                 'item_id' => ['required', 'integer', 'min:1'],
             ]);
 
-            $modelClass = $validated['item_type'] === 'product'
-                ? Product::class
-                : Package::class;
-
-            $purchasable = $modelClass::findOrFail($validated['item_id']);
-
+            $modelClass = $itemQuery['item_type'] === 'product' ? Product::class : Package::class;
+            $purchasable = $modelClass::findOrFail($itemQuery['item_id']);
             $item = [
-                'type' => $validated['item_type'],
+                'type' => $itemQuery['item_type'],
                 'id' => $purchasable->id,
                 'name' => $purchasable->name,
+                'category' => $purchasable->category,
                 'image' => $purchasable->image,
+                'price' => (float) $purchasable->price,
+                'installation_fee' => $purchasable->installation_fee === null ? null : (float) $purchasable->installation_fee,
             ];
         }
+
+        $serviceTypeQuery = $request->validate([
+            'service_type' => [
+                'nullable',
+                Rule::in(['Installation', 'Site Inspection', 'Maintenance', 'Repair', 'Consultation', 'Other']),
+            ],
+        ]);
+        $initialServiceType = $serviceTypeQuery['service_type'] ?? 'Installation';
 
         $unavailableDates = BlockedBookingDate::query()
             ->whereDate('booking_date', '>=', today())
@@ -63,12 +75,9 @@ class InquiryController extends Controller
             ->pluck('booking_date')
             ->map(fn ($date) => Carbon::parse($date)->toDateString());
 
-        // map() on an Eloquent collection preserves its model-aware collection type,
-        // but these items are strings. Convert to a base Support collection before unique().
-        $unavailableDates = collect(array_merge(
-            $unavailableDates->all(),
-            $blockedSlotDates->all()
-        ))->unique()->values();
+        $unavailableDates = collect(array_merge($unavailableDates->all(), $blockedSlotDates->all()))
+            ->unique()
+            ->values();
 
         $unavailableTimeSlots = BlockedBookingTimeSlot::query()
             ->whereDate('booking_date', '>=', today())
@@ -82,6 +91,38 @@ class InquiryController extends Controller
                 ->values())
             ->all();
 
+        $catalogItems = Product::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Product $product) => [
+                'type' => 'product',
+                'id' => $product->id,
+                'name' => $product->name,
+                'category' => $product->category,
+                'image' => $product->image,
+                'price' => (float) $product->price,
+                'installation_fee' => $product->installation_fee === null ? null : (float) $product->installation_fee,
+                'available_stock' => $inventory->getAvailableStock($product),
+            ])
+            ->merge(
+                Package::query()
+                    ->with('packageItems.product')
+                    ->orderBy('name')
+                    ->get()
+                    ->map(fn (Package $package) => [
+                        'type' => 'package',
+                        'id' => $package->id,
+                        'name' => $package->name,
+                        'category' => $package->category,
+                        'image' => $package->image,
+                        'price' => (float) $package->price,
+                        'installation_fee' => $package->installation_fee === null ? null : (float) $package->installation_fee,
+                        'available_stock' => $inventory->getAvailableStock($package),
+                    ])
+            )
+            ->sortBy('name')
+            ->values();
+
         return Inertia::render('inquiry', [
             'unavailableDates' => $unavailableDates,
             'unavailableTimeSlots' => $unavailableTimeSlots,
@@ -91,20 +132,18 @@ class InquiryController extends Controller
                 'phone' => $request->user()->phone ?? '',
             ],
             'item' => $item,
+            'catalogItems' => $catalogItems,
+            'initialServiceType' => $initialServiceType,
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, InventoryService $inventory)
     {
         $validated = $request->validate([
-            'item_type' => ['nullable', 'in:product,package'],
-            'item_id' => ['nullable', 'integer', 'min:1'],
+            'item_type' => ['nullable', 'required_if:service_type,Installation', 'in:product,package'],
+            'item_id' => ['nullable', 'required_if:service_type,Installation', 'integer', 'min:1'],
             'customer_name' => ['required', 'string', 'max:120'],
-            'customer_phone' => [
-                'required',
-                'string',
-                'regex:/^09\d{9}$/',
-            ],
+            'customer_phone' => ['required', 'string', 'regex:/^09\d{9}$/'],
             'customer_email' => ['required', 'email', 'max:255'],
             'street_address' => ['required', 'string', 'max:255'],
             'address_details' => ['nullable', 'string', 'max:500'],
@@ -112,36 +151,23 @@ class InquiryController extends Controller
             'service_latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'service_longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'google_place_id' => ['nullable', 'string', 'max:255'],
-            'service_type' => [
-                'required',
-                'string',
-                'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other',
-            ],
-            'urgency' => [
-                'required',
-                'in:normal,urgent,emergency',
-            ],
-            'preferred_date' => [
-                'required',
-                'date',
-                'after_or_equal:today',
-            ],
+            'service_type' => ['required', 'string', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'urgency' => ['required', 'in:normal,urgent,emergency'],
+            'preferred_date' => ['required', 'date', 'after_or_equal:today'],
             'preferred_time' => ['required', 'string', Rule::in(self::BOOKING_TIME_SLOTS)],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'payment_method' => ['nullable', 'required_if:service_type,Installation', 'in:gcash,card,maya'],
         ]);
 
         $hasLatitude = filled($validated['service_latitude'] ?? null);
         $hasLongitude = filled($validated['service_longitude'] ?? null);
-
         if ($hasLatitude !== $hasLongitude) {
             throw ValidationException::withMessages([
                 'service_location' => 'Choose a point on the map or leave the map pin unset.',
             ]);
         }
 
-        if (BlockedBookingDate::query()
-            ->whereDate('booking_date', $validated['preferred_date'])
-            ->exists()) {
+        if (BlockedBookingDate::query()->whereDate('booking_date', $validated['preferred_date'])->exists()) {
             throw ValidationException::withMessages([
                 'preferred_date' => 'This date is fully booked. Please choose another date.',
             ]);
@@ -156,14 +182,28 @@ class InquiryController extends Controller
             ]);
         }
 
+        $hasItemType = filled($validated['item_type'] ?? null);
+        $hasItemId = filled($validated['item_id'] ?? null);
+        if ($hasItemType !== $hasItemId) {
+            throw ValidationException::withMessages([
+                'item_id' => 'Select a product or package, or remove the item selection.',
+            ]);
+        }
+
         $inquirable = null;
-
-        if ($validated['item_type'] && $validated['item_id']) {
-            $modelClass = $validated['item_type'] === 'product'
-                ? Product::class
-                : Package::class;
-
+        if ($hasItemType && $hasItemId) {
+            $modelClass = $validated['item_type'] === 'product' ? Product::class : Package::class;
             $inquirable = $modelClass::findOrFail($validated['item_id']);
+        }
+
+        if ($validated['service_type'] === 'Installation') {
+            if (!$inquirable) {
+                throw ValidationException::withMessages([
+                    'item_id' => 'Choose a product or package before booking an installation.',
+                ]);
+            }
+
+            return $this->startInstallationPayment($request, $validated, $inquirable, $inventory);
         }
 
         do {
@@ -207,6 +247,150 @@ class InquiryController extends Controller
             'success',
             'Your inquiry has been submitted successfully.'
         );
+    }
+
+    private function startInstallationPayment(
+        Request $request,
+        array $validated,
+        Product|Package $item,
+        InventoryService $inventory
+    ) {
+        $secretKey = config('services.paymongo.secret_key');
+        if (!$secretKey) {
+            return back()->withErrors([
+                'payment' => 'Online payments are not configured yet. Add the PayMongo test secret key before booking an installation.',
+            ])->withInput();
+        }
+
+        $stockError = $inventory->getAvailabilityError($item, 1);
+        if ($stockError) {
+            return back()->withErrors(['item_id' => $stockError])->withInput();
+        }
+
+        $paymentMethod = $validated['payment_method'] ?? 'gcash';
+        $installationFee = max(0, (float) ($item->installation_fee ?? 0));
+        $itemPrice = (float) $item->price;
+        $serviceAddress = trim(implode(', ', array_filter([
+            $validated['street_address'],
+            $validated['address_details'] ?? null,
+            $validated['city'],
+        ])));
+
+        $order = DB::transaction(function () use (
+            $request, $validated, $item, $paymentMethod, $installationFee, $itemPrice, $serviceAddress
+        ) {
+            do {
+                $orderNumber = 'SV-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
+            } while (Order::where('order_number', $orderNumber)->exists());
+
+            $order = Order::create([
+                'user_id' => $request->user()->id,
+                'order_number' => $orderNumber,
+                'subtotal' => $itemPrice,
+                'shipping_fee' => 0,
+                'installation_fee' => $installationFee,
+                'total' => $itemPrice + $installationFee,
+                'payment_method' => $paymentMethod,
+                'payment_status' => 'pending',
+                'order_status' => 'awaiting_payment',
+                'customer_name' => $validated['customer_name'],
+                'customer_phone' => $validated['customer_phone'],
+                'customer_email' => $validated['customer_email'],
+                'delivery_address' => $serviceAddress,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            $order->items()->create([
+                'purchasable_type' => get_class($item),
+                'purchasable_id' => $item->id,
+                'name' => $item->name,
+                'price' => $itemPrice,
+                'quantity' => 1,
+                'subtotal' => $itemPrice,
+            ]);
+
+            PendingInquiryCheckout::create([
+                'user_id' => $request->user()->id,
+                'order_id' => $order->id,
+                'payload' => $validated,
+                'status' => 'pending_payment',
+            ]);
+
+            return $order;
+        });
+
+        $lineItems = [[
+            'name' => $item->name,
+            'amount' => (int) round($itemPrice * 100),
+            'currency' => 'PHP',
+            'quantity' => 1,
+        ]];
+        if ($installationFee > 0) {
+            $lineItems[] = [
+                'name' => 'Installation fee — ' . $item->name,
+                'amount' => (int) round($installationFee * 100),
+                'currency' => 'PHP',
+                'quantity' => 1,
+            ];
+        }
+
+        try {
+            $response = Http::withBasicAuth($secretKey, '')
+                ->acceptJson()
+                ->asJson()
+                ->withHeaders(['Idempotency-Key' => 'secureview-installation-' . $order->order_number])
+                ->post(rtrim(config('services.paymongo.base_url'), '/') . '/v2/checkout_sessions', [
+                    'data' => [
+                        'attributes' => [
+                            'line_items' => $lineItems,
+                            'payment_method_types' => [$paymentMethod === 'maya' ? 'paymaya' : $paymentMethod],
+                            'billing' => [
+                                'name' => $order->customer_name,
+                                'email' => $order->customer_email,
+                                'phone' => $order->customer_phone,
+                            ],
+                            'description' => 'SecureView Installation Booking ' . $order->order_number,
+                            'reference_number' => $order->order_number,
+                            'metadata' => [
+                                'order_id' => (string) $order->id,
+                                'order_number' => $order->order_number,
+                                'booking_type' => 'installation_inquiry',
+                            ],
+                            'send_email_receipt' => true,
+                            'show_description' => true,
+                            'show_line_items' => true,
+                            'success_url' => route('checkout.payment.success', ['order' => $order->id], true),
+                            'cancel_url' => route('checkout.payment.cancel', ['order' => $order->id], true),
+                        ],
+                    ],
+                ]);
+
+            if (!$response->successful()) {
+                $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
+                return back()->withErrors([
+                    'payment' => 'Unable to start the installation payment. Please check PayMongo and try again.',
+                ])->withInput();
+            }
+
+            $session = $response->json('data');
+            $checkoutSessionId = $session['id'] ?? null;
+            $checkoutUrl = $session['attributes']['checkout_url'] ?? null;
+            if (!$checkoutSessionId || !$checkoutUrl) {
+                $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
+                return back()->withErrors([
+                    'payment' => 'The payment gateway returned an invalid checkout session. No inquiry has been submitted.',
+                ])->withInput();
+            }
+
+            $order->update(['paymongo_checkout_session_id' => $checkoutSessionId]);
+            return Inertia::location($checkoutUrl);
+        } catch (\Throwable $exception) {
+            report($exception);
+            $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
+            return back()->withErrors([
+                'payment' => 'Unable to connect to the payment gateway. No inquiry has been submitted; please try again.',
+            ])->withInput();
+        }
     }
 
     public function index(Request $request)
