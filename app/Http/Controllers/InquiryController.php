@@ -149,7 +149,7 @@ class InquiryController extends Controller
                 ];
             })
             ->filter()
-            ->values();
+            ->values() ?? collect();
 
         return Inertia::render('inquiry', [
             'unavailableDates' => $unavailableDates,
