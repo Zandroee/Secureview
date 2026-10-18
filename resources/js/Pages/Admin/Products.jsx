@@ -624,6 +624,11 @@ export default function AdminProducts({
                                                             <div className="small text-muted">
                                                                 Product #{product.id}
                                                             </div>
+                                                            <div className="small mt-1">
+                                                                Installation: {Number(product.installation_fee ?? 0) > 0
+                                                                    ? money(product.installation_fee)
+                                                                    : "Free"}
+                                                            </div>
                                                         </td>
 
                                                         <td className="text-capitalize">
