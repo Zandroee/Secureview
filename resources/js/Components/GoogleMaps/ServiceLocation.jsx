@@ -264,6 +264,8 @@ export default function ServiceLocationPicker({
                     onChangeRef.current?.({
                         service_latitude: String(roundedLat),
                         service_longitude: String(roundedLng),
+                        // A manually placed entrance pin takes precedence over the suggested place.
+                        google_place_id: "",
                     });
                 };
 
@@ -433,6 +435,10 @@ export default function ServiceLocationPicker({
                     Google Maps address search is not configured yet. You can still enter the service address below. Add <code>VITE_GOOGLE_MAPS_API_KEY</code> to your local environment to enable address search and pin selection.
                 </div>
             )}
+
+            <div className="small text-muted mt-2">
+                Your service address and pin are shared with SecureView administrators and technicians assigned to the job so they can plan and perform the service.
+            </div>
 
             {apiErrors.service_location && <div className="small text-danger mt-1">{apiErrors.service_location}</div>}
         </section>
