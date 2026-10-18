@@ -111,7 +111,7 @@ export default function Services() {
                                         </p>
 
                                         <Link
-                                            href="/inquiry"
+                                            href={"/inquiry?service_type=" + encodeURIComponent(service.title)}
                                             className="btn btn-outline-primary btn-sm fw-bold"
                                         >
                                             BOOK SERVICE
