@@ -98,6 +98,10 @@ function moveMarkerAndMap(map, marker, position, zoom = 17) {
     map.setView([position.lat, position.lng], zoom);
 }
 
+function makeSearchQuery(streetAddress, city) {
+    return [streetAddress, city, "Philippines"].filter(Boolean).join(", ").trim();
+}
+
 export default function ServiceLocationPicker({
     streetAddress = "", city = "", latitude = null, longitude = null, placeId = "", apiErrors = {}, onChange,
 }) {
@@ -106,26 +110,31 @@ export default function ServiceLocationPicker({
     const markerRef = useRef(null);
     const onChangeRef = useRef(onChange);
     const addressRef = useRef({ streetAddress, city });
+    const searchedAddressRef = useRef("");
+    const pendingSearchPositionRef = useRef(null);
     const [mapReady, setMapReady] = useState(false);
     const [mapError, setMapError] = useState("");
     const [searching, setSearching] = useState(false);
     const [pin, setPin] = useState(null);
     const [locationMessage, setLocationMessage] = useState(
-        "Search your address, then click the map or drag the pin to the exact service entrance."
+        "Enter an address above, then find it on the map. You can also click the map to place a pin."
     );
 
     onChangeRef.current = onChange;
     addressRef.current = { streetAddress, city };
+    const hasSearchAddress = Boolean(streetAddress.trim() && city.trim());
 
     useEffect(() => {
         let cancelled = false;
 
         loadLeaflet().then((L) => {
             if (cancelled || !mapHostRef.current || mapInstanceRef.current) return;
+
             const savedPosition = coordinatesFromProps(latitude, longitude);
+            const initialPosition = savedPosition || pendingSearchPositionRef.current;
             const map = L.map(mapHostRef.current, { scrollWheelZoom: false }).setView(
-                savedPosition ? [savedPosition.lat, savedPosition.lng] : DEFAULT_CENTER,
-                savedPosition ? 17 : 11
+                initialPosition ? [initialPosition.lat, initialPosition.lng] : DEFAULT_CENTER,
+                initialPosition ? 17 : 11
             );
 
             L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -134,15 +143,17 @@ export default function ServiceLocationPicker({
             }).addTo(map);
 
             const marker = L.marker(
-                savedPosition ? [savedPosition.lat, savedPosition.lng] : DEFAULT_CENTER,
+                initialPosition ? [initialPosition.lat, initialPosition.lng] : DEFAULT_CENTER,
                 { draggable: true, title: "Service entrance" }
             );
-            if (savedPosition) marker.addTo(map);
+
+            if (initialPosition) marker.addTo(map);
 
             marker.on("dragend", () => {
                 const position = positionFromLeaflet(marker.getLatLng());
+                pendingSearchPositionRef.current = null;
                 setPin({ ...position, manuallyPinned: true });
-                setLocationMessage("Exact service entrance saved. You can drag the pin or click the map to adjust it.");
+                setLocationMessage("Exact entrance saved. These coordinates will be included with your inquiry.");
                 onChangeRef.current?.({
                     service_latitude: String(position.lat),
                     service_longitude: String(position.lng),
@@ -152,9 +163,10 @@ export default function ServiceLocationPicker({
 
             map.on("click", (event) => {
                 const position = positionFromLeaflet(event.latlng);
+                pendingSearchPositionRef.current = null;
                 showMarker(map, marker, position);
                 setPin({ ...position, manuallyPinned: true });
-                setLocationMessage("Exact service entrance saved. You can drag the pin or click the map to adjust it.");
+                setLocationMessage("Exact entrance saved. These coordinates will be included with your inquiry.");
                 onChangeRef.current?.({
                     service_latitude: String(position.lat),
                     service_longitude: String(position.lng),
@@ -164,14 +176,22 @@ export default function ServiceLocationPicker({
 
             mapInstanceRef.current = map;
             markerRef.current = marker;
+
             if (savedPosition) {
                 setPin({ ...savedPosition, manuallyPinned: true });
-                setLocationMessage("Saved service entrance. Drag the pin or click the map to refine it.");
+                setLocationMessage("Saved entrance pin. Drag it or click the map to refine the location.");
+            } else if (pendingSearchPositionRef.current) {
+                setPin({ ...pendingSearchPositionRef.current, manuallyPinned: false });
+                setLocationMessage("Address found approximately. Drag the marker or click the exact entrance to save its coordinates.");
             }
+
             setMapReady(true);
             window.setTimeout(() => map.invalidateSize(), 0);
         }).catch(() => {
-            if (!cancelled) setMapError("The map could not load. You can still enter the full address manually and use the map link below.");
+            if (!cancelled) {
+                setMapError("The map could not load. You can still submit the full address and open it in Google Maps.");
+                setLocationMessage("The map is unavailable. Your typed address will still be submitted.");
+            }
         });
 
         return () => {
@@ -185,32 +205,46 @@ export default function ServiceLocationPicker({
     useEffect(() => {
         if (!mapReady || !mapInstanceRef.current || !markerRef.current) return;
         const savedPosition = coordinatesFromProps(latitude, longitude);
+
         if (savedPosition) {
+            pendingSearchPositionRef.current = null;
             moveMarkerAndMap(mapInstanceRef.current, markerRef.current, savedPosition);
             setPin({ ...savedPosition, manuallyPinned: true });
-            setLocationMessage("Saved service entrance. Drag the pin or click the map to refine it.");
-        } else if (!placeId) {
+            setLocationMessage("Saved entrance pin. Drag it or click the map to refine the location.");
+        } else if (!placeId && !pendingSearchPositionRef.current) {
             markerRef.current.remove();
             setPin(null);
         }
     }, [mapReady, latitude, longitude, placeId]);
 
+    useEffect(() => {
+        const latestQuery = makeSearchQuery(streetAddress, city);
+        if (!searchedAddressRef.current || latestQuery === searchedAddressRef.current) return;
+
+        searchedAddressRef.current = "";
+        pendingSearchPositionRef.current = null;
+        markerRef.current?.remove();
+        setPin(null);
+        setLocationMessage("Address changed. Search again to update the map, or click the map to place the pin manually.");
+    }, [streetAddress, city]);
+
     const searchAddress = async () => {
         const { streetAddress: street, city: municipality } = addressRef.current;
-        const query = [street, municipality, "Philippines"].filter(Boolean).join(", ");
-        if (!street.trim() && !municipality.trim()) {
-            setLocationMessage("Enter the full service address and city below before searching the map.");
+        const query = makeSearchQuery(street, municipality);
+
+        if (!street.trim() || !municipality.trim()) {
+            setLocationMessage("Enter both the street address and city above before searching.");
             return;
         }
 
-        const waitMs = Math.max(0, 1100 - (Date.now() - lastGeocodeRequestAt));
-        if (waitMs > 0) {
+        if (Date.now() - lastGeocodeRequestAt < 1100) {
             setLocationMessage("Please wait a moment before searching again.");
             return;
         }
 
         setSearching(true);
         setMapError("");
+
         try {
             lastGeocodeRequestAt = Date.now();
             const response = await fetch(
@@ -221,19 +255,25 @@ export default function ServiceLocationPicker({
             if (!response.ok) throw new Error("Address search unavailable");
             const results = await response.json();
             const result = results[0];
+
             if (!result) {
-                setLocationMessage("No matching address was found. Try adding the barangay or a nearby landmark, or place the pin manually.");
+                setLocationMessage("No match found. Try adding the barangay or a nearby landmark, or place the pin manually.");
                 return;
             }
 
             const position = { lat: Number(result.lat), lng: Number(result.lon) };
+            searchedAddressRef.current = query;
+            pendingSearchPositionRef.current = position;
+
             if (mapInstanceRef.current && markerRef.current) {
                 moveMarkerAndMap(mapInstanceRef.current, markerRef.current, position, 17);
             }
+
             setPin({ ...position, manuallyPinned: false });
-            setLocationMessage("Address found. Confirm the pin is at the service entrance; click the map or drag the pin to save exact coordinates.");
+            setLocationMessage("Address found approximately. Drag the marker or click the exact entrance to save its coordinates.");
         } catch {
-            setMapError("Address search is temporarily unavailable. You can still move the map and place the pin manually.");
+            setMapError("Address search is temporarily unavailable. You can still click the map or drag the pin manually.");
+            setLocationMessage("Address search is unavailable. You can still place the pin manually.");
         } finally {
             setSearching(false);
         }
@@ -243,33 +283,84 @@ export default function ServiceLocationPicker({
 
     return (
         <section className="mb-3">
-            <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
-                <label className="form-label small fw-semibold mb-0">Locate service address on the map</label>
-                <span className="badge rounded-pill text-bg-success">No API key needed</span>
+            <div className="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                <div>
+                    <div className="fw-bold small">Service location map</div>
+                    <div className="small text-muted mt-1">
+                        Find the address, then refine the pin to the actual entrance.
+                    </div>
+                </div>
+                <span className="badge rounded-pill bg-light text-secondary border fw-semibold px-2 py-2">
+                    <i className="bi bi-map me-1" />OpenStreetMap
+                </span>
             </div>
-            <div className="d-flex flex-wrap gap-2 mb-2">
-                <button type="button" className="btn btn-outline-primary btn-sm" onClick={searchAddress} disabled={searching}>
-                    <i className="bi bi-search me-1" />{searching ? "Searching..." : "Find address on map"}
+
+            <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <button
+                    type="button"
+                    className="btn btn-primary btn-sm px-3"
+                    onClick={searchAddress}
+                    disabled={searching || !hasSearchAddress}
+                >
+                    <i className="bi bi-search me-1" />
+                    {searching ? "Finding address..." : "Find address on map"}
                 </button>
-                <a href={openMapsUrl} target="_blank" rel="noreferrer" className="btn btn-link btn-sm text-decoration-none p-1">
+                <a
+                    href={openMapsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-outline-secondary btn-sm"
+                >
                     <i className="bi bi-box-arrow-up-right me-1" />Open Google Maps
                 </a>
+                {!hasSearchAddress && (
+                    <span className="small text-muted">Enter the street address and city above first.</span>
+                )}
             </div>
+
             {mapError && <div className="alert alert-warning small py-2 mb-2">{mapError}</div>}
-            <div ref={mapHostRef} className="border rounded-3 overflow-hidden" style={{ width: "100%", height: 280, background: "#f1f4f8" }} />
-            <div className="small text-muted mt-2">{locationMessage}</div>
-            {pin && (
-                <div className="small mt-1">
-                    {pin.manuallyPinned ? (
-                        <span className="text-success"><i className="bi bi-geo-alt-fill me-1" />Exact entrance pin saved: {pin.lat.toFixed(6)}, {pin.lng.toFixed(6)}</span>
-                    ) : (
-                        <span className="text-muted"><i className="bi bi-geo-alt me-1" />Approximate address found. Place the pin precisely to save coordinates.</span>
+
+            <div className="rounded-3 overflow-hidden border bg-light" style={{ boxShadow: "0 2px 8px rgba(20, 34, 60, 0.06)" }}>
+                <div
+                    ref={mapHostRef}
+                    className="service-location-leaflet-map"
+                    style={{ width: "100%", height: 280, background: "#eef2f6" }}
+                    aria-label="Interactive service location map"
+                />
+            </div>
+
+            <div className={"d-flex align-items-start gap-2 rounded-3 border p-2 mt-2 " + (
+                pin?.manuallyPinned
+                    ? "bg-success-subtle border-success-subtle"
+                    : pin
+                        ? "bg-primary-subtle border-primary-subtle"
+                        : "bg-light"
+            )}>
+                <i className={"bi mt-1 " + (
+                    pin?.manuallyPinned
+                        ? "bi-check-circle-fill text-success"
+                        : pin
+                            ? "bi-info-circle-fill text-primary"
+                            : "bi-cursor-fill text-secondary"
+                )} />
+                <div className="small">
+                    <div className="fw-semibold">
+                        {pin?.manuallyPinned ? "Exact entrance pin saved" : pin ? "Approximate address located" : mapReady ? "Pin your service entrance" : "Loading map"}
+                    </div>
+                    <div>{locationMessage}</div>
+                    {pin?.manuallyPinned && (
+                        <div className="text-muted mt-1">
+                            Coordinates: {pin.lat.toFixed(6)}, {pin.lng.toFixed(6)}
+                        </div>
                     )}
                 </div>
-            )}
-            <div className="small text-muted mt-2">
-                Map data © OpenStreetMap contributors. Your service address and saved pin are shared with SecureView administrators and technicians assigned to the job.
             </div>
+
+            <div className="small text-muted mt-2">
+                <i className="bi bi-shield-check me-1" />
+                A search result is approximate. Your pin is saved only after you click the map or drag the marker. Map data © OpenStreetMap contributors.
+            </div>
+
             {apiErrors.service_location && <div className="small text-danger mt-1">{apiErrors.service_location}</div>}
         </section>
     );
@@ -291,6 +382,7 @@ export function ServiceLocationMap({
     useEffect(() => {
         if (!position || !mapHostRef.current) return undefined;
         let cancelled = false;
+
         loadLeaflet().then((L) => {
             if (cancelled || !mapHostRef.current) return;
             const map = L.map(mapHostRef.current, { scrollWheelZoom: false }).setView([position.lat, position.lng], 16);
