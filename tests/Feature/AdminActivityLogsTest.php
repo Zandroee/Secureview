@@ -176,8 +176,8 @@ class AdminActivityLogsTest extends TestCase
             ->where('subject_id', $inquiry->id)
             ->firstOrFail();
 
-        $this->assertSame(['technician_id' => null], $log->old_values);
-        $this->assertSame(['technician_id' => $technician->id], $log->new_values);
+        $this->assertSame(['technician_ids' => []], $log->old_values);
+        $this->assertSame(['technician_ids' => [$technician->id]], $log->new_values);
     }
 
     private function createInquiry(User $customer): Inquiry
