@@ -183,9 +183,14 @@ export default function ProductDetails({ product, reviews = [] }) {
                                 ))}
                             </ul>
 
-                            <div className="d-flex justify-content-start gap-3 mb-2" style={{ fontSize: "0.8rem" }}>
+                            <div className="d-flex flex-wrap justify-content-start gap-3 mb-2" style={{ fontSize: "0.8rem" }}>
                                 <strong>Warranty: {product.warranty}</strong>
                                 <strong>Category: {product.category}</strong>
+                                <strong>
+                                    Installation Fee: {Number(product.installation_fee ?? 0) > 0
+                                        ? "₱" + Number(product.installation_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                        : "Free"}
+                                </strong>
                             </div>
 
                             <div className="d-flex align-items-center gap-3 mb-2">
