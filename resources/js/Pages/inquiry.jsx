@@ -370,21 +370,6 @@ export default function Inquiry({ customer, item, unavailableDates = [], unavail
                                             CUSTOMER'S ADDRESS
                                         </div>
 
-                                        <ServiceLocationPicker
-                                            streetAddress={data.street_address}
-                                            city={data.city}
-                                            latitude={data.service_latitude}
-                                            longitude={data.service_longitude}
-                                            placeId={data.google_place_id}
-                                            apiErrors={errors}
-                                            onChange={(changes) =>
-                                                setData((current) => ({
-                                                    ...current,
-                                                    ...changes,
-                                                }))
-                                            }
-                                        />
-
                                         <div className="row g-2">
                                             <div className="col-12">
                                                 <label className="form-label small fw-semibold mb-1">
@@ -458,6 +443,21 @@ export default function Inquiry({ customer, item, unavailableDates = [], unavail
                                                 </div>
                                             </div>
                                         </div>
+                                        <ServiceLocationPicker
+                                        streetAddress={data.street_address}
+                                        city={data.city}
+                                        latitude={data.service_latitude}
+                                        longitude={data.service_longitude}
+                                        placeId={data.google_place_id}
+                                        apiErrors={errors}
+                                        onChange={(changes) =>
+                                        setData((current) => ({
+                                        ...current,
+                                        ...changes,
+                                        }))
+                                        }
+                                        />
+
                                     </div>
 
                                     <div className="mb-3">
