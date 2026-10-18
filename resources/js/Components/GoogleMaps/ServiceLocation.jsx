@@ -438,6 +438,11 @@ export default function ServiceLocationPicker({
             ) : (
                 <div className="alert alert-info small mb-2">
                     Google Maps address search is not configured yet. You can still enter the service address below. Add <code>VITE_GOOGLE_MAPS_API_KEY</code> to your local environment to enable address search and pin selection.
+                    <div className="mt-2">
+                        <a href={openMapsUrl} target="_blank" rel="noreferrer" className="text-decoration-none">
+                            <i className="bi bi-map me-1" />Check this address in Google Maps
+                        </a>
+                    </div>
                 </div>
             )}
 
