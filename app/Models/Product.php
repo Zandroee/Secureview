@@ -13,6 +13,7 @@ class Product extends Model
         'category',
         'warranty',
         'price',
+        'installation_fee',
         'stock_quantity',
         'badge',
         'image',
@@ -26,6 +27,7 @@ class Product extends Model
         'specifications' => 'array',
         'images' => 'array',
         'rating' => 'float',
+        'installation_fee' => 'float',
         'stock_quantity' => 'integer',
         'is_featured' => 'boolean',
     ];

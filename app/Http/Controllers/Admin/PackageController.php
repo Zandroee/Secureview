@@ -66,6 +66,7 @@ class PackageController extends Controller
                     'category' => $package->category,
                     'warranty' => $package->warranty,
                     'price' => (float) $package->price,
+                    'installation_fee' => $package->installation_fee === null ? null : (float) $package->installation_fee,
                     'badge' => $package->badge,
                     'image' => $package->image,
                     'images' => $this->currentImages($package),
@@ -339,8 +340,17 @@ class PackageController extends Controller
             ]);
         }
 
+        $diskName = config('filesystems.catalog_disk', 'public');
+        $disk = Storage::disk($diskName);
         $uploadedImages = collect($files)
-            ->map(fn ($file) => '/storage/' . $file->store($directory, 'public'))
+            ->map(function ($file) use ($directory, $diskName, $disk) {
+                $path = $file->storePublicly($directory, $diskName);
+
+                // Keep local development URLs compatible; use full object URLs in production.
+                return $diskName === 'public'
+                    ? '/storage/' . $path
+                    : $disk->url($path);
+            })
             ->all();
 
         return collect(array_merge($existingImages, $uploadedImages))
@@ -363,14 +373,28 @@ class PackageController extends Controller
 
     private function deleteStoredImage(?string $image): void
     {
-        if (!$image || preg_match('#^https?://#i', $image)) {
+        if (!$image) {
             return;
         }
 
-        $path = preg_replace('#^/?storage/#', '', $image);
+        $diskName = config('filesystems.catalog_disk', 'public');
+        $disk = Storage::disk($diskName);
+        $path = $image;
 
-        if ($path && Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->delete($path);
+        if (preg_match('#^https?://#i', $image)) {
+            // Never delete third-party images or images from another storage provider.
+            $diskBaseUrl = rtrim($disk->url('/'), '/') . '/';
+            if (!str_starts_with($image, $diskBaseUrl)) {
+                return;
+            }
+
+            $path = substr($image, strlen($diskBaseUrl));
+        } else {
+            $path = preg_replace('#^/?storage/#', '', $image);
+        }
+
+        if ($path && $disk->exists($path)) {
+            $disk->delete($path);
         }
     }
 
@@ -389,6 +413,7 @@ class PackageController extends Controller
             'category' => ['required', 'string', 'max:120'],
             'warranty' => ['required', 'string', 'max:120'],
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'installation_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'badge' => ['nullable', 'string', 'max:80'],
             'image' => ['nullable', 'string', 'max:2048'],
             'image_file' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
@@ -419,6 +444,7 @@ class PackageController extends Controller
             'category' => $validated['category'],
             'warranty' => $validated['warranty'],
             'price' => $validated['price'],
+            'installation_fee' => filled($validated['installation_fee'] ?? null) ? (float) $validated['installation_fee'] : null,
             'badge' => $validated['badge'] ?? null,
             'image' => $validated['image'] ?? null,
             'specifications' => $specifications ?: null,
@@ -458,6 +484,7 @@ class PackageController extends Controller
             'category' => $package->category,
             'warranty' => $package->warranty,
             'price' => (float) $package->price,
+            'installation_fee' => $package->installation_fee === null ? null : (float) $package->installation_fee,
             'badge' => $package->badge,
             'is_featured' => (bool) $package->is_featured,
             'items_count' => $package->packageItems()->count(),

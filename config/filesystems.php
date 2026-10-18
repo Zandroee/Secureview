@@ -15,6 +15,9 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
+    // Catalog uploads must use persistent object storage on serverless deployments.
+    'catalog_disk' => env('CATALOG_STORAGE_DISK', 'public'),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks

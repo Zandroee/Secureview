@@ -4,6 +4,7 @@ import Sidebar from "../../Components/Admin/Sidebar";
 import { Link, router } from "@inertiajs/react";
 import AdminPagination from "../../Components/Admin/AdminPagination";
 import { useState } from "react";
+import { googleMapsSearchUrl } from "../../Components/GoogleMaps/ServiceLocation";
 
 function urgencyClass(urgency) {
     if (urgency === "emergency") {
@@ -646,9 +647,31 @@ export default function AdminSchedules({
                                                             }
                                                         </div>
 
-                                                        <div className="small text-muted">
-                                                            {schedule.city}
+                                                        <div className="small text-muted text-truncate" title={schedule.street_address}>
+                                                            {schedule.street_address || schedule.city || "Location not provided"}
                                                         </div>
+                                                        {schedule.address_details && (
+                                                            <div className="small text-muted text-truncate" title={schedule.address_details}>
+                                                                {schedule.address_details}
+                                                            </div>
+                                                        )}
+                                                        {(schedule.google_place_id || schedule.service_latitude !== null && schedule.service_latitude !== undefined || schedule.street_address || schedule.city) && (
+                                                            <a
+                                                                href={googleMapsSearchUrl({
+                                                                    latitude: schedule.service_latitude,
+                                                                    longitude: schedule.service_longitude,
+                                                                    placeId: schedule.google_place_id,
+                                                                    streetAddress: schedule.street_address,
+                                                                    city: schedule.city,
+                                                                    addressDetails: schedule.address_details,
+                                                                })}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="small text-decoration-none"
+                                                            >
+                                                                <i className="bi bi-map me-1" />View map
+                                                            </a>
+                                                        )}
                                                     </td>
 
                                                     <td>

@@ -13,6 +13,7 @@ class Order extends Model
         'order_number',
         'subtotal',
         'shipping_fee',
+        'installation_fee',
         'total',
         'payment_method',
         'paymongo_checkout_session_id',
@@ -31,6 +32,7 @@ class Order extends Model
     protected $casts = [
         'subtotal' => 'float',
         'shipping_fee' => 'float',
+        'installation_fee' => 'float',
         'total' => 'float',
         'paid_at' => 'datetime',
         'stock_deducted_at' => 'datetime',

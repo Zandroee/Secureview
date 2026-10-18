@@ -340,6 +340,7 @@ class ProductController extends Controller
             'category' => ['required', 'string', 'max:120'],
             'warranty' => ['required', 'string', 'max:120'],
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'installation_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'stock_quantity' => ['required', 'integer', 'min:0'],
             'stock_reason' => ['nullable', 'string', 'max:255'],
             'badge' => ['nullable', 'string', 'max:80'],
@@ -369,6 +370,7 @@ class ProductController extends Controller
             'category' => trim($validated['category']),
             'warranty' => trim($validated['warranty']),
             'price' => $validated['price'],
+            'installation_fee' => filled($validated['installation_fee'] ?? null) ? (float) $validated['installation_fee'] : null,
             'stock_quantity' => (int) $validated['stock_quantity'],
             'badge' => filled($validated['badge'] ?? null) ? trim($validated['badge']) : null,
             'image' => filled($validated['image'] ?? null) ? trim($validated['image']) : null,
@@ -398,8 +400,17 @@ class ProductController extends Controller
             ]);
         }
 
+        $diskName = config('filesystems.catalog_disk', 'public');
+        $disk = Storage::disk($diskName);
         $uploadedImages = collect($files)
-            ->map(fn ($file) => '/storage/' . $file->store($directory, 'public'))
+            ->map(function ($file) use ($directory, $diskName, $disk) {
+                $path = $file->storePublicly($directory, $diskName);
+
+                // Keep local development URLs compatible; use full object URLs in production.
+                return $diskName === 'public'
+                    ? '/storage/' . $path
+                    : $disk->url($path);
+            })
             ->all();
 
         return collect(array_merge($existingImages, $uploadedImages))
@@ -422,14 +433,28 @@ class ProductController extends Controller
 
     private function deleteStoredImage(?string $image): void
     {
-        if (!$image || preg_match('#^https?://#i', $image)) {
+        if (!$image) {
             return;
         }
 
-        $path = preg_replace('#^/?storage/#', '', $image);
+        $diskName = config('filesystems.catalog_disk', 'public');
+        $disk = Storage::disk($diskName);
+        $path = $image;
 
-        if ($path && Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->delete($path);
+        if (preg_match('#^https?://#i', $image)) {
+            // Never delete third-party images or images from another storage provider.
+            $diskBaseUrl = rtrim($disk->url('/'), '/') . '/';
+            if (!str_starts_with($image, $diskBaseUrl)) {
+                return;
+            }
+
+            $path = substr($image, strlen($diskBaseUrl));
+        } else {
+            $path = preg_replace('#^/?storage/#', '', $image);
+        }
+
+        if ($path && $disk->exists($path)) {
+            $disk->delete($path);
         }
     }
 
@@ -448,6 +473,7 @@ class ProductController extends Controller
             'category' => $product->category,
             'warranty' => $product->warranty,
             'price' => (float) $product->price,
+            'installation_fee' => $product->installation_fee === null ? null : (float) $product->installation_fee,
             'stock_quantity' => (int) $product->stock_quantity,
             'badge' => $product->badge,
             'is_featured' => (bool) $product->is_featured,

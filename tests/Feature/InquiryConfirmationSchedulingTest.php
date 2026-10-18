@@ -205,7 +205,7 @@ class InquiryConfirmationSchedulingTest extends TestCase
                 'customer_email' => $customer->email,
                 'street_address' => '123 Test Street',
                 'city' => 'Taguig',
-                'service_type' => 'Installation',
+                'service_type' => 'Maintenance',
                 'urgency' => 'normal',
                 'preferred_date' => $date,
                 'preferred_time' => self::MORNING_SLOT,

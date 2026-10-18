@@ -69,6 +69,11 @@ class ScheduleController extends Controller
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_time' => $inquiry->preferred_time,
                     'city' => $inquiry->city,
+                    'street_address' => $inquiry->street_address,
+                    'address_details' => $inquiry->address_details,
+                    'service_latitude' => $inquiry->service_latitude,
+                    'service_longitude' => $inquiry->service_longitude,
+                    'google_place_id' => $inquiry->google_place_id,
                     'status' => $inquiry->status,
                     'technician' => $inquiry->technicians->first()
                         ? [

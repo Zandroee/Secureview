@@ -281,7 +281,7 @@ class BookingDateAvailabilityTest extends TestCase
             'customer_email' => $email,
             'street_address' => '123 Test Street',
             'city' => 'Taguig',
-            'service_type' => 'Installation',
+            'service_type' => 'Maintenance',
             'urgency' => 'normal',
             'preferred_date' => $date,
             'preferred_time' => '08:00 AM - 11:00 AM',

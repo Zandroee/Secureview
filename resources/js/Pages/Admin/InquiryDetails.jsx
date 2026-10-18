@@ -3,6 +3,7 @@ import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import ConfirmInquiryModal from "../../Components/Admin/ConfirmInquiryModal";
 import ManageTechnicianTeamModal from "../../Components/Admin/ManageTechnicianTeamModal";
+import { ServiceLocationMap } from "../../Components/GoogleMaps/ServiceLocation";
 import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
@@ -173,14 +174,31 @@ export default function AdminInquiryDetails({
 
                                         <div className="col-12">
                                             <div className="small text-muted">
-                                                ADDRESS
+                                                SERVICE ADDRESS
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.street_address},{" "}
-                                                {inquiry.city}
+                                                {inquiry.street_address}, {inquiry.city}
                                             </div>
+                                            {inquiry.address_details && (
+                                                <div className="small text-muted mt-1">
+                                                    <span className="fw-semibold">House / Unit / Landmark:</span> {inquiry.address_details}
+                                                </div>
+                                            )}
                                         </div>
+
+                                        {(inquiry.street_address || inquiry.city || inquiry.google_place_id || inquiry.service_latitude !== null && inquiry.service_latitude !== undefined) && (
+                                            <div className="col-12">
+                                                <ServiceLocationMap
+                                                    latitude={inquiry.service_latitude}
+                                                    longitude={inquiry.service_longitude}
+                                                    placeId={inquiry.google_place_id}
+                                                    streetAddress={inquiry.street_address}
+                                                    city={inquiry.city}
+                                                    addressDetails={inquiry.address_details}
+                                                />
+                                            </div>
+                                        )}
                                     </div>
 
                                     {inquiry.notes && (

@@ -146,7 +146,7 @@ class AdminActivityLogsTest extends TestCase
         $inquiry = $this->createInquiry($customer);
 
         $this->actingAs($admin)
-            ->patch(route('admin.inquiries.status', $inquiry), ['status' => 'confirmed'])
+            ->patch(route('admin.inquiries.status', $inquiry), ['status' => 'cancelled'])
             ->assertRedirect();
 
         $log = AdminActivityLog::query()
@@ -155,7 +155,7 @@ class AdminActivityLogsTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame(['status' => 'pending'], $log->old_values);
-        $this->assertSame(['status' => 'confirmed'], $log->new_values);
+        $this->assertSame(['status' => 'cancelled'], $log->new_values);
     }
 
     public function test_technician_assignment_is_recorded(): void
@@ -172,12 +172,12 @@ class AdminActivityLogsTest extends TestCase
             ->assertRedirect();
 
         $log = AdminActivityLog::query()
-            ->where('action', 'inquiry_technician_assigned')
+            ->where('action', 'inquiry_technician_team_updated')
             ->where('subject_id', $inquiry->id)
             ->firstOrFail();
 
-        $this->assertSame(['technician_id' => null], $log->old_values);
-        $this->assertSame(['technician_id' => $technician->id], $log->new_values);
+        $this->assertSame(['technician_ids' => []], $log->old_values);
+        $this->assertSame(['technician_ids' => [$technician->id]], $log->new_values);
     }
 
     private function createInquiry(User $customer): Inquiry

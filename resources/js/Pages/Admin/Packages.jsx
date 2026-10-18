@@ -11,6 +11,7 @@ function emptyPackage() {
         category: "",
         warranty: "1 year",
         price: "",
+        installation_fee: "",
         badge: "",
         image: "",
         gallery_managed: true,
@@ -316,6 +317,7 @@ export default function AdminPackages({
             category: item.category ?? "",
             warranty: item.warranty ?? "",
             price: String(item.price ?? ""),
+            installation_fee: item.installation_fee == null ? "" : String(item.installation_fee),
             badge: item.badge ?? "",
             image: item.image ?? "",
             gallery_managed: true,
@@ -619,7 +621,12 @@ export default function AdminPackages({
                                                         </div>
                                                     </td>
 
-                                                    <td className="fw-semibold text-nowrap">{money(item.price)}</td>
+                                                    <td className="fw-semibold text-nowrap">
+                                                        {money(item.price)}
+                                                        <div className="small text-muted fw-normal mt-1">
+                                                            Installation: {Number(item.installation_fee ?? 0) > 0 ? money(item.installation_fee) : "Free"}
+                                                        </div>
+                                                    </td>
 
                                                     <td style={{ minWidth: "200px" }}>
                                                         {item.items?.length ? (
@@ -791,6 +798,24 @@ export default function AdminPackages({
                                                 Selected product total: {money(componentSubtotal(data.items, products))}. Changes to components automatically recalculate this value.
                                             </div>
                                             <ErrorText message={errors.price} />
+                                        </div>
+
+                                        <div className="col-md-4">
+                                            <label className="form-label fw-semibold">
+                                                INSTALLATION FEE (₱) <span className="text-muted fw-normal">(OPTIONAL)</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="99999999.99"
+                                                step="0.01"
+                                                className={"form-control " + (errors.installation_fee ? "is-invalid" : "")}
+                                                value={data.installation_fee}
+                                                onChange={(event) => setData("installation_fee", event.target.value)}
+                                                placeholder="Leave blank for free installation"
+                                            />
+                                            <div className="form-text">Blank or ₱0 means installation is free.</div>
+                                            <ErrorText message={errors.installation_fee} />
                                         </div>
 
                                         <div className="col-md-4">

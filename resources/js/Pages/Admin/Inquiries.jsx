@@ -5,6 +5,7 @@ import { Link, router } from "@inertiajs/react";
 import AdminPagination from "../../Components/Admin/AdminPagination";
 import ConfirmInquiryModal from "../../Components/Admin/ConfirmInquiryModal";
 import ManageTechnicianTeamModal from "../../Components/Admin/ManageTechnicianTeamModal";
+import { googleMapsSearchUrl } from "../../Components/GoogleMaps/ServiceLocation";
 import { useState } from "react";
 
 function urgencyClass(urgency) {
@@ -324,6 +325,26 @@ export default function AdminInquiries({
                                                                 inquiry.customer_email
                                                             }
                                                         </div>
+                                                        <div className="small text-muted mt-1 text-truncate" title={inquiry.street_address}>
+                                                            {inquiry.street_address || inquiry.city || "Location not provided"}
+                                                        </div>
+                                                        {(inquiry.google_place_id || inquiry.service_latitude !== null && inquiry.service_latitude !== undefined || inquiry.street_address || inquiry.city) && (
+                                                            <a
+                                                                href={googleMapsSearchUrl({
+                                                                    latitude: inquiry.service_latitude,
+                                                                    longitude: inquiry.service_longitude,
+                                                                    placeId: inquiry.google_place_id,
+                                                                    streetAddress: inquiry.street_address,
+                                                                    city: inquiry.city,
+                                                                    addressDetails: inquiry.address_details,
+                                                                })}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="small text-decoration-none"
+                                                            >
+                                                                <i className="bi bi-map me-1" />Open map
+                                                            </a>
+                                                        )}
                                                     </td>
 
                                                     <td>

@@ -1,0 +1,11 @@
+# Vercel serverless build inputs; the PHP builder installs Composer dependencies.
+/vendor
+/node_modules
+/.git
+/.env
+/.env.*
+/tests
+/storage/logs
+/storage/framework/cache
+/storage/framework/sessions
+/storage/framework/views
