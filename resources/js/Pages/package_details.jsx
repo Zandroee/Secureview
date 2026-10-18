@@ -183,9 +183,14 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
                                 ))}
                             </ul>
 
-                            <div className="d-flex justify-content-start gap-3 mb-2" style={{ fontSize: "0.8rem" }}>
+                            <div className="d-flex flex-wrap justify-content-start gap-3 mb-2" style={{ fontSize: "0.8rem" }}>
                                 <strong>Warranty: {packageData.warranty}</strong>
                                 <strong>Category: {packageData.category}</strong>
+                                <strong>
+                                    Installation Fee: {Number(packageData.installation_fee ?? 0) > 0
+                                        ? "₱" + Number(packageData.installation_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                        : "Free"}
+                                </strong>
                             </div>
 
                             <div className="d-flex align-items-center gap-3 mb-2">
