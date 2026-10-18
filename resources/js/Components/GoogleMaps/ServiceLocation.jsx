@@ -384,6 +384,8 @@ export default function ServiceLocationPicker({
         } else if (!placeId && record) {
             hideMarker(record);
             setPin(null);
+            map.setCenter({ lat: 14.5995, lng: 120.9842 });
+            map.setZoom(11);
             setLocationMessage("Search for an address, then click the map or drag the pin to the exact service entrance.");
         }
     }, [mapsReady, latitude, longitude, placeId]);
