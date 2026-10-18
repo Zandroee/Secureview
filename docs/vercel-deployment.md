@@ -5,6 +5,7 @@ This repository is a Laravel 12 + Inertia React application. Vercel needs the co
 ## What the repository configures
 
 - `api/index.php` forwards requests into Laravel's public front controller.
+- `api/assets.php` safely serves Vite's generated `/build/*` files from within the PHP function bundle, because the PHP runtime's build hook does not automatically publish those generated files as browser-accessible static assets.
 - `vercel.json` uses `vercel-php@0.9.0` (PHP 8.5) and the static builder for generated assets under `public/`.
 - The Composer `vercel` build hook runs `npm ci` and `npm run build` so the Vite manifest/assets are generated during deployment.
 - Laravel's logs go to stderr; compiled/cache outputs that may be written by Laravel during requests use `/tmp`; queue processing uses the synchronous driver because Vercel does not run a persistent queue worker.
@@ -48,7 +49,7 @@ The product/package admin screens now use the configured catalog storage disk. T
 ## Verify deployment
 
 1. Verify the Vercel project root is the repository root, not a subfolder. Let the repository's `vercel.json` control routes/builds; remove dashboard overrides that force a static-only output directory.
-2. Confirm Vercel can install Composer and npm dependencies. Check deployment build logs if the Vercel status still fails.
+2. Confirm Vercel can install Composer and npm dependencies. The `npm run build` step should produce `public/build/manifest.json`. After deployment, verify a hashed file under `/build/assets/` returns HTTP 200 with the expected CSS/JavaScript content type. Check deployment build logs if the Vercel status still fails.
 3. Add the environment variables above and run migrations against the external database.
 4. Verify login/session persistence, product/package images, inquiry address maps, cart item selection/removal, and admin screens.
 5. Test one paid installation and one canceled/unpaid checkout with PayMongo test mode. Confirm the webhook creates exactly one inquiry and does not clear unrelated cart items.
