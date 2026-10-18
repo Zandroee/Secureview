@@ -56,7 +56,7 @@ const formatDateLabel = (value) => {
     });
 };
 
-export default function Inquiry({ customer, item, unavailableDates = [], unavailableTimeSlots = {} }) {
+export default function Inquiry({ customer, item, catalogItems = [], initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {} }) {
     const today = new Date();
     const [showDateModal, setShowDateModal] = useState(false);
 
@@ -79,12 +79,24 @@ export default function Inquiry({ customer, item, unavailableDates = [], unavail
         service_latitude: "",
         service_longitude: "",
         google_place_id: "",
-        service_type: "Installation",
+        service_type: initialServiceType,
+        payment_method: "gcash",
         urgency: "normal",
         preferred_date: "",
         preferred_time: "",
         notes: "",
     });
+
+    const selectedCatalogItem =
+        catalogItems.find((candidate) =>
+            candidate.type === data.item_type && String(candidate.id) === String(data.item_id)
+        ) || (
+            item && item.type === data.item_type && String(item.id) === String(data.item_id)
+                ? item
+                : null
+        );
+    const installationFee = Number(selectedCatalogItem?.installation_fee ?? 0);
+    const selectedItemTotal = Number(selectedCatalogItem?.price ?? 0) + installationFee;
 
     const monthLabel = calendarMonth.toLocaleDateString("en-US", {
         month: "long",
@@ -258,11 +270,8 @@ export default function Inquiry({ customer, item, unavailableDates = [], unavail
                                     </div>
                                 </div>
 
-                                {errors.inquiry && (
-                                    <div className="alert alert-danger small">
-                                        {errors.inquiry}
-                                    </div>
-                                )}
+                                {errors.inquiry && <div className="alert alert-danger small">{errors.inquiry}</div>}
+                                {errors.payment && <div className="alert alert-danger small">{errors.payment}</div>}
 
                                 <form onSubmit={submit}>
                                     <div className="mb-3">
@@ -363,6 +372,102 @@ export default function Inquiry({ customer, item, unavailableDates = [], unavail
                                                 )}
                                             </div>
                                         </div>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <div style={sectionTitleStyle}>PRODUCT / PACKAGE</div>
+                                        <div className="small text-muted mb-2">
+                                            {data.service_type === "Installation"
+                                                ? "Select the product or package to be installed. Payment is required before an installation inquiry is submitted."
+                                                : "Optional: attach a product or package to this service inquiry."}
+                                        </div>
+
+                                        <select
+                                            className={"form-select " + (errors.item_id ? "is-invalid" : "")}
+                                            style={fieldStyle}
+                                            value={data.item_type && data.item_id ? data.item_type + ":" + data.item_id : ""}
+                                            onChange={(event) => {
+                                                const value = event.target.value;
+                                                if (!value) {
+                                                    setData((current) => ({ ...current, item_type: "", item_id: "" }));
+                                                    return;
+                                                }
+                                                const [type, id] = value.split(":");
+                                                setData((current) => ({ ...current, item_type: type, item_id: Number(id) }));
+                                            }}
+                                        >
+                                            <option value="">Choose a product or package</option>
+                                            {catalogItems.map((catalogItem) => (
+                                                <option
+                                                    key={catalogItem.type + ":" + catalogItem.id}
+                                                    value={catalogItem.type + ":" + catalogItem.id}
+                                                    disabled={Number(catalogItem.available_stock ?? 0) <= 0}
+                                                >
+                                                    {catalogItem.type === "package" ? "Package" : "Product"}: {catalogItem.name}
+                                                    {" — ₱"}{Number(catalogItem.price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    {Number(catalogItem.available_stock ?? 0) <= 0 ? " — Out of stock" : ""}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {errors.item_id && <div className="small text-danger mt-1">{errors.item_id}</div>}
+
+                                        {selectedCatalogItem ? (
+                                            <div className="border rounded-3 p-3 mt-2" style={{ backgroundColor: "#fbfcff" }}>
+                                                <div className="d-flex align-items-start gap-3">
+                                                    {selectedCatalogItem.image ? (
+                                                        <img
+                                                            src={selectedCatalogItem.image}
+                                                            alt={selectedCatalogItem.name}
+                                                            className="rounded-2 flex-shrink-0"
+                                                            style={{ width: 68, height: 68, objectFit: "cover" }}
+                                                        />
+                                                    ) : (
+                                                        <div className="rounded-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 68, height: 68 }}>
+                                                            <i className="bi bi-camera-video fs-4" />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex-grow-1 min-w-0">
+                                                        <div className="small text-primary fw-bold text-uppercase">
+                                                            {selectedCatalogItem.type} {selectedCatalogItem.category ? "· " + selectedCatalogItem.category : ""}
+                                                        </div>
+                                                        <div className="fw-bold">{selectedCatalogItem.name}</div>
+                                                        <div className="small text-muted mt-1">
+                                                            Item price: ₱{Number(selectedCatalogItem.price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </div>
+                                                        <div className="small text-muted">
+                                                            Installation: {installationFee > 0
+                                                                ? "₱" + installationFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                                                : "Free"}
+                                                        </div>
+                                                        {data.service_type === "Installation" && (
+                                                            <div className="small fw-bold text-primary mt-1">
+                                                                Total due: ₱{selectedItemTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm btn-outline-danger flex-shrink-0"
+                                                        onClick={() => setData((current) => ({ ...current, item_type: "", item_id: "" }))}
+                                                        aria-label="Remove selected product or package"
+                                                        title="Remove selected item"
+                                                    >
+                                                        <i className="bi bi-x-lg me-1" />Remove
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="small text-muted border rounded-3 p-3 mt-2">
+                                                No product or package selected.
+                                            </div>
+                                        )}
+
+                                        {data.service_type === "Installation" && !selectedCatalogItem && (
+                                            <div className="alert alert-warning small mt-2 mb-0">
+                                                <i className="bi bi-exclamation-circle me-1" />
+                                                Installation bookings require a product or package. Select one above before continuing to payment.
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="mb-3">
@@ -643,6 +748,26 @@ export default function Inquiry({ customer, item, unavailableDates = [], unavail
                                                 </div>
                                             )}
 
+                                            {data.service_type === "Installation" && (
+                                                <div className="col-12">
+                                                    <label className="form-label small fw-semibold mb-1">Payment Method *</label>
+                                                    <select
+                                                        className={"form-select " + (errors.payment_method ? "is-invalid" : "")}
+                                                        style={fieldStyle}
+                                                        value={data.payment_method}
+                                                        onChange={(event) => setData("payment_method", event.target.value)}
+                                                    >
+                                                        <option value="gcash">GCash</option>
+                                                        <option value="card">Credit / Debit Card</option>
+                                                        <option value="maya">Maya</option>
+                                                    </select>
+                                                    {errors.payment_method && <div className="invalid-feedback">{errors.payment_method}</div>}
+                                                    <div className="form-text">
+                                                        You will be redirected to PayMongo. SecureView creates the installation inquiry only after payment is confirmed.
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div className="col-12">
                                                 <label className="form-label small fw-semibold mb-1">
                                                     Additional Notes{" "}
@@ -685,11 +810,13 @@ export default function Inquiry({ customer, item, unavailableDates = [], unavail
                                     <button
                                         type="submit"
                                         className="btn btn-primary fw-bold w-100 py-2"
-                                        disabled={processing}
+                                        disabled={processing || (data.service_type === "Installation" && !selectedCatalogItem)}
                                     >
                                         {processing
-                                            ? "SUBMITTING..."
-                                            : "CONFIRM INQUIRY"}
+                                            ? "PROCESSING..."
+                                            : data.service_type === "Installation"
+                                                ? "CONTINUE TO PAYMENT"
+                                                : "CONFIRM INQUIRY"}
                                     </button>
                                 </form>
                             </div>
@@ -703,103 +830,60 @@ export default function Inquiry({ customer, item, unavailableDates = [], unavail
                                 }}
                             >
                                 <div className="d-flex justify-content-between align-items-center mb-3">
-                                    <h4
-                                        className="fw-bold mb-0"
-                                        style={{
-                                            fontFamily: "Outfit, sans-serif",
-                                            fontSize: "1.15rem",
-                                        }}
-                                    >
-                                        CART
-                                    </h4>
-
-                                    <span className="small text-muted">
-                                        {item ? "1 item" : "No selected item"}
-                                    </span>
+                                    <h4 className="fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif", fontSize: "1.15rem" }}>CART</h4>
+                                    <span className="small text-muted">{selectedCatalogItem ? "1 item selected" : "No selected item"}</span>
                                 </div>
 
-                                {item ? (
-                                    <div
-                                        className="border rounded-3 p-2 mb-3"
-                                        style={{
-                                            backgroundColor: "#fafafa",
-                                        }}
-                                    >
-                                        <div className="d-flex gap-2 align-items-center">
-                                            {item.image ? (
-                                                <img
-                                                    src={item.image}
-                                                    alt={item.name}
-                                                    className="rounded-2"
-                                                    style={{
-                                                        width: "62px",
-                                                        height: "62px",
-                                                        objectFit: "cover",
-                                                    }}
-                                                />
+                                {selectedCatalogItem ? (
+                                    <div className="border rounded-3 p-3 mb-3" style={{ backgroundColor: "#fafbfc" }}>
+                                        <div className="d-flex gap-3 align-items-start">
+                                            {selectedCatalogItem.image ? (
+                                                <img src={selectedCatalogItem.image} alt={selectedCatalogItem.name} className="rounded-2" style={{ width: 72, height: 72, objectFit: "cover" }} />
                                             ) : (
-                                                <div
-                                                    className="rounded-2 bg-secondary-subtle d-flex align-items-center justify-content-center"
-                                                    style={{
-                                                        width: "62px",
-                                                        height: "62px",
-                                                    }}
-                                                >
-                                                    <i className="bi bi-camera-video text-secondary"></i>
+                                                <div className="rounded-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style={{ width: 72, height: 72 }}>
+                                                    <i className="bi bi-camera-video fs-4" />
                                                 </div>
                                             )}
-
                                             <div className="flex-grow-1">
-                                                <div className="small text-primary text-uppercase fw-bold">
-                                                    {item.type}
+                                                <div className="small text-primary text-uppercase fw-bold">{selectedCatalogItem.type}</div>
+                                                <div className="fw-bold">{selectedCatalogItem.name}</div>
+                                                <div className="small text-muted mt-1">
+                                                    Item: ₱{Number(selectedCatalogItem.price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </div>
-
-                                                <div className="fw-bold">
-                                                    {item.name}
-                                                </div>
-
-                                                <div className="small text-muted">
-                                                    Inquiry Item
-                                                </div>
+                                                {data.service_type === "Installation" && (
+                                                    <>
+                                                        <div className="small text-muted">
+                                                            Installation: {installationFee > 0 ? "₱" + installationFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "Free"}
+                                                        </div>
+                                                        <div className="d-flex justify-content-between align-items-center border-top mt-2 pt-2">
+                                                            <span className="small fw-bold">Total due</span>
+                                                            <span className="fw-bold text-primary">₱{selectedItemTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
-
-                                            <button
-                                                type="button"
-                                                className="btn btn-primary btn-sm fw-bold"
-                                                onClick={() =>
-                                                    (window.location.href =
-                                                        item.type === "package"
-                                                            ? "/packages/" +
-                                                              item.id
-                                                            : "/products/" +
-                                                              item.id)
-                                                }
-                                            >
-                                                DETAILS
+                                        </div>
+                                        <div className="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                                            <a href={selectedCatalogItem.type === "package" ? "/packages/" + selectedCatalogItem.id : "/products/" + selectedCatalogItem.id} className="small text-decoration-none">View details</a>
+                                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setData((current) => ({ ...current, item_type: "", item_id: "" }))}>
+                                                <i className="bi bi-x-circle me-1" />Cancel item
                                             </button>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div
-                                        className="rounded-3 p-3 mb-3"
-                                        style={{
-                                            backgroundColor: "#f6f6f7",
-                                        }}
-                                    >
-                                        <div className="fw-bold small">
-                                            General Service Inquiry
-                                        </div>
-
+                                    <div className="rounded-3 p-3 mb-3" style={{ backgroundColor: "#f6f6f7" }}>
+                                        <div className="fw-bold small">{data.service_type === "Installation" ? "Product/package required" : "General Service Inquiry"}</div>
                                         <div className="small text-muted mt-1">
-                                            No specific product or package was
-                                            selected.
+                                            {data.service_type === "Installation"
+                                                ? "Choose a product or package to calculate the total and continue to payment."
+                                                : "No product or package has been attached to this service."}
                                         </div>
                                     </div>
                                 )}
 
                                 <div className="d-flex justify-content-between small fw-semibold mb-3">
-                                    <span>You have:</span>
-                                    <span>{item ? "1 Inquiry Item" : "1 Inquiry"}</span>
+                                    <span>Service</span>
+                                    <span>{data.service_type}</span>
                                 </div>
 
                                 <div
