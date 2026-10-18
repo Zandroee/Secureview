@@ -25,7 +25,8 @@ Older inquiries without a Place ID or a pinned coordinate remain supported; the 
    VITE_GOOGLE_MAPS_MAP_ID=
    ```
 
-4. Restart `npm run dev` or rebuild assets with `npm run build` after changing Vite environment values.
+4. Run `php artisan migrate` to add the new service-location fields.
+5. Restart `npm run dev` or rebuild assets with `npm run build` after changing Vite environment values.
 
 When no key is configured or Google Maps cannot load, the inquiry remains usable through manual address fields. Existing records also retain an external Google Maps link even when the embedded map is unavailable.
 
