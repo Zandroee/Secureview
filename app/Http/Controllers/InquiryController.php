@@ -172,7 +172,7 @@ class InquiryController extends Controller
             'item_type' => ['nullable', 'required_if:service_type,Installation', 'in:product,package'],
             'item_id' => ['nullable', 'required_if:service_type,Installation', 'integer', 'min:1'],
             'item_quantity' => ['nullable', 'integer', 'min:1', 'max:99'],
-            'customer_name => ['required', 'string', 'max:120'],
+            'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['required', 'string', 'regex:/^09\d{9}$/'],
             'customer_email' => ['required', 'email', 'max:255'],
             'street_address' => ['required', 'string', 'max:255'],
