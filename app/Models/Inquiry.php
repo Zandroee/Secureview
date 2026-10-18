@@ -20,7 +20,11 @@ class Inquiry extends Model
         'customer_phone',
         'customer_email',
         'street_address',
+        'address_details',
         'city',
+        'service_latitude',
+        'service_longitude',
+        'google_place_id',
         'service_type',
         'urgency',
         'preferred_date',
@@ -31,6 +35,8 @@ class Inquiry extends Model
 
     protected $casts = [
         'preferred_date' => 'date',
+        'service_latitude' => 'float',
+        'service_longitude' => 'float',
     ];
 
     public function user(): BelongsTo
