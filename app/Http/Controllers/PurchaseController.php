@@ -23,6 +23,7 @@ class PurchaseController extends Controller
                     'id' => $order->id,
                     'order_number' => $order->order_number,
                     'subtotal' => (float) $order->subtotal,
+                    'installation_fee' => (float) $order->installation_fee,
                     'shipping_fee' => (float) $order->shipping_fee,
                     'total' => (float) $order->total,
                     'payment_method' => $order->payment_method,
@@ -63,6 +64,7 @@ class PurchaseController extends Controller
                 'id' => $order->id,
                 'order_number' => $order->order_number,
                 'subtotal' => (float) $order->subtotal,
+                'installation_fee' => (float) $order->installation_fee,
                 'shipping_fee' => (float) $order->shipping_fee,
                 'total' => (float) $order->total,
                 'payment_method' => $order->payment_method,
@@ -195,6 +197,15 @@ class PurchaseController extends Controller
                     'quantity' => (int) $item->quantity,
                 ];
             })->values()->all();
+
+            if ((float) $order->installation_fee > 0) {
+                $lineItems[] = [
+                    'name' => 'Installation fee',
+                    'amount' => (int) round((float) $order->installation_fee * 100),
+                    'currency' => 'PHP',
+                    'quantity' => 1,
+                ];
+            }
 
             $response = Http::withBasicAuth($secretKey, '')
                 ->acceptJson()
