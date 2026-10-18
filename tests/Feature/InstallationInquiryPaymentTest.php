@@ -147,12 +147,13 @@ class InstallationInquiryPaymentTest extends TestCase
             'email_verified_at' => now(),
         ]);
 
-        $package = Package::create([
-            'name' => 'Basic CCTV Package',
-            'category' => 'CCTV Package',
+        $product = Product::create([
+            'name' => 'Free Installation Camera',
+            'category' => 'CCTV',
             'warranty' => '6 months',
             'price' => 2500,
             'installation_fee' => null,
+            'stock_quantity' => 4,
             'is_featured' => false,
         ]);
 
@@ -178,12 +179,23 @@ class InstallationInquiryPaymentTest extends TestCase
 
         $this->actingAs($customer)
             ->post('/inquiries', $this->inquiryPayload([
-                'item_type' => 'package',
-                'item_id' => $package->id,
+                'item_type' => 'product',
+                'item_id' => $product->id,
             ]));
 
         $order = Order::query()->where('order_number', 'like', 'SV-%')->firstOrFail();
         $this->actingAs($customer)->get(route('checkout.payment.success', $order));
+
+        Http::assertSent(function (\\Illuminate\\Http\\Client\\Request $request) {
+            if (!str_ends_with($request->url(), '/v2/checkout_sessions')) {
+                return false;
+            }
+
+            $lineItems = $request['data']['attributes']['line_items'] ?? [];
+
+            return count($lineItems) === 1
+                && (int) $lineItems[0]['amount'] === 250000;
+        });
 
         $this->assertDatabaseCount('inquiries', 0);
         $this->assertSame('pending', $order->fresh()->payment_status);
