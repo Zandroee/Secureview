@@ -380,6 +380,101 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
 
                                     <div className="mb-3">
                                         <div style={sectionTitleStyle}>
+                                            CUSTOMER'S ADDRESS
+                                        </div>
+
+                                        <div className="row g-2">
+                                            <div className="col-12">
+                                                <label className="form-label small fw-semibold mb-1">
+                                                    Full Service Address *
+                                                </label>
+
+                                                <input
+                                                    type="text"
+                                                    className={"form-control " + (errors.street_address ? "is-invalid" : "")}
+                                                    style={fieldStyle}
+                                                    placeholder="House/Unit, Street, Barangay"
+                                                    value={data.street_address}
+                                                    onChange={(event) => setData((current) => ({
+                                                        ...current,
+                                                        street_address: event.target.value,
+                                                        service_latitude: "",
+                                                        service_longitude: "",
+                                                        google_place_id: "",
+                                                    }))}
+                                                />
+
+                                                {errors.street_address && (
+                                                    <div className="invalid-feedback">{errors.street_address}</div>
+                                                )}
+                                            </div>
+
+                                            <div className="col-12">
+                                                <label className="form-label small fw-semibold mb-1">
+                                                    City / Municipality *
+                                                </label>
+
+                                                <input
+                                                    type="text"
+                                                    className={"form-control " + (errors.city ? "is-invalid" : "")}
+                                                    style={fieldStyle}
+                                                    placeholder="City / Municipality"
+                                                    value={data.city}
+                                                    onChange={(event) => setData((current) => ({
+                                                        ...current,
+                                                        city: event.target.value,
+                                                        service_latitude: "",
+                                                        service_longitude: "",
+                                                        google_place_id: "",
+                                                    }))}
+                                                />
+
+                                                {errors.city && (
+                                                    <div className="invalid-feedback">{errors.city}</div>
+                                                )}
+                                            </div>
+
+                                            <div className="col-12">
+                                                <label className="form-label small fw-semibold mb-1">
+                                                    House / Unit / Gate / Landmark (Optional)
+                                                </label>
+
+                                                <input
+                                                    type="text"
+                                                    className={"form-control " + (errors.address_details ? "is-invalid" : "")}
+                                                    style={fieldStyle}
+                                                    placeholder="e.g. Unit 4B, blue gate beside the corner store"
+                                                    value={data.address_details}
+                                                    onChange={(event) => setData("address_details", event.target.value)}
+                                                />
+
+                                                {errors.address_details && (
+                                                    <div className="invalid-feedback">{errors.address_details}</div>
+                                                )}
+                                                <div className="form-text small">
+                                                    Add details that help the technician find the correct entrance or unit.
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <ServiceLocationPicker
+                                            streetAddress={data.street_address}
+                                            city={data.city}
+                                            latitude={data.service_latitude}
+                                            longitude={data.service_longitude}
+                                            placeId={data.google_place_id}
+                                            apiErrors={errors}
+                                            onChange={(changes) =>
+                                                setData((current) => ({
+                                                    ...current,
+                                                    ...changes,
+                                                }))
+                                            }
+                                        />
+
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <div style={sectionTitleStyle}>
                                             SERVICE DETAILS
                                         </div>
 
