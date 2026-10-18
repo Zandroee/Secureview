@@ -621,7 +621,12 @@ export default function AdminPackages({
                                                         </div>
                                                     </td>
 
-                                                    <td className="fw-semibold text-nowrap">{money(item.price)}</td>
+                                                    <td className="fw-semibold text-nowrap">
+                                                        {money(item.price)}
+                                                        <div className="small text-muted fw-normal mt-1">
+                                                            Installation: {Number(item.installation_fee ?? 0) > 0 ? money(item.installation_fee) : "Free"}
+                                                        </div>
+                                                    </td>
 
                                                     <td style={{ minWidth: "200px" }}>
                                                         {item.items?.length ? (
