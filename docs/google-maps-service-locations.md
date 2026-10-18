@@ -1,69 +1,69 @@
-# Google Maps service locations
+# Service location maps (Leaflet + OpenStreetMap)
 
 ## What this feature does
 
-Google Maps is part of the service-inquiry and field-workflow, not just a map embedded beside an address.
+The map is part of SecureView's inquiry and field-workflow, not just an embedded address.
 
-1. Customers can search for an address with Places Autocomplete (New), review the result on a map, and click or drag the marker to the actual service entrance.
-2. The customer can add unit, gate, landmark, or access instructions separately from the street address.
-3. The inquiry saves the selected Google Place ID. If the customer manually pins an exact entrance, the selected coordinates are saved and take precedence over the general place.
-4. Customers can review the location from their inquiry details.
-5. Administrators can open the location from the inquiries list, review it on the inquiry detail page, and open the map from the schedule list.
-6. Assigned technicians see service-address details and a one-tap Google Maps driving-directions link. Exact location details are not included in open jobs that technicians have not joined.
+1. Customers enter the full service address and city, then explicitly choose **Find address on map** to locate an approximate position.
+2. Customers can click the map or drag the marker to the actual service entrance. Coordinates are saved only after the customer deliberately places or drags the pin.
+3. Customers can add unit, gate, landmark, or access instructions separately from the street address.
+4. Customers can review saved locations in their inquiry details.
+5. Administrators can review pinned locations in inquiry details and open map links from inquiry and schedule views.
+6. Assigned technicians can see service-address details and open driving directions. Exact location details remain hidden from unclaimed jobs.
 
-Older inquiries without a Place ID or a pinned coordinate remain supported; the map links use their saved text address.
+Older inquiries without coordinates remain supported. They can still show the saved address and offer an external map/directions link.
 
-## Configure Google Maps
+## Setup
 
-1. Create or select a Google Cloud project and enable **Maps JavaScript API** and **Places API (New)**. Enable billing as required by Google Maps Platform for the project.
-2. Create a browser API key. The key is intentionally exposed to the browser by Vite; it is not a server secret. Restrict it by allowed website referrers (include localhost for development and the exact production domains) and restrict API access to the Maps JavaScript API and Places API (New).
-3. Add these values to the local `.env` file (do not commit the real key):
+No Google Cloud project, billing account, Google Maps API key, or npm map package is required. Leaflet is loaded from its official CDN and the interactive map uses OpenStreetMap tiles.
 
-   ```dotenv
-   VITE_GOOGLE_MAPS_API_KEY=your_restricted_browser_key
-   # Optional. Create a Map ID in Google Cloud to enable Advanced Markers.
-   VITE_GOOGLE_MAPS_MAP_ID=
-   ```
+1. Run `php artisan migrate` to add the service-location fields.
+2. Start the Laravel app and Vite as usual.
+3. Test the inquiry form and confirm the map loads. The browser must be able to access the Leaflet CDN, OpenStreetMap tile service, and address-search service.
+4. No map-specific environment variables are required.
 
-4. Run `php artisan migrate` to add the new service-location fields.
-5. Restart `npm run dev` or rebuild assets with `npm run build` after changing Vite environment values.
+The **Find address on map** button makes an explicit user-triggered search through the public Nominatim service. It is not autocomplete. Nominatim's public endpoint has strict usage limits (including a maximum of one request per second), forbids autocomplete, and is not an unlimited production geocoding service. The app intentionally does not issue background or keystroke-triggered geocoding requests. For a production deployment with more traffic, choose a hosted geocoding provider or run a service that meets your traffic and policy requirements; keep the provider configurable.
 
-When no key is configured or Google Maps cannot load, the inquiry remains usable through manual address fields. Existing records also retain an external Google Maps link even when the embedded map is unavailable.
+## Map tile policy and attribution
+
+The map uses `https://tile.openstreetmap.org/{z}/{x}/{y}.png` and visibly credits OpenStreetMap contributors. Follow the [OpenStreetMap tile usage policy](https://operations.osmfoundation.org/policies/tiles/): the public tile servers are best-effort, may block excessive use, and are not a guaranteed production service. Do not bulk-download tiles or bypass their caching rules.
+
+Address-search policy: [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/).
 
 ## Location data and privacy
 
-- `street_address` and `city` are the customer-confirmed service address.
+- `street_address` and `city` are the customer's confirmed service address.
 - `address_details` contains customer-provided unit, gate, landmark, or access instructions.
-- `google_place_id` records the selected place identifier. Place IDs are specifically exempt from Google's general Maps content caching restrictions.
-- `service_latitude` and `service_longitude` are written when the customer manually clicks the map or drags the marker to pin the exact entrance. Selecting a Google place alone does not persist its provider-returned coordinates.
-- The customer's own inquiry and admin views can show the location. Assigned technicians can see it for field work. Open jobs do not reveal exact address details, Place IDs, or coordinates before a technician joins the team.
+- `service_latitude` and `service_longitude` are saved only when the customer manually pins the exact entrance.
+- `google_place_id` remains nullable for compatibility with older data and earlier development; the Leaflet workflow does not generate Google Place IDs.
+- Customer and admin views can show the location. Assigned technicians can see it for field work. Open jobs do not reveal exact address details, Place IDs, or coordinates before a technician joins the team.
+- External Google Maps search/directions links are just ordinary links and do not use the Google Maps API or require a Google Cloud API key.
 
-Before production, publish or update the site's public Terms of Use and Privacy Policy to describe Google Maps usage and service-location collection and sharing. Google requires public Terms of Use and a Privacy Policy for Maps JavaScript API applications. Preserve Google-provided map attribution on embedded maps.
+Before production, ensure the site's public Terms of Use and Privacy Policy describe service-location collection and sharing, and review the selected map and geocoding providers' terms.
 
 ## Suggested next stages
 
 ### Stage 2 — Admin dispatch map and travel-aware scheduling
 
-- Show a map of confirmed and in-progress jobs on the admin schedule page, with filters for date, status, urgency, technician, and service type.
+- Show confirmed and in-progress jobs on an admin schedule map, with filters for date, status, urgency, technician, and service type.
 - Cluster nearby jobs and make each pin open the inquiry details.
-- Add an opt-in "estimate travel time" action using the Google Routes API Compute Route Matrix. Calculate road distance and estimated drive time from a chosen technician/starting location to the day's jobs; do not treat straight-line distance as drive time.
-- Use drive-time estimates as a scheduling aid, together with current job commitments and configurable travel buffers. Do not auto-reassign jobs without an administrator confirming the change.
-- Cache application-generated operational decisions, not restricted Google Maps content; respect Maps Platform service-specific storage and attribution policies.
+- Use a properly licensed route/time provider for road distance and estimated drive time; do not treat straight-line distance as drive time.
+- Use estimates as scheduling aids with configurable travel buffers. Do not automatically reassign jobs without an administrator confirming the change.
 
 ### Stage 3 — Technician arrival and customer coordination
 
 - Add explicit job milestones such as En Route and Arrived.
-- Let technicians open turn-by-turn navigation in Google Maps, while keeping SecureView as the system of record for assignments and job status.
-- Send customer notifications when the technician is en route or arrives; only share an ETA when it is supported by a fresh route estimate.
+- Let technicians open turn-by-turn navigation while SecureView remains the system of record for assignments and job status.
+- Send customer notifications when the technician is en route or arrives.
 - If live technician tracking is ever considered, make it a separate consent-based feature, visible only during an active job, with clear retention and privacy controls.
 
 ## Validation checklist
 
-- Select a Google Place and verify the street/city fields are filled.
-- Click or drag the marker and verify the manually pinned latitude/longitude are submitted together.
-- Change the address manually and verify stale Place ID and pin coordinates are cleared.
-- Submit with a Place ID but no manually pinned coordinates.
+- Confirm the map loads without a Google API key.
+- Enter a full address and city and click **Find address on map**.
+- Click the map or drag the marker and verify latitude/longitude are submitted together.
+- Change the address manually and verify stale pin coordinates are cleared.
+- Submit an inquiry without coordinates and confirm manual address entry still works.
 - Verify address/map display on customer inquiry details, admin inquiry details, and admin schedules.
-- Verify assigned technicians receive the directions link, while open unclaimed jobs do not expose exact location details.
-- Test with no API key and with a deliberately invalid/restricted key; the form should still allow manual address entry.
+- Verify assigned technicians receive the directions link, while unclaimed jobs do not expose exact location details.
 - Run `php artisan test --filter=GoogleMapsServiceLocationTest`, the booking/inquiry/technician feature tests, and `npm run build`.
