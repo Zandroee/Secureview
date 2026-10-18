@@ -123,6 +123,34 @@ class InquiryController extends Controller
             ->sortBy('name')
             ->values();
 
+        $cartItems = $request->user()->cart
+            ?->items()
+            ->with('purchasable')
+            ->get()
+            ->map(function ($cartItem) use ($inventory) {
+                $purchasable = $cartItem->purchasable;
+                if (!$purchasable instanceof Product && !$purchasable instanceof Package) {
+                    return null;
+                }
+
+                return [
+                    'cart_item_id' => $cartItem->id,
+                    'type' => $purchasable instanceof Package ? 'package' : 'product',
+                    'id' => $purchasable->id,
+                    'name' => $purchasable->name,
+                    'category' => $purchasable->category,
+                    'image' => $purchasable->image,
+                    'price' => (float) $purchasable->price,
+                    'installation_fee' => $purchasable->installation_fee === null
+                        ? null
+                        : (float) $purchasable->installation_fee,
+                    'quantity' => (int) $cartItem->quantity,
+                    'available_stock' => $inventory->getAvailableStock($purchasable),
+                ];
+            })
+            ->filter()
+            ->values();
+
         return Inertia::render('inquiry', [
             'unavailableDates' => $unavailableDates,
             'unavailableTimeSlots' => $unavailableTimeSlots,
@@ -133,6 +161,7 @@ class InquiryController extends Controller
             ],
             'item' => $item,
             'catalogItems' => $catalogItems,
+            'cartItems' => $cartItems,
             'initialServiceType' => $initialServiceType,
         ]);
     }
@@ -142,7 +171,8 @@ class InquiryController extends Controller
         $validated = $request->validate([
             'item_type' => ['nullable', 'required_if:service_type,Installation', 'in:product,package'],
             'item_id' => ['nullable', 'required_if:service_type,Installation', 'integer', 'min:1'],
-            'customer_name' => ['required', 'string', 'max:120'],
+            'item_quantity' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'customer_name => ['required', 'string', 'max:120'],
             'customer_phone' => ['required', 'string', 'regex:/^09\d{9}$/'],
             'customer_email' => ['required', 'email', 'max:255'],
             'street_address' => ['required', 'string', 'max:255'],
@@ -262,7 +292,8 @@ class InquiryController extends Controller
             ])->withInput();
         }
 
-        $stockError = $inventory->getAvailabilityError($item, 1);
+        $itemQuantity = max(1, (int) ($validated['item_quantity'] ?? 1));
+        $stockError = $inventory->getAvailabilityError($item, $itemQuantity);
         if ($stockError) {
             return back()->withErrors(['item_id' => $stockError])->withInput();
         }
@@ -270,6 +301,8 @@ class InquiryController extends Controller
         $paymentMethod = $validated['payment_method'] ?? 'gcash';
         $installationFee = max(0, (float) ($item->installation_fee ?? 0));
         $itemPrice = (float) $item->price;
+        $itemSubtotal = $itemPrice * $itemQuantity;
+        $totalInstallationFee = $installationFee * $itemQuantity;
         $serviceAddress = trim(implode(', ', array_filter([
             $validated['street_address'],
             $validated['address_details'] ?? null,
@@ -277,7 +310,7 @@ class InquiryController extends Controller
         ])));
 
         $order = DB::transaction(function () use (
-            $request, $validated, $item, $paymentMethod, $installationFee, $itemPrice, $serviceAddress
+            $request, $validated, $item, $paymentMethod, $installationFee, $itemPrice, $itemQuantity, $itemSubtotal, $totalInstallationFee, $serviceAddress
         ) {
             do {
                 $orderNumber = 'SV-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
@@ -286,10 +319,10 @@ class InquiryController extends Controller
             $order = Order::create([
                 'user_id' => $request->user()->id,
                 'order_number' => $orderNumber,
-                'subtotal' => $itemPrice,
+                'subtotal' => $itemSubtotal,
                 'shipping_fee' => 0,
-                'installation_fee' => $installationFee,
-                'total' => $itemPrice + $installationFee,
+                'installation_fee' => $totalInstallationFee,
+                'total' => $itemSubtotal + $totalInstallationFee,
                 'payment_method' => $paymentMethod,
                 'payment_status' => 'pending',
                 'order_status' => 'awaiting_payment',
@@ -305,8 +338,8 @@ class InquiryController extends Controller
                 'purchasable_id' => $item->id,
                 'name' => $item->name,
                 'price' => $itemPrice,
-                'quantity' => 1,
-                'subtotal' => $itemPrice,
+                'quantity' => $itemQuantity,
+                'subtotal' => $itemSubtotal,
             ]);
 
             PendingInquiryCheckout::create([
@@ -323,14 +356,14 @@ class InquiryController extends Controller
             'name' => $item->name,
             'amount' => (int) round($itemPrice * 100),
             'currency' => 'PHP',
-            'quantity' => 1,
+            'quantity' => $itemQuantity,
         ]];
         if ($installationFee > 0) {
             $lineItems[] = [
                 'name' => 'Installation fee — ' . $item->name,
                 'amount' => (int) round($installationFee * 100),
                 'currency' => 'PHP',
-                'quantity' => 1,
+                'quantity' => $itemQuantity,
             ];
         }
 
