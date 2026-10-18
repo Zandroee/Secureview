@@ -36,6 +36,7 @@ function emptyProduct() {
         category: "",
         warranty: "1 year",
         price: "",
+        installation_fee: "",
         stock_quantity: 0,
         stock_reason: "",
         badge: "",
@@ -292,6 +293,7 @@ export default function AdminProducts({
             category: product.category ?? "",
             warranty: product.warranty ?? "1 year",
             price: String(product.price ?? ""),
+            installation_fee: product.installation_fee == null ? "" : String(product.installation_fee),
             stock_quantity: Number(product.stock_quantity ?? 0),
             stock_reason: "",
             badge: product.badge ?? "",
@@ -864,6 +866,24 @@ export default function AdminProducts({
                                                 required
                                             />
                                             <FieldError message={productForm.errors.price} />
+                                        </div>
+
+                                        <div className="col-md-4">
+                                            <label className="form-label fw-semibold">
+                                                Installation Fee (₱) <span className="text-muted fw-normal">(optional)</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                className={"form-control " + (productForm.errors.installation_fee ? "is-invalid" : "")}
+                                                value={productForm.data.installation_fee}
+                                                onChange={(event) => productForm.setData("installation_fee", event.target.value)}
+                                                min="0"
+                                                max="99999999.99"
+                                                step="0.01"
+                                                placeholder="Leave blank for free installation"
+                                            />
+                                            <div className="form-text">Blank or ₱0 means installation is free.</div>
+                                            <FieldError message={productForm.errors.installation_fee} />
                                         </div>
 
                                         <div className="col-md-4">
