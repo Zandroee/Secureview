@@ -400,8 +400,17 @@ class ProductController extends Controller
             ]);
         }
 
+        $diskName = config('filesystems.catalog_disk', 'public');
+        $disk = Storage::disk($diskName);
         $uploadedImages = collect($files)
-            ->map(fn ($file) => '/storage/' . $file->store($directory, 'public'))
+            ->map(function ($file) use ($directory, $diskName, $disk) {
+                $path = $file->storePublicly($directory, $diskName);
+
+                // Keep local development URLs compatible; use full object URLs in production.
+                return $diskName === 'public'
+                    ? '/storage/' . $path
+                    : $disk->url($path);
+            })
             ->all();
 
         return collect(array_merge($existingImages, $uploadedImages))
@@ -424,14 +433,28 @@ class ProductController extends Controller
 
     private function deleteStoredImage(?string $image): void
     {
-        if (!$image || preg_match('#^https?://#i', $image)) {
+        if (!$image) {
             return;
         }
 
-        $path = preg_replace('#^/?storage/#', '', $image);
+        $diskName = config('filesystems.catalog_disk', 'public');
+        $disk = Storage::disk($diskName);
+        $path = $image;
 
-        if ($path && Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->delete($path);
+        if (preg_match('#^https?://#i', $image)) {
+            // Never delete third-party images or images from another storage provider.
+            $diskBaseUrl = rtrim($disk->url('/'), '/') . '/';
+            if (!str_starts_with($image, $diskBaseUrl)) {
+                return;
+            }
+
+            $path = substr($image, strlen($diskBaseUrl));
+        } else {
+            $path = preg_replace('#^/?storage/#', '', $image);
+        }
+
+        if ($path && $disk->exists($path)) {
+            $disk->delete($path);
         }
     }
 
