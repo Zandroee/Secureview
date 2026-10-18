@@ -13,6 +13,7 @@ class Package extends Model
         'category',
         'warranty',
         'price',
+        'installation_fee',
         'badge',
         'image',
         'images',
@@ -25,6 +26,7 @@ class Package extends Model
         'specifications' => 'array',
         'images' => 'array',
         'rating' => 'float',
+        'installation_fee' => 'float',
         'is_featured' => 'boolean',
     ];
 
