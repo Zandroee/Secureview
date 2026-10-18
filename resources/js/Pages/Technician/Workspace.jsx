@@ -2,6 +2,7 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
+import { googleMapsDirectionsUrl } from "../../Components/GoogleMaps/ServiceLocation";
 
 function statusClass(status) {
     if (status === "completed") return "bg-success-subtle text-success";
@@ -86,7 +87,25 @@ function JobCard({ job, open = false }) {
                     <div className="small text-muted fw-semibold mb-2">CUSTOMER DETAILS</div>
                     <div className="fw-semibold">{job.customer_name}</div>
                     {job.customer_phone && <div className="small"><a href={"tel:" + job.customer_phone}>{job.customer_phone}</a></div>}
-                    {job.street_address && <div className="small text-muted mt-1">{job.street_address}</div>}
+                    {job.street_address && <div className="small text-muted mt-1">{job.street_address}, {job.city}</div>}
+                    {job.address_details && <div className="small text-muted mt-1"><span className="fw-semibold">Entrance details:</span> {job.address_details}</div>}
+                    {(job.google_place_id || job.service_latitude !== null && job.service_latitude !== undefined || job.street_address) && (
+                        <a
+                            href={googleMapsDirectionsUrl({
+                                latitude: job.service_latitude,
+                                longitude: job.service_longitude,
+                                placeId: job.google_place_id,
+                                streetAddress: job.street_address,
+                                city: job.city,
+                                addressDetails: job.address_details,
+                            })}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn btn-outline-primary btn-sm fw-semibold mt-2"
+                        >
+                            <i className="bi bi-sign-turn-right me-2" />NAVIGATE TO SERVICE
+                        </a>
+                    )}
                     {job.notes && <div className="small mt-2"><span className="fw-semibold">Notes:</span> {job.notes}</div>}
                 </div>
             )}
