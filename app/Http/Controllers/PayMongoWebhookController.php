@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomerNotification;
 use App\Models\Order;
+use App\Models\PendingInquiryCheckout;
+use App\Services\PendingInquiryCheckoutService;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
 
@@ -102,6 +104,12 @@ class PayMongoWebhookController extends Controller
         }
 
         if ($order->payment_status === 'paid') {
+            // The browser return may not have happened. Retry finalization from
+            // this idempotent webhook when payment was already marked paid.
+            if (PendingInquiryCheckout::query()->where('order_id', $order->id)->exists()) {
+                app(PendingInquiryCheckoutService::class)->completePaidOrder($order);
+            }
+
             return response()->json([
                 'received' => true,
             ]);
@@ -132,7 +140,19 @@ class PayMongoWebhookController extends Controller
             'related_id' => $order->id,
         ]);
 
-        $order->user?->cart?->items()->delete();
+        $isInstallationCheckout = PendingInquiryCheckout::query()
+            ->where('order_id', $order->id)
+            ->exists();
+
+        if ($isInstallationCheckout) {
+            // Complete installation inquiries even when the customer never
+            // returns to the hosted-checkout success URL.
+            app(PendingInquiryCheckoutService::class)->completePaidOrder($order);
+        } else {
+            // Ordinary product checkout clears the purchase cart; installation
+            // bookings must not delete unrelated items from that cart.
+            $order->user?->cart?->items()->delete();
+        }
 
         return response()->json([
             'received' => true,
