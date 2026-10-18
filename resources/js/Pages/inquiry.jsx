@@ -765,8 +765,12 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                 ) : (
                                     <div className="border rounded-3 p-3 mb-3 text-center">
                                         <i className="bi bi-cart3 text-muted fs-3" />
-                                        <div className="small fw-semibold mt-2">Your cart is empty</div>
-                                        <div className="small text-muted mt-1 mb-2">Add a product or package from its details page, then return here to select it.</div>
+                                        <div className="small fw-semibold mt-2">{selectedCatalogItem ? "No additional items in your cart" : "Your cart is empty"}</div>
+                                        <div className="small text-muted mt-1 mb-2">
+                                            {selectedCatalogItem
+                                                ? "Your selected catalog item is still attached to this inquiry. Add other products or packages from their details pages if needed."
+                                                : "Add a product or package from its details page, then return here to select it."}
+                                        </div>
                                         <div className="d-flex justify-content-center gap-2">
                                             <a href="/products" className="btn btn-sm btn-outline-primary">Browse products</a>
                                             <a href="/packages" className="btn btn-sm btn-outline-primary">Browse packages</a>
