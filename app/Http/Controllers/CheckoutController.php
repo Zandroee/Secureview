@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomerNotification;
 use App\Models\Order;
+use App\Models\Inquiry;
+use App\Models\PendingInquiryCheckout;
+use App\Models\Product;
+use App\Models\Package;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -381,36 +385,42 @@ class CheckoutController extends Controller
                     $payments = $session['attributes']['payments'] ?? [];
 
                     foreach ($payments as $payment) {
-                        $paymentStatus = $payment['attributes']['status'] ?? null;
-
-                        if ($paymentStatus === 'paid') {
-                            $order->update([
-                                'payment_status' => 'paid',
-                                'order_status' => 'processing',
-                                'paymongo_payment_id' => $payment['id'] ?? null,
-                                'paid_at' => now(),
-                            ]);
-
-                            try {
-                                $inventory->deductForOrder($order);
-                            } catch (\Throwable $exception) {
-                                report($exception);
-                            }
-
-                            CustomerNotification::create([
-                                'user_id' => $request->user()->id,
-                                'type' => 'payment_paid',
-                                'title' => 'Payment successful',
-                                'message' => 'Payment for order ' . $order->order_number . ' was successful.',
-                                'action_url' => route('purchases.show', $order),
-                                'related_type' => Order::class,
-                                'related_id' => $order->id,
-                            ]);
-
-                            $request->user()->cart?->items()->delete();
-
-                            break;
+                        if (($payment['attributes']['status'] ?? null) !== 'paid') {
+                            continue;
                         }
+
+                        $order->update([
+                            'payment_status' => 'paid',
+                            'order_status' => 'processing',
+                            'paymongo_payment_id' => $payment['id'] ?? null,
+                            'paid_at' => now(),
+                        ]);
+
+                        try {
+                            $inventory->deductForOrder($order);
+                        } catch (\Throwable $exception) {
+                            report($exception);
+                        }
+
+                        $isInstallationCheckout = PendingInquiryCheckout::query()
+                            ->where('order_id', $order->id)
+                            ->exists();
+
+                        CustomerNotification::create([
+                            'user_id' => $request->user()->id,
+                            'type' => 'payment_paid',
+                            'title' => 'Payment successful',
+                            'message' => 'Payment for order ' . $order->order_number . ' was successful.',
+                            'action_url' => route('purchases.show', $order),
+                            'related_type' => Order::class,
+                            'related_id' => $order->id,
+                        ]);
+
+                        if (!$isInstallationCheckout) {
+                            $request->user()->cart?->items()->delete();
+                        }
+
+                        break;
                     }
                 }
             } catch (\Throwable $exception) {
@@ -418,7 +428,106 @@ class CheckoutController extends Controller
             }
         }
 
+        $order->refresh();
+
+        // The actual Installation inquiry is created only after PayMongo confirms payment.
+        if ($order->payment_status === 'paid') {
+            $inquiry = $this->completePaidInstallationInquiry($request, $order);
+
+            if ($inquiry) {
+                return redirect()->route('inquiries.show', $inquiry)->with(
+                    'success',
+                    'Payment confirmed. Your installation inquiry ' . $inquiry->inquiry_number . ' has been submitted.'
+                );
+            }
+        }
+
         return redirect()->route('purchases.show', $order);
+    }
+
+    private function completePaidInstallationInquiry(Request $request, Order $order): ?Inquiry
+    {
+        return DB::transaction(function () use ($request, $order) {
+            $pending = PendingInquiryCheckout::query()
+                ->where('order_id', $order->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$pending) {
+                return null;
+            }
+
+            if ($pending->inquiry_id) {
+                return Inquiry::query()
+                    ->where('user_id', $request->user()->id)
+                    ->find($pending->inquiry_id);
+            }
+
+            if ($pending->status !== 'pending_payment' || $order->payment_status !== 'paid') {
+                return null;
+            }
+
+            $payload = $pending->payload ?? [];
+            $itemType = $payload['item_type'] ?? null;
+            $itemId = $payload['item_id'] ?? null;
+
+            if (!$itemType || !$itemId || !in_array($itemType, ['product', 'package'], true)) {
+                report(new \RuntimeException('Paid installation order is missing its selected catalog item.'));
+                return null;
+            }
+
+            $modelClass = $itemType === 'product' ? Product::class : Package::class;
+            $item = $modelClass::find($itemId);
+
+            if (!$item) {
+                report(new \RuntimeException('Paid installation order references a missing catalog item.'));
+                return null;
+            }
+
+            do {
+                $inquiryNumber = 'INQ-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
+            } while (Inquiry::where('inquiry_number', $inquiryNumber)->exists());
+
+            $inquiry = Inquiry::create([
+                'user_id' => $request->user()->id,
+                'inquiry_number' => $inquiryNumber,
+                'inquirable_type' => get_class($item),
+                'inquirable_id' => $item->id,
+                'item_name' => $item->name,
+                'customer_name' => $payload['customer_name'],
+                'customer_phone' => $payload['customer_phone'],
+                'customer_email' => $payload['customer_email'],
+                'street_address' => $payload['street_address'],
+                'address_details' => $payload['address_details'] ?? null,
+                'city' => $payload['city'],
+                'service_latitude' => $payload['service_latitude'] ?? null,
+                'service_longitude' => $payload['service_longitude'] ?? null,
+                'google_place_id' => $payload['google_place_id'] ?? null,
+                'service_type' => 'Installation',
+                'urgency' => $payload['urgency'],
+                'preferred_date' => $payload['preferred_date'],
+                'preferred_time' => $payload['preferred_time'],
+                'notes' => $payload['notes'] ?? null,
+                'status' => 'pending',
+            ]);
+
+            $pending->update([
+                'status' => 'paid',
+                'inquiry_id' => $inquiry->id,
+            ]);
+
+            CustomerNotification::create([
+                'user_id' => $request->user()->id,
+                'type' => 'inquiry',
+                'title' => 'Installation inquiry received',
+                'message' => 'Your payment is confirmed and installation inquiry ' . $inquiry->inquiry_number . ' has been received.',
+                'action_url' => route('inquiries.show', $inquiry),
+                'related_type' => Inquiry::class,
+                'related_id' => $inquiry->id,
+            ]);
+
+            return $inquiry;
+        });
     }
 
     public function paymentCancel(Request $request, Order $order)
@@ -427,6 +536,8 @@ class CheckoutController extends Controller
             abort(404);
         }
 
+        // Keep the pending checkout so the customer can retry payment from order details.
+        // No Installation inquiry is created unless the gateway later confirms payment.
         return redirect()->route('purchases.show', $order)->with([
             'paymentCancelled' => true,
         ]);
