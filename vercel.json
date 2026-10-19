@@ -14,7 +14,7 @@
   "routes": [
     {
       "src": "/build/(.*)",
-      "dest": "public/build/$1"
+      "dest": "/api/assets.php?file=$1"
     },
     {
       "src": "/(.*\\.(?:css|js|mjs|map|svg|png|jpe?g|webp|gif|ico|woff2?|ttf|eot|txt|xml|webmanifest))",
