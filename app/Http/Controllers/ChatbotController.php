@@ -52,7 +52,8 @@ PROMPT;
             $model = config('services.gemini.model', 'gemini-2.5-flash');
             $response = Http::acceptJson()
                 ->withHeaders(['x-goog-api-key' => $apiKey])
-                ->timeout(25)
+                ->connectTimeout(10)
+                ->timeout(60)
                 ->post(
                     'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent',
                     [
