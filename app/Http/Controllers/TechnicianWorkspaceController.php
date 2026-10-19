@@ -29,6 +29,7 @@ class TechnicianWorkspaceController extends Controller
         $jobs = $technician->assignedInquiries()
             ->with('technicians:id,name,email')
             ->whereIn('status', ['confirmed', 'in_progress', 'completed'])
+            ->orderByRaw("CASE WHEN status = 'completed' THEN 4 WHEN urgency = 'emergency' THEN 1 WHEN urgency = 'urgent' THEN 2 ELSE 3 END")
             ->orderByRaw("CASE status WHEN 'in_progress' THEN 1 WHEN 'confirmed' THEN 2 ELSE 3 END")
             ->orderByRaw("CASE WHEN status = 'completed' THEN preferred_date END DESC")
             ->orderByRaw("CASE WHEN status != 'completed' THEN preferred_date END ASC")
