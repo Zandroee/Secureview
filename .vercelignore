@@ -9,3 +9,6 @@
 /storage/framework/cache
 /storage/framework/sessions
 /storage/framework/views
+
+# Build Vite assets inside each PHP function; serve /build/* through api/assets.php.
+/public/build
