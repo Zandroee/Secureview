@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\AuthController;
@@ -47,6 +48,10 @@ Route::get('/services', function () {
 Route::get('/about', function () {
     return Inertia::render('about');
 })->name('about');
+
+Route::post('/chatbot/message', [ChatbotController::class, 'reply'])
+    ->middleware('throttle:10,1')
+    ->name('chatbot.reply');
 
 Route::get('/login', function () {
     return Inertia::render('login');

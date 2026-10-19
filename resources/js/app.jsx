@@ -3,6 +3,7 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
 import './bootstrap';
+import Chatbot from './Components/Chatbot';
 
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
@@ -19,7 +20,10 @@ createInertiaApp({
     setup({ el, App, props }) {
         installTableSorting();
         createRoot(el).render(
-            <App {...props} />
+            <>
+                <App {...props} />
+                <Chatbot />
+            </>
         );
     },
 });
