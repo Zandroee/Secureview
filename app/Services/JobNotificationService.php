@@ -9,6 +9,47 @@ use Illuminate\Support\Carbon;
 
 class JobNotificationService
 {
+    /**
+     * Alert the admin team and technicians when a customer submits a new service inquiry.
+     * Dedupe by inquiry and recipient so retrying a paid-installation callback cannot spam users.
+     */
+    public function notifyNewInquirySubmitted(Inquiry $inquiry): int
+    {
+        $date = $inquiry->preferred_date?->format('F j, Y') ?? 'a date to be confirmed';
+        $sent = 0;
+
+        User::query()
+            ->whereIn('role', ['admin', 'technician'])
+            ->get()
+            ->each(function (User $recipient) use ($inquiry, $date, &$sent) {
+                $isAdmin = $recipient->role === 'admin';
+                $dedupeKey = 'new-inquiry:' . $inquiry->id . ':' . $recipient->id;
+
+                $notification = CustomerNotification::firstOrCreate(
+                    ['dedupe_key' => $dedupeKey],
+                    [
+                        'user_id' => $recipient->id,
+                        'type' => 'new_inquiry',
+                        'title' => $isAdmin ? 'New service inquiry received' : 'New service request received',
+                        'message' => $isAdmin
+                            ? "Inquiry {$inquiry->inquiry_number} from {$inquiry->customer_name} ({$inquiry->service_type}) is waiting for review. Requested: {$date}, {$inquiry->preferred_time}. Priority: " . ucfirst($inquiry->urgency) . '.'
+                            : "A new {$inquiry->service_type} request ({$inquiry->inquiry_number}) was submitted for {$date}, {$inquiry->preferred_time}. It is awaiting admin review; customer details become available if you are assigned to the service.",
+                        'action_url' => $isAdmin
+                            ? route('admin.inquiries.show', $inquiry)
+                            : route('technician.dashboard'),
+                        'related_type' => Inquiry::class,
+                        'related_id' => $inquiry->id,
+                    ]
+                );
+
+                if ($notification->wasRecentlyCreated) {
+                    $sent++;
+                }
+            });
+
+        return $sent;
+    }
+
     public function notifyConfirmation(Inquiry $inquiry): void
     {
         $inquiry->loadMissing('technicians');
