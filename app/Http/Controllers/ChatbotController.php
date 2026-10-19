@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ChatbotController extends Controller
 {
@@ -19,6 +20,8 @@ class ChatbotController extends Controller
         $apiKey = config('services.gemini.key');
 
         if (!$apiKey) {
+            Log::warning('SecureView chatbot request blocked: Gemini API key is not configured.');
+
             return response()->json([
                 'message' => 'The AI assistant is not configured yet. Please contact Netmax Trading or send an inquiry through the Services page.',
             ], 503);
@@ -46,11 +49,12 @@ Never ask for passwords, payment details, or sensitive personal information. Do 
 PROMPT;
 
         try {
+            $model = config('services.gemini.model', 'gemini-2.5-flash');
             $response = Http::acceptJson()
                 ->withHeaders(['x-goog-api-key' => $apiKey])
                 ->timeout(25)
                 ->post(
-                    'https://generativelanguage.googleapis.com/v1beta/models/' . config('services.gemini.model', 'gemini-2.5-flash') . ':generateContent',
+                    'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent',
                     [
                         'systemInstruction' => [
                             'parts' => [['text' => $systemInstruction]],
@@ -64,6 +68,33 @@ PROMPT;
                 );
 
             if (!$response->successful()) {
+                $googleErrorCode = $response->json('error.status');
+                $googleErrorMessage = $response->json('error.message', 'No error message provided');
+                Log::warning('SecureView Gemini API request failed.', [
+                    'http_status' => $response->status(),
+                    'error_code' => $googleErrorCode,
+                    'error_message' => $googleErrorMessage,
+                    'model' => $model,
+                ]);
+
+                if ($response->status() === 429) {
+                    return response()->json([
+                        'message' => 'Our AI assistant has reached its current usage limit. Please try again later or send us an inquiry through the Services page.',
+                    ], 429);
+                }
+
+                if (in_array($response->status(), [401, 403], true)) {
+                    return response()->json([
+                        'message' => 'Our AI assistant is having a configuration issue. Please contact Netmax Trading or send us an inquiry through the Services page.',
+                    ], 503);
+                }
+
+                if ($response->status() === 400 || $response->status() === 404) {
+                    return response()->json([
+                        'message' => 'Our AI assistant is temporarily misconfigured. Please try again later or send us an inquiry through the Services page.',
+                    ], 502);
+                }
+
                 return response()->json([
                     'message' => 'Sorry, the assistant is temporarily unavailable. Please try again shortly or send us an inquiry.',
                 ], 502);
@@ -72,6 +103,12 @@ PROMPT;
             $answer = $response->json('candidates.0.content.parts.0.text');
 
             if (!is_string($answer) || trim($answer) === '') {
+                Log::warning('SecureView Gemini API returned no text candidate.', [
+                    'model' => $model,
+                    'finish_reason' => $response->json('candidates.0.finishReason'),
+                    'prompt_feedback' => $response->json('promptFeedback.blockReason'),
+                ]);
+
                 return response()->json([
                     'message' => 'I could not form an answer just now. Please try asking another way or send us an inquiry.',
                 ], 502);
@@ -80,6 +117,11 @@ PROMPT;
             return response()->json(['message' => trim($answer)]);
         } catch (\Throwable $exception) {
             report($exception);
+
+            Log::warning('SecureView chatbot could not reach Gemini API.', [
+                'exception' => get_class($exception),
+                'message' => $exception->getMessage(),
+            ]);
 
             return response()->json([
                 'message' => 'Sorry, the assistant could not connect right now. Please try again later or use the Services page to contact us.',
