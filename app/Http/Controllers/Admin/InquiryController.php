@@ -367,6 +367,12 @@ class InquiryController extends Controller
             ]);
         }
 
+        if ($this->dateUnavailableByTechnicianCapacity($bookingDate, $inquiry->id)) {
+            return back()->withErrors([
+                'preferred_date' => 'No technicians are available on this date. Every technician is already scheduled for another service.',
+            ]);
+        }
+
         if (BlockedBookingTimeSlot::query()
             ->whereDate('booking_date', $bookingDate)
             ->where('booking_time', $bookingTime)
@@ -576,4 +582,32 @@ class InquiryController extends Controller
 
         return back()->with('success', 'Inquiry status updated successfully.');
     }
+    private function dateUnavailableByTechnicianCapacity(string $date, ?int $exceptInquiryId = null): bool
+    {
+        $technicianCount = User::query()->where('role', 'technician')->count();
+        if ($technicianCount === 0) {
+            return true;
+        }
+
+        $busyCount = User::query()
+            ->where('role', 'technician')
+            ->where(function ($technicianQuery) use ($date, $exceptInquiryId) {
+                $activeOnDate = function ($query) use ($date, $exceptInquiryId) {
+                    $query->whereDate('preferred_date', $date)
+                        ->whereIn('status', ['confirmed', 'in_progress']);
+                    if ($exceptInquiryId !== null) {
+                        $query->where('inquiries.id', '!=', $exceptInquiryId);
+                    }
+                };
+
+                $technicianQuery
+                    ->whereHas('assignedInquiries', $activeOnDate)
+                    ->orWhereHas('technicianInquiries', $activeOnDate);
+            })
+            ->count();
+
+        return $busyCount >= $technicianCount;
+    }
+
+
 }
