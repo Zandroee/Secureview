@@ -312,6 +312,7 @@ class TechnicianWorkspaceController extends Controller
             'item_name' => $inquiry->item_name,
             'urgency' => $inquiry->urgency,
             'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
+            'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
             'preferred_time' => $inquiry->preferred_time,
             'city' => $inquiry->city,
             'street_address' => $includeCustomerDetails ? $inquiry->street_address : null,
