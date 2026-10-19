@@ -124,6 +124,7 @@ class InquiryConfirmationSchedulingTest extends TestCase
         $secondCustomer = User::factory()->create(['role' => 'user']);
         $admin = User::factory()->create(['role' => 'admin']);
         $technician = User::factory()->create(['role' => 'technician']);
+        User::factory()->create(['role' => 'technician']); // Keep another technician free so this specifically tests a same-slot conflict.
         $date = today()->addDays(7)->toDateString();
 
         $existingJob = $this->createPendingInquiry($firstCustomer, $date);
