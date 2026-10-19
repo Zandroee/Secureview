@@ -249,7 +249,7 @@ class InquiryController extends Controller
             ->pluck('name')
             ->all();
 
-        if ($conflictingTechnicians) {
+        if (in_array($inquiry->status, ['pending', 'confirmed', 'in_progress'], true) && $conflictingTechnicians) {
             return back()->withErrors([
                 'technician_ids' => 'These technicians already have another service scheduled on that date: ' . implode(', ', $conflictingTechnicians) . '.',
             ]);
