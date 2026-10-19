@@ -43,6 +43,16 @@ function JobCard({ job, open = false }) {
         });
     };
 
+    const reviewReschedule = (decision) => {
+        setWorking(true);
+        setScheduleError("");
+        router.patch("/technician/jobs/" + job.id + "/reschedule/" + decision, {}, {
+            preserveScroll: true,
+            onError: (errors) => setScheduleError(errors.reschedule || "Unable to review reschedule request."),
+            onFinish: () => setWorking(false),
+        });
+    };
+
     const saveSchedule = (event) => {
         event.preventDefault();
         setWorking(true);
@@ -146,6 +156,19 @@ function JobCard({ job, open = false }) {
                 </button>
             ) : (
                 <div className="small text-success fw-semibold">This job is completed.</div>
+            )}
+
+            {!open && job.status === "confirmed" && job.reschedule_request_status === "pending" && (
+                <div className="mt-3 border rounded-3 bg-warning-subtle p-3">
+                    <div className="fw-bold small mb-1">Customer reschedule request</div>
+                    <div className="small">{job.reschedule_requested_date} · {job.reschedule_requested_time}</div>
+                    {job.reschedule_request_note && <div className="small text-muted mt-1">{job.reschedule_request_note}</div>}
+                    {scheduleError && <div className="small text-danger mt-2">{scheduleError}</div>}
+                    <div className="d-flex gap-2 mt-2">
+                        <button type="button" className="btn btn-success btn-sm flex-grow-1" disabled={working} onClick={() => reviewReschedule("approve")}>Approve</button>
+                        <button type="button" className="btn btn-outline-danger btn-sm flex-grow-1" disabled={working} onClick={() => reviewReschedule("decline")}>Decline</button>
+                    </div>
+                </div>
             )}
 
             {!open && job.status === "confirmed" && (
