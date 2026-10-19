@@ -133,12 +133,13 @@ class ScheduleController extends Controller
             ])
             ->values();
 
-        // Derive automatic availability from active technician assignments. A technician can
-        // take at most one service per day, so any active job blocks that technician for the day.
+        // A technician can take only one service per day. Count every assigned job
+        // (including pending inquiries that already have a technician); unassigned
+        // pending inquiries do not consume technician capacity.
         $technicianCount = $technicians->count();
-        $activeScheduleBookings = Inquiry::query()
+        $assignedScheduleBookings = Inquiry::query()
             ->with('technicians:id')
-            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
             ->whereDate('preferred_date', '>=', today())
             ->get(['id', 'technician_id', 'preferred_date', 'preferred_time']);
 
@@ -151,60 +152,55 @@ class ScheduleController extends Controller
             return $ids->unique()->values();
         };
 
-        $busyTechniciansByDate = $activeScheduleBookings
+        $busyTechniciansByDate = $assignedScheduleBookings
             ->groupBy(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d'))
             ->map(fn ($jobs) => $jobs->flatMap($assignedTechnicianIds)->unique()->count());
 
-        $busyTechniciansBySlot = $activeScheduleBookings
-            ->groupBy(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d') . '|' . $job->preferred_time)
-            ->map(fn ($jobs) => $jobs->flatMap($assignedTechnicianIds)->unique()->count());
+        $manualDateKeys = $blockedBookingDates->pluck('booking_date')->map(fn ($date) => (string) $date);
+        $capacityBlockedDateKeys = $busyTechniciansByDate
+            ->filter(fn ($busyCount) => $technicianCount === 0 || $busyCount >= $technicianCount)
+            ->keys()
+            ->map(fn ($date) => Carbon::parse($date)->toDateString());
 
-        $manualDateKeys = $blockedBookingDates->pluck('booking_date');
-        $automaticBlockedDates = $technicianCount > 0
-            ? $busyTechniciansByDate
-                ->filter(fn ($busyCount) => $busyCount >= $technicianCount)
-                ->keys()
-                ->map(fn ($date) => Carbon::parse($date)->toDateString())
-                ->diff($manualDateKeys)
-                ->map(fn ($date) => [
-                    'id' => 'capacity-' . $date,
-                    'booking_date' => $date,
-                    'formatted_date' => Carbon::parse($date)->format('F j, Y'),
-                    'reason' => 'Automatically blocked: every technician already has a service scheduled that day.',
-                    'is_automatic' => true,
-                ])
-                ->values()
-            : collect();
+        $automaticBlockedDates = $capacityBlockedDateKeys
+            ->reject(fn ($date) => $manualDateKeys->contains($date))
+            ->map(fn ($date) => [
+                'id' => 'capacity-' . $date,
+                'booking_date' => $date,
+                'formatted_date' => Carbon::parse($date)->format('F j, Y'),
+                'reason' => 'Automatically blocked: every technician already has a service scheduled that day.',
+                'is_automatic' => true,
+            ])
+            ->values();
 
         $blockedBookingDates = $blockedBookingDates
             ->concat($automaticBlockedDates)
             ->sortBy('booking_date')
             ->values();
 
+        // When all technicians are occupied for the day, display all three slots
+        // as unavailable too. This matches the one-service-per-technician-per-day rule.
         $manualSlotKeys = $blockedBookingTimeSlots->map(
             fn ($slot) => $slot['booking_date'] . '|' . $slot['booking_time']
         );
-        $automaticBlockedSlots = $technicianCount > 0
-            ? $busyTechniciansBySlot
-                ->filter(fn ($busyCount) => $busyCount >= $technicianCount)
-                ->keys()
-                ->map(function ($key) {
-                    [$date, $time] = explode('|', $key, 2);
-
-                    return [
-                        'id' => 'capacity-' . $date . '-' . md5($time),
-                        'booking_date' => $date,
-                        'formatted_date' => Carbon::parse($date)->format('F j, Y'),
-                        'booking_time' => $time,
-                        'reason' => 'Automatically blocked: every technician is already assigned during this time slot.',
-                        'is_automatic' => true,
-                    ];
-                })
-                ->reject(fn ($slot) => $manualSlotKeys->contains(
-                    $slot['booking_date'] . '|' . $slot['booking_time']
-                ))
-                ->values()
-            : collect();
+        $automaticBlockedSlots = $capacityBlockedDateKeys
+            ->flatMap(function ($date) use ($manualSlotKeys) {
+                return collect(self::BOOKING_TIME_SLOTS)
+                    ->map(function ($time) use ($date) {
+                        return [
+                            'id' => 'capacity-' . $date . '-' . md5($time),
+                            'booking_date' => $date,
+                            'formatted_date' => Carbon::parse($date)->format('F j, Y'),
+                            'booking_time' => $time,
+                            'reason' => 'Automatically blocked: every technician already has a service scheduled that day.',
+                            'is_automatic' => true,
+                        ];
+                    })
+                    ->reject(fn ($slot) => $manualSlotKeys->contains(
+                        $slot['booking_date'] . '|' . $slot['booking_time']
+                    ));
+            })
+            ->values();
 
         $blockedBookingTimeSlots = $blockedBookingTimeSlots
             ->concat($automaticBlockedSlots)
