@@ -549,21 +549,33 @@ class ScheduleController extends Controller
 
     private function assertTechniciansAvailable(array $technicianIds, string $date, string $time, Inquiry $inquiry): void
     {
+        if (empty($technicianIds)) {
+            return;
+        }
+
         $conflicts = User::query()
             ->whereIn('id', $technicianIds)
-            ->whereHas('assignedInquiries', function ($query) use ($date, $time, $inquiry) {
-                $query->whereDate('preferred_date', $date)
-                    ->where('preferred_time', $time)
-                    ->whereIn('status', ['confirmed', 'in_progress'])
-                    ->where('inquiries.id', '!=', $inquiry->id);
-            })->pluck('name')->all();
+            ->where(function ($technicianQuery) use ($date, $inquiry) {
+                $assignedOnDate = function ($query) use ($date, $inquiry) {
+                    $query->whereDate('preferred_date', $date)
+                        ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+                        ->where('inquiries.id', '!=', $inquiry->id);
+                };
+
+                $technicianQuery
+                    ->whereHas('assignedInquiries', $assignedOnDate)
+                    ->orWhereHas('technicianInquiries', $assignedOnDate);
+            })
+            ->pluck('name')
+            ->all();
 
         if ($conflicts) {
             throw ValidationException::withMessages([
-                'preferred_time' => 'The assigned team has a conflicting appointment: ' . implode(', ', $conflicts) . '.',
+                'preferred_date' => 'The assigned technician team already has another service on this date: ' . implode(', ', $conflicts) . '. Choose another date or team.',
             ]);
         }
     }
+
 
     private function dateUnavailableByTechnicianCapacity(string $date, ?int $exceptInquiryId = null): bool
     {
@@ -575,22 +587,21 @@ class ScheduleController extends Controller
         $busyCount = User::query()
             ->where('role', 'technician')
             ->where(function ($technicianQuery) use ($date, $exceptInquiryId) {
-                $activeOnDate = function ($query) use ($date, $exceptInquiryId) {
+                $assignedOnDate = function ($query) use ($date, $exceptInquiryId) {
                     $query->whereDate('preferred_date', $date)
-                        ->whereIn('status', ['confirmed', 'in_progress']);
+                        ->whereIn('status', ['pending', 'confirmed', 'in_progress']);
+
                     if ($exceptInquiryId !== null) {
                         $query->where('inquiries.id', '!=', $exceptInquiryId);
                     }
                 };
 
                 $technicianQuery
-                    ->whereHas('assignedInquiries', $activeOnDate)
-                    ->orWhereHas('technicianInquiries', $activeOnDate);
+                    ->whereHas('assignedInquiries', $assignedOnDate)
+                    ->orWhereHas('technicianInquiries', $assignedOnDate);
             })
             ->count();
 
         return $busyCount >= $technicianCount;
     }
-
-
 }
