@@ -1,0 +1,561 @@
+{
+  "_AdminPagination-Cu1nbwIt.js": {
+    "file": "assets/AdminPagination-Cu1nbwIt.js",
+    "name": "AdminPagination",
+    "imports": [
+      "resources/js/app.jsx"
+    ]
+  },
+  "_ManageTechnicianTeamModal-7YhmtDob.js": {
+    "file": "assets/ManageTechnicianTeamModal-7YhmtDob.js",
+    "name": "ManageTechnicianTeamModal",
+    "imports": [
+      "resources/js/app.jsx"
+    ]
+  },
+  "_PackageCard-DelZWx2Y.js": {
+    "file": "assets/PackageCard-DelZWx2Y.js",
+    "name": "PackageCard",
+    "imports": [
+      "resources/js/app.jsx",
+      "_ProductCard-ChCQ9tY-.js"
+    ]
+  },
+  "_Pagination-jmhxQitI.js": {
+    "file": "assets/Pagination-jmhxQitI.js",
+    "name": "Pagination",
+    "imports": [
+      "resources/js/app.jsx"
+    ],
+    "css": [
+      "assets/Pagination-tn0RQdqM.css"
+    ]
+  },
+  "_Pagination-tn0RQdqM.css": {
+    "file": "assets/Pagination-tn0RQdqM.css",
+    "src": "_Pagination-tn0RQdqM.css"
+  },
+  "_ProductCard-ChCQ9tY-.js": {
+    "file": "assets/ProductCard-ChCQ9tY-.js",
+    "name": "ProductCard",
+    "imports": [
+      "resources/js/app.jsx"
+    ]
+  },
+  "_ServiceLocation-BV4fsNcr.js": {
+    "file": "assets/ServiceLocation-BV4fsNcr.js",
+    "name": "ServiceLocation",
+    "imports": [
+      "resources/js/app.jsx"
+    ]
+  },
+  "_Sidebar-C-Uco7TR.js": {
+    "file": "assets/Sidebar-C-Uco7TR.js",
+    "name": "Sidebar",
+    "imports": [
+      "resources/js/app.jsx"
+    ]
+  },
+  "_customerSidebar-Dbfgcj6m.js": {
+    "file": "assets/customerSidebar-Dbfgcj6m.js",
+    "name": "customerSidebar",
+    "imports": [
+      "resources/js/app.jsx"
+    ]
+  },
+  "_footer-BBQ-vaAO.js": {
+    "file": "assets/footer-BBQ-vaAO.js",
+    "name": "footer",
+    "imports": [
+      "resources/js/app.jsx"
+    ]
+  },
+  "_login-DzU0dSlx.css": {
+    "file": "assets/login-DzU0dSlx.css",
+    "src": "_login-DzU0dSlx.css"
+  },
+  "_navbar-AUNLlf4t.js": {
+    "file": "assets/navbar-AUNLlf4t.js",
+    "name": "navbar",
+    "imports": [
+      "resources/js/app.jsx"
+    ]
+  },
+  "_signup-1GxJCoJ5.js": {
+    "file": "assets/signup-1GxJCoJ5.js",
+    "name": "signup",
+    "imports": [
+      "resources/js/app.jsx"
+    ],
+    "css": [
+      "assets/signup-CYxUkMPp.css"
+    ]
+  },
+  "_signup-CYxUkMPp.css": {
+    "file": "assets/signup-CYxUkMPp.css",
+    "src": "_signup-CYxUkMPp.css"
+  },
+  "node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff": {
+    "file": "assets/bootstrap-icons-BeopsB42.woff",
+    "src": "node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff"
+  },
+  "node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2": {
+    "file": "assets/bootstrap-icons-mSm7cUeB.woff2",
+    "src": "node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-BnqWBLhm.css",
+    "src": "resources/css/app.css",
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
+  },
+  "resources/js/Pages/Admin/ActivityLogs.jsx": {
+    "file": "assets/ActivityLogs-K8i_ECZj.js",
+    "name": "ActivityLogs",
+    "src": "resources/js/Pages/Admin/ActivityLogs.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_Sidebar-C-Uco7TR.js",
+      "_AdminPagination-Cu1nbwIt.js"
+    ]
+  },
+  "resources/js/Pages/Admin/Inquiries.jsx": {
+    "file": "assets/Inquiries-DRoLt89_.js",
+    "name": "Inquiries",
+    "src": "resources/js/Pages/Admin/Inquiries.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_Sidebar-C-Uco7TR.js",
+      "_AdminPagination-Cu1nbwIt.js",
+      "_ManageTechnicianTeamModal-7YhmtDob.js",
+      "_ServiceLocation-BV4fsNcr.js"
+    ]
+  },
+  "resources/js/Pages/Admin/InquiryDetails.jsx": {
+    "file": "assets/InquiryDetails-qCQAUu-7.js",
+    "name": "InquiryDetails",
+    "src": "resources/js/Pages/Admin/InquiryDetails.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_Sidebar-C-Uco7TR.js",
+      "_ManageTechnicianTeamModal-7YhmtDob.js",
+      "_ServiceLocation-BV4fsNcr.js"
+    ]
+  },
+  "resources/js/Pages/Admin/InventoryAdjustments.jsx": {
+    "file": "assets/InventoryAdjustments-CTpRd6SP.js",
+    "name": "InventoryAdjustments",
+    "src": "resources/js/Pages/Admin/InventoryAdjustments.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_Sidebar-C-Uco7TR.js",
+      "_AdminPagination-Cu1nbwIt.js"
+    ]
+  },
+  "resources/js/Pages/Admin/Packages.jsx": {
+    "file": "assets/Packages-BcOaRUDk.js",
+    "name": "Packages",
+    "src": "resources/js/Pages/Admin/Packages.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_Sidebar-C-Uco7TR.js",
+      "_AdminPagination-Cu1nbwIt.js"
+    ]
+  },
+  "resources/js/Pages/Admin/Products.jsx": {
+    "file": "assets/Products-CkhJVAh2.js",
+    "name": "Products",
+    "src": "resources/js/Pages/Admin/Products.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_Sidebar-C-Uco7TR.js",
+      "_AdminPagination-Cu1nbwIt.js"
+    ]
+  },
+  "resources/js/Pages/Admin/Purchases.jsx": {
+    "file": "assets/Purchases-Drgjh0mr.js",
+    "name": "Purchases",
+    "src": "resources/js/Pages/Admin/Purchases.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_Sidebar-C-Uco7TR.js"
+    ]
+  },
+  "resources/js/Pages/Admin/Schedules.jsx": {
+    "file": "assets/Schedules-8X5NMcXa.js",
+    "name": "Schedules",
+    "src": "resources/js/Pages/Admin/Schedules.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_Sidebar-C-Uco7TR.js",
+      "_AdminPagination-Cu1nbwIt.js",
+      "_ServiceLocation-BV4fsNcr.js"
+    ]
+  },
+  "resources/js/Pages/Admin/Transactions.jsx": {
+    "file": "assets/Transactions-C3Dj8Oq9.js",
+    "name": "Transactions",
+    "src": "resources/js/Pages/Admin/Transactions.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_Sidebar-C-Uco7TR.js",
+      "_AdminPagination-Cu1nbwIt.js"
+    ]
+  },
+  "resources/js/Pages/Admin/Users.jsx": {
+    "file": "assets/Users-Bi7f1DA3.js",
+    "name": "Users",
+    "src": "resources/js/Pages/Admin/Users.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_Sidebar-C-Uco7TR.js",
+      "_AdminPagination-Cu1nbwIt.js"
+    ]
+  },
+  "resources/js/Pages/Dashboard.jsx": {
+    "file": "assets/Dashboard-ZaegslVp.js",
+    "name": "Dashboard",
+    "src": "resources/js/Pages/Dashboard.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_Sidebar-C-Uco7TR.js",
+      "_AdminPagination-Cu1nbwIt.js"
+    ],
+    "css": [
+      "assets/Dashboard-Cb74IefQ.css"
+    ]
+  },
+  "resources/js/Pages/Technician/Workspace.jsx": {
+    "file": "assets/Workspace-BUYcsD9J.js",
+    "name": "Workspace",
+    "src": "resources/js/Pages/Technician/Workspace.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_ServiceLocation-BV4fsNcr.js"
+    ]
+  },
+  "resources/js/Pages/about.jsx": {
+    "file": "assets/about-DuYRxpej.js",
+    "name": "about",
+    "src": "resources/js/Pages/about.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js"
+    ],
+    "css": [
+      "assets/about-CYzuh80d.css"
+    ]
+  },
+  "resources/js/Pages/cart.jsx": {
+    "file": "assets/cart-DMuKLI2o.js",
+    "name": "cart",
+    "src": "resources/js/Pages/cart.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js"
+    ]
+  },
+  "resources/js/Pages/checkout.jsx": {
+    "file": "assets/checkout-Bt_TS3g5.js",
+    "name": "checkout",
+    "src": "resources/js/Pages/checkout.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js"
+    ]
+  },
+  "resources/js/Pages/forgot-password.jsx": {
+    "file": "assets/forgot-password-43FNc2jd.js",
+    "name": "forgot-password",
+    "src": "resources/js/Pages/forgot-password.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js"
+    ],
+    "css": [
+      "assets/login-DzU0dSlx.css"
+    ]
+  },
+  "resources/js/Pages/inquiries.jsx": {
+    "file": "assets/inquiries-DLCLXKtE.js",
+    "name": "inquiries",
+    "src": "resources/js/Pages/inquiries.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_customerSidebar-Dbfgcj6m.js",
+      "_ServiceLocation-BV4fsNcr.js"
+    ]
+  },
+  "resources/js/Pages/inquiry.jsx": {
+    "file": "assets/inquiry-BJoH9PhE.js",
+    "name": "inquiry",
+    "src": "resources/js/Pages/inquiry.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_ServiceLocation-BV4fsNcr.js"
+    ]
+  },
+  "resources/js/Pages/inquiry_details.jsx": {
+    "file": "assets/inquiry_details-C5G5cdTn.js",
+    "name": "inquiry_details",
+    "src": "resources/js/Pages/inquiry_details.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_ServiceLocation-BV4fsNcr.js"
+    ]
+  },
+  "resources/js/Pages/landing.jsx": {
+    "file": "assets/landing-q2cmiEBz.js",
+    "name": "landing",
+    "src": "resources/js/Pages/landing.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_PackageCard-DelZWx2Y.js",
+      "_ProductCard-ChCQ9tY-.js"
+    ]
+  },
+  "resources/js/Pages/login.jsx": {
+    "file": "assets/login-BN-P9qwc.js",
+    "name": "login",
+    "src": "resources/js/Pages/login.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js"
+    ],
+    "css": [
+      "assets/login-DzU0dSlx.css"
+    ]
+  },
+  "resources/js/Pages/notifications.jsx": {
+    "file": "assets/notifications-Dt-r8q5B.js",
+    "name": "notifications",
+    "src": "resources/js/Pages/notifications.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js"
+    ]
+  },
+  "resources/js/Pages/package_details.jsx": {
+    "file": "assets/package_details-BF_EDZBx.js",
+    "name": "package_details",
+    "src": "resources/js/Pages/package_details.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js"
+    ]
+  },
+  "resources/js/Pages/packages.jsx": {
+    "file": "assets/packages-ru7ws4cb.js",
+    "name": "packages",
+    "src": "resources/js/Pages/packages.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_Pagination-jmhxQitI.js",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_PackageCard-DelZWx2Y.js",
+      "_ProductCard-ChCQ9tY-.js"
+    ]
+  },
+  "resources/js/Pages/product_details.jsx": {
+    "file": "assets/product_details-BMER9rZc.js",
+    "name": "product_details",
+    "src": "resources/js/Pages/product_details.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js"
+    ]
+  },
+  "resources/js/Pages/products.jsx": {
+    "file": "assets/products-C0Gwn4sl.js",
+    "name": "products",
+    "src": "resources/js/Pages/products.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_Pagination-jmhxQitI.js",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_ProductCard-ChCQ9tY-.js"
+    ]
+  },
+  "resources/js/Pages/purchase_details.jsx": {
+    "file": "assets/purchase_details-DhrG14fM.js",
+    "name": "purchase_details",
+    "src": "resources/js/Pages/purchase_details.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js"
+    ]
+  },
+  "resources/js/Pages/purchases.jsx": {
+    "file": "assets/purchases-BsZdskCi.js",
+    "name": "purchases",
+    "src": "resources/js/Pages/purchases.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_customerSidebar-Dbfgcj6m.js"
+    ]
+  },
+  "resources/js/Pages/reset-password.jsx": {
+    "file": "assets/reset-password-BdCCfUpp.js",
+    "name": "reset-password",
+    "src": "resources/js/Pages/reset-password.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_signup-1GxJCoJ5.js",
+      "_navbar-AUNLlf4t.js"
+    ]
+  },
+  "resources/js/Pages/schedules.jsx": {
+    "file": "assets/schedules-BXr_g8Yo.js",
+    "name": "schedules",
+    "src": "resources/js/Pages/schedules.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js",
+      "_customerSidebar-Dbfgcj6m.js"
+    ]
+  },
+  "resources/js/Pages/services.jsx": {
+    "file": "assets/services-BV4hrv9p.js",
+    "name": "services",
+    "src": "resources/js/Pages/services.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_footer-BBQ-vaAO.js"
+    ]
+  },
+  "resources/js/Pages/signup.jsx": {
+    "file": "assets/signup-CTnVkmDf.js",
+    "name": "signup",
+    "src": "resources/js/Pages/signup.jsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.jsx",
+      "_navbar-AUNLlf4t.js",
+      "_signup-1GxJCoJ5.js"
+    ]
+  },
+  "resources/js/app.jsx": {
+    "file": "assets/app-DFiKjkrQ.js",
+    "name": "app",
+    "src": "resources/js/app.jsx",
+    "isEntry": true,
+    "dynamicImports": [
+      "resources/js/Pages/Admin/ActivityLogs.jsx",
+      "resources/js/Pages/Admin/Inquiries.jsx",
+      "resources/js/Pages/Admin/InquiryDetails.jsx",
+      "resources/js/Pages/Admin/InventoryAdjustments.jsx",
+      "resources/js/Pages/Admin/Packages.jsx",
+      "resources/js/Pages/Admin/Products.jsx",
+      "resources/js/Pages/Admin/Purchases.jsx",
+      "resources/js/Pages/Admin/Schedules.jsx",
+      "resources/js/Pages/Admin/Transactions.jsx",
+      "resources/js/Pages/Admin/Users.jsx",
+      "resources/js/Pages/Dashboard.jsx",
+      "resources/js/Pages/Technician/Workspace.jsx",
+      "resources/js/Pages/about.jsx",
+      "resources/js/Pages/cart.jsx",
+      "resources/js/Pages/checkout.jsx",
+      "resources/js/Pages/forgot-password.jsx",
+      "resources/js/Pages/inquiries.jsx",
+      "resources/js/Pages/inquiry.jsx",
+      "resources/js/Pages/inquiry_details.jsx",
+      "resources/js/Pages/landing.jsx",
+      "resources/js/Pages/login.jsx",
+      "resources/js/Pages/notifications.jsx",
+      "resources/js/Pages/package_details.jsx",
+      "resources/js/Pages/packages.jsx",
+      "resources/js/Pages/product_details.jsx",
+      "resources/js/Pages/products.jsx",
+      "resources/js/Pages/purchase_details.jsx",
+      "resources/js/Pages/purchases.jsx",
+      "resources/js/Pages/reset-password.jsx",
+      "resources/js/Pages/schedules.jsx",
+      "resources/js/Pages/services.jsx",
+      "resources/js/Pages/signup.jsx"
+    ],
+    "css": [
+      "assets/app-D7GwWThn.css"
+    ],
+    "assets": [
+      "assets/bootstrap-icons-mSm7cUeB.woff2",
+      "assets/bootstrap-icons-BeopsB42.woff"
+    ]
+  }
+}
