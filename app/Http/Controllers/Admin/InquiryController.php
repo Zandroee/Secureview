@@ -25,6 +25,8 @@ class InquiryController extends Controller
 
     public function index(Request $request)
     {
+        Inquiry::escalateOverdueUrgency();
+
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:pending,confirmed,in_progress,completed,cancelled'],
