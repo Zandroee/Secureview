@@ -174,7 +174,19 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
 
     const isTimeSlotFullyBooked = (timeSlot) =>
         Boolean(selectedDate) &&
-        (unavailableTimeSlots[selectedDate] ?? []).includes(timeSlot);
+        (
+            isFullyBookedDate(selectedDate) ||
+            (unavailableTimeSlots[selectedDate] ?? []).includes(timeSlot)
+        );
+
+    useEffect(() => {
+        if (selectedDate && isFullyBookedDate(selectedDate)) {
+            setSelectedDate("");
+            setSelectedTime("");
+            setData("preferred_date", "");
+            setData("preferred_time", "");
+        }
+    }, [selectedDate, unavailableDates, noTechniciansAvailable]);
 
     const openDateModal = () => {
         if (data.preferred_date) {
