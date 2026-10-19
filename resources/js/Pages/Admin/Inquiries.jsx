@@ -195,11 +195,8 @@ export default function AdminInquiries({
                                             setStatus(event.target.value)
                                         }
                                     >
-                                        <option value="">All statuses</option>
+                                        <option value="">All inquiry statuses</option>
                                         <option value="pending">Pending</option>
-                                        <option value="confirmed">Confirmed</option>
-                                        <option value="in_progress">In Progress</option>
-                                        <option value="completed">Completed</option>
                                         <option value="cancelled">Cancelled</option>
                                     </select>
                                 </div>
