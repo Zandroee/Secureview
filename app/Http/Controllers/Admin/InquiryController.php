@@ -107,15 +107,22 @@ class InquiryController extends Controller
             
         $technicianBookings = Inquiry::query()
             ->with('technicians:id')
-            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
             ->whereDate('preferred_date', '>=', today())
-            ->get(['id', 'preferred_date', 'preferred_time'])
-            ->map(fn (Inquiry $job) => [
-                'inquiry_id' => $job->id,
-                'date' => $job->preferred_date?->format('Y-m-d'),
-                'time' => $job->preferred_time,
-                'technician_ids' => $job->technicians->pluck('id')->map(fn ($id) => (int) $id)->values(),
-            ])
+            ->get(['id', 'technician_id', 'preferred_date', 'preferred_time'])
+            ->map(function (Inquiry $job) {
+                $technicianIds = $job->technicians->pluck('id')->map(fn ($id) => (int) $id);
+                if ($job->technician_id) {
+                    $technicianIds->push((int) $job->technician_id);
+                }
+
+                return [
+                    'inquiry_id' => $job->id,
+                    'date' => $job->preferred_date?->format('Y-m-d'),
+                    'time' => $job->preferred_time,
+                    'technician_ids' => $technicianIds->unique()->values(),
+                ];
+            })
             ->values();
 
 
@@ -228,18 +235,23 @@ class InquiryController extends Controller
 
         $conflictingTechnicians = User::query()
             ->whereIn('id', $technicianIds)
-            ->whereHas('assignedInquiries', function ($query) use ($inquiry) {
-                $query->whereDate('preferred_date', $inquiry->preferred_date)
-                    ->where('preferred_time', $inquiry->preferred_time)
-                    ->whereIn('status', ['confirmed', 'in_progress'])
-                    ->where('inquiries.id', '!=', $inquiry->getKey());
+            ->where(function ($technicianQuery) use ($inquiry) {
+                $assignedOnDate = function ($query) use ($inquiry) {
+                    $query->whereDate('preferred_date', $inquiry->preferred_date)
+                        ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+                        ->where('inquiries.id', '!=', $inquiry->getKey());
+                };
+
+                $technicianQuery
+                    ->whereHas('assignedInquiries', $assignedOnDate)
+                    ->orWhereHas('technicianInquiries', $assignedOnDate);
             })
             ->pluck('name')
             ->all();
 
-        if (in_array($inquiry->status, ['confirmed', 'in_progress'], true) && $conflictingTechnicians) {
+        if ($conflictingTechnicians) {
             return back()->withErrors([
-                'technician_ids' => 'These technicians already have jobs in that time slot: ' . implode(', ', $conflictingTechnicians) . '.',
+                'technician_ids' => 'These technicians already have another service scheduled on that date: ' . implode(', ', $conflictingTechnicians) . '.',
             ]);
         }
 
@@ -386,18 +398,23 @@ class InquiryController extends Controller
 
         $conflictingTechnicians = User::query()
             ->whereIn('id', $technicianIds)
-            ->whereHas('assignedInquiries', function ($query) use ($bookingDate, $bookingTime, $inquiry) {
-                $query->whereDate('preferred_date', $bookingDate)
-                    ->where('preferred_time', $bookingTime)
-                    ->whereIn('status', ['confirmed', 'in_progress'])
-                    ->where('inquiries.id', '!=', $inquiry->getKey());
+            ->where(function ($technicianQuery) use ($bookingDate, $inquiry) {
+                $assignedOnDate = function ($query) use ($bookingDate, $inquiry) {
+                    $query->whereDate('preferred_date', $bookingDate)
+                        ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+                        ->where('inquiries.id', '!=', $inquiry->getKey());
+                };
+
+                $technicianQuery
+                    ->whereHas('assignedInquiries', $assignedOnDate)
+                    ->orWhereHas('technicianInquiries', $assignedOnDate);
             })
             ->pluck('name')
             ->all();
 
         if ($conflictingTechnicians) {
             return back()->withErrors([
-                'technician_ids' => 'These technicians already have jobs in that time slot: ' . implode(', ', $conflictingTechnicians) . '.',
+                'technician_ids' => 'These technicians already have another service scheduled on that date: ' . implode(', ', $conflictingTechnicians) . '.',
             ]);
         }
 
