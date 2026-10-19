@@ -2,7 +2,7 @@ import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import ServiceLocationPicker from "../Components/GoogleMaps/ServiceLocation";
 import { router, useForm } from "@inertiajs/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const serviceTypes = [
     "Installation",
@@ -89,6 +89,22 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
         preferred_time: "",
         notes: "",
     });
+
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            if (document.visibilityState !== "visible" || processing) {
+                return;
+            }
+
+            router.reload({
+                only: ["unavailableDates", "unavailableTimeSlots", "noTechniciansAvailable"],
+                preserveState: true,
+                preserveScroll: true,
+            });
+        }, 15000);
+
+        return () => window.clearInterval(intervalId);
+    }, [processing]);
 
     const selectedCatalogItem =
         catalogItems.find((candidate) =>
