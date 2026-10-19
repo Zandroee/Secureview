@@ -9,6 +9,8 @@ class ScheduleController extends Controller
 {
     public function index(Request $request)
     {
+        Inquiry::escalateOverdueUrgency();
+
         $schedules = $request->user()
             ->inquiries()
             ->with('inquirable')
