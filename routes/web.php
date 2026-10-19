@@ -48,6 +48,10 @@ Route::get('/about', function () {
     return Inertia::render('about');
 })->name('about');
 
+Route::post('/chatbot/message', [ChatbotController::class, 'reply'])
+    ->middleware('throttle:10,1')
+    ->name('chatbot.reply');
+
 Route::get('/login', function () {
     return Inertia::render('login');
 })->name('login');
