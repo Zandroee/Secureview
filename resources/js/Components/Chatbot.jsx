@@ -21,7 +21,7 @@ function normalizeAssistantText(content = "") {
         .replace(/\\n/g, "\n")
         .replace(/\\r/g, "\n")
         .replace(/\\t/g, " ")
-        .replace(/\\([\\*_`])/g, "$1")
+        .replace(/\\([\\*_])/g, "$1")
         .trim();
 }
 
@@ -31,7 +31,7 @@ function renderAssistantContent(content) {
 
     return lines.map((line, lineIndex) => {
         // Render internal routes as friendly links instead of exposing raw paths.
-        const tokens = line.split(/(\\*\\*.*?\\*\\*|\\/(?:services|inquiry|products|packages|about)\\b)/gi);
+        const tokens = line.split(/(\*\*.*?\*\*|\/(?:services|inquiry|products|packages|about)\b)/gi);
 
         return (
             <span key={lineIndex}>
