@@ -22,6 +22,8 @@ class TechnicianWorkspaceController extends Controller
 
     public function index(Request $request)
     {
+        Inquiry::escalateOverdueUrgency();
+
         $technician = $request->user();
 
         $jobs = $technician->assignedInquiries()
