@@ -116,12 +116,13 @@ class InquiryController extends Controller
                 ->merge($slots)->unique()->values();
         }
 
-        $capacityBlockedDates = collect($capacityBlockedSlots)
+        // A date is unavailable when every slot is blocked manually or has no technician capacity.
+        $fullyUnavailableDates = collect($unavailableTimeSlots)
             ->filter(fn ($slots) => collect(self::BOOKING_TIME_SLOTS)->every(fn ($slot) => collect($slots)->contains($slot)))
             ->keys();
 
         $unavailableDates = collect($unavailableDates)
-            ->merge($capacityBlockedDates)
+            ->merge($fullyUnavailableDates)
             ->unique()
             ->values();
 
