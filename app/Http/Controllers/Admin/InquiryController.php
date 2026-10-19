@@ -135,6 +135,8 @@ class InquiryController extends Controller
 
     public function show(Inquiry $inquiry)
     {
+        Inquiry::escalateOverdueUrgency();
+
         $inquiry->load(['user', 'inquirable', 'technician', 'technicians']);
 
         $technicians = User::where('role', 'technician')
