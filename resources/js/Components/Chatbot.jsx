@@ -34,6 +34,7 @@ export default function Chatbot() {
 
         const userMessage = { role: "user", content };
         const history = [...messages.slice(1), userMessage].slice(-8);
+        while (history.length > 0 && history[0].role !== "user") history.shift();
         setMessages((previous) => [...previous, userMessage]);
         setInput("");
         setError("");
