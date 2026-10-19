@@ -216,6 +216,7 @@ Route::middleware(['auth', 'verified', 'technician'])->prefix('technician')->nam
     Route::post('/jobs/{inquiry}/claim', [TechnicianWorkspaceController::class, 'claimJob'])->name('jobs.claim');
     Route::patch('/jobs/{inquiry}/status', [TechnicianWorkspaceController::class, 'updateJobStatus'])->name('jobs.status');
     Route::patch('/jobs/{inquiry}/schedule', [TechnicianWorkspaceController::class, 'updateJobSchedule'])->name('jobs.schedule');
+    Route::patch('/jobs/{inquiry}/reschedule/{decision}', [TechnicianWorkspaceController::class, 'reviewReschedule'])->whereIn('decision', ['approve', 'decline'])->name('jobs.reschedule.review');
     Route::patch('/inventory/{product}', [TechnicianWorkspaceController::class, 'adjustStock'])->name('inventory.adjust');
 });
 
