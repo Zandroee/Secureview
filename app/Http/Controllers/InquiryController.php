@@ -506,6 +506,8 @@ class InquiryController extends Controller
 
     public function index(Request $request)
     {
+        Inquiry::escalateOverdueUrgency();
+
         $inquiries = $request->user()
             ->inquiries()
             ->with(['technician', 'technicians'])
@@ -548,6 +550,8 @@ class InquiryController extends Controller
 
     public function show(Request $request, Inquiry $inquiry)
     {
+        Inquiry::escalateOverdueUrgency();
+
         if ($inquiry->user_id !== $request->user()->id) {
             abort(404);
         }
