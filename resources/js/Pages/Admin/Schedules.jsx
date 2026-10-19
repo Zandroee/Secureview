@@ -3,7 +3,7 @@ import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import { Link, router } from "@inertiajs/react";
 import AdminPagination from "../../Components/Admin/AdminPagination";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { googleMapsSearchUrl } from "../../Components/GoogleMaps/ServiceLocation";
 
 function urgencyClass(urgency) {
@@ -111,6 +111,22 @@ export default function AdminSchedules({
     const [bookingReason, setBookingReason] = useState("");
     const [availabilityMessage, setAvailabilityMessage] = useState("");
     const [availabilityError, setAvailabilityError] = useState("");
+
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            if (document.visibilityState !== "visible") {
+                return;
+            }
+
+            router.reload({
+                only: ["schedules", "summary", "blockedBookingDates", "blockedBookingTimeSlots"],
+                preserveState: true,
+                preserveScroll: true,
+            });
+        }, 15000);
+
+        return () => window.clearInterval(intervalId);
+    }, []);
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -792,7 +808,7 @@ export default function AdminSchedules({
                                                     <td className="text-end pe-3">
                                                         <div className="d-flex flex-column align-items-end gap-2">
                                                             <ScheduleActions schedule={schedule} todayDate={todayDate} bookingTimeSlots={bookingTimeSlots} />
-                                                            <Link href={"/admin/inquiries/" + schedule.id} className="btn btn-outline-primary btn-sm fw-bold">VIEW</Link>
+                                                            <Link href={"/admin/schedules/" + schedule.id} className="btn btn-outline-primary btn-sm fw-bold">VIEW</Link>
                                                         </div>
                                                     </td>
                                                 </tr>
