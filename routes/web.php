@@ -203,6 +203,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/inquiries', [InquiryController::class, 'store'])->name('inquiries.store');
     Route::get('/inquiries', [InquiryController::class, 'index'])->name('inquiries.index');
     Route::get('/inquiries/{inquiry}', [InquiryController::class, 'show'])->name('inquiries.show');
+    Route::post('/inquiries/{inquiry}/reschedule', [InquiryController::class, 'requestReschedule'])->name('inquiries.reschedule');
     Route::get('/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
@@ -214,6 +215,7 @@ Route::middleware(['auth', 'verified', 'technician'])->prefix('technician')->nam
     Route::get('/dashboard', [TechnicianWorkspaceController::class, 'index'])->name('dashboard');
     Route::post('/jobs/{inquiry}/claim', [TechnicianWorkspaceController::class, 'claimJob'])->name('jobs.claim');
     Route::patch('/jobs/{inquiry}/status', [TechnicianWorkspaceController::class, 'updateJobStatus'])->name('jobs.status');
+    Route::patch('/jobs/{inquiry}/schedule', [TechnicianWorkspaceController::class, 'updateJobSchedule'])->name('jobs.schedule');
     Route::patch('/inventory/{product}', [TechnicianWorkspaceController::class, 'adjustStock'])->name('inventory.adjust');
 });
 
@@ -253,6 +255,8 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/admin/inventory-adjustments', [AdminInventoryAdjustmentController::class, 'index'])
         ->name('admin.inventory-adjustments.index');
 
+    Route::get('/admin/warranty', fn () => Inertia::render('Admin/Warranty'))->name('admin.warranty.index');
+
     Route::post('/admin/products', [AdminProductController::class, 'store'])
         ->name('admin.products.store');
 
@@ -282,6 +286,9 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/schedules', [AdminScheduleController::class, 'index'])
         ->name('admin.schedules.index');
+    Route::patch('/admin/schedules/{inquiry}', [AdminScheduleController::class, 'updateSchedule'])->name('admin.schedules.update');
+    Route::patch('/admin/reschedule-requests/{inquiry}/approve', [AdminScheduleController::class, 'approveReschedule'])->name('admin.reschedule-requests.approve');
+    Route::patch('/admin/reschedule-requests/{inquiry}/decline', [AdminScheduleController::class, 'declineReschedule'])->name('admin.reschedule-requests.decline');
 
     Route::post('/admin/booking-availability', [AdminScheduleController::class, 'storeBookingDateBlock'])
         ->name('admin.booking-availability.store');
