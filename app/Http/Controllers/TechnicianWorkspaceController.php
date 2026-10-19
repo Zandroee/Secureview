@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BlockedBookingDate;
+use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\InventoryAdjustment;
@@ -332,4 +334,70 @@ class TechnicianWorkspaceController extends Controller
 
         return $data;
     }
+    public function updateJobSchedule(Request $request, Inquiry $inquiry)
+    {
+        $technician = $request->user();
+        abort_unless($inquiry->technicians()->where('users.id', $technician->id)->exists(), 404);
+
+        if ($inquiry->status !== 'confirmed') {
+            return back()->withErrors(['schedule' => 'Only confirmed jobs can be rescheduled by a technician.']);
+        }
+
+        $validated = $request->validate([
+            'preferred_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'preferred_time' => ['required', 'in:08:00 AM - 11:00 AM,11:00 AM - 02:00 PM,02:00 PM - 05:00 PM'],
+        ]);
+
+        if (BlockedBookingDate::query()->whereDate('booking_date', $validated['preferred_date'])->exists()) {
+            return back()->withErrors(['preferred_date' => 'That date is marked fully booked.']);
+        }
+        if (BlockedBookingTimeSlot::query()->whereDate('booking_date', $validated['preferred_date'])->where('booking_time', $validated['preferred_time'])->exists()) {
+            return back()->withErrors(['preferred_time' => 'That time slot is marked fully booked.']);
+        }
+
+        $teamIds = $inquiry->technicians()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+        $conflicts = Inquiry::query()
+            ->where('id', '!=', $inquiry->id)
+            ->whereDate('preferred_date', $validated['preferred_date'])
+            ->where('preferred_time', $validated['preferred_time'])
+            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereHas('technicians', fn ($query) => $query->whereIn('users.id', $teamIds))
+            ->with('technicians:id,name')
+            ->get()
+            ->flatMap(fn (Inquiry $job) => $job->technicians->whereIn('id', $teamIds)->pluck('name'))
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($conflicts) {
+            return back()->withErrors(['preferred_time' => 'Your team has another job at that time: ' . implode(', ', $conflicts) . '.']);
+        }
+
+        DB::transaction(function () use ($inquiry, $validated) {
+            Inquiry::query()->whereKey($inquiry->id)->lockForUpdate()->firstOrFail()->update([
+                'preferred_date' => $validated['preferred_date'],
+                'preferred_time' => $validated['preferred_time'],
+                'reschedule_requested_date' => null,
+                'reschedule_requested_time' => null,
+                'reschedule_request_status' => 'none',
+                'reschedule_request_note' => null,
+                'reschedule_requested_at' => null,
+            ]);
+        });
+
+        if ($inquiry->user_id) {
+            CustomerNotification::create([
+                'user_id' => $inquiry->user_id,
+                'type' => 'schedule_updated',
+                'title' => 'Service schedule updated',
+                'message' => 'Your service ' . $inquiry->inquiry_number . ' is now scheduled for ' . $validated['preferred_date'] . ' (' . $validated['preferred_time'] . ').',
+                'action_url' => route('inquiries.show', $inquiry),
+                'related_type' => Inquiry::class,
+                'related_id' => $inquiry->id,
+            ]);
+        }
+
+        return back()->with('success', 'Service schedule updated successfully.');
+    }
+
 }
