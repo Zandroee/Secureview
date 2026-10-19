@@ -33,9 +33,9 @@ class InquiryController extends Controller
             'urgency' => ['nullable', 'in:normal,urgent,emergency'],
         ]);
 
-        // Active confirmed jobs live on the Schedules page, not in the pending inquiry queue.
+        // Active jobs belong on Schedules; completed jobs belong in Service History.
         $query = Inquiry::with(['user', 'inquirable', 'technician', 'technicians'])
-            ->whereNotIn('status', ['confirmed', 'in_progress']);
+            ->whereNotIn('status', ['confirmed', 'in_progress', 'completed']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
