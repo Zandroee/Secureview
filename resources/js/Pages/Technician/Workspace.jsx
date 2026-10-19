@@ -17,6 +17,11 @@ function formatStatus(status) {
 function JobCard({ job, open = false }) {
     const [working, setWorking] = useState(false);
     const [error, setError] = useState("");
+    const [editingSchedule, setEditingSchedule] = useState(false);
+    const [scheduleDate, setScheduleDate] = useState(job.preferred_date_value || "");
+    const [scheduleTime, setScheduleTime] = useState(job.preferred_time || "08:00 AM - 11:00 AM");
+    const [scheduleError, setScheduleError] = useState("");
+    const timeSlots = ["08:00 AM - 11:00 AM", "11:00 AM - 02:00 PM", "02:00 PM - 05:00 PM"];
 
     const claim = () => {
         setWorking(true);
@@ -34,6 +39,21 @@ function JobCard({ job, open = false }) {
         router.patch("/technician/jobs/" + job.id + "/status", { status }, {
             preserveScroll: true,
             onError: (errors) => setError(errors.status ?? "Unable to update job status."),
+            onFinish: () => setWorking(false),
+        });
+    };
+
+    const saveSchedule = (event) => {
+        event.preventDefault();
+        setWorking(true);
+        setScheduleError("");
+        router.patch("/technician/jobs/" + job.id + "/schedule", {
+            preferred_date: scheduleDate,
+            preferred_time: scheduleTime,
+        }, {
+            preserveScroll: true,
+            onError: (errors) => setScheduleError(errors.preferred_date || errors.preferred_time || errors.schedule || "Unable to update schedule."),
+            onSuccess: () => setEditingSchedule(false),
             onFinish: () => setWorking(false),
         });
     };
@@ -126,6 +146,26 @@ function JobCard({ job, open = false }) {
                 </button>
             ) : (
                 <div className="small text-success fw-semibold">This job is completed.</div>
+            )}
+
+            {!open && job.status === "confirmed" && (
+                <div className="mt-3 border-top pt-3">
+                    <button type="button" className="btn btn-outline-secondary btn-sm w-100" onClick={() => setEditingSchedule((value) => !value)}>
+                        {editingSchedule ? "Cancel schedule change" : "Change service schedule"}
+                    </button>
+                    {editingSchedule && (
+                        <form onSubmit={saveSchedule} className="bg-light border rounded-3 p-3 mt-2">
+                            <label className="form-label small fw-semibold">New date</label>
+                            <input type="date" min={new Date().toLocaleDateString("en-CA")} className="form-control form-control-sm mb-2" value={scheduleDate} required onChange={(event) => setScheduleDate(event.target.value)} />
+                            <label className="form-label small fw-semibold">New time slot</label>
+                            <select className="form-select form-select-sm mb-2" value={scheduleTime} required onChange={(event) => setScheduleTime(event.target.value)}>
+                                {timeSlots.map((slot) => <option key={slot} value={slot}>{slot}</option>)}
+                            </select>
+                            {scheduleError && <div className="alert alert-danger py-2 small">{scheduleError}</div>}
+                            <button type="submit" className="btn btn-primary btn-sm w-100" disabled={working || !scheduleDate}>{working ? "SAVING..." : "SAVE SCHEDULE"}</button>
+                        </form>
+                    )}
+                </div>
             )}
         </article>
     );
