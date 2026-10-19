@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -50,9 +51,19 @@ PROMPT;
 
         try {
             $model = config('services.gemini.model', 'gemini-2.5-flash');
+            $generationConfig = ['maxOutputTokens' => 400];
+
+            if (str_starts_with($model, 'gemini-3.')) {
+                // Gemini 3 supports thinking levels; low keeps a customer FAQ response fast.
+                $generationConfig['thinkingConfig'] = ['thinkingLevel' => 'low'];
+            } else {
+                $generationConfig['temperature'] = 0.35;
+            }
+
             $response = Http::acceptJson()
                 ->withHeaders(['x-goog-api-key' => $apiKey])
-                ->timeout(25)
+                ->connectTimeout(10)
+                ->timeout(60)
                 ->post(
                     'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent',
                     [
@@ -60,10 +71,7 @@ PROMPT;
                             'parts' => [['text' => $systemInstruction]],
                         ],
                         'contents' => $contents,
-                        'generationConfig' => [
-                            'temperature' => 0.35,
-                            'maxOutputTokens' => 400,
-                        ],
+                        'generationConfig' => $generationConfig,
                     ]
                 );
 
@@ -115,6 +123,16 @@ PROMPT;
             }
 
             return response()->json(['message' => trim($answer)]);
+        } catch (ConnectionException $exception) {
+            Log::warning('SecureView chatbot timed out or could not connect to Gemini.', [
+                'model' => $model,
+                'exception' => get_class($exception),
+                'message' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'The AI assistant took too long to connect or respond. Please try again shortly. If this keeps happening, check your internet connection and Google AI API availability.',
+            ], 504);
         } catch (\Throwable $exception) {
             report($exception);
 
