@@ -30,6 +30,67 @@ function statusLabel(status) {
     return status === "in_progress" ? "In Progress" : "Confirmed";
 }
 
+
+function ScheduleActions({ schedule, todayDate, bookingTimeSlots }) {
+    const [editing, setEditing] = useState(false);
+    const [date, setDate] = useState(schedule.preferred_date_value || todayDate);
+    const [time, setTime] = useState(schedule.preferred_time || bookingTimeSlots[0] || "");
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState("");
+
+    const saveSchedule = (event) => {
+        event.preventDefault();
+        setBusy(true);
+        setError("");
+        router.patch("/admin/schedules/" + schedule.id, { preferred_date: date, preferred_time: time }, {
+            preserveScroll: true,
+            onError: (errors) => setError(errors.preferred_date || errors.preferred_time || errors.schedule || "Unable to update schedule."),
+            onSuccess: () => setEditing(false),
+            onFinish: () => setBusy(false),
+        });
+    };
+
+    const reviewRequest = (action) => {
+        if (busy) return;
+        setBusy(true);
+        setError("");
+        router.patch("/admin/reschedule-requests/" + schedule.id + "/" + action, {}, {
+            preserveScroll: true,
+            onError: (errors) => setError(errors.reschedule || errors.preferred_time || errors.preferred_date || "Unable to review request."),
+            onFinish: () => setBusy(false),
+        });
+    };
+
+    return (
+        <div className="d-flex flex-column align-items-end gap-2">
+            {schedule.reschedule_request_status === "pending" && (
+                <div className="rounded-3 border bg-warning-subtle p-2 text-start" style={{ minWidth: 220 }}>
+                    <div className="small fw-bold">Customer reschedule request</div>
+                    <div className="small">{schedule.reschedule_requested_date} · {schedule.reschedule_requested_time}</div>
+                    {schedule.reschedule_request_note && <div className="small text-muted mt-1">{schedule.reschedule_request_note}</div>}
+                    <div className="d-flex gap-1 mt-2">
+                        <button type="button" className="btn btn-success btn-sm" disabled={busy} onClick={() => reviewRequest("approve")}>Approve</button>
+                        <button type="button" className="btn btn-outline-danger btn-sm" disabled={busy} onClick={() => reviewRequest("decline")}>Decline</button>
+                    </div>
+                </div>
+            )}
+            {error && <div className="small text-danger" role="alert">{error}</div>}
+            <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setEditing((value) => !value)}>{editing ? "Cancel edit" : "Change schedule"}</button>
+            {editing && (
+                <form onSubmit={saveSchedule} className="border rounded-3 bg-light p-2 text-start" style={{ minWidth: 220 }}>
+                    <label className="form-label small fw-semibold">Date</label>
+                    <input type="date" className="form-control form-control-sm mb-2" min={todayDate || undefined} value={date} required onChange={(event) => setDate(event.target.value)} />
+                    <label className="form-label small fw-semibold">Time slot</label>
+                    <select className="form-select form-select-sm mb-2" value={time} required onChange={(event) => setTime(event.target.value)}>
+                        {bookingTimeSlots.map((slot) => <option key={slot} value={slot}>{slot}</option>)}
+                    </select>
+                    <button type="submit" className="btn btn-primary btn-sm w-100" disabled={busy}>{busy ? "Saving..." : "Save schedule"}</button>
+                </form>
+            )}
+        </div>
+    );
+}
+
 export default function AdminSchedules({
     schedules = [],
     technicians = [],
@@ -717,15 +778,10 @@ export default function AdminSchedules({
                                                     </td>
 
                                                     <td className="text-end pe-3">
-                                                        <Link
-                                                            href={
-                                                                "/admin/inquiries/" +
-                                                                schedule.id
-                                                            }
-                                                            className="btn btn-outline-primary btn-sm fw-bold"
-                                                        >
-                                                            VIEW
-                                                        </Link>
+                                                        <div className="d-flex flex-column align-items-end gap-2">
+                                                            <ScheduleActions schedule={schedule} todayDate={todayDate} bookingTimeSlots={bookingTimeSlots} />
+                                                            <Link href={"/admin/inquiries/" + schedule.id} className="btn btn-outline-primary btn-sm fw-bold">VIEW</Link>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
