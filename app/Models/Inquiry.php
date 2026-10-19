@@ -41,6 +41,19 @@ class Inquiry extends Model
         'service_longitude' => 'float',
     ];
 
+    /**
+     * Promote overdue open services to urgent. Emergency urgency is never downgraded,
+     * and completed/cancelled services are excluded.
+     */
+    public static function escalateOverdueUrgency(): int
+    {
+        return static::query()
+            ->whereDate('preferred_date', '<', today())
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->where('urgency', 'normal')
+            ->update(['urgency' => 'urgent']);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
