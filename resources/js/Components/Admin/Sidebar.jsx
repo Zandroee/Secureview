@@ -22,6 +22,12 @@ const menuGroups = [
             key: "schedules",
             icon: "bi-calendar3",
         },
+        {
+            label: "Service History",
+            href: "/admin/service-history",
+            key: "service-history",
+            icon: "bi-clock-history",
+        },
     ],
     [
         {
