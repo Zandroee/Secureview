@@ -6,7 +6,7 @@ import { useState } from "react";
 function iconForType(type) {
     if (type === "payment_paid") return "bi bi-credit-card";
     if (type === "order") return "bi bi-bag-check";
-    if (type === "inquiry") return "bi bi-chat-left-text";
+    if (type === "inquiry" || type === "new_inquiry" || type === "reschedule_request") return "bi bi-chat-left-text";
     if (type === "schedule" || type === "job_upcoming" || type.startsWith("job_reminder")) return "bi bi-calendar-check";
     if (type === "job_in_progress") return "bi bi-tools";
     if (type === "job_completed") return "bi bi-check-circle";
@@ -18,7 +18,7 @@ function iconForType(type) {
 function iconBackground(type) {
     if (type === "payment_paid" || type === "job_completed") return "#eaf8f0";
     if (type === "order" || type === "job_in_progress") return "#edf5ff";
-    if (type === "inquiry" || type === "inventory_low_stock") return "#fff6e8";
+    if (type === "inquiry" || type === "new_inquiry" || type === "reschedule_request" || type === "inventory_low_stock") return "#fff6e8";
     if (type === "schedule" || type.startsWith("job_")) return "#f1edff";
     return "#f2f2f4";
 }
