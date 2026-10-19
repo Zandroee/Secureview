@@ -91,6 +91,40 @@ class InquiryController extends Controller
                 ->values())
             ->all();
 
+        // Automatically close slots when every technician already has an active job.
+        $technicianCount = User::query()->where('role', 'technician')->count();
+        $activeBookings = Inquiry::query()
+            ->with('technicians:id')
+            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->get(['id', 'preferred_date', 'preferred_time']);
+
+        $busyBySlot = $activeBookings
+            ->groupBy(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d') . '|' . $job->preferred_time)
+            ->map(fn ($jobs) => $jobs->flatMap(fn (Inquiry $job) => $job->technicians->pluck('id'))->unique()->count());
+
+        $capacityBlockedSlots = [];
+        foreach ($busyBySlot as $key => $busyTechnicianCount) {
+            [$date, $time] = explode('|', $key, 2);
+            if ($technicianCount === 0 || $busyTechnicianCount >= $technicianCount) {
+                $capacityBlockedSlots[$date][] = $time;
+            }
+        }
+
+        foreach ($capacityBlockedSlots as $date => $slots) {
+            $unavailableTimeSlots[$date] = collect($unavailableTimeSlots[$date] ?? [])
+                ->merge($slots)->unique()->values();
+        }
+
+        $capacityBlockedDates = collect($capacityBlockedSlots)
+            ->filter(fn ($slots) => collect(self::BOOKING_TIME_SLOTS)->every(fn ($slot) => collect($slots)->contains($slot)))
+            ->keys();
+
+        $unavailableDates = collect($unavailableDates)
+            ->merge($capacityBlockedDates)
+            ->unique()
+            ->values();
+
         $catalogItems = Product::query()
             ->orderBy('name')
             ->get()
@@ -209,6 +243,20 @@ class InquiryController extends Controller
             ->exists()) {
             throw ValidationException::withMessages([
                 'preferred_time' => 'This time slot is fully booked. Please choose another time.',
+            ]);
+        }
+
+        if ($this->slotUnavailableByTechnicianCapacity($validated['preferred_date'], $validated['preferred_time'])) {
+            throw ValidationException::withMessages([
+                'preferred_time' => 'All technicians are already occupied during this time slot. Please choose another time.',
+            ]);
+        }
+
+        if (collect(self::BOOKING_TIME_SLOTS)->every(
+            fn (string $slot) => $this->slotUnavailableByTechnicianCapacity($validated['preferred_date'], $slot)
+        )) {
+            throw ValidationException::withMessages([
+                'preferred_date' => 'All technicians are fully booked for that day. Please choose another date.',
             ]);
         }
 
@@ -603,6 +651,25 @@ class InquiryController extends Controller
 
         return redirect()->route('inquiries.show', $inquiry)
             ->with('success', 'Reschedule request submitted. Your current appointment remains active until the request is approved.');
+    }
+
+    private function slotUnavailableByTechnicianCapacity(string $date, string $time): bool
+    {
+        $technicianCount = User::query()->where('role', 'technician')->count();
+        if ($technicianCount === 0) {
+            return true;
+        }
+
+        $busyTechnicianCount = User::query()
+            ->where('role', 'technician')
+            ->whereHas('assignedInquiries', function ($query) use ($date, $time) {
+                $query->whereDate('preferred_date', $date)
+                    ->where('preferred_time', $time)
+                    ->whereIn('status', ['confirmed', 'in_progress']);
+            })
+            ->count();
+
+        return $busyTechnicianCount >= $technicianCount;
     }
 
 }
