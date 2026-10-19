@@ -50,6 +50,15 @@ PROMPT;
 
         try {
             $model = config('services.gemini.model', 'gemini-2.5-flash');
+            $generationConfig = ['maxOutputTokens' => 400];
+
+            if (str_starts_with($model, 'gemini-3.')) {
+                // Gemini 3 supports thinking levels; low keeps a customer FAQ response fast.
+                $generationConfig['thinkingConfig'] = ['thinkingLevel' => 'low'];
+            } else {
+                $generationConfig['temperature'] = 0.35;
+            }
+
             $response = Http::acceptJson()
                 ->withHeaders(['x-goog-api-key' => $apiKey])
                 ->connectTimeout(10)
@@ -61,10 +70,7 @@ PROMPT;
                             'parts' => [['text' => $systemInstruction]],
                         ],
                         'contents' => $contents,
-                        'generationConfig' => [
-                            'temperature' => 0.35,
-                            'maxOutputTokens' => 400,
-                        ],
+                        'generationConfig' => $generationConfig,
                     ]
                 );
 
