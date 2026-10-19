@@ -1,7 +1,8 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import { ServiceLocationMap } from "../Components/GoogleMaps/ServiceLocation";
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
+import { useState } from "react";
 
 function statusClass(status) {
     if (status === "confirmed" || status === "completed") {
@@ -32,6 +33,27 @@ function urgencyClass(urgency) {
 }
 
 export default function InquiryDetails({ inquiry, success }) {
+    const [rescheduleDate, setRescheduleDate] = useState(inquiry.reschedule_requested_date || "");
+    const [rescheduleTime, setRescheduleTime] = useState(inquiry.reschedule_requested_time || "08:00 AM - 11:00 AM");
+    const [rescheduleNote, setRescheduleNote] = useState("");
+    const [rescheduleErrors, setRescheduleErrors] = useState({});
+    const [rescheduleBusy, setRescheduleBusy] = useState(false);
+    const timeSlots = ["08:00 AM - 11:00 AM", "11:00 AM - 02:00 PM", "02:00 PM - 05:00 PM"];
+    const submitReschedule = (event) => {
+        event.preventDefault();
+        setRescheduleBusy(true);
+        setRescheduleErrors({});
+        router.post("/inquiries/" + inquiry.id + "/reschedule", {
+            preferred_date: rescheduleDate,
+            preferred_time: rescheduleTime,
+            note: rescheduleNote,
+        }, {
+            preserveScroll: true,
+            onError: (errors) => setRescheduleErrors(errors),
+            onFinish: () => setRescheduleBusy(false),
+        });
+    };
+
     return (
         <div>
             <Navbar />
@@ -149,6 +171,33 @@ export default function InquiryDetails({ inquiry, success }) {
                                     <div className="fw-semibold">
                                         {inquiry.preferred_time}
                                     </div>
+
+                                    {inquiry.status === "confirmed" && (
+                                        <div className="mt-3 border rounded-3 p-3 bg-white">
+                                            <div className="fw-bold mb-1">Reschedule appointment</div>
+                                            <div className="small text-muted mb-3">Your current appointment stays active until a technician or administrator approves the change.</div>
+                                            {inquiry.reschedule_request_status === "pending" ? (
+                                                <div className="alert alert-warning mb-0">
+                                                    Request pending: {inquiry.reschedule_requested_date} · {inquiry.reschedule_requested_time}
+                                                </div>
+                                            ) : (
+                                                <form onSubmit={submitReschedule}>
+                                                    <label className="form-label small fw-semibold" htmlFor="reschedule-date">Requested date</label>
+                                                    <input id="reschedule-date" type="date" min={new Date().toLocaleDateString("en-CA")} className={"form-control mb-2" + (rescheduleErrors.preferred_date ? " is-invalid" : "")} value={rescheduleDate} required onChange={(event) => setRescheduleDate(event.target.value)} />
+                                                    {rescheduleErrors.preferred_date && <div className="invalid-feedback d-block">{rescheduleErrors.preferred_date}</div>}
+                                                    <label className="form-label small fw-semibold" htmlFor="reschedule-time">Requested time</label>
+                                                    <select id="reschedule-time" className={"form-select mb-2" + (rescheduleErrors.preferred_time ? " is-invalid" : "")} value={rescheduleTime} onChange={(event) => setRescheduleTime(event.target.value)}>
+                                                        {timeSlots.map((slot) => <option key={slot} value={slot}>{slot}</option>)}
+                                                    </select>
+                                                    {rescheduleErrors.preferred_time && <div className="invalid-feedback d-block">{rescheduleErrors.preferred_time}</div>}
+                                                    <label className="form-label small fw-semibold" htmlFor="reschedule-note">Reason (optional)</label>
+                                                    <textarea id="reschedule-note" className="form-control mb-2" rows="2" maxLength="500" value={rescheduleNote} onChange={(event) => setRescheduleNote(event.target.value)} placeholder="Tell us why you need to reschedule" />
+                                                    {rescheduleErrors.reschedule && <div className="alert alert-danger py-2 small">{rescheduleErrors.reschedule}</div>}
+                                                    <button type="submit" className="btn btn-outline-primary fw-bold w-100" disabled={rescheduleBusy || !rescheduleDate}>{rescheduleBusy ? "SUBMITTING..." : "REQUEST RESCHEDULE"}</button>
+                                                </form>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="small text-muted mt-2">
                                         Technician
