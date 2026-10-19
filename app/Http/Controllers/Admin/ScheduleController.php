@@ -68,6 +68,7 @@ class ScheduleController extends Controller
                     'item_name' => $inquiry->item_name,
                     'urgency' => $inquiry->urgency,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
+                    'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                     'preferred_time' => $inquiry->preferred_time,
                     'city' => $inquiry->city,
                     'street_address' => $inquiry->street_address,
@@ -284,7 +285,11 @@ class ScheduleController extends Controller
             $inquiry->update([
                 'preferred_date' => $date,
                 'preferred_time' => $time,
+                'reschedule_requested_date' => null,
+                'reschedule_requested_time' => null,
                 'reschedule_request_status' => 'approved',
+                'reschedule_request_note' => null,
+                'reschedule_requested_at' => null,
             ]);
             if ($inquiry->user_id) {
                 CustomerNotification::create([
