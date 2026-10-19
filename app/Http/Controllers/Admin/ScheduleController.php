@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\BlockedBookingDate;
 use App\Models\BlockedBookingTimeSlot;
+use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -75,6 +76,10 @@ class ScheduleController extends Controller
                     'service_longitude' => $inquiry->service_longitude,
                     'google_place_id' => $inquiry->google_place_id,
                     'status' => $inquiry->status,
+                    'reschedule_requested_date' => $inquiry->reschedule_requested_date?->format('Y-m-d'),
+                    'reschedule_requested_time' => $inquiry->reschedule_requested_time,
+                    'reschedule_request_status' => $inquiry->reschedule_request_status ?? 'none',
+                    'reschedule_request_note' => $inquiry->reschedule_request_note,
                     'technician' => $inquiry->technicians->first()
                         ? [
                             'id' => $inquiry->technicians->first()->id,
@@ -217,4 +222,134 @@ class ScheduleController extends Controller
             ->route('admin.schedules.index')
             ->with('success', 'The selected time slot is available for booking again.');
     }
+    public function updateSchedule(Request $request, Inquiry $inquiry)
+    {
+        if (!in_array($inquiry->status, ['confirmed', 'in_progress'], true)) {
+            return back()->withErrors(['schedule' => 'Only confirmed or in-progress services can be rescheduled.']);
+        }
+
+        $validated = $request->validate([
+            'preferred_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'preferred_time' => ['required', 'in:' . implode(',', self::BOOKING_TIME_SLOTS)],
+        ]);
+
+        $this->assertSlotIsOpen($validated['preferred_date'], $validated['preferred_time'], $inquiry);
+
+        $technicianIds = $inquiry->technicians()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+        $this->assertTechniciansAvailable($technicianIds, $validated['preferred_date'], $validated['preferred_time'], $inquiry);
+
+        $inquiry->update([
+            'preferred_date' => $validated['preferred_date'],
+            'preferred_time' => $validated['preferred_time'],
+            'reschedule_requested_date' => null,
+            'reschedule_requested_time' => null,
+            'reschedule_request_status' => 'none',
+            'reschedule_request_note' => null,
+            'reschedule_requested_at' => null,
+        ]);
+
+        if ($inquiry->user_id) {
+            CustomerNotification::create([
+                'user_id' => $inquiry->user_id,
+                'type' => 'schedule_updated',
+                'title' => 'Service schedule updated',
+                'message' => 'Your service ' . $inquiry->inquiry_number . ' is now scheduled for ' . $inquiry->preferred_date->format('F j, Y') . ' (' . $inquiry->preferred_time . ').',
+                'action_url' => route('inquiries.show', $inquiry),
+                'related_type' => Inquiry::class,
+                'related_id' => $inquiry->id,
+            ]);
+        }
+
+        return back()->with('success', 'Service schedule updated successfully.');
+    }
+
+    public function approveReschedule(Request $request, Inquiry $inquiry)
+    {
+        if ($inquiry->status !== 'confirmed' || ($inquiry->reschedule_request_status ?? 'none') !== 'pending') {
+            return back()->withErrors(['reschedule' => 'There is no pending customer reschedule request to approve.']);
+        }
+
+        $date = $inquiry->reschedule_requested_date?->format('Y-m-d');
+        $time = $inquiry->reschedule_requested_time;
+        if (!$date || !$time) {
+            return back()->withErrors(['reschedule' => 'The requested date or time is missing.']);
+        }
+
+        $this->assertSlotIsOpen($date, $time, $inquiry);
+        $technicianIds = $inquiry->technicians()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+        $this->assertTechniciansAvailable($technicianIds, $date, $time, $inquiry);
+
+        DB::transaction(function () use ($inquiry, $date, $time, $request) {
+            $inquiry->newQuery()->whereKey($inquiry->id)->lockForUpdate()->firstOrFail();
+            $inquiry->update([
+                'preferred_date' => $date,
+                'preferred_time' => $time,
+                'reschedule_request_status' => 'approved',
+            ]);
+            if ($inquiry->user_id) {
+                CustomerNotification::create([
+                    'user_id' => $inquiry->user_id,
+                    'type' => 'reschedule_approved',
+                    'title' => 'Reschedule request approved',
+                    'message' => 'Your service ' . $inquiry->inquiry_number . ' has been rescheduled to ' . $inquiry->preferred_date->format('F j, Y') . ' (' . $inquiry->preferred_time . ').',
+                    'action_url' => route('inquiries.show', $inquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $inquiry->id,
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Customer reschedule request approved.');
+    }
+
+    public function declineReschedule(Request $request, Inquiry $inquiry)
+    {
+        if (($inquiry->reschedule_request_status ?? 'none') !== 'pending') {
+            return back()->withErrors(['reschedule' => 'There is no pending reschedule request to decline.']);
+        }
+
+        $inquiry->update(['reschedule_request_status' => 'declined']);
+        if ($inquiry->user_id) {
+            CustomerNotification::create([
+                'user_id' => $inquiry->user_id,
+                'type' => 'reschedule_declined',
+                'title' => 'Reschedule request declined',
+                'message' => 'Your reschedule request for ' . $inquiry->inquiry_number . ' was declined. Your original appointment remains scheduled.',
+                'action_url' => route('inquiries.show', $inquiry),
+                'related_type' => Inquiry::class,
+                'related_id' => $inquiry->id,
+            ]);
+        }
+
+        return back()->with('success', 'Reschedule request declined. The original schedule remains unchanged.');
+    }
+
+    private function assertSlotIsOpen(string $date, string $time, Inquiry $inquiry): void
+    {
+        if (BlockedBookingDate::query()->whereDate('booking_date', $date)->exists()) {
+            throw ValidationException::withMessages(['preferred_date' => 'That date is marked fully booked.']);
+        }
+        if (BlockedBookingTimeSlot::query()->whereDate('booking_date', $date)->where('booking_time', $time)->exists()) {
+            throw ValidationException::withMessages(['preferred_time' => 'That time slot is marked fully booked.']);
+        }
+    }
+
+    private function assertTechniciansAvailable(array $technicianIds, string $date, string $time, Inquiry $inquiry): void
+    {
+        $conflicts = User::query()
+            ->whereIn('id', $technicianIds)
+            ->whereHas('assignedInquiries', function ($query) use ($date, $time, $inquiry) {
+                $query->whereDate('preferred_date', $date)
+                    ->where('preferred_time', $time)
+                    ->whereIn('status', ['confirmed', 'in_progress'])
+                    ->where('inquiries.id', '!=', $inquiry->id);
+            })->pluck('name')->all();
+
+        if ($conflicts) {
+            throw ValidationException::withMessages([
+                'preferred_time' => 'The assigned team has a conflicting appointment: ' . implode(', ', $conflicts) . '.',
+            ]);
+        }
+    }
+
 }
