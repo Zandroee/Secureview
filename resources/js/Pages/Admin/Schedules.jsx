@@ -822,8 +822,7 @@ export default function AdminSchedules({
 
 
                         <div className="small text-muted mt-3">
-                            Use the inquiry details page to change the
-                            technician assignment or job status.
+                            Use schedule details to review the job, update its status, or change its assigned technician team.
                         </div>
                     </main>
                 </div>
