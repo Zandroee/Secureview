@@ -12,6 +12,7 @@ use App\Models\Package;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\InventoryService;
+use App\Services\JobNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -224,7 +225,7 @@ class InquiryController extends Controller
         ]);
     }
 
-    public function store(Request $request, InventoryService $inventory)
+    public function store(Request $request, InventoryService $inventory, JobNotificationService $jobNotifications)
     {
         $validated = $request->validate([
             'item_type' => ['nullable', 'required_if:service_type,Installation', 'in:product,package'],
@@ -350,6 +351,8 @@ class InquiryController extends Controller
             'related_type' => Inquiry::class,
             'related_id' => $inquiry->id,
         ]);
+
+        $jobNotifications->notifyNewInquirySubmitted($inquiry);
 
         return redirect()->route('inquiries.show', $inquiry)->with(
             'success',
