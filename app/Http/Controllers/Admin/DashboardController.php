@@ -46,6 +46,8 @@ class DashboardController extends Controller
 
     public function index(Request $request)
     {
+        Inquiry::escalateOverdueUrgency();
+
         $filters = $request->validate([
             'sales_period' => ['nullable', 'in:' . implode(',', array_keys(self::METRIC_PERIOD_OPTIONS))],
             'orders_period' => ['nullable', 'in:' . implode(',', array_keys(self::METRIC_PERIOD_OPTIONS))],
