@@ -1,13 +1,19 @@
 import { router } from "@inertiajs/react";
 import { useState } from "react";
 
-export default function ManageTechnicianTeamModal({ inquiry, technicians = [], onClose }) {
+export default function ManageTechnicianTeamModal({ inquiry, technicians = [], technicianBookings = [], onClose }) {
     const initialIds = (inquiry.technicians ?? []).map((technician) => String(technician.id));
     if (!initialIds.length && inquiry.technician?.id) initialIds.push(String(inquiry.technician.id));
 
     const [selectedIds, setSelectedIds] = useState(initialIds);
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
+    const isTechnicianBusy = (technicianId) => technicianBookings.some((booking) =>
+        booking.inquiry_id !== inquiry.id &&
+        booking.date === inquiry.preferred_date_value &&
+        booking.time === inquiry.preferred_time &&
+        (booking.technician_ids ?? []).map(String).includes(String(technicianId))
+    );
 
     const toggleTechnician = (id) => {
         const next = selectedIds.includes(id)
@@ -59,10 +65,11 @@ export default function ManageTechnicianTeamModal({ inquiry, technicians = [], o
                                 <input className="form-check-input mt-0" type="checkbox"
                                     id={"team-tech-" + technician.id}
                                     checked={selectedIds.includes(String(technician.id))}
+                                    disabled={isTechnicianBusy(technician.id) && !selectedIds.includes(String(technician.id))}
                                     onChange={() => toggleTechnician(String(technician.id))} />
                                 <label className="flex-grow-1" htmlFor={"team-tech-" + technician.id}>
                                     <span className="fw-semibold d-block">{technician.name}</span>
-                                    <span className="small text-muted">{technician.email}</span>
+                                    <span className="small text-muted">{technician.email}{isTechnicianBusy(technician.id) ? " · Busy in this time slot" : ""}</span>
                                 </label>
                             </div>
                         ))}
