@@ -234,6 +234,123 @@ class ScheduleController extends Controller
         ]);
     }
 
+    public function show(Request $request, Inquiry $inquiry)
+    {
+        Inquiry::escalateOverdueUrgency();
+
+        $fromHistory = $request->query('from') === 'history';
+        $inquiry->load(['user', 'inquirable', 'technician', 'technicians']);
+
+        $technicians = User::where('role', 'technician')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email'])
+            ->values();
+
+        return Inertia::render('Admin/InquiryDetails', [
+            'inquiry' => [
+                'id' => $inquiry->id,
+                'inquiry_number' => $inquiry->inquiry_number,
+                'item_name' => $inquiry->item_name,
+                'item_type' => $inquiry->inquirable_type
+                    ? class_basename($inquiry->inquirable_type)
+                    : null,
+                'item_image' => $inquiry->inquirable?->image,
+                'customer_name' => $inquiry->customer_name,
+                'customer_phone' => $inquiry->customer_phone,
+                'customer_email' => $inquiry->customer_email,
+                'technician' => $inquiry->technician
+                    ? [
+                        'id' => $inquiry->technician->id,
+                        'name' => $inquiry->technician->name,
+                        'email' => $inquiry->technician->email,
+                    ]
+                    : null,
+                'technicians' => $inquiry->technicians->map(fn (User $technician) => [
+                    'id' => $technician->id,
+                    'name' => $technician->name,
+                    'email' => $technician->email,
+                ])->values(),
+                'street_address' => $inquiry->street_address,
+                'address_details' => $inquiry->address_details,
+                'city' => $inquiry->city,
+                'service_latitude' => $inquiry->service_latitude,
+                'service_longitude' => $inquiry->service_longitude,
+                'google_place_id' => $inquiry->google_place_id,
+                'service_type' => $inquiry->service_type,
+                'urgency' => $inquiry->urgency,
+                'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
+                'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
+                'preferred_time' => $inquiry->preferred_time,
+                'notes' => $inquiry->notes,
+                'status' => $inquiry->status,
+                'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
+                'user_id' => $inquiry->user_id,
+            ],
+            'technicians' => $technicians,
+            'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
+            'todayDate' => today()->toDateString(),
+            'fromSchedule' => !$fromHistory,
+            'fromHistory' => $fromHistory,
+        ]);
+    }
+
+    public function history(Request $request)
+    {
+        Inquiry::escalateOverdueUrgency();
+
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $query = Inquiry::query()
+            ->with('technicians')
+            ->where('status', 'completed');
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($builder) use ($search) {
+                $builder
+                    ->where('inquiry_number', 'like', '%' . $search . '%')
+                    ->orWhere('customer_name', 'like', '%' . $search . '%')
+                    ->orWhere('customer_email', 'like', '%' . $search . '%')
+                    ->orWhere('service_type', 'like', '%' . $search . '%')
+                    ->orWhere('item_name', 'like', '%' . $search . '%');
+            });
+        }
+
+        $services = $query
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->paginate(10)
+            ->withQueryString()
+            ->through(function (Inquiry $inquiry) {
+                return [
+                    'id' => $inquiry->id,
+                    'inquiry_number' => $inquiry->inquiry_number,
+                    'customer_name' => $inquiry->customer_name,
+                    'customer_email' => $inquiry->customer_email,
+                    'service_type' => $inquiry->service_type,
+                    'item_name' => $inquiry->item_name,
+                    'urgency' => $inquiry->urgency,
+                    'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
+                    'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
+                    'preferred_time' => $inquiry->preferred_time,
+                    'technicians' => $inquiry->technicians->map(fn (User $technician) => [
+                        'id' => $technician->id,
+                        'name' => $technician->name,
+                    ])->values(),
+                    'completed_at' => $inquiry->updated_at?->format('M d, Y h:i A'),
+                ];
+            });
+
+        return Inertia::render('Admin/ServiceHistory', [
+            'services' => $services,
+            'filters' => [
+                'search' => $filters['search'] ?? '',
+            ],
+        ]);
+    }
+
     public function storeBookingDateBlock(Request $request)
     {
         $blockType = $request->input('block_type', 'full_date');
