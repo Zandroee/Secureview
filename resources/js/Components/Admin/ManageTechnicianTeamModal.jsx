@@ -11,7 +11,6 @@ export default function ManageTechnicianTeamModal({ inquiry, technicians = [], t
     const isTechnicianBusy = (technicianId) => technicianBookings.some((booking) =>
         booking.inquiry_id !== inquiry.id &&
         booking.date === inquiry.preferred_date_value &&
-        booking.time === inquiry.preferred_time &&
         (booking.technician_ids ?? []).map(String).includes(String(technicianId))
     );
 
