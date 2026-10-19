@@ -31,10 +31,10 @@ const menuGroups = [
             icon: "bi-camera-video",
         },
         {
-            label: "Stock History",
-            href: "/admin/inventory-adjustments",
-            key: "inventory-adjustments",
-            icon: "bi-clipboard-data",
+            label: "Warranty",
+            href: "/admin/warranty",
+            key: "warranty",
+            icon: "bi-shield-check",
         },
         {
             label: "Packages",
