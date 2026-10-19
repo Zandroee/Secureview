@@ -242,7 +242,7 @@ class ScheduleController extends Controller
             ->get(['id', 'name', 'email'])
             ->values();
 
-        return Inertia::render('Admin/InquiryDetails', [
+        return Inertia::render($fromHistory ? 'Admin/InquiryDetails' : 'Admin/ScheduleDetails', [
             'inquiry' => [
                 'id' => $inquiry->id,
                 'inquiry_number' => $inquiry->inquiry_number,
