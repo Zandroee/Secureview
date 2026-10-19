@@ -34,11 +34,10 @@ export default function ConfirmInquiryModal({
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
 
-    const isTechnicianBusy = (technicianId, date = preferredDate, time = preferredTime) =>
+    const isTechnicianBusy = (technicianId, date = preferredDate) =>
         technicianBookings.some((booking) =>
             booking.inquiry_id !== inquiry.id &&
             booking.date === date &&
-            booking.time === time &&
             (booking.technician_ids ?? []).map(String).includes(String(technicianId))
         );
 
