@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -67,4 +68,57 @@ class ChatbotTest extends TestCase
             ],
         ])->assertUnprocessable();
     }
+    public function test_gemini_three_uses_low_thinking_without_temperature_parameter(): void
+    {
+        config([
+            'services.gemini.key' => 'test-gemini-key',
+            'services.gemini.model' => 'gemini-3.8-flash',
+        ]);
+
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [['text' => 'You can request an installation through Services.']],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->postJson('/chatbot/message', [
+            'messages' => [
+                ['role' => 'user', 'content' => 'How do I book an installation?'],
+            ],
+        ])->assertOk();
+
+        Http::assertSent(fn ($request) =>
+            data_get($request->data(), 'generationConfig.thinkingConfig.thinkingLevel') === 'low'
+            && !array_key_exists('temperature', $request->data()['generationConfig'])
+        );
+    }
+
+    public function test_chatbot_returns_gateway_timeout_when_gemini_connection_times_out(): void
+    {
+        config([
+            'services.gemini.key' => 'test-gemini-key',
+            'services.gemini.model' => 'gemini-3.8-flash',
+        ]);
+
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => function () {
+                throw new ConnectionException('cURL error 28: Operation timed out');
+            },
+        ]);
+
+        $this->postJson('/chatbot/message', [
+            'messages' => [
+                ['role' => 'user', 'content' => 'What services do you offer?'],
+            ],
+        ])
+            ->assertStatus(504)
+            ->assertJsonPath('message', 'The AI assistant took too long to connect or respond. Please try again shortly. If this keeps happening, check your internet connection and Google AI API availability.');
+    }
+
 }
