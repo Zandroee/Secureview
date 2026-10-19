@@ -17,11 +17,11 @@ const suggestedQuestions = [
 // literal \\n sequences. Normalize those before displaying the answer.
 function normalizeAssistantText(content = "") {
     return String(content)
-        .replace(/\\\\r\\\\n/g, "\n")
-        .replace(/\\\\n/g, "\n")
-        .replace(/\\\\r/g, "\n")
-        .replace(/\\\\t/g, " ")
-        .replace(/\\\\([\\\\*_`])/g, "$1")
+        .replace(/\\r\\n/g, "\n")
+        .replace(/\\n/g, "\n")
+        .replace(/\\r/g, "\n")
+        .replace(/\\t/g, " ")
+        .replace(/\\([\\*_`])/g, "$1")
         .trim();
 }
 
