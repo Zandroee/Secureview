@@ -633,6 +633,12 @@ class InquiryController extends Controller
             ]);
         }
 
+        if ($this->dateUnavailableByTechnicianCapacity($validated['preferred_date'], $inquiry->id)) {
+            throw ValidationException::withMessages([
+                'preferred_date' => 'No technicians are available on that date. Every technician is already scheduled for another service.',
+            ]);
+        }
+
         if (BlockedBookingTimeSlot::query()
             ->whereDate('booking_date', $validated['preferred_date'])
             ->where('booking_time', $validated['preferred_time'])
@@ -690,7 +696,7 @@ class InquiryController extends Controller
             ->with('success', 'Reschedule request submitted. Your current appointment remains active until the request is approved.');
     }
 
-    private function dateUnavailableByTechnicianCapacity(string $date): bool
+    private function dateUnavailableByTechnicianCapacity(string $date, ?int $exceptInquiryId = null): bool
     {
         $technicianCount = User::query()->where('role', 'technician')->count();
         if ($technicianCount === 0) {
@@ -699,9 +705,18 @@ class InquiryController extends Controller
 
         $techniciansBusyThatDay = User::query()
             ->where('role', 'technician')
-            ->whereHas('assignedInquiries', function ($query) use ($date) {
-                $query->whereDate('preferred_date', $date)
-                    ->whereIn('status', ['confirmed', 'in_progress']);
+            ->where(function ($technicianQuery) use ($date, $exceptInquiryId) {
+                $applyActiveDate = function ($query) use ($date, $exceptInquiryId) {
+                    $query->whereDate('preferred_date', $date)
+                        ->whereIn('status', ['confirmed', 'in_progress']);
+                    if ($exceptInquiryId !== null) {
+                        $query->where('inquiries.id', '!=', $exceptInquiryId);
+                    }
+                };
+
+                $technicianQuery
+                    ->whereHas('assignedInquiries', $applyActiveDate)
+                    ->orWhereHas('technicianInquiries', $applyActiveDate);
             })
             ->count();
 
@@ -717,10 +732,16 @@ class InquiryController extends Controller
 
         $busyTechnicianCount = User::query()
             ->where('role', 'technician')
-            ->whereHas('assignedInquiries', function ($query) use ($date, $time) {
-                $query->whereDate('preferred_date', $date)
-                    ->where('preferred_time', $time)
-                    ->whereIn('status', ['confirmed', 'in_progress']);
+            ->where(function ($technicianQuery) use ($date, $time) {
+                $applyActiveSlot = function ($query) use ($date, $time) {
+                    $query->whereDate('preferred_date', $date)
+                        ->where('preferred_time', $time)
+                        ->whereIn('status', ['confirmed', 'in_progress']);
+                };
+
+                $technicianQuery
+                    ->whereHas('assignedInquiries', $applyActiveSlot)
+                    ->orWhereHas('technicianInquiries', $applyActiveSlot);
             })
             ->count();
 
