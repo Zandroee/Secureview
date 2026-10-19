@@ -355,6 +355,10 @@ class TechnicianWorkspaceController extends Controller
             'preferred_time' => ['required', 'in:08:00 AM - 11:00 AM,11:00 AM - 02:00 PM,02:00 PM - 05:00 PM'],
         ]);
 
+        if ($this->dateUnavailableByTechnicianCapacity($validated['preferred_date'], $inquiry->id)) {
+            return back()->withErrors(['preferred_date' => 'No technicians are available on that date. Every technician is already scheduled for another service.']);
+        }
+
         if (BlockedBookingDate::query()->whereDate('booking_date', $validated['preferred_date'])->exists()) {
             return back()->withErrors(['preferred_date' => 'That date is marked fully booked.']);
         }
@@ -441,6 +445,10 @@ class TechnicianWorkspaceController extends Controller
             return back()->withErrors(['reschedule' => 'The requested date or time is missing.']);
         }
 
+        if ($this->dateUnavailableByTechnicianCapacity($date, $inquiry->id)) {
+            return back()->withErrors(['reschedule' => 'No technicians are available on that date. Every technician is already scheduled for another service.']);
+        }
+
         if (BlockedBookingDate::query()->whereDate('booking_date', $date)->exists()) {
             return back()->withErrors(['reschedule' => 'The requested date is now marked fully booked.']);
         }
@@ -485,5 +493,33 @@ class TechnicianWorkspaceController extends Controller
 
         return back()->with('success', 'Customer reschedule request approved.');
     }
+
+    private function dateUnavailableByTechnicianCapacity(string $date, ?int $exceptInquiryId = null): bool
+    {
+        $technicianCount = User::query()->where('role', 'technician')->count();
+        if ($technicianCount === 0) {
+            return true;
+        }
+
+        $busyCount = User::query()
+            ->where('role', 'technician')
+            ->where(function ($technicianQuery) use ($date, $exceptInquiryId) {
+                $activeOnDate = function ($query) use ($date, $exceptInquiryId) {
+                    $query->whereDate('preferred_date', $date)
+                        ->whereIn('status', ['confirmed', 'in_progress']);
+                    if ($exceptInquiryId !== null) {
+                        $query->where('inquiries.id', '!=', $exceptInquiryId);
+                    }
+                };
+
+                $technicianQuery
+                    ->whereHas('assignedInquiries', $activeOnDate)
+                    ->orWhereHas('technicianInquiries', $activeOnDate);
+            })
+            ->count();
+
+        return $busyCount >= $technicianCount;
+    }
+
 
 }
