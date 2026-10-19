@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('secureview:send-upcoming-job-reminders')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::call(fn () => \\App\\Models\\Inquiry::escalateOverdueUrgency())->dailyAt('00:01')->withoutOverlapping();
