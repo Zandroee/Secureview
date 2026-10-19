@@ -82,7 +82,7 @@ export default function Navbar() {
 
         const interval = window.setInterval(pollNotifications, 10000);
         return () => window.clearInterval(interval);
-    }, [isLoggedIn]);
+    }, [isLoggedIn, url]);
 
     return (
         <>
