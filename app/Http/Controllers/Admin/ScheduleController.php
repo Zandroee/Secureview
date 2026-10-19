@@ -9,6 +9,9 @@ use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ScheduleController extends Controller
@@ -128,6 +131,84 @@ class ScheduleController extends Controller
                 'booking_time' => $blockedSlot->booking_time,
                 'reason' => $blockedSlot->reason,
             ])
+            ->values();
+
+        // Derive automatic availability from active technician assignments. A technician can
+        // take at most one service per day, so any active job blocks that technician for the day.
+        $technicianCount = $technicians->count();
+        $activeScheduleBookings = Inquiry::query()
+            ->with('technicians:id')
+            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->get(['id', 'technician_id', 'preferred_date', 'preferred_time']);
+
+        $assignedTechnicianIds = function (Inquiry $job) {
+            $ids = $job->technicians->pluck('id')->map(fn ($id) => (int) $id);
+            if ($job->technician_id) {
+                $ids->push((int) $job->technician_id);
+            }
+
+            return $ids->unique()->values();
+        };
+
+        $busyTechniciansByDate = $activeScheduleBookings
+            ->groupBy(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d'))
+            ->map(fn ($jobs) => $jobs->flatMap($assignedTechnicianIds)->unique()->count());
+
+        $busyTechniciansBySlot = $activeScheduleBookings
+            ->groupBy(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d') . '|' . $job->preferred_time)
+            ->map(fn ($jobs) => $jobs->flatMap($assignedTechnicianIds)->unique()->count());
+
+        $manualDateKeys = $blockedBookingDates->pluck('booking_date');
+        $automaticBlockedDates = $technicianCount > 0
+            ? $busyTechniciansByDate
+                ->filter(fn ($busyCount) => $busyCount >= $technicianCount)
+                ->keys()
+                ->map(fn ($date) => Carbon::parse($date)->toDateString())
+                ->diff($manualDateKeys)
+                ->map(fn ($date) => [
+                    'id' => 'capacity-' . $date,
+                    'booking_date' => $date,
+                    'formatted_date' => Carbon::parse($date)->format('F j, Y'),
+                    'reason' => 'Automatically blocked: every technician already has a service scheduled that day.',
+                    'is_automatic' => true,
+                ])
+                ->values()
+            : collect();
+
+        $blockedBookingDates = $blockedBookingDates
+            ->concat($automaticBlockedDates)
+            ->sortBy('booking_date')
+            ->values();
+
+        $manualSlotKeys = $blockedBookingTimeSlots->map(
+            fn ($slot) => $slot['booking_date'] . '|' . $slot['booking_time']
+        );
+        $automaticBlockedSlots = $technicianCount > 0
+            ? $busyTechniciansBySlot
+                ->filter(fn ($busyCount) => $busyCount >= $technicianCount)
+                ->keys()
+                ->map(function ($key) {
+                    [$date, $time] = explode('|', $key, 2);
+
+                    return [
+                        'id' => 'capacity-' . $date . '-' . md5($time),
+                        'booking_date' => $date,
+                        'formatted_date' => Carbon::parse($date)->format('F j, Y'),
+                        'booking_time' => $time,
+                        'reason' => 'Automatically blocked: every technician is already assigned during this time slot.',
+                        'is_automatic' => true,
+                    ];
+                })
+                ->reject(fn ($slot) => $manualSlotKeys->contains(
+                    $slot['booking_date'] . '|' . $slot['booking_time']
+                ))
+                ->values()
+            : collect();
+
+        $blockedBookingTimeSlots = $blockedBookingTimeSlots
+            ->concat($automaticBlockedSlots)
+            ->sortBy(fn ($slot) => $slot['booking_date'] . '|' . $slot['booking_time'])
             ->values();
 
         return Inertia::render('Admin/Schedules', [
