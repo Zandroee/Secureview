@@ -101,10 +101,24 @@ class InquiryController extends Controller
             ->get(['id', 'name', 'email'])
             ->values();
             
+        $technicianBookings = Inquiry::query()
+            ->with('technicians:id')
+            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->get(['id', 'preferred_date', 'preferred_time'])
+            ->map(fn (Inquiry $job) => [
+                'inquiry_id' => $job->id,
+                'date' => $job->preferred_date?->format('Y-m-d'),
+                'time' => $job->preferred_time,
+                'technician_ids' => $job->technicians->pluck('id')->map(fn ($id) => (int) $id)->values(),
+            ])
+            ->values();
+
 
         return Inertia::render('Admin/Inquiries', [
             'inquiries' => $inquiries,
             'technicians' => $technicians,
+            'technicianBookings' => $technicianBookings,
             'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
             'todayDate' => today()->toDateString(),
             'filters' => [
