@@ -47,6 +47,7 @@ function formatStatus(status) {
 export default function AdminInquiries({
     inquiries = [],
     technicians = [],
+    technicianBookings = [],
     filters = {},
     bookingTimeSlots = [],
     todayDate = "",
@@ -471,6 +472,7 @@ export default function AdminInquiries({
                 <ConfirmInquiryModal
                     inquiry={confirmingInquiry}
                     technicians={technicians}
+                    technicianBookings={technicianBookings}
                     bookingTimeSlots={bookingTimeSlots}
                     todayDate={todayDate}
                     onClose={() => setConfirmingInquiry(null)}
@@ -481,6 +483,7 @@ export default function AdminInquiries({
                 <ManageTechnicianTeamModal
                     inquiry={managingInquiry}
                     technicians={technicians}
+                    technicianBookings={technicianBookings}
                     onClose={() => setManagingInquiry(null)}
                 />
             )}
