@@ -44,12 +44,15 @@ export default function AdminInquiryDetails({
     technicians = [],
     bookingTimeSlots = [],
     todayDate = "",
+    fromSchedule = false,
+    fromHistory = false,
 }) {
     const [confirming, setConfirming] = useState(false);
     const [managingTeam, setManagingTeam] = useState(false);
 
     const updateStatus = (event) => {
-        if (event.target.value === "confirmed" && inquiry.status !== "confirmed") {
+        const nextStatus = event.target.value;
+        if (nextStatus === "confirmed" && inquiry.status !== "confirmed") {
             setConfirming(true);
             return;
         }
@@ -57,13 +60,39 @@ export default function AdminInquiryDetails({
         router.patch(
             "/admin/inquiries/" + inquiry.id + "/status",
             {
-                status: event.target.value,
+                status: nextStatus,
             },
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    if (fromSchedule && nextStatus === "completed") {
+                        router.visit("/admin/service-history");
+                    }
+                },
             }
         );
     };
+
+    const backHref = fromHistory
+        ? "/admin/service-history"
+        : fromSchedule
+            ? "/admin/schedules"
+            : "/admin/inquiries";
+    const backLabel = fromHistory
+        ? "BACK TO SERVICE HISTORY"
+        : fromSchedule
+            ? "BACK TO SCHEDULES"
+            : "BACK TO INQUIRIES";
+    const pageTitle = fromHistory
+        ? "SERVICE HISTORY DETAILS"
+        : fromSchedule
+            ? "SERVICE SCHEDULE DETAILS"
+            : "INQUIRY DETAILS";
+    const activeSection = fromHistory
+        ? "service-history"
+        : fromSchedule
+            ? "schedules"
+            : "inquiries";
 
 
     return (
@@ -73,7 +102,7 @@ export default function AdminInquiryDetails({
             <div className="container-fluid">
                 <div className="row">
                     <aside className="col-md-3 col-lg-2 px-0">
-                        <Sidebar active="inquiries" />
+                        <Sidebar active={activeSection} />
                     </aside>
 
                     <main
@@ -91,7 +120,7 @@ export default function AdminInquiryDetails({
                                 </div>
 
                                 <h1 className="fw-bold mb-1">
-                                    INQUIRY DETAILS
+                                    {pageTitle}
                                 </h1>
 
                                 <div className="text-muted small">
@@ -101,10 +130,10 @@ export default function AdminInquiryDetails({
                             </div>
 
                             <Link
-                                href="/admin/inquiries"
+                                href={backHref}
                                 className="btn btn-outline-primary fw-bold"
                             >
-                                BACK TO INQUIRIES
+                                {backLabel}
                             </Link>
                         </div>
 
