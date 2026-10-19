@@ -272,7 +272,7 @@ class InquiryController extends Controller
             $activityLogger,
             $jobNotifications
         ) {
-            if (in_array($inquiry->status, ['confirmed', 'in_progress'], true) && $technicianIds) {
+            if (in_array($inquiry->status, ['pending', 'confirmed', 'in_progress'], true) && $technicianIds) {
                 User::query()
                     ->whereIn('id', $technicianIds)
                     ->orderBy('id')
@@ -281,11 +281,16 @@ class InquiryController extends Controller
 
                 $conflictsAfterLock = User::query()
                     ->whereIn('id', $technicianIds)
-                    ->whereHas('assignedInquiries', function ($query) use ($inquiry) {
-                        $query->whereDate('preferred_date', $inquiry->preferred_date)
-                            ->where('preferred_time', $inquiry->preferred_time)
-                            ->whereIn('status', ['confirmed', 'in_progress'])
-                            ->where('inquiries.id', '!=', $inquiry->getKey());
+                    ->where(function ($technicianQuery) use ($inquiry) {
+                        $assignedOnDate = function ($query) use ($inquiry) {
+                            $query->whereDate('preferred_date', $inquiry->preferred_date)
+                                ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+                                ->where('inquiries.id', '!=', $inquiry->getKey());
+                        };
+
+                        $technicianQuery
+                            ->whereHas('assignedInquiries', $assignedOnDate)
+                            ->orWhereHas('technicianInquiries', $assignedOnDate);
                     })
                     ->pluck('name')
                     ->all();
@@ -443,11 +448,16 @@ class InquiryController extends Controller
 
             $conflictsAfterLock = User::query()
                 ->whereIn('id', $technicianIds)
-                ->whereHas('assignedInquiries', function ($query) use ($bookingDate, $bookingTime, $inquiry) {
-                    $query->whereDate('preferred_date', $bookingDate)
-                        ->where('preferred_time', $bookingTime)
-                        ->whereIn('status', ['confirmed', 'in_progress'])
-                        ->where('inquiries.id', '!=', $inquiry->getKey());
+                ->where(function ($technicianQuery) use ($bookingDate, $inquiry) {
+                    $assignedOnDate = function ($query) use ($bookingDate, $inquiry) {
+                        $query->whereDate('preferred_date', $bookingDate)
+                            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+                            ->where('inquiries.id', '!=', $inquiry->getKey());
+                    };
+
+                    $technicianQuery
+                        ->whereHas('assignedInquiries', $assignedOnDate)
+                        ->orWhereHas('technicianInquiries', $assignedOnDate);
                 })
                 ->pluck('name')
                 ->all();
