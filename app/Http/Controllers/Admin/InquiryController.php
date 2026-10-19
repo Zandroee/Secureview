@@ -31,7 +31,9 @@ class InquiryController extends Controller
             'urgency' => ['nullable', 'in:normal,urgent,emergency'],
         ]);
 
-        $query = Inquiry::with(['user', 'inquirable', 'technician', 'technicians']);
+        // Active confirmed jobs live on the Schedules page, not in the pending inquiry queue.
+        $query = Inquiry::with(['user', 'inquirable', 'technician', 'technicians'])
+            ->whereNotIn('status', ['confirmed', 'in_progress']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
