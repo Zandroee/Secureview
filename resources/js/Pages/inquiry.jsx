@@ -56,7 +56,7 @@ const formatDateLabel = (value) => {
     });
 };
 
-export default function Inquiry({ customer, item, catalogItems = [], cartItems = [], initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {} }) {
+export default function Inquiry({ customer, item, catalogItems = [], cartItems = [], initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
     const today = new Date();
     const [showDateModal, setShowDateModal] = useState(false);
 
@@ -154,7 +154,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
     };
 
     const isFullyBookedDate = (dateValue) =>
-        Boolean(dateValue) && unavailableDates.includes(dateValue);
+        Boolean(dateValue) && (noTechniciansAvailable || unavailableDates.includes(dateValue));
 
     const isTimeSlotFullyBooked = (timeSlot) =>
         Boolean(selectedDate) &&
@@ -541,17 +541,25 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                     }
                                                 >
                                                     <option value="normal">
-                                                        Normal
+                                                        Normal — routine service
                                                     </option>
 
                                                     <option value="urgent">
-                                                        Urgent
+                                                        Urgent — service disruption or time-sensitive issue
                                                     </option>
 
                                                     <option value="emergency">
-                                                        Emergency
+                                                        Emergency — immediate safety or security risk
                                                     </option>
                                                 </select>
+
+                                                <div className="form-text small">
+                                                    {data.urgency === "emergency"
+                                                        ? "Use only when there is an immediate safety or security risk."
+                                                        : data.urgency === "urgent"
+                                                          ? "For a failed system, service disruption, or an issue that cannot reasonably wait."
+                                                          : "For routine installation, maintenance, or non-critical service requests."}
+                                                </div>
 
                                                 {errors.urgency && (
                                                     <div className="invalid-feedback">
