@@ -291,7 +291,7 @@ export default function AdminSchedules({
                                         BOOKING DATE AVAILABILITY
                                     </h2>
                                     <p className="small text-muted mb-0">
-                                        Block an entire date or one of its three-hour time slots. Customers cannot select blocked options until you reopen them.
+                                        Dates and time slots may be blocked manually or automatically when technician capacity is full. Automatic blocks clear when the schedules change.
                                     </p>
                                 </div>
                                 <span className="badge rounded-pill bg-danger-subtle text-danger px-3 py-2">
@@ -403,7 +403,7 @@ export default function AdminSchedules({
                                             <div className="bg-light rounded-3 p-4 text-center">
                                                 <i className="bi bi-calendar-check text-success fs-4" />
                                                 <p className="small text-muted mt-2 mb-0">
-                                                    No upcoming dates are blocked. All dates are available for booking.
+                                                    No upcoming dates are blocked manually or by technician capacity.
                                                 </p>
                                             </div>
                                         ) : (
@@ -424,14 +424,20 @@ export default function AdminSchedules({
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-outline-success btn-sm fw-bold"
-                                                            onClick={() => reopenBookingDate(blockedDate)}
-                                                        >
-                                                            <i className="bi bi-calendar-check me-1" />
-                                                            REOPEN
-                                                        </button>
+                                                        {blockedDate.is_automatic ? (
+                                                            <span className="badge rounded-pill bg-warning-subtle text-warning-emphasis px-3 py-2">
+                                                                AUTO-BLOCKED
+                                                            </span>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-outline-success btn-sm fw-bold"
+                                                                onClick={() => reopenBookingDate(blockedDate)}
+                                                            >
+                                                                <i className="bi bi-calendar-check me-1" />
+                                                                REOPEN
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -474,14 +480,20 @@ export default function AdminSchedules({
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-outline-success btn-sm fw-bold"
-                                                            onClick={() => reopenBookingTimeSlot(blockedSlot)}
-                                                        >
-                                                            <i className="bi bi-clock me-1" />
-                                                            REOPEN
-                                                        </button>
+                                                        {blockedSlot.is_automatic ? (
+                                                            <span className="badge rounded-pill bg-warning-subtle text-warning-emphasis px-3 py-2">
+                                                                AUTO-BLOCKED
+                                                            </span>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-outline-success btn-sm fw-bold"
+                                                                onClick={() => reopenBookingTimeSlot(blockedSlot)}
+                                                            >
+                                                                <i className="bi bi-clock me-1" />
+                                                                REOPEN
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
