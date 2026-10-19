@@ -35,6 +35,8 @@ class Inquiry extends Model
 
     protected $casts = [
         'preferred_date' => 'date',
+        'reschedule_requested_date' => 'date',
+        'reschedule_requested_at' => 'datetime',
         'service_latitude' => 'float',
         'service_longitude' => 'float',
     ];
