@@ -97,7 +97,7 @@ class InquiryController extends Controller
         $technicianCount = $technicianIds->count();
         $activeBookings = Inquiry::query()
             ->with('technicians:id')
-            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
             ->whereDate('preferred_date', '>=', today())
             ->get(['id', 'technician_id', 'preferred_date', 'preferred_time']);
 
@@ -136,6 +136,15 @@ class InquiryController extends Controller
         $capacityBlockedDates = $busyByDate
             ->filter(fn ($busyTechnicianCount) => $technicianCount === 0 || $busyTechnicianCount >= $technicianCount)
             ->keys();
+
+        // A technician can take only one service per day. If every technician is
+        // already assigned anywhere on this date, all three slots must be disabled.
+        foreach ($capacityBlockedDates as $date) {
+            $unavailableTimeSlots[$date] = collect($unavailableTimeSlots[$date] ?? [])
+                ->merge(self::BOOKING_TIME_SLOTS)
+                ->unique()
+                ->values();
+        }
 
         $fullyUnavailableDates = collect($unavailableTimeSlots)
             ->filter(fn ($slots) => collect(self::BOOKING_TIME_SLOTS)->every(fn ($slot) => collect($slots)->contains($slot)))
@@ -708,7 +717,7 @@ class InquiryController extends Controller
             ->where(function ($technicianQuery) use ($date, $exceptInquiryId) {
                 $applyActiveDate = function ($query) use ($date, $exceptInquiryId) {
                     $query->whereDate('preferred_date', $date)
-                        ->whereIn('status', ['confirmed', 'in_progress']);
+                        ->whereIn('status', ['pending', 'confirmed', 'in_progress']);
                     if ($exceptInquiryId !== null) {
                         $query->where('inquiries.id', '!=', $exceptInquiryId);
                     }
@@ -733,10 +742,10 @@ class InquiryController extends Controller
         $busyTechnicianCount = User::query()
             ->where('role', 'technician')
             ->where(function ($technicianQuery) use ($date, $time) {
+                // A technician assigned to any service that day cannot take another slot.
                 $applyActiveSlot = function ($query) use ($date, $time) {
                     $query->whereDate('preferred_date', $date)
-                        ->where('preferred_time', $time)
-                        ->whereIn('status', ['confirmed', 'in_progress']);
+                        ->whereIn('status', ['pending', 'confirmed', 'in_progress']);
                 };
 
                 $technicianQuery
