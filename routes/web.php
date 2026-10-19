@@ -287,6 +287,10 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/schedules', [AdminScheduleController::class, 'index'])
         ->name('admin.schedules.index');
+    Route::get('/admin/service-history', [AdminScheduleController::class, 'history'])
+        ->name('admin.service-history.index');
+    Route::get('/admin/schedules/{inquiry}', [AdminScheduleController::class, 'show'])
+        ->name('admin.schedules.show');
     Route::patch('/admin/schedules/{inquiry}', [AdminScheduleController::class, 'updateSchedule'])->name('admin.schedules.update');
     Route::patch('/admin/reschedule-requests/{inquiry}/approve', [AdminScheduleController::class, 'approveReschedule'])->name('admin.reschedule-requests.approve');
     Route::patch('/admin/reschedule-requests/{inquiry}/decline', [AdminScheduleController::class, 'declineReschedule'])->name('admin.reschedule-requests.decline');
