@@ -507,7 +507,12 @@ class InquiryController extends Controller
                     'email' => $technician->email,
                 ])->values(),
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
+                'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                 'preferred_time' => $inquiry->preferred_time,
+                'reschedule_requested_date' => $inquiry->reschedule_requested_date?->format('Y-m-d'),
+                'reschedule_requested_time' => $inquiry->reschedule_requested_time,
+                'reschedule_request_status' => $inquiry->reschedule_request_status ?? 'none',
+                'reschedule_request_note' => $inquiry->reschedule_request_note,
                 'notes' => $inquiry->notes,
                 'status' => $inquiry->status,
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
@@ -515,4 +520,89 @@ class InquiryController extends Controller
             'success' => $request->session()->get('success'),
         ]);
     }
+    public function requestReschedule(Request $request, Inquiry $inquiry)
+    {
+        abort_unless($inquiry->user_id === $request->user()->id, 404);
+
+        if ($inquiry->status !== 'confirmed') {
+            throw ValidationException::withMessages([
+                'reschedule' => 'Only confirmed services can be rescheduled by customers.',
+            ]);
+        }
+
+        if (($inquiry->reschedule_request_status ?? 'none') === 'pending') {
+            throw ValidationException::withMessages([
+                'reschedule' => 'You already have a reschedule request awaiting review.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'preferred_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'preferred_time' => ['required', Rule::in(self::BOOKING_TIME_SLOTS)],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if (BlockedBookingDate::query()->whereDate('booking_date', $validated['preferred_date'])->exists()) {
+            throw ValidationException::withMessages([
+                'preferred_date' => 'That date is marked fully booked. Please choose another date.',
+            ]);
+        }
+
+        if (BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', $validated['preferred_date'])
+            ->where('booking_time', $validated['preferred_time'])
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'preferred_time' => 'That time slot is marked fully booked. Please choose another time.',
+            ]);
+        }
+
+        $technicianIds = User::query()->where('role', 'technician')->pluck('id')->map(fn ($id) => (int) $id)->all();
+        if ($technicianIds) {
+            $busyIds = Inquiry::query()
+                ->where('id', '!=', $inquiry->id)
+                ->whereDate('preferred_date', $validated['preferred_date'])
+                ->where('preferred_time', $validated['preferred_time'])
+                ->whereIn('status', ['confirmed', 'in_progress'])
+                ->whereHas('technicians', fn ($query) => $query->whereIn('users.id', $technicianIds))
+                ->with('technicians:id')
+                ->get()
+                ->flatMap(fn (Inquiry $job) => $job->technicians->pluck('id'))
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->all();
+
+            if (count(array_diff($technicianIds, $busyIds)) === 0) {
+                throw ValidationException::withMessages([
+                    'preferred_time' => 'No technicians are available for that time slot. Please choose another slot.',
+                ]);
+            }
+        } else {
+            throw ValidationException::withMessages([
+                'preferred_time' => 'There are no technicians available for scheduling right now.',
+            ]);
+        }
+
+        $inquiry->update([
+            'reschedule_requested_date' => $validated['preferred_date'],
+            'reschedule_requested_time' => $validated['preferred_time'],
+            'reschedule_request_status' => 'pending',
+            'reschedule_request_note' => $validated['note'] ?? null,
+            'reschedule_requested_at' => now(),
+        ]);
+
+        CustomerNotification::create([
+            'user_id' => $inquiry->user_id,
+            'type' => 'reschedule_request',
+            'title' => 'Reschedule request submitted',
+            'message' => 'Your requested change for ' . $inquiry->inquiry_number . ' is awaiting technician/admin approval. Your current appointment remains unchanged until approval.',
+            'action_url' => route('inquiries.show', $inquiry),
+            'related_type' => Inquiry::class,
+            'related_id' => $inquiry->id,
+        ]);
+
+        return redirect()->route('inquiries.show', $inquiry)
+            ->with('success', 'Reschedule request submitted. Your current appointment remains active until the request is approved.');
+    }
+
 }
