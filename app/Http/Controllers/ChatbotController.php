@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -122,6 +123,16 @@ PROMPT;
             }
 
             return response()->json(['message' => trim($answer)]);
+        } catch (ConnectionException $exception) {
+            Log::warning('SecureView chatbot timed out or could not connect to Gemini.', [
+                'model' => $model,
+                'exception' => get_class($exception),
+                'message' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'The AI assistant took too long to connect or respond. Please try again shortly. If this keeps happening, check your internet connection and Google AI API availability.',
+            ], 504);
         } catch (\Throwable $exception) {
             report($exception);
 
