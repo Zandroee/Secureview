@@ -13,6 +13,57 @@ const suggestedQuestions = [
     "Can I choose my schedule?",
 ];
 
+// Gemini may return escaped Markdown (for example, \\*\\*bold\\*\\*) or
+// literal \\n sequences. Normalize those before displaying the answer.
+function normalizeAssistantText(content = "") {
+    return String(content)
+        .replace(/\\\\r\\\\n/g, "\n")
+        .replace(/\\\\n/g, "\n")
+        .replace(/\\\\r/g, "\n")
+        .replace(/\\\\t/g, " ")
+        .replace(/\\\\([\\\\*_`])/g, "$1")
+        .trim();
+}
+
+function renderAssistantContent(content) {
+    const normalized = normalizeAssistantText(content);
+    const lines = normalized.split("\n");
+
+    return lines.map((line, lineIndex) => {
+        // Render internal routes as friendly links instead of exposing raw paths.
+        const tokens = line.split(/(\\*\\*.*?\\*\\*|\\/(?:services|inquiry|products|packages|about)\\b)/gi);
+
+        return (
+            <span key={lineIndex}>
+                {lineIndex > 0 && <br />}
+                {tokens.map((token, tokenIndex) => {
+                    const routeLabels = {
+                        "/services": "Services page",
+                        "/inquiry": "inquiry form",
+                        "/products": "Products page",
+                        "/packages": "Packages page",
+                        "/about": "About page",
+                    };
+
+                    if (routeLabels[token]) {
+                        return (
+                            <a key={tokenIndex} href={token}>
+                                {routeLabels[token]}
+                            </a>
+                        );
+                    }
+
+                    if (token.startsWith("**") && token.endsWith("**") && token.length > 4) {
+                        return <strong key={tokenIndex}>{token.slice(2, -2)}</strong>;
+                    }
+
+                    return <span key={tokenIndex}>{token}</span>;
+                })}
+            </span>
+        );
+    });
+}
+
 export default function Chatbot() {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([welcomeMessage]);
@@ -88,7 +139,9 @@ export default function Chatbot() {
                                 key={`${index}-${message.role}`}
                             >
                                 <div className={`sv-chat-bubble ${message.role === "user" ? "sv-chat-bubble-user" : ""}`}>
-                                    {message.content}
+                                    {message.role === "assistant"
+                                        ? renderAssistantContent(message.content)
+                                        : message.content}
                                 </div>
                             </div>
                         ))}
