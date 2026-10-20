@@ -182,7 +182,10 @@ class PurchaseController extends Controller
             ->where('order_id', $order->id)
             ->first();
 
-        if ($installationCheckout?->inquiry && $installationCheckout->inquiry->status !== 'completed') {
+        if (
+            $installationCheckout &&
+            (!$installationCheckout->inquiry || $installationCheckout->inquiry->status !== 'completed')
+        ) {
             return back()->withErrors([
                 'order' => 'This order includes an installation service. Complete the related service from Schedules and Service History before marking the order Completed.',
             ]);
@@ -241,7 +244,10 @@ class PurchaseController extends Controller
                 && $order->order_status === 'processing'
                 && !\App\Models\PendingInquiryCheckout::query()
                     ->where('order_id', $order->id)
-                    ->whereHas('inquiry', fn ($query) => $query->where('status', '!=', 'completed'))
+                    ->where(function ($query) {
+                        $query->whereNull('inquiry_id')
+                            ->orWhereHas('inquiry', fn ($inquiryQuery) => $inquiryQuery->where('status', '!=', 'completed'));
+                    })
                     ->exists(),
             'items' => $order->items->map(fn ($item) => [
                 'id' => $item->id,
