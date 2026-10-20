@@ -73,7 +73,7 @@ class PurchaseController extends Controller
         $orders = $query
             ->paginate(12)
             ->withQueryString()
-            ->through(fn (Order $order) => $this->formatOrder($order));
+            ->through(fn (Order $order) => $this->formatOrder($order, $invoiceProfileReady));
 
         $unpaidOrderQuery = Order::query()
             ->whereNull('paid_at')
