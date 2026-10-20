@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Order;
+use App\Models\InvoiceSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -114,4 +115,39 @@ class InvoiceTest extends TestCase
 
         return $order;
     }
+
+    public function test_invoice_preview_uses_saved_business_profile_settings(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+        $order = $this->createOrder($customer);
+
+        InvoiceSetting::create([
+            'id' => 1,
+            'business_name' => 'SecureView CCTV',
+            'registered_name' => 'SecureView Demo Trading',
+            'address' => '456 Registered Address, Taguig City',
+            'email' => 'billing@example.test',
+            'phone' => '02-8000-0000',
+            'tin' => '000-000-000-000',
+            'vat_status' => 'non_vat',
+            'branch_code' => '000',
+            'bir_atp_number' => 'DEMO-ATP',
+            'serial_number_range' => 'DEMO-000001 to DEMO-000999',
+            'invoice_number_padding' => 6,
+        ]);
+
+        $this->actingAs($customer)
+            ->get(route('purchases.invoice', $order))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('invoice')
+                ->where('invoice.business.name', 'SecureView CCTV')
+                ->where('invoice.business.registered_name', 'SecureView Demo Trading')
+                ->where('invoice.business.vat_status', 'non_vat')
+                ->where('invoice.business.bir_atp_number', 'DEMO-ATP'));
+    }
+
 }
