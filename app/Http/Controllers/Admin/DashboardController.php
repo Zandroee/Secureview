@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\BlockedBookingDate;
+use App\Models\BlockedBookingTimeSlot;
+use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Order;
 use App\Models\Product;
@@ -184,11 +187,16 @@ class DashboardController extends Controller
                 '₱' . number_format((float) $order->total, 2),
             ]);
 
-        $scheduleData = Inquiry::query()
+        $scheduleQuery = Inquiry::query()
             ->whereIn('status', ['confirmed', 'in_progress'])
-            ->whereDate('preferred_date', '>=', today())
+            ->whereDate('preferred_date', '>=', today());
+
+        $upcomingScheduleCount = (clone $scheduleQuery)->count();
+
+        $scheduleData = $scheduleQuery
             ->orderBy('preferred_date')
             ->orderBy('preferred_time')
+            ->orderByRaw("CASE urgency WHEN 'emergency' THEN 1 WHEN 'urgent' THEN 2 ELSE 3 END")
             ->limit(5)
             ->get([
                 'id',
@@ -198,12 +206,17 @@ class DashboardController extends Controller
                 'preferred_date',
                 'preferred_time',
                 'status',
+                'urgency',
             ])
             ->map(fn (Inquiry $inquiry) => [
                 'id' => $inquiry->id,
                 'title' => $inquiry->service_type ?: 'Service appointment',
                 'date' => $inquiry->preferred_date?->format('F j, Y') ?? 'Date not set',
+                'date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                 'time' => $inquiry->preferred_time,
+                'customer_name' => $inquiry->customer_name,
+                'status' => $inquiry->status,
+                'urgency' => $inquiry->urgency ?: 'normal',
                 'description' => $inquiry->customer_name . ' · ' . str_replace('_', ' ', $inquiry->status),
                 'inquiry_number' => $inquiry->inquiry_number,
             ])
@@ -212,13 +225,121 @@ class DashboardController extends Controller
         $recentInquiries = Inquiry::query()
             ->latest()
             ->limit(4)
-            ->get(['id', 'inquiry_number', 'customer_name', 'service_type', 'status', 'created_at'])
+            ->get([
+                'id',
+                'inquiry_number',
+                'customer_name',
+                'service_type',
+                'status',
+                'urgency',
+                'preferred_date',
+                'preferred_time',
+                'created_at',
+            ])
             ->map(fn (Inquiry $inquiry) => [
+                'id' => $inquiry->id,
+                'inquiry_number' => $inquiry->inquiry_number,
                 'title' => $inquiry->service_type ?: ('Inquiry ' . $inquiry->inquiry_number),
+                'customer_name' => $inquiry->customer_name,
                 'message' => $inquiry->customer_name . ' · ' . str_replace('_', ' ', $inquiry->status),
                 'date' => $inquiry->created_at?->diffForHumans() ?? '',
+                'status' => $inquiry->status,
+                'urgency' => $inquiry->urgency ?: 'normal',
+                'preferred_date' => $inquiry->preferred_date?->format('M j, Y'),
+                'preferred_time' => $inquiry->preferred_time,
             ])
             ->values();
+
+        // Keep the dashboard's inquiry alert badge tied to the same admin notification
+        // records shown in the Notifications page/navbar.
+        $unreadInquiryNotificationCount = CustomerNotification::query()
+            ->where('user_id', $request->user()->id)
+            ->whereNull('read_at')
+            ->whereIn('type', ['new_inquiry', 'reschedule_request'])
+            ->count();
+
+        $manuallyBlockedDates = BlockedBookingDate::query()
+            ->whereDate('booking_date', '>=', today())
+            ->pluck('booking_date')
+            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->unique()
+            ->values();
+
+        $manualBlockedSlotsByDate = BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', '>=', today())
+            ->get(['booking_date', 'booking_time'])
+            ->groupBy(fn (BlockedBookingTimeSlot $slot) => $slot->booking_date?->format('Y-m-d'))
+            ->map(fn ($slots) => $slots->pluck('booking_time')->unique()->values());
+
+        $technicianIds = User::query()
+            ->where('role', 'technician')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id);
+        $technicianCount = $technicianIds->count();
+
+        // Match the booking rules: each technician may have one active service per day,
+        // and legacy technician_id assignments count alongside team assignments.
+        $assignedBookings = Inquiry::query()
+            ->with('technicians:id')
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->get(['id', 'technician_id', 'preferred_date', 'preferred_time']);
+
+        $assignedIdsForJob = function (Inquiry $job) {
+            $ids = $job->technicians->pluck('id')->map(fn ($id) => (int) $id);
+
+            if ($job->technician_id) {
+                $ids->push((int) $job->technician_id);
+            }
+
+            return $ids->unique()->values();
+        };
+
+        $busyTechniciansByDate = $assignedBookings
+            ->groupBy(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d'))
+            ->map(fn ($jobs) => $jobs->flatMap($assignedIdsForJob)->unique()->count());
+
+        $capacityFullyBookedDates = $technicianCount > 0
+            ? $busyTechniciansByDate
+                ->filter(fn ($busyCount) => $busyCount >= $technicianCount)
+                ->keys()
+                ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            : collect();
+
+        $manualFullyBookedDates = $manualBlockedSlotsByDate
+            ->filter(fn ($slots) => $slots->count() >= count(self::BOOKING_TIME_SLOTS))
+            ->keys();
+
+        $fullyBookedDates = $manuallyBlockedDates
+            ->concat($manualFullyBookedDates)
+            ->concat($capacityFullyBookedDates)
+            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->unique()
+            ->values();
+
+        $partiallyBlockedBySlots = $manualBlockedSlotsByDate
+            ->filter(fn ($slots, $date) => $slots->count() > 0
+                && $slots->count() < count(self::BOOKING_TIME_SLOTS)
+                && !$fullyBookedDates->contains($date))
+            ->keys();
+
+        $partiallyUsedCapacityDates = $technicianCount > 0
+            ? $busyTechniciansByDate
+                ->filter(fn ($busyCount) => $busyCount > 0 && $busyCount < $technicianCount)
+                ->keys()
+            : collect();
+
+        $partiallyBlockedDates = $partiallyBlockedBySlots
+            ->concat($partiallyUsedCapacityDates)
+            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->reject(fn ($date) => $fullyBookedDates->contains($date))
+            ->unique()
+            ->values();
+
+        $calendarAvailability = [
+            'fullyBookedDates' => $fullyBookedDates,
+            'partiallyBlockedDates' => $partiallyBlockedDates,
+        ];
 
         $chartPeriod = $filters['chart_period'] ?? 'year';
         $chartConfiguration = $this->revenueChartConfiguration($chartPeriod);
@@ -343,7 +464,10 @@ class DashboardController extends Controller
             'lowStockData' => $lowStockData,
             'pendingPaymentData' => $pendingPaymentData,
             'scheduleData' => $scheduleData,
+            'upcomingScheduleCount' => $upcomingScheduleCount,
             'recentInquiries' => $recentInquiries,
+            'unreadInquiryNotificationCount' => $unreadInquiryNotificationCount,
+            'calendarAvailability' => $calendarAvailability,
             'lowStockThreshold' => self::LOW_STOCK_THRESHOLD,
         ]);
     }
