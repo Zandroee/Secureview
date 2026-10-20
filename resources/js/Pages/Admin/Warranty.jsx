@@ -27,8 +27,16 @@ function statusClass(status) {
     return "bg-info-subtle text-info-emphasis";
 }
 
+function coverageClass(status) {
+    if (status === "active") return "bg-success-subtle text-success";
+    if (status === "lifetime") return "bg-primary-subtle text-primary";
+    if (status === "expired") return "bg-danger-subtle text-danger";
+    return "bg-secondary-subtle text-secondary";
+}
+
 export default function AdminWarranty({
     claims = [],
+    warranties = [],
     filters = {},
     summary = {},
     statuses = STATUS_OPTIONS,
@@ -39,6 +47,7 @@ export default function AdminWarranty({
     const [editingClaim, setEditingClaim] = useState(null);
     const [saving, setSaving] = useState(false);
     const rows = claims.data ?? (Array.isArray(claims) ? claims : []);
+    const coverageRows = warranties.data ?? (Array.isArray(warranties) ? warranties : []);
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -154,7 +163,7 @@ export default function AdminWarranty({
                                     />
                                 </div>
                                 <div className="col-sm-8 col-lg-3">
-                                    <label className="form-label small fw-semibold mb-1">STATUS</label>
+                                    <label className="form-label small fw-semibold mb-1">CLAIM STATUS</label>
                                     <select className="form-select" value={status} onChange={(event) => setStatus(event.target.value)}>
                                         <option value="">All statuses</option>
                                         {(statuses.length ? statuses : STATUS_OPTIONS).map((item) => (
@@ -171,7 +180,85 @@ export default function AdminWarranty({
                             </form>
                         </section>
 
+                        <section className="bg-white border rounded-3 overflow-hidden mb-3" style={{ boxShadow: "0 3px 12px rgba(0,0,0,0.04)" }}>
+                            <div className="p-3 p-md-4 border-bottom">
+                                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-1">
+                                    <div>
+                                        <h2 className="h5 fw-bold mb-1">Warranty Coverage Register</h2>
+                                        <p className="small text-muted mb-0">Paid purchases and their calculated coverage period, including items that have not needed service yet.</p>
+                                    </div>
+                                    <span className="small text-muted">{warranties.total ?? coverageRows.length} purchase records</span>
+                                </div>
+                            </div>
+                            <div className="table-responsive">
+                                <table className="table table-hover align-middle mb-0">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th className="ps-3">CUSTOMER / ORDER</th>
+                                            <th>PURCHASED ITEM</th>
+                                            <th>WARRANTY</th>
+                                            <th>LATEST CLAIM</th>
+                                            <th>COVERAGE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {coverageRows.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="5" className="text-center py-5 text-muted">
+                                                    <i className="bi bi-shield-check fs-2 d-block mb-2" />
+                                                    No paid purchase records found.
+                                                </td>
+                                            </tr>
+                                        ) : coverageRows.map((warranty) => (
+                                            <tr key={warranty.id}>
+                                                <td className="ps-3">
+                                                    <div className="fw-semibold">{warranty.customer_name}</div>
+                                                    <div className="small text-muted text-break">{warranty.customer_email}</div>
+                                                    <div className="small text-primary mt-1">{warranty.order_number || "—"}</div>
+                                                </td>
+                                                <td>
+                                                    <div className="fw-semibold">{warranty.item_name}</div>
+                                                    <div className="small text-muted">Quantity: {warranty.quantity}</div>
+                                                </td>
+                                                <td>
+                                                    <div className="fw-semibold">{warranty.warranty_period || "Not specified"}</div>
+                                                    <div className="small text-muted">Started {warranty.warranty_start_date || "—"}</div>
+                                                    <div className="small text-muted">
+                                                        {warranty.warranty_expiry_date
+                                                            ? "Expires " + warranty.warranty_expiry_date
+                                                            : /lifetime/i.test(warranty.warranty_period ?? "") ? "No expiration (lifetime)" : "Expiry unavailable"}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    {warranty.latest_claim_number ? (
+                                                        <>
+                                                            <div className="small fw-semibold">{warranty.latest_claim_number}</div>
+                                                            <span className={"badge rounded-pill text-capitalize px-2 py-1 " + statusClass(warranty.latest_claim_status)}>
+                                                                {statusLabel(warranty.latest_claim_status)}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="small text-muted">No claim submitted</span>
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    <span className={"badge rounded-pill text-capitalize px-2 py-2 " + coverageClass(warranty.coverage_status)}>
+                                                        {statusLabel(warranty.coverage_status)}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <AdminPagination pagination={warranties} label="warranty records" insideCard />
+                        </section>
+
                         <section className="bg-white border rounded-3 overflow-hidden" style={{ boxShadow: "0 3px 12px rgba(0,0,0,0.04)" }}>
+                            <div className="p-3 p-md-4 border-bottom">
+                                <h2 className="h5 fw-bold mb-1">Warranty Service Claims</h2>
+                                <p className="small text-muted mb-0">Review customer reports and record decisions, repairs, and resolution notes.</p>
+                            </div>
                             <div className="table-responsive">
                                 <table className="table table-hover align-middle mb-0">
                                     <thead className="table-light">
