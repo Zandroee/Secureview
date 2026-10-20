@@ -14,6 +14,14 @@ class GoogleMapsServiceLocationTest extends TestCase
 
     private const SERVICE_SLOT = '02:00 PM - 05:00 PM';
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // The booking capacity guard rejects submissions when no technician exists.
+        User::factory()->create(['role' => 'technician']);
+    }
+
     public function test_customer_can_submit_a_service_address_with_a_google_place_and_precise_pin(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
