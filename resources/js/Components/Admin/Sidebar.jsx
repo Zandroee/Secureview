@@ -71,6 +71,12 @@ const menuGroups = [
             icon: "bi-receipt",
         },
         {
+            label: "Invoice Settings",
+            href: "/admin/invoice-settings",
+            key: "invoice-settings",
+            icon: "bi-file-earmark-text",
+        },
+        {
             label: "Activity Logs",
             href: "/admin/activity-logs",
             key: "activity-logs",

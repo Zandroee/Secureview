@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\TransactionController as AdminTransactionControll
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\InventoryAdjustmentController as AdminInventoryAdjustmentController;
 use App\Http\Controllers\Admin\WarrantyController as AdminWarrantyController;
+use App\Http\Controllers\Admin\InvoiceSettingsController as AdminInvoiceSettingsController;
 use App\Http\Controllers\WarrantyClaimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -257,6 +258,10 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/transactions', [AdminTransactionController::class, 'index'])
         ->name('admin.transactions.index');
+    Route::get('/admin/invoice-settings', [AdminInvoiceSettingsController::class, 'index'])
+        ->name('admin.invoice-settings.index');
+    Route::patch('/admin/invoice-settings', [AdminInvoiceSettingsController::class, 'update'])
+        ->name('admin.invoice-settings.update');
 
     Route::get('/admin/inquiries', [AdminInquiryController::class, 'index'])
         ->name('admin.inquiries.index');
