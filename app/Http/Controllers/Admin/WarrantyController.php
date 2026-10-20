@@ -109,11 +109,13 @@ class WarrantyController extends Controller
         ]);
 
         $oldStatus = $warrantyClaim->status;
+        $oldNotes = $warrantyClaim->admin_notes;
         $newStatus = $validated['status'];
+        $newNotes = $validated['admin_notes'] ?? null;
 
         $warrantyClaim->update([
             'status' => $newStatus,
-            'admin_notes' => $validated['admin_notes'] ?? null,
+            'admin_notes' => $newNotes,
             'reviewed_at' => $newStatus === 'submitted'
                 ? null
                 : ($warrantyClaim->reviewed_at ?? now()),
@@ -122,12 +124,12 @@ class WarrantyController extends Controller
                 : null,
         ]);
 
-        if ($oldStatus !== $newStatus) {
+        if ($oldStatus !== $newStatus || $oldNotes !== $newNotes) {
             CustomerNotification::create([
                 'user_id' => $warrantyClaim->user_id,
                 'type' => 'warranty_claim_update',
                 'title' => 'Warranty claim updated',
-                'message' => 'Your warranty claim ' . $warrantyClaim->claim_number . ' is now ' . str_replace('_', ' ', $newStatus) . '.',
+                'message' => 'Your warranty claim ' . $warrantyClaim->claim_number . ' has an update. Current status: ' . str_replace('_', ' ', $newStatus) . '.',
                 'action_url' => route('warranty-claims.index'),
                 'related_type' => WarrantyClaim::class,
                 'related_id' => $warrantyClaim->id,
