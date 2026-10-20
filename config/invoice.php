@@ -13,4 +13,6 @@ return [
     'bir_permit_number' => env('INVOICE_BIR_PERMIT_NUMBER'),
     'bir_atp_number' => env('INVOICE_BIR_ATP_NUMBER'),
     'serial_number_range' => env('INVOICE_SERIAL_NUMBER_RANGE'),
+    'pti_einvoice_number' => env('INVOICE_PTI_EINVOICE_NUMBER'),
+    'eis_certification_reference' => env('INVOICE_EIS_CERTIFICATION_REFERENCE'),
 ];
