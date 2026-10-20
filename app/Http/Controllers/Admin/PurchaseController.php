@@ -30,6 +30,7 @@ class PurchaseController extends Controller
             'payment_status' => ['nullable', 'in:pending,paid,failed'],
             'order_status' => ['nullable', 'in:' . implode(',', self::ORDER_STATUSES)],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
+            'attention' => ['nullable', 'in:stale'],
         ]);
 
         $query = Order::with(['user', 'items'])
@@ -59,6 +60,13 @@ class PurchaseController extends Controller
             $query->where('payment_method', $filters['payment_method']);
         }
 
+        if (($filters['attention'] ?? null) === 'stale') {
+            $query->whereNull('paid_at')
+                ->whereIn('payment_status', ['pending', 'failed'])
+                ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed'])
+                ->where('updated_at', '<=', now()->subHours(24));
+        }
+
         $orders = $query
             ->paginate(12)
             ->withQueryString()
@@ -86,6 +94,7 @@ class PurchaseController extends Controller
                 'payment_status' => $filters['payment_status'] ?? '',
                 'order_status' => $filters['order_status'] ?? '',
                 'payment_method' => $filters['payment_method'] ?? '',
+                'attention' => $filters['attention'] ?? '',
             ],
             'summary' => [
                 'total_orders' => Order::count(),
