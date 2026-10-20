@@ -363,6 +363,12 @@ class CheckoutController extends Controller
             abort(404);
         }
 
+        if ($order->order_status === 'cancelled') {
+            return redirect()->route('purchases.show', $order)->withErrors([
+                'payment' => 'This order has been cancelled and can no longer be paid.',
+            ]);
+        }
+
         if (
             $order->payment_method !== 'cash' &&
             $order->payment_status !== 'paid' &&
