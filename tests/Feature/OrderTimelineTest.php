@@ -131,7 +131,7 @@ class OrderTimelineTest extends TestCase
                 ->has('order.timeline', 3)
                 ->where('order.timeline.0.title', 'Order placed')
                 ->where('order.timeline.1.title', 'Payment confirmed')
-                ->where('order.timeline.2.title', 'Order status changed to processing')
+                ->where('order.timeline.2.title', 'Order status changed to Processing')
                 ->where('order.timeline.0.actor_label', $customer->name)
             );
 
