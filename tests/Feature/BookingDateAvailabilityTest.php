@@ -182,6 +182,7 @@ class BookingDateAvailabilityTest extends TestCase
     public function test_customer_cannot_submit_an_individually_blocked_time_slot(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
+        User::factory()->create(['role' => 'technician']);
         $date = today()->addDays(8)->toDateString();
         $timeSlot = '11:00 AM - 02:00 PM';
 
