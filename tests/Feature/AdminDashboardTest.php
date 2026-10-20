@@ -112,6 +112,38 @@ class AdminDashboardTest extends TestCase
 
 
 
+    public function test_dashboard_hides_delivered_stage_until_delivery_tracking_exists(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+
+        Order::create([
+            'user_id' => $customer->id,
+            'order_number' => 'ORD-DASH-LEGACY-DELIVERED',
+            'subtotal' => 799,
+            'shipping_fee' => 0,
+            'total' => 799,
+            'payment_method' => 'gcash',
+            'payment_status' => 'paid',
+            'order_status' => 'delivered',
+            'paid_at' => now(),
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'delivery_address' => '123 Test Street',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('orderStatusData', function ($statuses) {
+                    return collect($statuses)->doesntContain(
+                        fn ($status) => $status['key'] === 'delivered'
+                    );
+                }));
+    }
+
     public function test_dashboard_notice_tables_have_independent_pagination(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
