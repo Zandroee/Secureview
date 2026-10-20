@@ -77,10 +77,25 @@ class TechnicianWorkspaceController extends Controller
             ])
             ->values();
 
+        $recentNotifications = $technician->customerNotifications()
+            ->latest('id')
+            ->limit(5)
+            ->get(['id', 'type', 'title', 'message', 'read_at', 'created_at'])
+            ->map(fn (CustomerNotification $notification) => [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'title' => $notification->title,
+                'message' => $notification->message,
+                'read' => $notification->read_at !== null,
+                'created_at' => $notification->created_at?->diffForHumans() ?? '',
+            ])
+            ->values();
+
         return Inertia::render('Technician/Workspace', [
             'jobs' => $jobs,
             'openJobs' => $openJobs,
             'inventory' => $inventory,
+            'recentNotifications' => $recentNotifications,
         ]);
     }
 
