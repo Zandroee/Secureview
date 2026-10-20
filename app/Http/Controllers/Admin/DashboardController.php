@@ -174,6 +174,7 @@ class DashboardController extends Controller
 
         $pendingPaymentData = Order::query()
             ->whereIn('payment_status', ['pending', 'failed'])
+            ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed'])
             ->latest()
             ->paginate(5, ['order_number', 'customer_name', 'total'], 'pending_payments_page')
             ->withQueryString()
