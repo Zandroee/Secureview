@@ -123,6 +123,9 @@ export default function Dashboard({
                                             ]}
                                             rows={pendingPaymentData.data ?? []}
                                             pagination={pendingPaymentData}
+                                            rowLinks={(pendingPaymentData.data ?? []).map((row) =>
+                                                "/admin/purchases?search=" + encodeURIComponent(row[0])
+                                            )}
                                         />
                                     </div>
                                 </div>
