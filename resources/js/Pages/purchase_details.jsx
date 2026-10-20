@@ -418,8 +418,8 @@ export default function PurchaseDetails({ order }) {
 
                                     <div className="small text-muted">
                                         {order.payment_method === "cash"
-                                            ? "Payment is pending and will be collected on delivery."
-                                            : "Online payment processing will be handled through the payment gateway."}
+                                            ? "Cash payment is still marked pending until SecureView confirms it. Delivery tracking is not currently available in the site."
+                                            : "Online payment is confirmed only after PayMongo reports a successful payment."}
                                     </div>
                                 </div>
                             </div>
