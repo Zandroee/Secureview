@@ -9,6 +9,7 @@ use App\Http\Controllers\PackageController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\ScheduleController;
