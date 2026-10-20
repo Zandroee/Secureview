@@ -56,6 +56,7 @@ class InquiryConfirmationSchedulingTest extends TestCase
     {
         $customer = User::factory()->create(['role' => 'user']);
         $admin = User::factory()->create(['role' => 'admin']);
+        User::factory()->create(['role' => 'technician']); // Ensure the request reaches the confirmation guard.
         $date = today()->addDays(4)->toDateString();
         $inquiry = $this->createPendingInquiry($customer, $date);
 
@@ -156,6 +157,7 @@ class InquiryConfirmationSchedulingTest extends TestCase
     {
         $customer = User::factory()->create(['role' => 'user']);
         $admin = User::factory()->create(['role' => 'admin']);
+        User::factory()->create(['role' => 'technician']); // Ensure the request reaches the status endpoint.
         $inquiry = $this->createPendingInquiry($customer, today()->addDays(4)->toDateString());
 
         $this->actingAs($admin)
