@@ -317,6 +317,10 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
         ->name('admin.purchases.index');
     Route::patch('/admin/purchases/{order}/cancel', [AdminPurchaseController::class, 'cancel'])
         ->name('admin.purchases.cancel');
+    Route::patch('/admin/purchases/{order}/confirm-cash-payment', [AdminPurchaseController::class, 'confirmCashPayment'])
+        ->name('admin.purchases.confirm-cash-payment');
+    Route::patch('/admin/purchases/{order}/complete', [AdminPurchaseController::class, 'markCompleted'])
+        ->name('admin.purchases.complete');
 
     Route::patch('/admin/users/{user}/role', [AdminUserController::class, 'updateRole'])
         ->name('admin.users.role');
