@@ -95,7 +95,7 @@ export default function Announcements({
                 ) : (
                     <div className="text-center border rounded-3 bg-light p-4">
                         <i className="bi bi-chat-square-text fs-4 text-muted d-block mb-2" />
-                        <p className="small text-muted mb-2">No inquiries have been submitted yet.</p>
+                        <p className="small text-muted mb-2">No pending inquiries need attention right now.</p>
                         <Link href="/admin/inquiries" className="small fw-semibold text-decoration-none">
                             Open inquiries
                         </Link>
