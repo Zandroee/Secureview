@@ -32,6 +32,40 @@ class NotificationController extends Controller
         ]);
     }
 
+    public function storeAnnouncement(Request $request)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:120'],
+            'message' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $recipients = \\App\\Models\\User::query()
+            ->where('role', 'user')
+            ->select('id')
+            ->get();
+
+        if ($recipients->isEmpty()) {
+            return back()->withErrors([
+                'announcement' => 'There are no customer accounts to receive this announcement yet.',
+            ]);
+        }
+
+        foreach ($recipients as $recipient) {
+            CustomerNotification::create([
+                'user_id' => $recipient->id,
+                'type' => 'announcement',
+                'title' => $validated['title'],
+                'message' => $validated['message'],
+                'action_url' => null,
+                'related_type' => 'announcement',
+            ]);
+        }
+
+        return back()->with('success', 'Announcement sent to ' . $recipients->count() . ' customer account(s).');
+    }
+
     public function markAsRead(Request $request, CustomerNotification $notification)
     {
         if ($notification->user_id !== $request->user()->id) {
