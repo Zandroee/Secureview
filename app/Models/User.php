@@ -79,6 +79,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(CustomerNotification::class);
     }
 
+    public function warrantyClaims(): HasMany
+    {
+        return $this->hasMany(WarrantyClaim::class);
+    }
+
     public function reviews()
     {
         return $this->hasMany(Review::class);
