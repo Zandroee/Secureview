@@ -19,6 +19,12 @@ class DashboardController extends Controller
 {
     private const LOW_STOCK_THRESHOLD = 5;
 
+    private const BOOKING_TIME_SLOTS = [
+        '08:00 AM - 11:00 AM',
+        '11:00 AM - 02:00 PM',
+        '02:00 PM - 05:00 PM',
+    ];
+
     private const METRIC_PERIOD_OPTIONS = [
         'today' => 'Today',
         'yesterday' => 'Yesterday',
