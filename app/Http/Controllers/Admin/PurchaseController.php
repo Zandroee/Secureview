@@ -33,7 +33,7 @@ class PurchaseController extends Controller
             'attention' => ['nullable', 'in:stale'],
         ]);
 
-        $query = Order::with(['user', 'items'])
+        $query = Order::with(['user', 'items', 'events.actor'])
             ->latest();
 
         if (!empty($filters['search'])) {
@@ -78,7 +78,7 @@ class PurchaseController extends Controller
             ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed']);
 
         $attentionOrders = (clone $unpaidOrderQuery)
-            ->with(['user', 'items'])
+            ->with(['user', 'items', 'events.actor'])
             ->orderByRaw("CASE WHEN payment_status = 'failed' OR order_status = 'payment_failed' THEN 0 WHEN payment_method = 'cash' THEN 1 ELSE 2 END")
             ->orderBy('updated_at')
             ->limit(6)
@@ -274,6 +274,18 @@ class PurchaseController extends Controller
             'payment_status' => $order->payment_status,
             'order_status' => $order->order_status,
             'cancellation_reason' => $order->cancellation_reason,
+            'timeline' => $order->events->map(fn ($event) => [
+                'id' => $event->id,
+                'event_key' => $event->event_key,
+                'title' => $event->title,
+                'description' => $event->description,
+                'payment_status_before' => $event->payment_status_before,
+                'payment_status_after' => $event->payment_status_after,
+                'order_status_before' => $event->order_status_before,
+                'order_status_after' => $event->order_status_after,
+                'actor_name' => $event->actor?->name ?? 'SecureView system',
+                'created_at' => $event->created_at?->format('M d, Y h:i A'),
+            ])->values(),
             'paid_at' => $order->paid_at?->format('M d, Y h:i A'),
             'created_at' => $order->created_at?->format('M d, Y h:i A'),
             'updated_at' => $order->updated_at?->format('M d, Y h:i A'),

@@ -307,6 +307,44 @@ export default function PurchaseDetails({ order }) {
                                     )}
                                 </div>
                             </div>
+                            <div
+                                className="bg-white border rounded-4 p-3 p-md-4 mt-4"
+                                style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}
+                            >
+                                <div className="d-flex flex-column flex-sm-row justify-content-between gap-1 mb-3">
+                                    <h4 className="fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>
+                                        ORDER & PAYMENT HISTORY
+                                    </h4>
+                                    <span className="small text-muted">Payment and order changes recorded by SecureView.</span>
+                                </div>
+                                {order.timeline?.length ? (
+                                    <div className="d-flex flex-column gap-3">
+                                        {[...order.timeline].reverse().map((event) => (
+                                            <div key={event.id} className="d-flex gap-3">
+                                                <div className="d-flex flex-column align-items-center">
+                                                    <span className="rounded-circle bg-primary" style={{ width: "10px", height: "10px", marginTop: "5px" }} />
+                                                    <span className="flex-grow-1 border-start" />
+                                                </div>
+                                                <div className="flex-grow-1 pb-1">
+                                                    <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                                                        <span className="fw-semibold">{event.title}</span>
+                                                        <span className="small text-muted">{event.created_at}</span>
+                                                    </div>
+                                                    {event.description && (
+                                                        <div className="small text-muted mt-1">{event.description}</div>
+                                                    )}
+                                                    <div className="small text-muted mt-1">Recorded by {event.actor_label}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="small text-muted">
+                                        Event history begins when SecureView records new order activity. Earlier status changes cannot be reconstructed for older orders.
+                                    </div>
+                                )}
+                            </div>
+
                         </div>
 
                         <div className="col-lg-4">

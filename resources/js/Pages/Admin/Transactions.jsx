@@ -628,6 +628,36 @@ export default function AdminTransactions({
                             )}
                         </div>
 
+                        <div className="border rounded-3 p-3 mt-3">
+                            <div className="fw-bold mb-3">ORDER & PAYMENT TIMELINE</div>
+                            {viewingTransaction.timeline?.length ? (
+                                <div className="d-flex flex-column gap-3">
+                                    {viewingTransaction.timeline.map((event) => (
+                                        <div key={event.id} className="d-flex gap-3">
+                                            <div className="d-flex flex-column align-items-center">
+                                                <span className="rounded-circle bg-primary" style={{ width: "10px", height: "10px", marginTop: "5px" }} />
+                                                <span className="flex-grow-1 border-start" />
+                                            </div>
+                                            <div className="flex-grow-1 pb-1">
+                                                <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                                                    <span className="fw-semibold">{event.title}</span>
+                                                    <span className="small text-muted">{event.created_at}</span>
+                                                </div>
+                                                {event.description && (
+                                                    <div className="small text-muted mt-1">{event.description}</div>
+                                                )}
+                                                <div className="small text-muted mt-1">Recorded by {event.actor_name}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="small text-muted">
+                                    No earlier event history is available for this order. SecureView cannot reconstruct status changes from before timeline logging was enabled.
+                                </div>
+                            )}
+                        </div>
+
                         <div className="d-flex justify-content-end mt-3">
                             <button
                                 type="button"

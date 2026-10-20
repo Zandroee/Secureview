@@ -60,7 +60,7 @@ class PurchaseController extends Controller
             abort(404);
         }
 
-        $order->load('items.purchasable');
+        $order->load(['items.purchasable', 'events.actor']);
 
         return Inertia::render('purchase_details', [
             'order' => [
@@ -74,6 +74,20 @@ class PurchaseController extends Controller
                 'payment_status' => $order->payment_status,
                 'order_status' => $order->order_status,
                 'cancellation_reason' => $order->cancellation_reason,
+                'timeline' => $order->events->map(fn ($event) => [
+                    'id' => $event->id,
+                    'event_key' => $event->event_key,
+                    'title' => $event->title,
+                    'description' => $event->description,
+                    'payment_status_before' => $event->payment_status_before,
+                    'payment_status_after' => $event->payment_status_after,
+                    'order_status_before' => $event->order_status_before,
+                    'order_status_after' => $event->order_status_after,
+                    'actor_label' => $event->actor?->role === 'admin'
+                        ? 'SecureView'
+                        : ($event->actor?->name ?? 'SecureView system'),
+                    'created_at' => $event->created_at?->format('M d, Y h:i A'),
+                ])->values(),
                 'can_cancel' => $this->canCancel($order),
                 'customer_name' => $order->customer_name,
                 'customer_phone' => $order->customer_phone,
