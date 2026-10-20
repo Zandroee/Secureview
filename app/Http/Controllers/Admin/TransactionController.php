@@ -1,12 +1,12 @@
 <?php
 
-namespace App\\Http\\Controllers\\Admin;
+namespace App\Http\Controllers\Admin;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\Order;
-use Illuminate\\Database\\Eloquent\\Builder;
-use Illuminate\\Http\\Request;
-use Inertia\\Inertia;
+use App\Http\Controllers\Controller;
+use App\Models\Order;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class TransactionController extends Controller
 {
@@ -192,7 +192,7 @@ class TransactionController extends Controller
     {
         $value = (string) $value;
 
-        if ($value !== '' && preg_match('/^[=+@\\-\\t\\r]/', $value) === 1) {
+        if ($value !== '' && preg_match('/^[=+@\-\t\r]/', $value) === 1) {
             return "'" . $value;
         }
 
