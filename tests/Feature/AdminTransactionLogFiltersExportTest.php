@@ -95,7 +95,7 @@ class AdminTransactionLogFiltersExportTest extends TestCase
 
         $csv = $response->streamedContent();
 
-        $this->assertStringContainsString('Order Number,Payment Transaction ID,Checkout Session ID', $csv);
+        $this->assertStringContainsString('"Order Number","Payment Transaction ID","Checkout Session ID"', $csv);
         $this->assertStringContainsString('ORD-CSV-MATCH', $csv);
         $this->assertStringContainsString('cs_test_session_123', $csv);
         $this->assertStringContainsString("'=2+2", $csv);
@@ -104,7 +104,8 @@ class AdminTransactionLogFiltersExportTest extends TestCase
 
     private function createOrder(User $customer, array $overrides = []): Order
     {
-        return Order::create(array_merge([
+        $createdAt = $overrides['created_at'] ?? null;
+        $attributes = array_merge([
             'user_id' => $customer->id,
             'order_number' => 'ORD-TEST-' . uniqid(),
             'subtotal' => 1000,
@@ -117,6 +118,17 @@ class AdminTransactionLogFiltersExportTest extends TestCase
             'customer_phone' => '09171234567',
             'customer_email' => $customer->email,
             'delivery_address' => '123 Test Street, Taguig',
-        ], $overrides));
+        ], $overrides);
+
+        // created_at is managed by Eloquent, not mass assignable on Order.
+        unset($attributes['created_at']);
+
+        $order = Order::create($attributes);
+
+        if ($createdAt !== null) {
+            $order->forceFill(['created_at' => $createdAt])->save();
+        }
+
+        return $order;
     }
 }
