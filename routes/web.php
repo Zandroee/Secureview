@@ -200,6 +200,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
+    Route::patch('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
 
     Route::get('/warranty-claims', [WarrantyClaimController::class, 'index'])->name('warranty-claims.index');
     Route::post('/warranty-claims', [WarrantyClaimController::class, 'store'])->name('warranty-claims.store');
@@ -314,6 +315,8 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/purchases', [AdminPurchaseController::class, 'index'])
         ->name('admin.purchases.index');
+    Route::patch('/admin/purchases/{order}/cancel', [AdminPurchaseController::class, 'cancel'])
+        ->name('admin.purchases.cancel');
 
     Route::patch('/admin/users/{user}/role', [AdminUserController::class, 'updateRole'])
         ->name('admin.users.role');
