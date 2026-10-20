@@ -87,8 +87,14 @@ class InvoiceSettingsController extends Controller
             ]);
         }
 
-        if ($settings->next_invoice_number !== null && $first !== null && $settings->next_invoice_number > $first) {
-            if ($first !== $settings->first_invoice_number || $last < $settings->next_invoice_number) {
+        $previousFirst = $settings->first_invoice_number;
+        $nextNumber = $settings->next_invoice_number;
+        $seriesHasStarted = $previousFirst !== null
+            && $nextNumber !== null
+            && $nextNumber > $previousFirst;
+
+        if ($seriesHasStarted && $first !== null) {
+            if ($first !== $previousFirst || $last < $nextNumber) {
                 throw ValidationException::withMessages([
                     'first_invoice_number' => 'The configured series cannot be reset or shortened after numbers have been reserved. Preserve the existing range and extend it through an approved series if needed.',
                 ]);
@@ -97,9 +103,14 @@ class InvoiceSettingsController extends Controller
 
         $settings->fill($validated);
         $settings->updated_by = $request->user()->id;
-        if ($settings->next_invoice_number === null && $first !== null) {
+
+        // No numbers are issued by this setup page. Until the future issuance
+        // workflow consumes a serial, keep the next number aligned with the
+        // first number configured by the administrator.
+        if (!$seriesHasStarted) {
             $settings->next_invoice_number = $first;
         }
+
         $settings->save();
 
         return back()->with('success', 'Invoice profile settings saved.');
