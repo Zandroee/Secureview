@@ -30,6 +30,9 @@ export default function AdminCalendar({
     upcomingCount = 0,
     fullyBookedDates = [],
     partiallyBlockedDates = [],
+    subtitle = "{subtitle}",
+    viewAllHref = "/admin/schedules",
+    itemHrefPrefix = "/admin/schedules/",
 }) {
     const [date, setDate] = useState(new Date());
     const fullyBookedSet = new Set(fullyBookedDates ?? []);
@@ -155,7 +158,7 @@ export default function AdminCalendar({
                             {displayedSchedules.map((schedule) => (
                                 <Link
                                     key={schedule.id}
-                                    href={"/admin/schedules/" + schedule.id}
+                                    href={itemHrefPrefix.endsWith("#my-jobs") ? itemHrefPrefix : itemHrefPrefix + schedule.id}
                                     className="d-block text-decoration-none text-reset border rounded-3 p-2"
                                 >
                                     <div className="d-flex justify-content-between align-items-start gap-2">
@@ -190,7 +193,7 @@ export default function AdminCalendar({
                         <div className="text-center border rounded-3 bg-light p-3">
                             <i className="bi bi-calendar-check fs-4 text-muted d-block mb-1" />
                             <p className="small text-muted mb-2">No upcoming appointments.</p>
-                            <Link href="/admin/schedules" className="small fw-semibold text-decoration-none">
+                            <Link href={viewAllHref} className="small fw-semibold text-decoration-none">
                                 Open schedules
                             </Link>
                         </div>
