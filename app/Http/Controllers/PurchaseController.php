@@ -30,6 +30,7 @@ class PurchaseController extends Controller
                     'payment_method' => $order->payment_method,
                     'payment_status' => $order->payment_status,
                     'order_status' => $order->order_status,
+                    'cancellation_reason' => $order->cancellation_reason,
                     'can_cancel' => $this->canCancel($order),
                     'created_at' => $order->created_at?->format('M d, Y h:i A'),
                     'items' => $order->items->map(function ($item) {
@@ -72,6 +73,7 @@ class PurchaseController extends Controller
                 'payment_method' => $order->payment_method,
                 'payment_status' => $order->payment_status,
                 'order_status' => $order->order_status,
+                'cancellation_reason' => $order->cancellation_reason,
                 'can_cancel' => $this->canCancel($order),
                 'customer_name' => $order->customer_name,
                 'customer_phone' => $order->customer_phone,
@@ -106,7 +108,12 @@ class PurchaseController extends Controller
             abort(404);
         }
 
-        $cancellation->cancel($order, $inventory);
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'min:5', 'max:500'],
+        ]);
+        $reason = trim((string) ($validated['reason'] ?? '')) ?: 'Cancelled by customer.';
+
+        $cancellation->cancel($order, $inventory, $reason);
 
         return back()->with('success', 'Order ' . $order->order_number . ' was cancelled.');
     }
