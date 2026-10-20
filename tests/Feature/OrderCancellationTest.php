@@ -36,6 +36,7 @@ class OrderCancellationTest extends TestCase
             'order_status' => 'cancelled',
             'payment_status' => 'pending',
             'stock_deducted_at' => null,
+            'cancellation_reason' => 'Cancelled by customer.',
         ]);
         $this->assertDatabaseHas('products', [
             'id' => $product->id,
@@ -183,8 +184,10 @@ class OrderCancellationTest extends TestCase
             'order_status' => 'payment_failed',
         ]);
 
+        $reason = 'Payment failed and customer did not proceed.';
+
         $this->actingAs($admin)
-            ->patch(route('admin.purchases.cancel', $order))
+            ->patch(route('admin.purchases.cancel', $order), ['reason' => $reason])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
@@ -192,6 +195,7 @@ class OrderCancellationTest extends TestCase
             'id' => $order->id,
             'order_status' => 'cancelled',
             'payment_status' => 'failed',
+            'cancellation_reason' => 'Payment failed and customer did not proceed.',
         ]);
         $this->assertDatabaseHas('admin_activity_logs', [
             'admin_id' => $admin->id,
@@ -204,6 +208,96 @@ class OrderCancellationTest extends TestCase
             'type' => 'order_cancelled',
             'related_id' => $order->id,
         ]);
+    }
+
+    public function test_admin_cannot_cancel_an_unpaid_order_without_a_reason(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(5);
+        $order = $this->createOrder($customer, $product, [
+            'payment_method' => 'gcash',
+            'payment_status' => 'failed',
+            'order_status' => 'payment_failed',
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.purchases.index'))
+            ->patch(route('admin.purchases.cancel', $order))
+            ->assertRedirect(route('admin.purchases.index'))
+            ->assertSessionHasErrors('reason');
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'order_status' => 'payment_failed',
+            'cancellation_reason' => null,
+        ]);
+    }
+
+    public function test_admin_payment_queue_separates_pending_failed_cash_and_stale_orders(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(20);
+
+        $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-ATTN-PENDING',
+            'payment_method' => 'gcash',
+            'payment_status' => 'pending',
+            'order_status' => 'awaiting_payment',
+        ]);
+
+        $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-ATTN-FAILED',
+            'payment_method' => 'gcash',
+            'payment_status' => 'failed',
+            'order_status' => 'payment_failed',
+        ]);
+
+        $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-ATTN-CASH',
+            'payment_method' => 'cash',
+            'payment_status' => 'pending',
+            'order_status' => 'pending',
+        ]);
+
+        $staleOrder = $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-ATTN-STALE',
+            'payment_method' => 'gcash',
+            'payment_status' => 'pending',
+            'order_status' => 'awaiting_payment',
+        ]);
+        $staleOrder->timestamps = false;
+        $staleOrder->forceFill(['updated_at' => now()->subHours(30)])->save();
+
+        $this->actingAs($admin)
+            ->get(route('admin.purchases.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Purchases')
+                ->where('summary.pending_online_payments', 2)
+                ->where('summary.failed_payments', 1)
+                ->where('summary.cash_awaiting_confirmation', 1)
+                ->where('summary.stale_unpaid_orders', 1)
+                ->has('attentionOrders', 4)
+                ->where('attentionOrders.0.order_number', 'ORD-ATTN-FAILED')
+                ->where('attentionOrders.2.order_number', 'ORD-ATTN-STALE')
+                ->where('attentionOrders.2.is_stale_unpaid', true));
+
+        $this->actingAs($admin)
+            ->get(route('admin.purchases.index', ['attention' => 'stale']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Purchases')
+                ->where('filters.attention', 'stale')
+                ->has('orders.data', 1)
+                ->where('orders.data.0.order_number', 'ORD-ATTN-STALE'));
     }
 
     public function test_admin_order_management_is_paginated_and_filters_by_status(): void
