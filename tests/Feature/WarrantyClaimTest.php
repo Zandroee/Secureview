@@ -166,6 +166,31 @@ class WarrantyClaimTest extends TestCase
                 ->has('eligibleItems', 0));
     }
 
+    public function test_admin_can_view_paid_purchase_warranty_coverage_register(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $item = $this->createPaidOrderItem($customer, '18 months', now()->subMonths(2));
+
+        $this->actingAs($admin)
+            ->get(route('admin.warranty.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Warranty')
+                ->has('warranties.data', 1)
+                ->where('warranties.data.0.id', $item->id)
+                ->where('warranties.data.0.item_name', $item->name)
+                ->where('warranties.data.0.warranty_period', '18 months')
+                ->where('warranties.data.0.coverage_status', 'active')
+                ->has('claims.data', 0));
+    }
+
     private function createPaidOrderItem(User $customer, string $warranty, $paidAt): OrderItem
     {
         $product = Product::create([
