@@ -8,7 +8,6 @@ use App\Models\InvoiceSetting;
 use App\Models\Order;
 use App\Services\AdminActivityLogger;
 use App\Services\InvoiceDocumentService;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
