@@ -102,12 +102,20 @@ export default function PurchaseDetails({ order }) {
                             </div>
                         </div>
 
-                        <Link
-                            href="/purchases"
-                            className="btn btn-outline-primary fw-bold"
-                        >
-                            BACK TO PURCHASES
-                        </Link>
+                        <div className="d-flex flex-wrap gap-2">
+                            <Link
+                                href={"/purchases/" + order.id + "/invoice"}
+                                className="btn btn-primary fw-bold"
+                            >
+                                <i className="bi bi-receipt me-2"></i>VIEW INVOICE
+                            </Link>
+                            <Link
+                                href="/purchases"
+                                className="btn btn-outline-primary fw-bold"
+                            >
+                                BACK TO PURCHASES
+                            </Link>
+                        </div>
                     </div>
 
                     {props.flash?.success && (
