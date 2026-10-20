@@ -22,6 +22,7 @@ class Order extends Model
         'stock_deducted_at',
         'payment_status',
         'order_status',
+        'cancellation_reason',
         'customer_name',
         'customer_phone',
         'customer_email',

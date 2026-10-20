@@ -16,7 +16,7 @@ class OrderCancellationService
         'payment_failed',
     ];
 
-    public function cancel(Order $order, InventoryService $inventory): void
+    public function cancel(Order $order, InventoryService $inventory, string $reason): void
     {
         $order->refresh();
         $this->ensureCancellable($order);
@@ -25,7 +25,7 @@ class OrderCancellationService
             $this->expireOnlineCheckout($order, $inventory);
         }
 
-        DB::transaction(function () use ($order, $inventory) {
+        DB::transaction(function () use ($order, $inventory, $reason) {
             $lockedOrder = Order::query()
                 ->lockForUpdate()
                 ->findOrFail($order->id);
@@ -34,6 +34,7 @@ class OrderCancellationService
 
             $lockedOrder->update([
                 'order_status' => 'cancelled',
+                'cancellation_reason' => $reason,
             ]);
 
             PendingInquiryCheckout::query()

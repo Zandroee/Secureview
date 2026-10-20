@@ -30,6 +30,7 @@ class PurchaseController extends Controller
             'payment_status' => ['nullable', 'in:pending,paid,failed'],
             'order_status' => ['nullable', 'in:' . implode(',', self::ORDER_STATUSES)],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
+            'attention' => ['nullable', 'in:stale'],
         ]);
 
         $query = Order::with(['user', 'items'])
@@ -59,24 +60,61 @@ class PurchaseController extends Controller
             $query->where('payment_method', $filters['payment_method']);
         }
 
+        if (($filters['attention'] ?? null) === 'stale') {
+            $query->whereNull('paid_at')
+                ->whereIn('payment_status', ['pending', 'failed'])
+                ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed'])
+                ->where('updated_at', '<=', now()->subHours(24));
+        }
+
         $orders = $query
             ->paginate(12)
             ->withQueryString()
             ->through(fn (Order $order) => $this->formatOrder($order));
 
+        $unpaidOrderQuery = Order::query()
+            ->whereNull('paid_at')
+            ->whereIn('payment_status', ['pending', 'failed'])
+            ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed']);
+
+        $attentionOrders = (clone $unpaidOrderQuery)
+            ->with(['user', 'items'])
+            ->orderByRaw("CASE WHEN payment_status = 'failed' OR order_status = 'payment_failed' THEN 0 WHEN payment_method = 'cash' THEN 1 ELSE 2 END")
+            ->orderBy('updated_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (Order $order) => $this->formatOrder($order))
+            ->values();
+
         return Inertia::render('Admin/Purchases', [
             'orders' => $orders,
+            'attentionOrders' => $attentionOrders,
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'payment_status' => $filters['payment_status'] ?? '',
                 'order_status' => $filters['order_status'] ?? '',
                 'payment_method' => $filters['payment_method'] ?? '',
+                'attention' => $filters['attention'] ?? '',
             ],
             'summary' => [
                 'total_orders' => Order::count(),
                 'paid_orders' => Order::where('payment_status', 'paid')->count(),
-                'pending_payments' => Order::whereIn('payment_status', ['pending', 'failed'])
-                    ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed'])
+                'pending_payments' => (clone $unpaidOrderQuery)->where('payment_status', 'pending')->count(),
+                'pending_online_payments' => (clone $unpaidOrderQuery)
+                    ->where('payment_status', 'pending')
+                    ->where('order_status', 'awaiting_payment')
+                    ->whereIn('payment_method', ['gcash', 'card', 'maya'])
+                    ->count(),
+                'failed_payments' => (clone $unpaidOrderQuery)
+                    ->where(fn ($builder) => $builder->where('payment_status', 'failed')->orWhere('order_status', 'payment_failed'))
+                    ->count(),
+                'cash_awaiting_confirmation' => (clone $unpaidOrderQuery)
+                    ->where('payment_method', 'cash')
+                    ->where('payment_status', 'pending')
+                    ->where('order_status', 'pending')
+                    ->count(),
+                'stale_unpaid_orders' => (clone $unpaidOrderQuery)
+                    ->where('updated_at', '<=', now()->subHours(24))
                     ->count(),
                 'revenue' => (float) Order::where('payment_status', 'paid')->sum('total'),
             ],
@@ -90,25 +128,29 @@ class PurchaseController extends Controller
         InventoryService $inventory,
         AdminActivityLogger $activityLogger
     ) {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:500'],
+        ]);
+        $reason = trim($validated['reason']);
         $oldStatus = $order->order_status;
 
-        $cancellation->cancel($order, $inventory);
+        $cancellation->cancel($order, $inventory, $reason);
         $order->refresh();
 
         $activityLogger->record(
             $request,
             'order_cancelled',
-            'Cancelled unpaid order ' . $order->order_number . '.',
+            'Cancelled unpaid order ' . $order->order_number . '. Reason: ' . $reason,
             $order,
             ['status' => $oldStatus],
-            ['status' => $order->order_status]
+            ['status' => $order->order_status, 'cancellation_reason' => $reason]
         );
 
         CustomerNotification::create([
             'user_id' => $order->user_id,
             'type' => 'order_cancelled',
             'title' => 'Order cancelled',
-            'message' => 'Your unpaid order ' . $order->order_number . ' was cancelled by SecureView.',
+            'message' => 'Your unpaid order ' . $order->order_number . ' was cancelled by SecureView. Reason: ' . $reason,
             'action_url' => route('purchases.show', $order),
             'related_type' => Order::class,
             'related_id' => $order->id,
@@ -231,8 +273,25 @@ class PurchaseController extends Controller
             'payment_method' => $order->payment_method,
             'payment_status' => $order->payment_status,
             'order_status' => $order->order_status,
+            'cancellation_reason' => $order->cancellation_reason,
             'paid_at' => $order->paid_at?->format('M d, Y h:i A'),
             'created_at' => $order->created_at?->format('M d, Y h:i A'),
+            'updated_at' => $order->updated_at?->format('M d, Y h:i A'),
+            'age_hours' => $order->updated_at ? (int) $order->updated_at->diffInHours(now()) : 0,
+            'is_stale_unpaid' => $order->payment_status !== 'paid'
+                && $order->paid_at === null
+                && in_array($order->payment_status, ['pending', 'failed'], true)
+                && in_array($order->order_status, ['pending', 'awaiting_payment', 'payment_failed'], true)
+                && $order->updated_at?->lte(now()->subHours(24)),
+            'next_action' => $order->payment_status === 'paid' || $order->paid_at !== null
+                ? 'none'
+                : ($order->payment_method === 'cash' && $order->order_status === 'pending'
+                    ? 'confirm_cash_payment'
+                    : ($order->payment_status === 'failed' || $order->order_status === 'payment_failed'
+                        ? 'retry_or_cancel'
+                        : (in_array($order->order_status, ['pending', 'awaiting_payment'], true)
+                            ? 'awaiting_payment'
+                            : 'review'))),
             'can_cancel' => $order->payment_status !== 'paid'
                 && $order->paid_at === null
                 && in_array($order->payment_status, ['pending', 'failed'], true)
