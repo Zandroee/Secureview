@@ -227,6 +227,8 @@ Route::middleware(['auth', 'verified', 'technician'])->prefix('technician')->nam
 });
 
 Route::middleware(['auth', 'verified', 'admin'])->group(function () {
+    Route::post('/admin/announcements', [NotificationController::class, 'storeAnnouncement'])
+        ->name('admin.announcements.store');
     Route::post('/admin/catalog-options', [AdminCatalogOptionController::class, 'store'])
         ->name('admin.catalog-options.store');
 
