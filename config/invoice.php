@@ -2,7 +2,7 @@
 
 return [
     // Until configured, the printable document is clearly marked as an internal preview.
-    'business_name' => env('INVOICE_BUSINESS_NAME', env('APP_NAME', 'SecureView')),
+    'business_name' => env('INVOICE_BUSINESS_NAME', 'SecureView'),
     'registered_name' => env('INVOICE_REGISTERED_NAME'),
     'address' => env('INVOICE_BUSINESS_ADDRESS'),
     'email' => env('INVOICE_BUSINESS_EMAIL'),
