@@ -129,11 +129,8 @@ export default function Invoice({ invoice }) {
                         <Link
                             href={invoice.viewer_role === "admin"
                                 ? "/admin/purchases"
-                                : "/purchases/" + encodeURIComponent(invoice.reference_number)}
+                                : "/purchases/" + invoice.order_id}
                             className="btn btn-outline-primary fw-semibold"
-                            onClick={(event) => {
-                                // The order details route uses the order ID; use the explicit URL supplied below instead.
-                            }}
                         >
                             BACK
                         </Link>
