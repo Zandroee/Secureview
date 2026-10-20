@@ -236,6 +236,9 @@ export default function AdminPurchases({
                         {props.errors?.stock && (
                             <div className="alert alert-danger">{props.errors.stock}</div>
                         )}
+                        {props.errors?.invoice && (
+                            <div className="alert alert-danger">{props.errors.invoice}</div>
+                        )}
 
                         <div className="small text-muted mb-3">
                             SecureView does not currently have shipment tracking. “Delivered” is not offered as an action; it will only appear in the dashboard if a legacy delivered order already exists.
@@ -895,6 +898,16 @@ export default function AdminPurchases({
                             <div className="border rounded-3 bg-light p-3 mt-3">
                                 <div className="small text-muted fw-bold mb-1">CANCELLATION REASON</div>
                                 <div className="small">{viewingOrder.cancellation_reason}</div>
+                            </div>
+                        )}
+
+                        {props.errors?.invoice && (
+                            <div className="alert alert-danger small mt-3 mb-0">{props.errors.invoice}</div>
+                        )}
+
+                        {!viewingOrder.invoice_record && !viewingOrder.can_record_invoice && (
+                            <div className="alert alert-secondary small mt-3 mb-0">
+                                An internal invoice record is available after payment is confirmed, the order is Processing or Completed, and the seller profile is complete in Invoice Settings.
                             </div>
                         )}
 
