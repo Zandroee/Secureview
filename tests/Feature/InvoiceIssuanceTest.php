@@ -37,7 +37,7 @@ class InvoiceIssuanceTest extends TestCase
         $this->assertMatchesRegularExpression('/^SV-INT-INV-\d{4}-\d{8}$/', $record->record_number);
         $this->assertSame('SecureView CCTV', $record->snapshot['business']['name']);
         $this->assertSame('Test Camera', $record->snapshot['items'][0]['name']);
-        $this->assertSame(1500.0, $record->snapshot['total']);
+        $this->assertEquals(1500, $record->snapshot['total']);
         $this->assertSame($admin->id, $record->issued_by);
 
         // Saving an internal record must never consume the authorized BIR
@@ -155,7 +155,7 @@ class InvoiceIssuanceTest extends TestCase
             ->assertSessionHas('success', 'This order already has an internal invoice record. Its saved snapshot was left unchanged.');
 
         $this->assertSame(1, InvoiceRecord::query()->where('order_id', $order->id)->count());
-        $this->assertSame(1500.0, $record->fresh()->snapshot['total']);
+        $this->assertEquals(1500, $record->fresh()->snapshot['total']);
         $this->assertSame(1, $order->events()->where('event_key', 'internal_invoice_recorded')->count());
     }
 
