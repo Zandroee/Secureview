@@ -43,6 +43,12 @@ const menuGroups = [
             icon: "bi-shield-check",
         },
         {
+            label: "Orders",
+            href: "/admin/purchases",
+            key: "purchases",
+            icon: "bi-bag-check",
+        },
+        {
             label: "Packages",
             href: "/admin/packages",
             key: "packages",
