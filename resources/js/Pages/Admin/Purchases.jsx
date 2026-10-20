@@ -61,6 +61,7 @@ export default function AdminPurchases({
     );
     const [viewingOrder, setViewingOrder] = useState(null);
     const [cancellingOrderId, setCancellingOrderId] = useState(null);
+    const [updatingOrderId, setUpdatingOrderId] = useState(null);
     const { props } = usePage();
     const orderRows = orders.data ?? (Array.isArray(orders) ? orders : []);
 
@@ -79,6 +80,27 @@ export default function AdminPurchases({
                 preserveScroll: true,
                 onSuccess: () => setViewingOrder(null),
                 onFinish: () => setCancellingOrderId(null),
+            }
+        );
+    };
+
+    const runOrderAction = (order, action) => {
+        const confirmation = action === "confirm-cash-payment"
+            ? "Confirm that cash has actually been received for order " + order.order_number + "? This will mark the payment as paid and move the order to Processing."
+            : "Confirm that order " + order.order_number + " has been fulfilled? This will mark it Completed. SecureView does not track shipments.";
+
+        if (!window.confirm(confirmation)) {
+            return;
+        }
+
+        setUpdatingOrderId(order.id);
+        router.patch(
+            "/admin/purchases/" + order.id + "/" + action,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => setViewingOrder(null),
+                onFinish: () => setUpdatingOrderId(null),
             }
         );
     };
@@ -677,14 +699,42 @@ export default function AdminPurchases({
                             )}
                         </div>
 
+                        {viewingOrder.order_status === "payment_failed" && (
+                            <div className="alert alert-warning small mt-3 mb-0">
+                                Payment failed. The customer can retry from their own Purchases page. Cancel this order if they no longer want to proceed.
+                            </div>
+                        )}
+
                         <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-3">
-                            <div>
+                            <div className="d-flex flex-wrap gap-2">
+                                {viewingOrder.can_confirm_cash_payment && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-success fw-bold"
+                                        onClick={() => runOrderAction(viewingOrder, "confirm-cash-payment")}
+                                        disabled={updatingOrderId === viewingOrder.id || cancellingOrderId === viewingOrder.id}
+                                    >
+                                        {updatingOrderId === viewingOrder.id ? "UPDATING..." : "CONFIRM CASH RECEIVED"}
+                                    </button>
+                                )}
+
+                                {viewingOrder.can_mark_completed && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary fw-bold"
+                                        onClick={() => runOrderAction(viewingOrder, "complete")}
+                                        disabled={updatingOrderId === viewingOrder.id || cancellingOrderId === viewingOrder.id}
+                                    >
+                                        {updatingOrderId === viewingOrder.id ? "UPDATING..." : "MARK COMPLETED"}
+                                    </button>
+                                )}
+
                                 {viewingOrder.can_cancel && (
                                     <button
                                         type="button"
                                         className="btn btn-outline-danger fw-bold"
                                         onClick={() => cancelOrder(viewingOrder)}
-                                        disabled={cancellingOrderId === viewingOrder.id}
+                                        disabled={cancellingOrderId === viewingOrder.id || updatingOrderId === viewingOrder.id}
                                     >
                                         {cancellingOrderId === viewingOrder.id ? "CANCELLING..." : "CANCEL UNPAID ORDER"}
                                     </button>
