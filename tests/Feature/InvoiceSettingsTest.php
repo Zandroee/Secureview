@@ -101,4 +101,43 @@ class InvoiceSettingsTest extends TestCase
                 ->where('series_ready', false)
                 ->has('settings'));
     }
+
+    public function test_next_number_tracks_a_new_start_before_any_invoices_are_issued(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->patch(route('admin.invoice-settings.update'), [
+            'business_name' => 'SecureView',
+            'vat_status' => 'non_vat',
+            'invoice_number_prefix' => 'SERIES-A-',
+            'first_invoice_number' => '100',
+            'last_invoice_number' => '199',
+            'invoice_number_padding' => '6',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('invoice_settings', [
+            'first_invoice_number' => 100,
+            'last_invoice_number' => 199,
+            'next_invoice_number' => 100,
+        ]);
+
+        $this->actingAs($admin)->patch(route('admin.invoice-settings.update'), [
+            'business_name' => 'SecureView',
+            'vat_status' => 'non_vat',
+            'invoice_number_prefix' => 'SERIES-B-',
+            'first_invoice_number' => '500',
+            'last_invoice_number' => '599',
+            'invoice_number_padding' => '6',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('invoice_settings', [
+            'first_invoice_number' => 500,
+            'last_invoice_number' => 599,
+            'next_invoice_number' => 500,
+        ]);
+    }
+
 }
