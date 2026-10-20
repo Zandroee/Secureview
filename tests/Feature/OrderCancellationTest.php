@@ -236,6 +236,82 @@ class OrderCancellationTest extends TestCase
                 ->where('orders.data.0.order_status', 'payment_failed'));
     }
 
+    public function test_admin_can_confirm_cash_received_and_start_processing(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(4);
+        $order = $this->createOrder($customer, $product, [
+            'payment_method' => 'cash',
+            'payment_status' => 'pending',
+            'order_status' => 'pending',
+            'stock_deducted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.purchases.confirm-cash-payment', $order))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+            'order_status' => 'processing',
+        ]);
+        $this->assertDatabaseHas('customer_notifications', [
+            'user_id' => $customer->id,
+            'type' => 'payment_paid',
+            'related_id' => $order->id,
+        ]);
+        $this->assertDatabaseHas('admin_activity_logs', [
+            'admin_id' => $admin->id,
+            'action' => 'order_cash_payment_confirmed',
+            'subject_type' => 'Order',
+            'subject_id' => $order->id,
+        ]);
+    }
+
+    public function test_admin_can_mark_a_paid_fulfilled_order_completed(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(4);
+        $order = $this->createOrder($customer, $product, [
+            'payment_status' => 'paid',
+            'order_status' => 'processing',
+            'paid_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.purchases.complete', $order))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'payment_status' => 'paid',
+            'order_status' => 'completed',
+        ]);
+        $this->assertDatabaseHas('customer_notifications', [
+            'user_id' => $customer->id,
+            'type' => 'order_completed',
+            'related_id' => $order->id,
+        ]);
+        $this->assertDatabaseHas('admin_activity_logs', [
+            'admin_id' => $admin->id,
+            'action' => 'order_completed',
+            'subject_type' => 'Order',
+            'subject_id' => $order->id,
+        ]);
+    }
+
     private function createCustomer(): User
     {
         return User::factory()->create([
