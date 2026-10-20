@@ -405,6 +405,8 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         </div>
                     )}
 
+                    <div className="row g-4 align-items-start">
+                        <div className="col-lg-9">
                     <div className="row g-3 mb-4">
                         <div className="col-6 col-xl-3">
                             <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
