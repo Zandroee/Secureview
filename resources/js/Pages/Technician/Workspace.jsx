@@ -1,5 +1,6 @@
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
+import Calendar from "../../Components/Admin/Calendar";
 import { Link, router, usePage } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 import { googleMapsDirectionsUrl } from "../../Components/GoogleMaps/ServiceLocation";
@@ -213,7 +214,7 @@ function JobCard({ job, open = false }) {
     );
 }
 
-export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventory = [] }) {
+export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventory = [], recentNotifications = [] }) {
     const { props } = usePage();
     const [stockChanges, setStockChanges] = useState({});
     const [stockErrors, setStockErrors] = useState({});
@@ -222,6 +223,23 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
     const [availableJobSearch, setAvailableJobSearch] = useState("");
     const [inventorySearch, setInventorySearch] = useState("");
     const [inventoryFilter, setInventoryFilter] = useState("all");
+
+    const upcomingTechnicianJobs = useMemo(() => jobs
+        .filter((job) => ["confirmed", "in_progress"].includes(job.status) && job.preferred_date_value)
+        .sort((a, b) => String(a.preferred_date_value).localeCompare(String(b.preferred_date_value)))
+        .slice(0, 5)
+        .map((job) => ({
+            id: job.id,
+            title: job.service_type,
+            date: job.preferred_date,
+            date_value: job.preferred_date_value,
+            time: job.preferred_time,
+            customer_name: job.customer_name,
+            description: job.city,
+            inquiry_number: job.inquiry_number,
+            status: job.status,
+            urgency: job.urgency,
+        })), [jobs]);
 
     const activeJobs = useMemo(
         () => jobs.filter((job) => ["confirmed", "in_progress"].includes(job.status)),
@@ -653,6 +671,69 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                             Stock cannot be reduced below zero. All successful adjustments are recorded for audit and low-stock monitoring.
                         </p>
                     </section>
+                        </div>
+
+                        <aside className="col-lg-3">
+                            <div className="mb-4">
+                                <Calendar
+                                    title="My Schedule"
+                                    subtitle="Your assigned appointments and service dates."
+                                    schedules={upcomingTechnicianJobs}
+                                    upcomingCount={activeJobs.length}
+                                    viewAllHref="/technician/workspace#my-jobs"
+                                    itemHrefPrefix="/technician/workspace#my-jobs"
+                                />
+                            </div>
+
+                            <section className="card border rounded-3 mb-4">
+                                <div className="card-body p-3 p-lg-4">
+                                    <div className="d-flex align-items-start justify-content-between gap-2 mb-3">
+                                        <div>
+                                            <h5 className="fw-bold mb-1">Recent Notifications</h5>
+                                            <p className="small text-muted mb-0">Updates about your jobs and team.</p>
+                                        </div>
+                                        <Link href="/notifications" className="btn btn-sm btn-outline-primary text-nowrap">View all</Link>
+                                    </div>
+                                    {recentNotifications.length ? (
+                                        <div className="d-flex flex-column gap-2">
+                                            {recentNotifications.map((notification) => (
+                                                <article key={notification.id} className="border rounded-3 p-3">
+                                                    <div className="d-flex align-items-start gap-2">
+                                                        <span className={"d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 " + (notification.read ? "bg-light text-secondary" : "bg-primary-subtle text-primary")} style={{ width: 34, height: 34 }}>
+                                                            <i className={"bi " + (notification.type === "announcement" ? "bi-megaphone" : "bi-bell")} />
+                                                        </span>
+                                                        <div className="min-w-0">
+                                                            <div className="fw-bold small">{notification.title}</div>
+                                                            <div className="small text-muted mt-1">{notification.created_at}</div>
+                                                        </div>
+                                                    </div>
+                                                    <p className="small mb-0 mt-2 text-secondary">{notification.message}</p>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center rounded-3 bg-light p-4">
+                                            <i className="bi bi-bell fs-4 text-muted d-block mb-2" />
+                                            <p className="small text-muted mb-0">You're all caught up. New job updates and announcements will appear here.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </section>
+
+                            <section className="card border rounded-3">
+                                <div className="card-body p-3 p-lg-4">
+                                    <h5 className="fw-bold mb-1">Quick Links</h5>
+                                    <p className="small text-muted mb-3">Jump to the tools you use most.</p>
+                                    <div className="d-grid gap-2">
+                                        <a href="#my-jobs" className="btn btn-outline-primary text-start"><i className="bi bi-clipboard2-check me-2" />My Service Jobs</a>
+                                        <a href="#available-jobs" className="btn btn-outline-primary text-start"><i className="bi bi-people me-2" />Available Jobs</a>
+                                        <a href="#inventory" className="btn btn-outline-primary text-start"><i className="bi bi-box-seam me-2" />Inventory</a>
+                                        <Link href="/notifications" className="btn btn-outline-primary text-start"><i className="bi bi-bell me-2" />Notifications</Link>
+                                    </div>
+                                </div>
+                            </section>
+                        </aside>
+                    </div>
                 </div>
             </main>
             <Footer />
