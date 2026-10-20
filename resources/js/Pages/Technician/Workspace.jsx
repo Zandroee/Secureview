@@ -217,7 +217,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
     const { props } = usePage();
     const [stockChanges, setStockChanges] = useState({});
     const [stockErrors, setStockErrors] = useState({});
-    const [stockSuccess, setStockSuccess] = useState("");
     const [savingProduct, setSavingProduct] = useState(null);
     const [jobFilter, setJobFilter] = useState("active");
     const [availableJobSearch, setAvailableJobSearch] = useState("");
@@ -274,7 +273,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
 
     const adjustStock = (event, product) => {
         event.preventDefault();
-        setStockSuccess("");
         setStockErrors({});
         setSavingProduct(product.id);
 
@@ -286,7 +284,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
             onError: (errors) => setStockErrors((current) => ({ ...current, [product.id]: errors })),
             onSuccess: () => {
                 setStockChanges((current) => ({ ...current, [product.id]: { change: "", reason: "" } }));
-                setStockSuccess("Stock adjustment saved.");
             },
             onFinish: () => setSavingProduct(null),
         });
@@ -567,8 +564,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                             </div>
                         </div>
 
-                        {stockSuccess && <div className="alert alert-success d-flex align-items-center gap-2" role="status"><i className="bi bi-check-circle-fill" />{stockSuccess}</div>}
-                        {props.flash?.success && stockSuccess !== props.flash.success && <div className="alert alert-success small">{props.flash.success}</div>}
 
                         <div className="d-flex flex-wrap gap-2 mb-3">
                             <span className="badge rounded-pill bg-light text-secondary border px-3 py-2">{inventory.length} products</span>
