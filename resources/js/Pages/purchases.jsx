@@ -28,7 +28,7 @@ function statusClass(status) {
         return "bg-danger-subtle text-danger";
     }
 
-    if (status === "awaiting_payment") {
+    if (status === "pending" || status === "awaiting_payment") {
         return "bg-warning-subtle text-warning-emphasis";
     }
 
@@ -234,21 +234,26 @@ export default function Purchases({ orders = [] }) {
 
                                                     <div className="col-md-2">
                                                         <div className="small text-muted">
-                                                            STATUS
+                                                            ORDER STATUS
                                                         </div>
 
                                                         <span
                                                             className={
-                                                                "badge rounded-pill px-2 py-1 " +
-                                                                statusClass(
-                                                                    order.payment_status
-                                                                )
+                                                                "badge rounded-pill px-2 py-1 text-capitalize " +
+                                                                statusClass(order.order_status)
                                                             }
                                                         >
-                                                            {order.payment_status.replace(
-                                                                /_/g,
-                                                                " "
-                                                            )}
+                                                            {order.order_status.replace(/_/g, " ")}
+                                                        </span>
+
+                                                        <div className="small text-muted mt-2">PAYMENT</div>
+                                                        <span
+                                                            className={
+                                                                "badge rounded-pill px-2 py-1 text-capitalize " +
+                                                                statusClass(order.payment_status)
+                                                            }
+                                                        >
+                                                            {order.payment_status.replace(/_/g, " ")}
                                                         </span>
                                                     </div>
 
