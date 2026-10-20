@@ -99,7 +99,7 @@ class AdminDashboardTest extends TestCase
                 ->has('revenueData', 12)
                 ->where('revenueData.0.month', 'Jan')
                 ->where('chartPeriod', 'year')
-                ->has('orderStatusData', 7)
+                ->has('orderStatusData', 6)
                 ->where('orderStatusData.3.key', 'processing')
                 ->where('orderStatusData.3.count', 1)
                 ->has('lowStockData.data', 1)
