@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\InvoiceSetting;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,6 +27,7 @@ class InvoiceController extends Controller
     private function renderInvoice(Order $order, bool $isAdmin): Response
     {
         $order->loadMissing(['items', 'user']);
+        $business = $this->businessSettings();
 
         $isPaid = $order->payment_status === 'paid';
         $isCancelled = $order->order_status === 'cancelled';
@@ -65,20 +67,59 @@ class InvoiceController extends Controller
                 'amount_paid' => $amountPaid,
                 'balance_due' => max(0, $balanceDue),
                 'business' => [
-                    'name' => config('invoice.business_name'),
-                    'registered_name' => config('invoice.registered_name'),
-                    'address' => config('invoice.address'),
-                    'email' => config('invoice.email'),
-                    'phone' => config('invoice.phone'),
-                    'tin' => config('invoice.tin'),
-                    'vat_status' => config('invoice.vat_status'),
-                    'branch_code' => config('invoice.branch_code'),
-                    'bir_permit_number' => config('invoice.bir_permit_number'),
-                    'bir_atp_number' => config('invoice.bir_atp_number'),
-                    'serial_number_range' => config('invoice.serial_number_range'),
+                    'name' => $business['business_name'] ?? null,
+                    'registered_name' => $business['registered_name'] ?? null,
+                    'address' => $business['address'] ?? null,
+                    'email' => $business['email'] ?? null,
+                    'phone' => $business['phone'] ?? null,
+                    'tin' => $business['tin'] ?? null,
+                    'vat_status' => $business['vat_status'] ?? null,
+                    'branch_code' => $business['branch_code'] ?? null,
+                    'bir_permit_number' => $business['bir_permit_number'] ?? null,
+                    'bir_atp_number' => $business['bir_atp_number'] ?? null,
+                    'serial_number_range' => $business['serial_number_range'] ?? null,
                 ],
                 'viewer_role' => $isAdmin ? 'admin' : 'customer',
             ],
+        ]);
+    }
+
+    private function businessSettings(): array
+    {
+        $settings = InvoiceSetting::query()->find(1);
+
+        if (!$settings) {
+            return [
+                'business_name' => config('invoice.business_name', 'SecureView'),
+                'registered_name' => config('invoice.registered_name'),
+                'address' => config('invoice.address'),
+                'email' => config('invoice.email'),
+                'phone' => config('invoice.phone'),
+                'tin' => config('invoice.tin'),
+                'vat_status' => config('invoice.vat_status', 'not_configured'),
+                'branch_code' => config('invoice.branch_code'),
+                'bir_permit_number' => config('invoice.bir_permit_number'),
+                'bir_atp_number' => config('invoice.bir_atp_number'),
+                'serial_number_range' => config('invoice.serial_number_range'),
+                'pti_einvoice_number' => config('invoice.pti_einvoice_number'),
+                'eis_certification_reference' => config('invoice.eis_certification_reference'),
+            ];
+        }
+
+        return $settings->only([
+            'business_name',
+            'registered_name',
+            'address',
+            'email',
+            'phone',
+            'tin',
+            'vat_status',
+            'branch_code',
+            'bir_permit_number',
+            'bir_atp_number',
+            'serial_number_range',
+            'pti_einvoice_number',
+            'eis_certification_reference',
         ]);
     }
 
