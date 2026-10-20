@@ -57,7 +57,19 @@ export default function AdminTransactions({
     const [paymentMethod, setPaymentMethod] = useState(
         filters.payment_method ?? ""
     );
+    const [orderStatus, setOrderStatus] = useState(filters.order_status ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
     const [viewingTransaction, setViewingTransaction] = useState(null);
+
+    const exportParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== "" && value !== null && value !== undefined) {
+            exportParams.set(key, String(value));
+        }
+    });
+    exportParams.set("export", "csv");
+    const exportUrl = "/admin/transactions?" + exportParams.toString();
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -68,6 +80,9 @@ export default function AdminTransactions({
                 search,
                 payment_status: paymentStatus,
                 payment_method: paymentMethod,
+                order_status: orderStatus,
+                date_from: dateFrom,
+                date_to: dateTo,
             },
             {
                 preserveState: true,
@@ -81,6 +96,9 @@ export default function AdminTransactions({
         setSearch("");
         setPaymentStatus("");
         setPaymentMethod("");
+        setOrderStatus("");
+        setDateFrom("");
+        setDateTo("");
 
         router.get(
             "/admin/transactions",
@@ -121,7 +139,7 @@ export default function AdminTransactions({
                             </h1>
 
                             <div className="small text-muted">
-                                Review payment and order transaction records.
+                                Review payment records linked to orders. Each row shows the latest payment status stored for that order.
                             </div>
                         </div>
 
@@ -129,7 +147,7 @@ export default function AdminTransactions({
                             <div className="col-6 col-xl-3">
                                 <div className="bg-white border rounded-3 p-3 h-100">
                                     <div className="small text-muted">
-                                        TOTAL TRANSACTIONS
+                                        MATCHING TRANSACTIONS
                                     </div>
 
                                     <div className="h4 fw-bold mb-0">
@@ -191,87 +209,131 @@ export default function AdminTransactions({
                             }}
                         >
                             <form
-                                className="row g-2 align-items-end"
                                 onSubmit={applyFilters}
                             >
-                                <div className="col-lg-6">
-                                    <label className="form-label small fw-semibold mb-1">
-                                        SEARCH
-                                    </label>
+                                <div className="row g-2 align-items-end">
+                                    <div className="col-lg-5">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            SEARCH
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Order, customer, email, payment ID, or checkout session"
+                                            value={search}
+                                            onChange={(event) => setSearch(event.target.value)}
+                                        />
+                                    </div>
 
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Order number, customer, email, or payment ID"
-                                        value={search}
-                                        onChange={(event) =>
-                                            setSearch(event.target.value)
-                                        }
-                                    />
+                                    <div className="col-sm-6 col-lg-2">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            PAYMENT
+                                        </label>
+                                        <select
+                                            className="form-select"
+                                            value={paymentStatus}
+                                            onChange={(event) => setPaymentStatus(event.target.value)}
+                                        >
+                                            <option value="">All payment</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="paid">Paid</option>
+                                            <option value="failed">Failed</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="col-sm-6 col-lg-2">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            METHOD
+                                        </label>
+                                        <select
+                                            className="form-select"
+                                            value={paymentMethod}
+                                            onChange={(event) => setPaymentMethod(event.target.value)}
+                                        >
+                                            <option value="">All methods</option>
+                                            <option value="cash">Cash</option>
+                                            <option value="gcash">GCash</option>
+                                            <option value="card">Card</option>
+                                            <option value="maya">Maya</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="col-sm-6 col-lg-3">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            ORDER STATUS
+                                        </label>
+                                        <select
+                                            className="form-select"
+                                            value={orderStatus}
+                                            onChange={(event) => setOrderStatus(event.target.value)}
+                                        >
+                                            <option value="">All order statuses</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="awaiting_payment">Awaiting payment</option>
+                                            <option value="payment_failed">Payment failed</option>
+                                            <option value="processing">Processing</option>
+                                            <option value="delivered">Delivered</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                        </select>
+                                    </div>
                                 </div>
 
-                                <div className="col-sm-6 col-lg-2">
-                                    <label className="form-label small fw-semibold mb-1">
-                                        PAYMENT
-                                    </label>
+                                <div className="row g-2 align-items-end mt-1">
+                                    <div className="col-sm-6 col-md-3 col-lg-2">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            CREATED FROM
+                                        </label>
+                                        <input
+                                            type="date"
+                                            className="form-control"
+                                            value={dateFrom}
+                                            max={dateTo || undefined}
+                                            onChange={(event) => setDateFrom(event.target.value)}
+                                        />
+                                    </div>
 
-                                    <select
-                                        className="form-select"
-                                        value={paymentStatus}
-                                        onChange={(event) =>
-                                            setPaymentStatus(
-                                                event.target.value
-                                            )
-                                        }
-                                    >
-                                        <option value="">All payment</option>
-                                        <option value="pending">
-                                            Pending
-                                        </option>
-                                        <option value="paid">Paid</option>
-                                        <option value="failed">
-                                            Failed
-                                        </option>
-                                    </select>
-                                </div>
+                                    <div className="col-sm-6 col-md-3 col-lg-2">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            CREATED TO
+                                        </label>
+                                        <input
+                                            type="date"
+                                            className="form-control"
+                                            value={dateTo}
+                                            min={dateFrom || undefined}
+                                            onChange={(event) => setDateTo(event.target.value)}
+                                        />
+                                    </div>
 
-                                <div className="col-sm-6 col-lg-2">
-                                    <label className="form-label small fw-semibold mb-1">
-                                        METHOD
-                                    </label>
+                                    <div className="col-6 col-md-2 d-grid">
+                                        <button
+                                            type="submit"
+                                            className="btn btn-primary fw-bold"
+                                        >
+                                            FILTER
+                                        </button>
+                                    </div>
 
-                                    <select
-                                        className="form-select"
-                                        value={paymentMethod}
-                                        onChange={(event) =>
-                                            setPaymentMethod(event.target.value)
-                                        }
-                                    >
-                                        <option value="">All methods</option>
-                                        <option value="cash">Cash</option>
-                                        <option value="gcash">GCash</option>
-                                        <option value="card">Card</option>
-                                        <option value="maya">Maya</option>
-                                    </select>
-                                </div>
+                                    <div className="col-6 col-md-2 d-grid">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary fw-bold"
+                                            onClick={clearFilters}
+                                        >
+                                            CLEAR
+                                        </button>
+                                    </div>
 
-                                <div className="col-6 col-lg-1 d-grid">
-                                    <button
-                                        type="submit"
-                                        className="btn btn-primary fw-bold"
-                                    >
-                                        FILTER
-                                    </button>
-                                </div>
-
-                                <div className="col-6 col-lg-1 d-grid">
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-primary fw-bold"
-                                        onClick={clearFilters}
-                                    >
-                                        CLEAR
-                                    </button>
+                                    <div className="col-12 col-md-3 d-grid">
+                                        <a
+                                            href={exportUrl}
+                                            className="btn btn-outline-primary fw-bold"
+                                        >
+                                            <i className="bi bi-download me-2" aria-hidden="true"></i>
+                                            EXPORT CSV
+                                        </a>
+                                    </div>
                                 </div>
                             </form>
                         </div>
