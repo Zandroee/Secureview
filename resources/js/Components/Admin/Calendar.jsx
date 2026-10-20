@@ -30,7 +30,7 @@ export default function AdminCalendar({
     upcomingCount = 0,
     fullyBookedDates = [],
     partiallyBlockedDates = [],
-    subtitle = "{subtitle}",
+    subtitle = "Appointment dates and booking availability.",
     viewAllHref = "/admin/schedules",
     itemHrefPrefix = "/admin/schedules/",
 }) {
@@ -115,7 +115,7 @@ export default function AdminCalendar({
                     <div>
                         <h5 className="fw-bold mb-1">{title}</h5>
                         <p className="small text-muted mb-0">
-                            Appointment dates and booking availability.
+                            {subtitle}
                         </p>
                     </div>
                     <Link
