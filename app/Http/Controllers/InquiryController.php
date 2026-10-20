@@ -427,6 +427,7 @@ class InquiryController extends Controller
                 'purchasable_type' => get_class($item),
                 'purchasable_id' => $item->id,
                 'name' => $item->name,
+                'warranty_period' => $item->warranty ?? null,
                 'price' => $itemPrice,
                 'quantity' => $itemQuantity,
                 'subtotal' => $itemSubtotal,
