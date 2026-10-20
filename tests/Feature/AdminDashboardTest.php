@@ -83,6 +83,26 @@ class AdminDashboardTest extends TestCase
             'status' => 'confirmed',
         ]);
 
+        // Confirmed work belongs in Upcoming Schedule; a separate pending inquiry
+        // belongs in the Recent Inquiries queue awaiting admin review.
+        Inquiry::create([
+            'user_id' => $customer->id,
+            'technician_id' => null,
+            'inquiry_number' => 'INQ-DASH-PENDING-001',
+            'item_name' => 'Dahua Camera',
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'street_address' => '123 Test Street',
+            'city' => 'Taguig',
+            'service_type' => 'CCTV Installation',
+            'urgency' => 'normal',
+            'preferred_date' => today()->addDay(),
+            'preferred_time' => '08:00 AM - 11:00 AM',
+            'notes' => null,
+            'status' => 'pending',
+        ]);
+
         $this->actingAs($admin)
             ->get(route('dashboard'))
             ->assertOk()
