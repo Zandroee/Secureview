@@ -170,17 +170,23 @@ export default function Invoice({ invoice }) {
                             {business.vat_status && business.vat_status !== "not_configured" && (
                                 <div className="small text-muted">{businessTaxStatus(business.vat_status)}{business.branch_code ? " · Branch " + business.branch_code : ""}</div>
                             )}
+                            {business.bir_permit_number && <div className="small text-muted mt-1">BIR Permit: {business.bir_permit_number}</div>}
+                            {business.bir_atp_number && <div className="small text-muted">Authority to Print: {business.bir_atp_number}</div>}
+                            {business.serial_number_range && <div className="small text-muted">Serial number range: {business.serial_number_range}</div>}
                         </div>
 
                         <div className="text-md-end">
                             <div className="display-6 fw-bold text-primary" style={{ letterSpacing: ".04em" }}>INVOICE</div>
                             <div className="fw-semibold mt-1">{invoice.reference_number}</div>
                             <div className="small text-muted mt-1">Order placed: {invoice.document_date || "—"}</div>
-                            <span className={"badge rounded-pill mt-3 px-3 py-2 " + (invoice.is_paid ? "text-bg-success" : "text-bg-warning")}>
-                                {invoice.is_paid ? "PAID" : "PAYMENT " + humanize(invoice.payment_status).toUpperCase()}
+                            <span className={"badge rounded-pill mt-3 px-3 py-2 " + (invoice.is_cancelled ? "text-bg-danger" : invoice.is_paid ? "text-bg-success" : "text-bg-warning")}>
+                                {invoice.is_cancelled ? "CANCELLED" : invoice.is_paid ? "PAID" : "PAYMENT " + humanize(invoice.payment_status).toUpperCase()}
                             </span>
                             {invoice.is_paid && invoice.payment_date && (
                                 <div className="small text-muted mt-2">Payment received: {invoice.payment_date}</div>
+                            )}
+                            {invoice.is_cancelled && (
+                                <div className="small text-danger mt-2 fw-semibold">This order was cancelled. No payment is due.</div>
                             )}
                         </div>
                     </div>
