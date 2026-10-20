@@ -79,7 +79,7 @@ class TransactionController extends Controller
      */
     private function buildQuery(array $filters): Builder
     {
-        $query = Order::query()->latest();
+        $query = Order::query()->with('events.actor')->latest();
 
         if (!empty($filters['search'])) {
             $search = trim($filters['search']);
@@ -132,6 +132,18 @@ class TransactionController extends Controller
             'amount' => (float) $order->total,
             'created_at' => $order->created_at?->format('M d, Y h:i A'),
             'paid_at' => $order->paid_at?->format('M d, Y h:i A'),
+            'timeline' => $order->events->map(fn ($event) => [
+                'id' => $event->id,
+                'event_key' => $event->event_key,
+                'title' => $event->title,
+                'description' => $event->description,
+                'payment_status_before' => $event->payment_status_before,
+                'payment_status_after' => $event->payment_status_after,
+                'order_status_before' => $event->order_status_before,
+                'order_status_after' => $event->order_status_after,
+                'actor_name' => $event->actor?->name ?? 'SecureView system',
+                'created_at' => $event->created_at?->format('M d, Y h:i A'),
+            ])->values(),
         ];
     }
 
