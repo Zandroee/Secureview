@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Services\InventoryService;
+use App\Services\OrderCancellationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -29,6 +30,7 @@ class PurchaseController extends Controller
                     'payment_method' => $order->payment_method,
                     'payment_status' => $order->payment_status,
                     'order_status' => $order->order_status,
+                    'can_cancel' => $this->canCancel($order),
                     'created_at' => $order->created_at?->format('M d, Y h:i A'),
                     'items' => $order->items->map(function ($item) {
                         return [
@@ -70,6 +72,7 @@ class PurchaseController extends Controller
                 'payment_method' => $order->payment_method,
                 'payment_status' => $order->payment_status,
                 'order_status' => $order->order_status,
+                'can_cancel' => $this->canCancel($order),
                 'customer_name' => $order->customer_name,
                 'customer_phone' => $order->customer_phone,
                 'customer_email' => $order->customer_email,
@@ -91,6 +94,29 @@ class PurchaseController extends Controller
                 })->values(),
             ],
         ]);
+    }
+
+    public function cancel(
+        Request $request,
+        Order $order,
+        OrderCancellationService $cancellation,
+        InventoryService $inventory
+    ) {
+        if ((int) $order->user_id !== (int) $request->user()->id) {
+            abort(404);
+        }
+
+        $cancellation->cancel($order, $inventory);
+
+        return back()->with('success', 'Order ' . $order->order_number . ' was cancelled.');
+    }
+
+    private function canCancel(Order $order): bool
+    {
+        return $order->payment_status !== 'paid'
+            && $order->paid_at === null
+            && in_array($order->payment_status, ['pending', 'failed'], true)
+            && in_array($order->order_status, ['pending', 'awaiting_payment', 'payment_failed'], true);
     }
 
     public function pay(Request $request, Order $order, InventoryService $inventory)
