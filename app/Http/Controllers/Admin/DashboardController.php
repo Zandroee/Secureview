@@ -228,7 +228,10 @@ class DashboardController extends Controller
             ])
             ->values();
 
+        // Only show inquiries that still need admin attention. Confirmed and
+        // in-progress inquiries belong in Upcoming Schedule, not Recent Inquiries.
         $recentInquiries = Inquiry::query()
+            ->where('status', 'pending')
             ->latest()
             ->limit(4)
             ->get([
@@ -253,6 +256,54 @@ class DashboardController extends Controller
                 'urgency' => $inquiry->urgency ?: 'normal',
                 'preferred_date' => $inquiry->preferred_date?->format('M j, Y'),
                 'preferred_time' => $inquiry->preferred_time,
+            ])
+            ->values();
+
+        $recentOrders = Order::query()
+            ->latest()
+            ->limit(5)
+            ->get([
+                'id',
+                'order_number',
+                'customer_name',
+                'total',
+                'payment_status',
+                'order_status',
+                'created_at',
+            ])
+            ->map(fn (Order $order) => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'customer_name' => $order->customer_name,
+                'total' => (float) $order->total,
+                'payment_status' => $order->payment_status,
+                'order_status' => $order->order_status,
+                'created_at' => $order->created_at?->diffForHumans() ?? '',
+            ])
+            ->values();
+
+        // Use the same per-admin notification records that power the notification bell.
+        $recentAnnouncements = CustomerNotification::query()
+            ->where('user_id', $request->user()->id)
+            ->latest()
+            ->limit(5)
+            ->get([
+                'id',
+                'type',
+                'title',
+                'message',
+                'action_url',
+                'read_at',
+                'created_at',
+            ])
+            ->map(fn (CustomerNotification $notification) => [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'title' => $notification->title,
+                'message' => $notification->message,
+                'action_url' => $notification->action_url,
+                'read' => $notification->read_at !== null,
+                'created_at' => $notification->created_at?->diffForHumans() ?? '',
             ])
             ->values();
 
@@ -472,6 +523,8 @@ class DashboardController extends Controller
             'scheduleData' => $scheduleData,
             'upcomingScheduleCount' => $upcomingScheduleCount,
             'recentInquiries' => $recentInquiries,
+            'recentOrders' => $recentOrders,
+            'recentAnnouncements' => $recentAnnouncements,
             'unreadInquiryNotificationCount' => $unreadInquiryNotificationCount,
             'calendarAvailability' => $calendarAvailability,
             'lowStockThreshold' => self::LOW_STOCK_THRESHOLD,
