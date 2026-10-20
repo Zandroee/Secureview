@@ -283,26 +283,30 @@ class DashboardController extends Controller
             ->values();
 
         // Use the same per-admin notification records that power the notification bell.
+        // Announcement notifications are broadcast per recipient, so deduplicate
+        // the recipient copies to show each published announcement only once.
         $recentAnnouncements = CustomerNotification::query()
-            ->where('user_id', $request->user()->id)
+            ->where('type', 'announcement')
             ->latest()
-            ->limit(5)
+            ->limit(100)
             ->get([
                 'id',
                 'type',
                 'title',
                 'message',
                 'action_url',
-                'read_at',
                 'created_at',
             ])
+            ->unique(fn (CustomerNotification $notification) => sha1(
+                $notification->title . '|' . $notification->message
+            ))
+            ->take(5)
             ->map(fn (CustomerNotification $notification) => [
                 'id' => $notification->id,
                 'type' => $notification->type,
                 'title' => $notification->title,
                 'message' => $notification->message,
                 'action_url' => $notification->action_url,
-                'read' => $notification->read_at !== null,
                 'created_at' => $notification->created_at?->diffForHumans() ?? '',
             ])
             ->values();
