@@ -1,7 +1,8 @@
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
-import { router } from "@inertiajs/react";
+import AdminPagination from "../../Components/Admin/AdminPagination";
+import { router, usePage } from "@inertiajs/react";
 import { useState } from "react";
 
 function paymentClass(status) {
@@ -59,6 +60,28 @@ export default function AdminPurchases({
         filters.payment_method ?? ""
     );
     const [viewingOrder, setViewingOrder] = useState(null);
+    const [cancellingOrderId, setCancellingOrderId] = useState(null);
+    const { props } = usePage();
+    const orderRows = orders.data ?? (Array.isArray(orders) ? orders : []);
+
+    const cancelOrder = (order) => {
+        if (!window.confirm(
+            "Cancel unpaid order " + order.order_number + "? The order will be retained in history and cannot be reopened. Paid orders cannot be cancelled here."
+        )) {
+            return;
+        }
+
+        setCancellingOrderId(order.id);
+        router.patch(
+            "/admin/purchases/" + order.id + "/cancel",
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => setViewingOrder(null),
+                onFinish: () => setCancellingOrderId(null),
+            }
+        );
+    };
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -120,12 +143,23 @@ export default function AdminPurchases({
                             </div>
 
                             <h1 className="fw-bold mb-1">
-                                PURCHASE HISTORY
+                                ORDER MANAGEMENT
                             </h1>
 
                             <div className="small text-muted">
-                                Review customer orders, payment status, and order details.
+                                Review orders, manage failed or pending payments, and cancel eligible unpaid orders.
                             </div>
+                        </div>
+
+                        {props.flash?.success && (
+                            <div className="alert alert-success">{props.flash.success}</div>
+                        )}
+                        {props.errors?.order && (
+                            <div className="alert alert-danger">{props.errors.order}</div>
+                        )}
+
+                        <div className="small text-muted mb-3">
+                            SecureView does not currently have shipment tracking. “Delivered” is not offered as an action; it will only appear in the dashboard if a legacy delivered order already exists.
                         </div>
 
                         <div className="row g-3 mb-3">
@@ -328,7 +362,7 @@ export default function AdminPurchases({
                                     </thead>
 
                                     <tbody>
-                                        {orders.length === 0 ? (
+                                        {orderRows.length === 0 ? (
                                             <tr>
                                                 <td
                                                     colSpan="7"
@@ -338,7 +372,7 @@ export default function AdminPurchases({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            orders.map((order) => (
+                                            orderRows.map((order) => (
                                                 <tr key={order.id}>
                                                     <td className="ps-3">
                                                         <div className="fw-semibold">
@@ -440,6 +474,7 @@ export default function AdminPurchases({
                                     </tbody>
                                 </table>
                             </div>
+                            <AdminPagination pagination={orders} label="orders" insideCard />
                         </div>
                     </main>
                 </div>
@@ -642,7 +677,19 @@ export default function AdminPurchases({
                             )}
                         </div>
 
-                        <div className="d-flex justify-content-end mt-3">
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-3">
+                            <div>
+                                {viewingOrder.can_cancel && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-danger fw-bold"
+                                        onClick={() => cancelOrder(viewingOrder)}
+                                        disabled={cancellingOrderId === viewingOrder.id}
+                                    >
+                                        {cancellingOrderId === viewingOrder.id ? "CANCELLING..." : "CANCEL UNPAID ORDER"}
+                                    </button>
+                                )}
+                            </div>
                             <button
                                 type="button"
                                 className="btn btn-outline-primary fw-bold"
