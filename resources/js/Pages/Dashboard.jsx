@@ -6,6 +6,8 @@ import RevenueChart from "../Components/Admin/RevenueChart";
 import NoticeTable from "../Components/Admin/NoticeTable";
 import Calendar from "../Components/Admin/Calendar";
 import Announcements from "../Components/Admin/Announcements";
+import RecentOrders from "../Components/Admin/RecentOrders";
+import AnnouncementFeed from "../Components/Admin/AnnouncementFeed";
 import OrderStatusOverview from "../Components/Admin/OrderStatusOverview";
 import { router } from "@inertiajs/react";
 import { useEffect } from "react";
@@ -28,6 +30,8 @@ export default function Dashboard({
     scheduleData = [],
     upcomingScheduleCount = 0,
     recentInquiries = [],
+    recentOrders = [],
+    recentAnnouncements = [],
     unreadInquiryNotificationCount = 0,
     calendarAvailability = { fullyBookedDates: [], partiallyBlockedDates: [] },
 }) {
@@ -40,6 +44,8 @@ export default function Dashboard({
                     "scheduleData",
                     "upcomingScheduleCount",
                     "recentInquiries",
+                    "recentOrders",
+                    "recentAnnouncements",
                     "unreadInquiryNotificationCount",
                     "calendarAvailability",
                 ],
@@ -173,6 +179,14 @@ export default function Dashboard({
                                         announcements={recentInquiries}
                                         unreadNotificationCount={unreadInquiryNotificationCount}
                                     />
+                                </div>
+
+                                <div className="mt-4">
+                                    <RecentOrders orders={recentOrders} />
+                                </div>
+
+                                <div className="mt-4">
+                                    <AnnouncementFeed announcements={recentAnnouncements} />
                                 </div>
                             </div>
                         </div>
