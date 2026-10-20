@@ -20,6 +20,7 @@ function statusClass(status) {
 export default function PurchaseDetails({ order }) {
     const { props } = usePage();
     const [paying, setPaying] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
 
     const payNow = () => {
         setPaying(true);
@@ -38,6 +39,24 @@ export default function PurchaseDetails({ order }) {
         ["gcash", "card", "maya"].includes(order.payment_method) &&
         ["pending", "failed"].includes(order.payment_status) &&
         ["awaiting_payment", "payment_failed"].includes(order.order_status);
+
+    const cancelOrder = () => {
+        if (!window.confirm(
+            "Cancel unpaid order " + order.order_number + "? This cannot be undone. Paid orders cannot be cancelled here."
+        )) {
+            return;
+        }
+
+        setCancelling(true);
+        router.patch(
+            "/purchases/" + order.id + "/cancel",
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setCancelling(false),
+            }
+        );
+    };
 
     return (
         <div>
@@ -78,10 +97,18 @@ export default function PurchaseDetails({ order }) {
                         </Link>
                     </div>
 
+                    {props.flash?.success && (
+                        <div className="alert alert-success mb-4">{props.flash.success}</div>
+                    )}
+
                     {props.errors?.payment && (
                         <div className="alert alert-danger mb-4">
                             {props.errors.payment}
                         </div>
+                    )}
+
+                    {props.errors?.order && (
+                        <div className="alert alert-danger mb-4">{props.errors.order}</div>
                     )}
 
                     <div className="row g-4">
@@ -285,9 +312,20 @@ export default function PurchaseDetails({ order }) {
                                         type="button"
                                         className="btn btn-primary fw-bold w-100 mb-3"
                                         onClick={payNow}
-                                        disabled={paying}
+                                        disabled={paying || cancelling}
                                     >
                                         {paying ? "OPENING PAYMENT..." : "PAY NOW"}
+                                    </button>
+                                )}
+
+                                {order.can_cancel && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-danger fw-bold w-100 mb-3"
+                                        onClick={cancelOrder}
+                                        disabled={paying || cancelling}
+                                    >
+                                        {cancelling ? "CANCELLING ORDER..." : "CANCEL UNPAID ORDER"}
                                     </button>
                                 )}
 
