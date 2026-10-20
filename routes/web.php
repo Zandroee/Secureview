@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\InventoryAdjustmentController as AdminInventoryAdjustmentController;
 use App\Http\Controllers\Admin\WarrantyController as AdminWarrantyController;
 use App\Http\Controllers\Admin\InvoiceSettingsController as AdminInvoiceSettingsController;
+use App\Http\Controllers\Admin\InvoiceIssuanceController as AdminInvoiceIssuanceController;
 use App\Http\Controllers\WarrantyClaimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -327,6 +328,8 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
         ->name('admin.purchases.index');
     Route::get('/admin/purchases/{order}/invoice', [InvoiceController::class, 'admin'])
         ->name('admin.purchases.invoice');
+    Route::post('/admin/purchases/{order}/invoice-record', [AdminInvoiceIssuanceController::class, 'store'])
+        ->name('admin.purchases.invoice-record.store');
     Route::patch('/admin/purchases/{order}/cancel', [AdminPurchaseController::class, 'cancel'])
         ->name('admin.purchases.cancel');
     Route::patch('/admin/purchases/{order}/confirm-cash-payment', [AdminPurchaseController::class, 'confirmCashPayment'])
