@@ -1,5 +1,6 @@
-// for the lowStockTable.jsx and WarrantyTable.jsx
+// Compact dashboard notice table with optional links for the first cell of each row.
 
+import { Link } from "@inertiajs/react";
 import AdminPagination from "./AdminPagination";
 
 export default function NoticeTable({
@@ -8,6 +9,7 @@ export default function NoticeTable({
     rows = [],
     pagination = null,
     paginationLabel = "records",
+    rowLinks = [],
 }){
 
     return(
@@ -34,15 +36,25 @@ export default function NoticeTable({
                         {
                             rows.length > 0 ?
 
-                            rows.map((row,index)=>(
+                            rows.map((row,rowIndex)=>(
 
-                                <tr key={index}>
+                                <tr key={rowIndex}>
                                     {
-                                        row.map((cell,index)=>(
-                                            <td key={index}>
-                                                {cell}
+                                        row.map((cell,cellIndex)=>(
+                                            <td key={cellIndex}>
+                                                {cellIndex === 0 && rowLinks[rowIndex] ? (
+                                                    <Link
+                                                        href={rowLinks[rowIndex]}
+                                                        className="text-decoration-none fw-semibold"
+                                                    >
+                                                        {cell}
+                                                    </Link>
+                                                ) : cell}
                                             </td>
                                         ))
+                                    }
+                                </tr>
+                            ))
                                     }
                                 </tr>
                             ))
