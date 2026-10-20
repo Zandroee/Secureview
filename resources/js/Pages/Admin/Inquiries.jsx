@@ -47,6 +47,7 @@ function formatStatus(status) {
 export default function AdminInquiries({
     inquiries = [],
     technicians = [],
+    technicianBookings = [],
     filters = {},
     bookingTimeSlots = [],
     todayDate = "",
@@ -194,11 +195,8 @@ export default function AdminInquiries({
                                             setStatus(event.target.value)
                                         }
                                     >
-                                        <option value="">All statuses</option>
+                                        <option value="">All inquiry statuses</option>
                                         <option value="pending">Pending</option>
-                                        <option value="confirmed">Confirmed</option>
-                                        <option value="in_progress">In Progress</option>
-                                        <option value="completed">Completed</option>
                                         <option value="cancelled">Cancelled</option>
                                     </select>
                                 </div>
@@ -471,6 +469,7 @@ export default function AdminInquiries({
                 <ConfirmInquiryModal
                     inquiry={confirmingInquiry}
                     technicians={technicians}
+                    technicianBookings={technicianBookings}
                     bookingTimeSlots={bookingTimeSlots}
                     todayDate={todayDate}
                     onClose={() => setConfirmingInquiry(null)}
@@ -481,6 +480,7 @@ export default function AdminInquiries({
                 <ManageTechnicianTeamModal
                     inquiry={managingInquiry}
                     technicians={technicians}
+                    technicianBookings={technicianBookings}
                     onClose={() => setManagingInquiry(null)}
                 />
             )}

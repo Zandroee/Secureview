@@ -10,6 +10,7 @@ const DEFAULT_TIME_SLOTS = [
 export default function ConfirmInquiryModal({
     inquiry,
     technicians = [],
+    technicianBookings = [],
     bookingTimeSlots = DEFAULT_TIME_SLOTS,
     todayDate,
     onClose,
@@ -32,6 +33,13 @@ export default function ConfirmInquiryModal({
     });
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
+
+    const isTechnicianBusy = (technicianId, date = preferredDate) =>
+        technicianBookings.some((booking) =>
+            booking.inquiry_id !== inquiry.id &&
+            booking.date === date &&
+            (booking.technician_ids ?? []).map(String).includes(String(technicianId))
+        );
 
     const submit = (event) => {
         event.preventDefault();
@@ -119,7 +127,11 @@ export default function ConfirmInquiryModal({
                                 value={preferredDate}
                                 min={todayDate || undefined}
                                 required
-                                onChange={(event) => setPreferredDate(event.target.value)}
+                                onChange={(event) => {
+                                    const nextDate = event.target.value;
+                                    setPreferredDate(nextDate);
+                                    setTechnicianIds((current) => current.filter((id) => !isTechnicianBusy(id, nextDate, preferredTime)));
+                                }}
                             />
                             {errors.preferred_date && (
                                 <div className="invalid-feedback">{errors.preferred_date}</div>
@@ -135,7 +147,11 @@ export default function ConfirmInquiryModal({
                                 className={"form-select" + (errors.preferred_time ? " is-invalid" : "")}
                                 value={preferredTime}
                                 required
-                                onChange={(event) => setPreferredTime(event.target.value)}
+                                onChange={(event) => {
+                                    const nextTime = event.target.value;
+                                    setPreferredTime(nextTime);
+                                    setTechnicianIds((current) => current.filter((id) => !isTechnicianBusy(id, preferredDate, nextTime)));
+                                }}
                             >
                                 {timeSlots.map((slot) => (
                                     <option key={slot} value={slot}>{slot}</option>
@@ -163,8 +179,8 @@ export default function ConfirmInquiryModal({
                                 }}
                             >
                                 {technicians.map((technician) => (
-                                    <option key={technician.id} value={String(technician.id)}>
-                                        {technician.name}{technician.email ? " — " + technician.email : ""}
+                                    <option key={technician.id} value={String(technician.id)} disabled={isTechnicianBusy(technician.id)}>
+                                        {technician.name}{technician.email ? " — " + technician.email : ""}{isTechnicianBusy(technician.id) ? " (busy in this slot)" : ""}
                                     </option>
                                 ))}
                             </select>

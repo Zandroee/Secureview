@@ -147,4 +147,52 @@ class InventoryService
             ]);
         });
     }
+
+    /**
+     * Return stock only when this order previously deducted it. Clearing the
+     * marker prevents a cancelled cash order from being restocked twice.
+     */
+    public function restoreForCancelledOrder(Order $order): void
+    {
+        DB::transaction(function () use ($order) {
+            $lockedOrder = Order::query()
+                ->lockForUpdate()
+                ->findOrFail($order->id);
+
+            if (!$lockedOrder->stock_deducted_at || $lockedOrder->order_status !== 'cancelled') {
+                return;
+            }
+
+            $lockedOrder->load('items');
+
+            foreach ($lockedOrder->items as $orderItem) {
+                if ($orderItem->purchasable_type === Package::class) {
+                    $package = Package::with('packageItems')->findOrFail($orderItem->purchasable_id);
+
+                    foreach ($package->packageItems as $packageItem) {
+                        $product = Product::query()
+                            ->lockForUpdate()
+                            ->findOrFail($packageItem->product_id);
+
+                        $product->increment(
+                            'stock_quantity',
+                            (int) $packageItem->quantity * (int) $orderItem->quantity
+                        );
+                    }
+
+                    continue;
+                }
+
+                $product = Product::query()
+                    ->lockForUpdate()
+                    ->findOrFail($orderItem->purchasable_id);
+
+                $product->increment('stock_quantity', (int) $orderItem->quantity);
+            }
+
+            $lockedOrder->update([
+                'stock_deducted_at' => null,
+            ]);
+        });
+    }
 }

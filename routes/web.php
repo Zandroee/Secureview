@@ -25,8 +25,11 @@ use App\Http\Controllers\Admin\CatalogOptionController as AdminCatalogOptionCont
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\InventoryAdjustmentController as AdminInventoryAdjustmentController;
+use App\Http\Controllers\Admin\WarrantyController as AdminWarrantyController;
+use App\Http\Controllers\WarrantyClaimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Auth\Events\PasswordReset;
@@ -152,7 +155,7 @@ Route::post('/reset-password', function (Request $request) {
         'password' => [
             'required',
             'confirmed',
-            Password::min(8)
+            PasswordRule::min(8)
                 ->mixedCase()
                 ->numbers()
                 ->symbols(),
@@ -198,11 +201,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
+    Route::patch('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
+
+    Route::get('/warranty-claims', [WarrantyClaimController::class, 'index'])->name('warranty-claims.index');
+    Route::post('/warranty-claims', [WarrantyClaimController::class, 'store'])->name('warranty-claims.store');
 
     Route::get('/inquiry', [InquiryController::class, 'create'])->name('inquiries.create');
     Route::post('/inquiries', [InquiryController::class, 'store'])->name('inquiries.store');
     Route::get('/inquiries', [InquiryController::class, 'index'])->name('inquiries.index');
     Route::get('/inquiries/{inquiry}', [InquiryController::class, 'show'])->name('inquiries.show');
+    Route::post('/inquiries/{inquiry}/reschedule', [InquiryController::class, 'requestReschedule'])->name('inquiries.reschedule');
     Route::get('/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
@@ -214,10 +222,14 @@ Route::middleware(['auth', 'verified', 'technician'])->prefix('technician')->nam
     Route::get('/dashboard', [TechnicianWorkspaceController::class, 'index'])->name('dashboard');
     Route::post('/jobs/{inquiry}/claim', [TechnicianWorkspaceController::class, 'claimJob'])->name('jobs.claim');
     Route::patch('/jobs/{inquiry}/status', [TechnicianWorkspaceController::class, 'updateJobStatus'])->name('jobs.status');
+    Route::patch('/jobs/{inquiry}/schedule', [TechnicianWorkspaceController::class, 'updateJobSchedule'])->name('jobs.schedule');
+    Route::patch('/jobs/{inquiry}/reschedule/{decision}', [TechnicianWorkspaceController::class, 'reviewReschedule'])->whereIn('decision', ['approve', 'decline'])->name('jobs.reschedule.review');
     Route::patch('/inventory/{product}', [TechnicianWorkspaceController::class, 'adjustStock'])->name('inventory.adjust');
 });
 
 Route::middleware(['auth', 'verified', 'admin'])->group(function () {
+    Route::post('/admin/announcements', [NotificationController::class, 'storeAnnouncement'])
+        ->name('admin.announcements.store');
     Route::post('/admin/catalog-options', [AdminCatalogOptionController::class, 'store'])
         ->name('admin.catalog-options.store');
 
@@ -253,6 +265,11 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/admin/inventory-adjustments', [AdminInventoryAdjustmentController::class, 'index'])
         ->name('admin.inventory-adjustments.index');
 
+    Route::get('/admin/warranty', [AdminWarrantyController::class, 'index'])
+        ->name('admin.warranty.index');
+    Route::patch('/admin/warranty/{warrantyClaim}', [AdminWarrantyController::class, 'update'])
+        ->name('admin.warranty.update');
+
     Route::post('/admin/products', [AdminProductController::class, 'store'])
         ->name('admin.products.store');
 
@@ -282,6 +299,13 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/schedules', [AdminScheduleController::class, 'index'])
         ->name('admin.schedules.index');
+    Route::get('/admin/service-history', [AdminScheduleController::class, 'history'])
+        ->name('admin.service-history.index');
+    Route::get('/admin/schedules/{inquiry}', [AdminScheduleController::class, 'show'])
+        ->name('admin.schedules.show');
+    Route::patch('/admin/schedules/{inquiry}', [AdminScheduleController::class, 'updateSchedule'])->name('admin.schedules.update');
+    Route::patch('/admin/reschedule-requests/{inquiry}/approve', [AdminScheduleController::class, 'approveReschedule'])->name('admin.reschedule-requests.approve');
+    Route::patch('/admin/reschedule-requests/{inquiry}/decline', [AdminScheduleController::class, 'declineReschedule'])->name('admin.reschedule-requests.decline');
 
     Route::post('/admin/booking-availability', [AdminScheduleController::class, 'storeBookingDateBlock'])
         ->name('admin.booking-availability.store');
@@ -294,6 +318,12 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/purchases', [AdminPurchaseController::class, 'index'])
         ->name('admin.purchases.index');
+    Route::patch('/admin/purchases/{order}/cancel', [AdminPurchaseController::class, 'cancel'])
+        ->name('admin.purchases.cancel');
+    Route::patch('/admin/purchases/{order}/confirm-cash-payment', [AdminPurchaseController::class, 'confirmCashPayment'])
+        ->name('admin.purchases.confirm-cash-payment');
+    Route::patch('/admin/purchases/{order}/complete', [AdminPurchaseController::class, 'markCompleted'])
+        ->name('admin.purchases.complete');
 
     Route::patch('/admin/users/{user}/role', [AdminUserController::class, 'updateRole'])
         ->name('admin.users.role');

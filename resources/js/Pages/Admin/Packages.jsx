@@ -30,6 +30,28 @@ function money(value) {
     });
 }
 
+function componentSubtotal(items = [], products = []) {
+    return (items ?? []).reduce((total, item) => {
+        const product = (products ?? []).find(
+            (candidate) => String(candidate.id) === String(item.product_id)
+        );
+        const quantity = Number(item.quantity);
+        const unitPrice = Number(product?.price ?? 0);
+
+        if (
+            !product ||
+            !Number.isFinite(quantity) ||
+            quantity < 1 ||
+            !Number.isFinite(unitPrice) ||
+            unitPrice < 0
+        ) {
+            return total;
+        }
+
+        return total + unitPrice * quantity;
+    }, 0);
+}
+
 function stockClass(stock) {
     return Number(stock) > 0
         ? "bg-success-subtle text-success"

@@ -25,6 +25,9 @@ class InstallationInquiryPaymentTest extends TestCase
             'services.paymongo.secret_key' => 'sk_test_secureview',
             'services.paymongo.base_url' => 'https://api.paymongo.com',
         ]);
+
+        // Availability validation happens before installation payment preparation.
+        User::factory()->create(['role' => 'technician']);
     }
 
     public function test_service_card_selection_is_prefilled_in_the_inquiry_form(): void

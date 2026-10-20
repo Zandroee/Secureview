@@ -182,6 +182,7 @@ class BookingDateAvailabilityTest extends TestCase
     public function test_customer_cannot_submit_an_individually_blocked_time_slot(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
+        User::factory()->create(['role' => 'technician']);
         $date = today()->addDays(8)->toDateString();
         $timeSlot = '11:00 AM - 02:00 PM';
 
@@ -236,6 +237,7 @@ class BookingDateAvailabilityTest extends TestCase
     public function test_booking_accepts_three_hour_slots_and_rejects_old_one_hour_slots(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
+        User::factory()->create(['role' => 'technician']);
         $date = today()->addDays(3)->toDateString();
 
         $this->actingAs($customer)
@@ -269,6 +271,80 @@ class BookingDateAvailabilityTest extends TestCase
                     ->exists()
             );
         }
+    }
+
+    public function test_entire_day_is_unavailable_when_every_technician_has_a_job_in_a_different_slot(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technicians = [
+            User::factory()->create(['role' => 'technician']),
+            User::factory()->create(['role' => 'technician']),
+            User::factory()->create(['role' => 'technician']),
+        ];
+        $date = today()->addDays(10)->toDateString();
+        $timeSlots = [
+            '08:00 AM - 11:00 AM',
+            '11:00 AM - 02:00 PM',
+            '02:00 PM - 05:00 PM',
+        ];
+
+        foreach ($timeSlots as $index => $timeSlot) {
+            $this->createConfirmedBooking(
+                $customer,
+                $technicians[$index],
+                $admin,
+                $date,
+                $timeSlot,
+                'TEST-' . $index . '-' . $date
+            );
+        }
+
+        $this->actingAs($customer)
+            ->get(route('inquiries.create'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('inquiry')
+                ->where('unavailableDates.0', $date)
+            );
+
+        $this->actingAs($customer)
+            ->post(route('inquiries.store'), $this->validInquiryPayload($date, $customer->email))
+            ->assertSessionHasErrors('preferred_date');
+
+        $this->assertSame(3, Inquiry::query()
+            ->whereDate('preferred_date', $date)
+            ->where('status', 'confirmed')
+            ->count());
+    }
+
+    private function createConfirmedBooking(
+        User $customer,
+        User $technician,
+        User $admin,
+        string $date,
+        string $time,
+        string $number
+    ): Inquiry {
+        $inquiry = Inquiry::create([
+            'user_id' => $customer->id,
+            'technician_id' => $technician->id,
+            'inquiry_number' => $number,
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'street_address' => '123 Test Street',
+            'city' => 'Taguig',
+            'service_type' => 'Maintenance',
+            'urgency' => 'normal',
+            'preferred_date' => $date,
+            'preferred_time' => $time,
+            'status' => 'confirmed',
+        ]);
+
+        $inquiry->technicians()->attach($technician->id, ['assigned_by' => $admin->id]);
+
+        return $inquiry;
     }
 
     private function validInquiryPayload(string $date, string $email = 'booking-test@example.com'): array

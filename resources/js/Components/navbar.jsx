@@ -58,8 +58,13 @@ export default function Navbar() {
         if (!isLoggedIn) return;
 
         const pollNotifications = () => {
+            if (document.visibilityState !== "visible") return;
+
+            const only = ["notificationCount", "latestNotification"];
+            if (url.startsWith("/notifications")) only.push("notifications");
+
             router.reload({
-                only: ["notificationCount", "latestNotification"],
+                only,
                 preserveState: true,
                 preserveScroll: true,
                 onSuccess: (page) => {
@@ -75,9 +80,9 @@ export default function Navbar() {
             });
         };
 
-        const interval = window.setInterval(pollNotifications, 30000);
+        const interval = window.setInterval(pollNotifications, 10000);
         return () => window.clearInterval(interval);
-    }, [isLoggedIn]);
+    }, [isLoggedIn, url]);
 
     return (
         <>

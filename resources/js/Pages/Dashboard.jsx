@@ -6,8 +6,11 @@ import RevenueChart from "../Components/Admin/RevenueChart";
 import NoticeTable from "../Components/Admin/NoticeTable";
 import Calendar from "../Components/Admin/Calendar";
 import Announcements from "../Components/Admin/Announcements";
+import RecentOrders from "../Components/Admin/RecentOrders";
+import AnnouncementFeed from "../Components/Admin/AnnouncementFeed";
 import OrderStatusOverview from "../Components/Admin/OrderStatusOverview";
 import { router } from "@inertiajs/react";
+import { useEffect } from "react";
 
 export default function Dashboard({
     stats = [],
@@ -25,8 +28,36 @@ export default function Dashboard({
     lowStockData = { data: [] },
     pendingPaymentData = { data: [] },
     scheduleData = [],
+    upcomingScheduleCount = 0,
     recentInquiries = [],
+    recentOrders = [],
+    recentAnnouncements = [],
+    unreadInquiryNotificationCount = 0,
+    calendarAvailability = { fullyBookedDates: [], partiallyBlockedDates: [] },
 }) {
+    useEffect(() => {
+        const refreshDashboardActivity = () => {
+            if (document.visibilityState !== "visible") return;
+
+            router.reload({
+                only: [
+                    "scheduleData",
+                    "upcomingScheduleCount",
+                    "recentInquiries",
+                    "recentOrders",
+                    "recentAnnouncements",
+                    "unreadInquiryNotificationCount",
+                    "calendarAvailability",
+                ],
+                preserveState: true,
+                preserveScroll: true,
+            });
+        };
+
+        const interval = window.setInterval(refreshDashboardActivity, 10000);
+        return () => window.clearInterval(interval);
+    }, []);
+
     const updateDashboardFilter = (key, value) => {
         router.get(
             "/dashboard",
@@ -123,6 +154,9 @@ export default function Dashboard({
                                             ]}
                                             rows={pendingPaymentData.data ?? []}
                                             pagination={pendingPaymentData}
+                                            rowLinks={(pendingPaymentData.data ?? []).map((row) =>
+                                                "/admin/purchases?search=" + encodeURIComponent(row[0])
+                                            )}
                                         />
                                     </div>
                                 </div>
@@ -134,13 +168,25 @@ export default function Dashboard({
                                 <Calendar
                                     title="Upcoming Schedule"
                                     schedules={scheduleData}
+                                    upcomingCount={upcomingScheduleCount}
+                                    fullyBookedDates={calendarAvailability.fullyBookedDates ?? []}
+                                    partiallyBlockedDates={calendarAvailability.partiallyBlockedDates ?? []}
                                 />
 
                                 <div className="mt-4">
                                     <Announcements
                                         title="Recent Inquiries"
                                         announcements={recentInquiries}
+                                        unreadNotificationCount={unreadInquiryNotificationCount}
                                     />
+                                </div>
+
+                                <div className="mt-4">
+                                    <RecentOrders orders={recentOrders} />
+                                </div>
+
+                                <div className="mt-4">
+                                    <AnnouncementFeed announcements={recentAnnouncements} />
                                 </div>
                             </div>
                         </div>

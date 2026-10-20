@@ -1,3 +1,5 @@
+import { Link } from "@inertiajs/react";
+
 export default function OrderStatusOverview({ statuses = [] }) {
     const totalOrders = statuses.reduce(
         (total, status) => total + Number(status.count ?? 0),
@@ -47,12 +49,16 @@ export default function OrderStatusOverview({ statuses = [] }) {
 
                             return (
                                 <div className="col-sm-6" key={status.key}>
-                                    <div
-                                        className="h-100 rounded-3 p-3"
+                                    <Link
+                                        href={"/admin/purchases?order_status=" + encodeURIComponent(status.key)}
+                                        className="h-100 rounded-3 p-3 d-block text-decoration-none text-reset"
                                         style={{
                                             backgroundColor: "#fbfcfe",
                                             border: "1px solid #e6ebf2",
+                                            transition: "border-color 0.15s ease, box-shadow 0.15s ease",
                                         }}
+                                        aria-label={"Manage " + status.label + " orders (" + count + ")"}
+                                        title={"View and manage " + status.label.toLowerCase() + " orders"}
                                     >
                                         <div className="d-flex align-items-center gap-2">
                                             <div
@@ -96,7 +102,7 @@ export default function OrderStatusOverview({ statuses = [] }) {
                                                 style={{ width: percentage + "%" }}
                                             />
                                         </div>
-                                    </div>
+                                    </Link>
                                 </div>
                             );
                         })}
