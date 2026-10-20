@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomerNotification;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -41,7 +42,7 @@ class NotificationController extends Controller
             'message' => ['required', 'string', 'max:2000'],
         ]);
 
-        $recipients = \\App\\Models\\User::query()
+        $recipients = User::query()
             ->where('role', 'user')
             ->select('id')
             ->get();
