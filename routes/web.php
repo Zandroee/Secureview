@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\WarrantyController as AdminWarrantyController;
 use App\Http\Controllers\WarrantyClaimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Auth\Events\PasswordReset;
@@ -154,7 +155,7 @@ Route::post('/reset-password', function (Request $request) {
         'password' => [
             'required',
             'confirmed',
-            Password::min(8)
+            PasswordRule::min(8)
                 ->mixedCase()
                 ->numbers()
                 ->symbols(),
