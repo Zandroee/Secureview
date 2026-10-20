@@ -25,6 +25,8 @@ use App\Http\Controllers\Admin\CatalogOptionController as AdminCatalogOptionCont
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\InventoryAdjustmentController as AdminInventoryAdjustmentController;
+use App\Http\Controllers\Admin\WarrantyController as AdminWarrantyController;
+use App\Http\Controllers\WarrantyClaimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
@@ -199,6 +201,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
 
+    Route::get('/warranty-claims', [WarrantyClaimController::class, 'index'])->name('warranty-claims.index');
+    Route::post('/warranty-claims', [WarrantyClaimController::class, 'store'])->name('warranty-claims.store');
+
     Route::get('/inquiry', [InquiryController::class, 'create'])->name('inquiries.create');
     Route::post('/inquiries', [InquiryController::class, 'store'])->name('inquiries.store');
     Route::get('/inquiries', [InquiryController::class, 'index'])->name('inquiries.index');
@@ -256,7 +261,10 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/admin/inventory-adjustments', [AdminInventoryAdjustmentController::class, 'index'])
         ->name('admin.inventory-adjustments.index');
 
-    Route::get('/admin/warranty', fn () => Inertia::render('Admin/Warranty'))->name('admin.warranty.index');
+    Route::get('/admin/warranty', [AdminWarrantyController::class, 'index'])
+        ->name('admin.warranty.index');
+    Route::patch('/admin/warranty/{warrantyClaim}', [AdminWarrantyController::class, 'update'])
+        ->name('admin.warranty.update');
 
     Route::post('/admin/products', [AdminProductController::class, 'store'])
         ->name('admin.products.store');
