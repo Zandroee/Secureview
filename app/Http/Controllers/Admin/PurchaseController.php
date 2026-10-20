@@ -117,6 +117,101 @@ class PurchaseController extends Controller
         return back()->with('success', 'Order ' . $order->order_number . ' was cancelled.');
     }
 
+    public function confirmCashPayment(
+        Request $request,
+        Order $order,
+        InventoryService $inventory,
+        AdminActivityLogger $activityLogger
+    ) {
+        if (
+            $order->payment_method !== 'cash' ||
+            $order->payment_status !== 'pending' ||
+            $order->order_status !== 'pending'
+        ) {
+            return back()->withErrors([
+                'order' => 'Only an unpaid cash order in Pending status can be confirmed as paid. Do not use this action for online payments.',
+            ]);
+        }
+
+        // Ensure inventory is reserved/deducted before recording the cash
+        // payment. Existing checkout stock deductions are idempotent.
+        $inventory->deductForOrder($order);
+
+        $oldStatus = $order->order_status;
+        $order->update([
+            'payment_status' => 'paid',
+            'paid_at' => now(),
+            'order_status' => 'processing',
+        ]);
+
+        $activityLogger->record(
+            $request,
+            'order_cash_payment_confirmed',
+            'Confirmed cash received for order ' . $order->order_number . '.',
+            $order,
+            ['status' => $oldStatus],
+            ['status' => 'processing']
+        );
+
+        CustomerNotification::create([
+            'user_id' => $order->user_id,
+            'type' => 'payment_paid',
+            'title' => 'Cash payment confirmed',
+            'message' => 'SecureView confirmed receipt of cash payment for order ' . $order->order_number . '.',
+            'action_url' => route('purchases.show', $order),
+            'related_type' => Order::class,
+            'related_id' => $order->id,
+        ]);
+
+        return back()->with('success', 'Cash payment confirmed. Order ' . $order->order_number . ' is now Processing.');
+    }
+
+    public function markCompleted(
+        Request $request,
+        Order $order,
+        AdminActivityLogger $activityLogger
+    ) {
+        if ($order->payment_status !== 'paid' || $order->order_status !== 'processing') {
+            return back()->withErrors([
+                'order' => 'Only paid orders in Processing status can be marked Completed.',
+            ]);
+        }
+
+        $installationCheckout = \App\Models\PendingInquiryCheckout::query()
+            ->with('inquiry')
+            ->where('order_id', $order->id)
+            ->first();
+
+        if ($installationCheckout?->inquiry && $installationCheckout->inquiry->status !== 'completed') {
+            return back()->withErrors([
+                'order' => 'This order includes an installation service. Complete the related service from Schedules and Service History before marking the order Completed.',
+            ]);
+        }
+
+        $order->update(['order_status' => 'completed']);
+
+        $activityLogger->record(
+            $request,
+            'order_completed',
+            'Marked order ' . $order->order_number . ' as completed.',
+            $order,
+            ['status' => 'processing'],
+            ['status' => 'completed']
+        );
+
+        CustomerNotification::create([
+            'user_id' => $order->user_id,
+            'type' => 'order_completed',
+            'title' => 'Order completed',
+            'message' => 'Your order ' . $order->order_number . ' has been marked Completed by SecureView.',
+            'action_url' => route('purchases.show', $order),
+            'related_type' => Order::class,
+            'related_id' => $order->id,
+        ]);
+
+        return back()->with('success', 'Order ' . $order->order_number . ' has been marked Completed.');
+    }
+
     private function formatOrder(Order $order): array
     {
         return [
@@ -139,6 +234,15 @@ class PurchaseController extends Controller
                 && $order->paid_at === null
                 && in_array($order->payment_status, ['pending', 'failed'], true)
                 && in_array($order->order_status, ['pending', 'awaiting_payment', 'payment_failed'], true),
+            'can_confirm_cash_payment' => $order->payment_method === 'cash'
+                && $order->payment_status === 'pending'
+                && $order->order_status === 'pending',
+            'can_mark_completed' => $order->payment_status === 'paid'
+                && $order->order_status === 'processing'
+                && !\App\Models\PendingInquiryCheckout::query()
+                    ->where('order_id', $order->id)
+                    ->whereHas('inquiry', fn ($query) => $query->where('status', '!=', 'completed'))
+                    ->exists(),
             'items' => $order->items->map(fn ($item) => [
                 'id' => $item->id,
                 'name' => $item->name,
