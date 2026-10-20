@@ -199,6 +199,7 @@ class CheckoutController extends Controller
                     'purchasable_type' => $cartItem->purchasable_type,
                     'purchasable_id' => $cartItem->purchasable_id,
                     'name' => $purchasable->name,
+                    'warranty_period' => $purchasable->warranty ?? null,
                     'price' => $price,
                     'quantity' => $quantity,
                     'subtotal' => $price * $quantity,
