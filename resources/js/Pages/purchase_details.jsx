@@ -315,7 +315,7 @@ export default function PurchaseDetails({ order }) {
                                     <h4 className="fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>
                                         ORDER & PAYMENT HISTORY
                                     </h4>
-                                    <span className="small text-muted">Latest updates first by status will appear below</span>
+                                    <span className="small text-muted">Payment and order changes recorded by SecureView.</span>
                                 </div>
                                 {order.timeline?.length ? (
                                     <div className="d-flex flex-column gap-3">
