@@ -4,6 +4,7 @@ import { router, usePage } from "@inertiajs/react";
 import { useState } from "react";
 
 function iconForType(type) {
+    if (type === "announcement") return "bi bi-megaphone";
     if (type === "payment_paid") return "bi bi-credit-card";
     if (type === "order") return "bi bi-bag-check";
     if (type === "inquiry" || type === "new_inquiry" || type === "reschedule_request") return "bi bi-chat-left-text";
@@ -26,6 +27,10 @@ function iconBackground(type) {
 export default function Notifications({ notifications = [] }) {
     const { props } = usePage();
     const [working, setWorking] = useState(false);
+    const [announcementTitle, setAnnouncementTitle] = useState("");
+    const [announcementMessage, setAnnouncementMessage] = useState("");
+    const [announcementWorking, setAnnouncementWorking] = useState(false);
+    const isAdmin = props.auth?.user?.role === "admin" || props.auth?.user?.is_admin === true;
 
     const unreadCount = notifications.filter(
         (notification) => !notification.read
@@ -107,6 +112,79 @@ export default function Notifications({ notifications = [] }) {
                             <div className="alert alert-danger small">
                                 {props.errors.notification}
                             </div>
+                        )}
+
+                        {props.flash?.success && (
+                            <div className="alert alert-success small" role="status">
+                                {props.flash.success}
+                            </div>
+                        )}
+
+                        {isAdmin && (
+                            <form
+                                className="border rounded-3 p-3 mb-4"
+                                onSubmit={(event) => {
+                                    event.preventDefault();
+                                    setAnnouncementWorking(true);
+                                    router.post(
+                                        "/admin/announcements",
+                                        { title: announcementTitle, message: announcementMessage },
+                                        {
+                                            preserveScroll: true,
+                                            onSuccess: () => {
+                                                setAnnouncementTitle("");
+                                                setAnnouncementMessage("");
+                                            },
+                                            onFinish: () => setAnnouncementWorking(false),
+                                        }
+                                    );
+                                }}
+                            >
+                                <div className="d-flex align-items-center gap-2 mb-2">
+                                    <i className="bi bi-megaphone text-primary fs-5" />
+                                    <h5 className="fw-bold mb-0">Create announcement</h5>
+                                </div>
+                                <p className="small text-muted mb-3">
+                                    Send an announcement to all customer accounts. It will appear in their Notifications.
+                                </p>
+                                {props.errors?.announcement && (
+                                    <div className="alert alert-danger small">{props.errors.announcement}</div>
+                                )}
+                                {props.errors?.title && (
+                                    <div className="text-danger small mb-2">{props.errors.title}</div>
+                                )}
+                                <label htmlFor="announcement-title" className="form-label small fw-semibold">Title</label>
+                                <input
+                                    id="announcement-title"
+                                    className={"form-control mb-3" + (props.errors?.title ? " is-invalid" : "")}
+                                    value={announcementTitle}
+                                    onChange={(event) => setAnnouncementTitle(event.target.value)}
+                                    maxLength={120}
+                                    required
+                                    placeholder="e.g. Holiday service schedule"
+                                />
+                                <label htmlFor="announcement-message" className="form-label small fw-semibold">Message</label>
+                                <textarea
+                                    id="announcement-message"
+                                    className={"form-control mb-3" + (props.errors?.message ? " is-invalid" : "")}
+                                    value={announcementMessage}
+                                    onChange={(event) => setAnnouncementMessage(event.target.value)}
+                                    maxLength={2000}
+                                    rows={3}
+                                    required
+                                    placeholder="Write the information customers need to know..."
+                                />
+                                {props.errors?.message && (
+                                    <div className="text-danger small mb-2">{props.errors.message}</div>
+                                )}
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary btn-sm fw-semibold"
+                                    disabled={announcementWorking || !announcementTitle.trim() || !announcementMessage.trim()}
+                                >
+                                    {announcementWorking ? "Sending..." : "Send to all customers"}
+                                </button>
+                            </form>
                         )}
 
                         {notifications.length === 0 ? (
