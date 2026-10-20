@@ -41,8 +41,21 @@ export default function PurchaseDetails({ order }) {
         ["awaiting_payment", "payment_failed"].includes(order.order_status);
 
     const cancelOrder = () => {
+        const enteredReason = window.prompt(
+            "Why are you cancelling order " + order.order_number + "? Leave blank to record 'Cancelled by customer.'",
+            "Changed my mind"
+        );
+
+        if (enteredReason === null) return;
+
+        const reason = enteredReason.trim() || "Cancelled by customer.";
+        if (reason.length < 5) {
+            window.alert("Please enter at least 5 characters for the cancellation reason.");
+            return;
+        }
+
         if (!window.confirm(
-            "Cancel unpaid order " + order.order_number + "? This cannot be undone. Paid orders cannot be cancelled here."
+            "Cancel unpaid order " + order.order_number + "? This cannot be undone. Paid orders cannot be cancelled here.\n\nReason: " + reason
         )) {
             return;
         }
@@ -50,7 +63,7 @@ export default function PurchaseDetails({ order }) {
         setCancelling(true);
         router.patch(
             "/purchases/" + order.id + "/cancel",
-            {},
+            { reason },
             {
                 preserveScroll: true,
                 onFinish: () => setCancelling(false),
@@ -274,6 +287,13 @@ export default function PurchaseDetails({ order }) {
                                             {order.delivery_address}
                                         </div>
                                     </div>
+
+                                    {order.cancellation_reason && (
+                                        <div className="col-12">
+                                            <div className="small text-muted mb-1">CANCELLATION REASON</div>
+                                            <div className="fw-semibold">{order.cancellation_reason}</div>
+                                        </div>
+                                    )}
 
                                     {order.notes && (
                                         <div className="col-12">
