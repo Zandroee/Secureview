@@ -86,7 +86,7 @@ class InvoiceTest extends TestCase
 
     private function createOrder(User $customer): Order
     {
-        return Order::create([
+        $order = Order::create([
             'user_id' => $customer->id,
             'order_number' => 'SV-INVOICE-' . uniqid(),
             'subtotal' => 1500,
@@ -100,16 +100,18 @@ class InvoiceTest extends TestCase
             'customer_phone' => '09171234567',
             'customer_email' => $customer->email,
             'delivery_address' => '123 Test Street, Taguig',
-        ])->tap(function (Order $order) {
-            $order->items()->create([
-                'name' => 'Test Camera',
-                'purchasable_type' => 'App\\Models\\Product',
-                'purchasable_id' => 1,
-                'warranty_period' => '1 year',
-                'price' => 750,
-                'quantity' => 2,
-                'subtotal' => 1500,
-            ]);
-        });
+        ]);
+
+        $order->items()->create([
+            'name' => 'Test Camera',
+            'purchasable_type' => 'App\\Models\\Product',
+            'purchasable_id' => 1,
+            'warranty_period' => '1 year',
+            'price' => 750,
+            'quantity' => 2,
+            'subtotal' => 1500,
+        ]);
+
+        return $order;
     }
 }
