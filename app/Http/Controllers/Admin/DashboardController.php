@@ -319,6 +319,9 @@ class DashboardController extends Controller
                     'description' => $definition['description'],
                 ];
             })
+            // There is no delivery-tracking workflow yet. Keep legacy delivered
+            // records visible if any exist, but don't advertise an unused stage.
+            ->reject(fn (array $status) => $status['key'] === 'delivered' && $status['count'] === 0)
             ->values();
 
         return Inertia::render('Dashboard', [
