@@ -61,7 +61,7 @@ class WarrantyEligibilityService
         return $startDate->copy()->addDays($amount);
     }
 
-    public function isCovered(OrderItem $item): bool
+    public function coverageStatusFor(OrderItem $item): string
     {
         $item->loadMissing(['order', 'purchasable']);
 
@@ -71,7 +71,7 @@ class WarrantyEligibilityService
             $order->payment_status !== 'paid' ||
             in_array($order->order_status, ['cancelled', 'payment_failed'], true)
         ) {
-            return false;
+            return 'not_covered';
         }
 
         $period = $this->periodFor($item);
@@ -79,15 +79,25 @@ class WarrantyEligibilityService
             !$period ||
             preg_match('/\b(no warranty|not covered|none|n\/a)\b/i', $period)
         ) {
-            return false;
+            return 'not_covered';
         }
 
         if (preg_match('/\blifetime\b/i', $period)) {
-            return true;
+            return 'lifetime';
         }
 
         $expiresAt = $this->expiryDateFor($item);
+        if ($expiresAt === null) {
+            return 'not_covered';
+        }
 
-        return $expiresAt !== null && $expiresAt->toDateString() >= today()->toDateString();
+        return $expiresAt->toDateString() >= today()->toDateString()
+            ? 'active'
+            : 'expired';
+    }
+
+    public function isCovered(OrderItem $item): bool
+    {
+        return in_array($this->coverageStatusFor($item), ['active', 'lifetime'], true);
     }
 }
