@@ -878,6 +878,14 @@ export default function AdminPurchases({
 
                         <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-3">
                             <div className="d-flex flex-wrap gap-2">
+                                <a
+                                    href={"/admin/purchases/" + viewingOrder.id + "/invoice"}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="btn btn-outline-primary fw-bold"
+                                >
+                                    <i className="bi bi-receipt me-2"></i>VIEW INVOICE
+                                </a>
                                 {viewingOrder.can_confirm_cash_payment && (
                                     <button
                                         type="button"
