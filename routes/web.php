@@ -199,6 +199,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/checkout/payment/{order}/cancel', [CheckoutController::class, 'paymentCancel'])->name('checkout.payment.cancel');
 
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+    Route::get('/purchases/{order}/invoice', [InvoiceController::class, 'customer'])->name('purchases.invoice');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
     Route::patch('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
@@ -318,6 +319,8 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/purchases', [AdminPurchaseController::class, 'index'])
         ->name('admin.purchases.index');
+    Route::get('/admin/purchases/{order}/invoice', [InvoiceController::class, 'admin'])
+        ->name('admin.purchases.invoice');
     Route::patch('/admin/purchases/{order}/cancel', [AdminPurchaseController::class, 'cancel'])
         ->name('admin.purchases.cancel');
     Route::patch('/admin/purchases/{order}/confirm-cash-payment', [AdminPurchaseController::class, 'confirmCashPayment'])
