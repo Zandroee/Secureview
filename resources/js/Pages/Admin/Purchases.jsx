@@ -64,6 +64,7 @@ export default function AdminPurchases({
     const [viewingOrder, setViewingOrder] = useState(null);
     const [cancellingOrderId, setCancellingOrderId] = useState(null);
     const [updatingOrderId, setUpdatingOrderId] = useState(null);
+    const [recordingInvoiceId, setRecordingInvoiceId] = useState(null);
     const { props } = usePage();
     const orderRows = orders.data ?? (Array.isArray(orders) ? orders : []);
 
@@ -117,6 +118,21 @@ export default function AdminPurchases({
                 onFinish: () => setUpdatingOrderId(null),
             }
         );
+    };
+
+    const recordInvoice = (order) => {
+        const message =
+            "Save an immutable internal invoice record for " + order.order_number + "?\n\n" +
+            "This preserves the seller, customer, item, and total details as they are now. " +
+            "It does not consume an authorized BIR invoice number and is not a BIR-registered tax invoice.";
+        if (!window.confirm(message)) return;
+
+        setRecordingInvoiceId(order.id);
+        router.post("/admin/purchases/" + order.id + "/invoice-record", {}, {
+            preserveScroll: true,
+            onSuccess: () => setViewingOrder(null),
+            onFinish: () => setRecordingInvoiceId(null),
+        });
     };
 
     const applyFilters = (event) => {
@@ -535,6 +551,12 @@ export default function AdminPurchases({
                                                                 ? ""
                                                                 : "s"}
                                                         </div>
+                                                        {order.invoice_record && (
+                                                            <div className="small text-success mt-1">
+                                                                <i className="bi bi-file-earmark-check me-1"></i>
+                                                                {order.invoice_record.record_number}
+                                                            </div>
+                                                        )}
                                                     </td>
 
                                                     <td>
@@ -876,6 +898,14 @@ export default function AdminPurchases({
                             </div>
                         )}
 
+                        {viewingOrder.invoice_record && (
+                            <div className="alert alert-info small mt-3 mb-0">
+                                <div className="fw-bold">Saved internal invoice record</div>
+                                <div>{viewingOrder.invoice_record.record_number}</div>
+                                <div className="text-muted">Saved {viewingOrder.invoice_record.issued_at}. The saved invoice page uses this frozen snapshot.</div>
+                            </div>
+                        )}
+
                         <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-3">
                             <div className="d-flex flex-wrap gap-2">
                                 <a
@@ -884,8 +914,19 @@ export default function AdminPurchases({
                                     rel="noreferrer"
                                     className="btn btn-outline-primary fw-bold"
                                 >
-                                    <i className="bi bi-receipt me-2"></i>VIEW INVOICE
+                                    <i className="bi bi-receipt me-2"></i>{viewingOrder.invoice_record ? "VIEW SAVED INVOICE" : "VIEW INVOICE"}
                                 </a>
+                                {viewingOrder.can_record_invoice && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary fw-bold"
+                                        onClick={() => recordInvoice(viewingOrder)}
+                                        disabled={recordingInvoiceId === viewingOrder.id || cancellingOrderId === viewingOrder.id || updatingOrderId === viewingOrder.id}
+                                    >
+                                        <i className="bi bi-file-earmark-check me-2"></i>
+                                        {recordingInvoiceId === viewingOrder.id ? "SAVING RECORD..." : "SAVE INTERNAL INVOICE RECORD"}
+                                    </button>
+                                )}
                                 {viewingOrder.can_confirm_cash_payment && (
                                     <button
                                         type="button"
