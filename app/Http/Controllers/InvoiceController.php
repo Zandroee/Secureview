@@ -28,8 +28,10 @@ class InvoiceController extends Controller
         $order->loadMissing(['items', 'user']);
 
         $isPaid = $order->payment_status === 'paid';
+        $isCancelled = $order->order_status === 'cancelled';
         $amountPaid = $isPaid ? (float) $order->total : 0.0;
         $total = (float) $order->total;
+        $balanceDue = (!$isPaid && !$isCancelled) ? $total : 0.0;
 
         return Inertia::render('invoice', [
             'invoice' => [
@@ -42,6 +44,7 @@ class InvoiceController extends Controller
                 'payment_status' => $order->payment_status,
                 'order_status' => $order->order_status,
                 'is_paid' => $isPaid,
+                'is_cancelled' => $isCancelled,
                 'customer' => [
                     'name' => $order->customer_name,
                     'email' => $order->customer_email,
@@ -60,7 +63,7 @@ class InvoiceController extends Controller
                 'shipping_fee' => (float) $order->shipping_fee,
                 'total' => $total,
                 'amount_paid' => $amountPaid,
-                'balance_due' => max(0, $total - $amountPaid),
+                'balance_due' => max(0, $balanceDue),
                 'business' => [
                     'name' => config('invoice.business_name'),
                     'registered_name' => config('invoice.registered_name'),
