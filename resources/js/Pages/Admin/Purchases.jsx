@@ -26,7 +26,7 @@ function orderClass(status) {
         return "bg-danger-subtle text-danger";
     }
 
-    if (status === "awaiting_payment") {
+    if (status === "pending" || status === "awaiting_payment") {
         return "bg-warning-subtle text-warning-emphasis";
     }
 
@@ -178,6 +178,9 @@ export default function AdminPurchases({
                         )}
                         {props.errors?.order && (
                             <div className="alert alert-danger">{props.errors.order}</div>
+                        )}
+                        {props.errors?.stock && (
+                            <div className="alert alert-danger">{props.errors.stock}</div>
                         )}
 
                         <div className="small text-muted mb-3">
