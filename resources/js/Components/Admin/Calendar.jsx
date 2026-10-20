@@ -134,7 +134,7 @@ export default function AdminCalendar({
                 <div className="d-flex flex-wrap gap-2 small mt-2 mb-3" aria-label="Calendar legend">
                     <span className="d-inline-flex align-items-center gap-1">
                         <span className="rounded-circle" style={{ width: 8, height: 8, background: "#b91c1c" }} />
-                        Fully booked
+                        Fully booked / blocked
                     </span>
                     <span className="d-inline-flex align-items-center gap-1">
                         <span className="rounded-circle" style={{ width: 8, height: 8, background: "#b7791f" }} />
