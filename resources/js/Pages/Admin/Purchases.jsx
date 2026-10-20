@@ -46,6 +46,7 @@ function statusLabel(status) {
 
 export default function AdminPurchases({
     orders = [],
+    attentionOrders = [],
     summary = {},
     filters = {},
 }) {
@@ -59,6 +60,7 @@ export default function AdminPurchases({
     const [paymentMethod, setPaymentMethod] = useState(
         filters.payment_method ?? ""
     );
+    const [attentionFilter, setAttentionFilter] = useState(filters.attention ?? "");
     const [viewingOrder, setViewingOrder] = useState(null);
     const [cancellingOrderId, setCancellingOrderId] = useState(null);
     const [updatingOrderId, setUpdatingOrderId] = useState(null);
@@ -66,8 +68,20 @@ export default function AdminPurchases({
     const orderRows = orders.data ?? (Array.isArray(orders) ? orders : []);
 
     const cancelOrder = (order) => {
+        const reason = window.prompt(
+            "Enter the cancellation reason for " + order.order_number + " (required, at least 5 characters).",
+            order.payment_status === "failed" ? "Payment failed and customer did not proceed" : "Payment was not completed"
+        );
+
+        if (reason === null) return;
+
+        if (reason.trim().length < 5) {
+            window.alert("Please enter a cancellation reason with at least 5 characters.");
+            return;
+        }
+
         if (!window.confirm(
-            "Cancel unpaid order " + order.order_number + "? The order will be retained in history and cannot be reopened. Paid orders cannot be cancelled here."
+            "Cancel unpaid order " + order.order_number + "? The reason will be saved in order history. Paid orders cannot be cancelled here.\n\nReason: " + reason.trim()
         )) {
             return;
         }
@@ -75,7 +89,7 @@ export default function AdminPurchases({
         setCancellingOrderId(order.id);
         router.patch(
             "/admin/purchases/" + order.id + "/cancel",
-            {},
+            { reason: reason.trim() },
             {
                 preserveScroll: true,
                 onSuccess: () => setViewingOrder(null),
@@ -115,6 +129,7 @@ export default function AdminPurchases({
                 payment_status: paymentStatus,
                 order_status: orderStatus,
                 payment_method: paymentMethod,
+                attention: attentionFilter,
             },
             {
                 preserveState: true,
@@ -124,11 +139,34 @@ export default function AdminPurchases({
         );
     };
 
+    const applyQuickFilter = (preset) => {
+        const next = {
+            search: "",
+            payment_status: preset.payment_status ?? "",
+            order_status: preset.order_status ?? "",
+            payment_method: preset.payment_method ?? "",
+            attention: preset.attention ?? "",
+        };
+
+        setSearch(next.search);
+        setPaymentStatus(next.payment_status);
+        setOrderStatus(next.order_status);
+        setPaymentMethod(next.payment_method);
+        setAttentionFilter(next.attention);
+
+        router.get("/admin/purchases", next, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    };
+
     const clearFilters = () => {
         setSearch("");
         setPaymentStatus("");
         setOrderStatus("");
         setPaymentMethod("");
+        setAttentionFilter("");
 
         router.get(
             "/admin/purchases",
@@ -238,6 +276,93 @@ export default function AdminPurchases({
                                 </div>
                             </div>
                         </div>
+
+                        <section className="bg-white border rounded-3 p-3 p-lg-4 mb-3" style={{ boxShadow: "0 3px 12px rgba(0,0,0,0.04)" }}>
+                            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                                <div>
+                                    <h2 className="h5 fw-bold mb-1">Payment queue</h2>
+                                    <p className="small text-muted mb-0">Orders that may need follow-up. Selecting a card filters the order list below.</p>
+                                </div>
+                                <span className="small text-muted">{attentionOrders.length} priority orders shown</span>
+                            </div>
+
+                            <div className="row g-2 mb-4">
+                                <div className="col-6 col-xl-3">
+                                    <button type="button" onClick={() => applyQuickFilter({ payment_status: "pending", order_status: "awaiting_payment" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-warning-subtle">
+                                        <div className="small text-secondary fw-semibold">PENDING ONLINE</div>
+                                        <div className="h3 fw-bold mb-1 text-warning-emphasis">{summary.pending_online_payments ?? 0}</div>
+                                        <div className="small text-secondary">Waiting on customer payment</div>
+                                    </button>
+                                </div>
+                                <div className="col-6 col-xl-3">
+                                    <button type="button" onClick={() => applyQuickFilter({ payment_status: "failed", order_status: "payment_failed" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-danger-subtle">
+                                        <div className="small text-secondary fw-semibold">PAYMENT FAILED</div>
+                                        <div className="h3 fw-bold mb-1 text-danger">{summary.failed_payments ?? 0}</div>
+                                        <div className="small text-secondary">Customer may retry or cancel</div>
+                                    </button>
+                                </div>
+                                <div className="col-6 col-xl-3">
+                                    <button type="button" onClick={() => applyQuickFilter({ payment_status: "pending", order_status: "pending", payment_method: "cash" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-info-subtle">
+                                        <div className="small text-secondary fw-semibold">CASH TO CONFIRM</div>
+                                        <div className="h3 fw-bold mb-1 text-info-emphasis">{summary.cash_awaiting_confirmation ?? 0}</div>
+                                        <div className="small text-secondary">Confirm only when cash is received</div>
+                                    </button>
+                                </div>
+                                <div className="col-6 col-xl-3">
+                                    <button type="button" onClick={() => applyQuickFilter({ attention: "stale" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-light">
+                                        <div className="small text-secondary fw-semibold">UNPAID OVER 24 HOURS</div>
+                                        <div className="h3 fw-bold mb-1 text-dark">{summary.stale_unpaid_orders ?? 0}</div>
+                                        <div className="small text-secondary">Review stale checkouts</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                <h3 className="h6 fw-bold mb-0">Needs attention</h3>
+                                <button type="button" className="btn btn-link btn-sm text-decoration-none" onClick={() => applyQuickFilter({})}>View all orders</button>
+                            </div>
+
+                            {attentionOrders.length ? (
+                                <div className="d-flex flex-column gap-2">
+                                    {attentionOrders.map((order) => {
+                                        const actionText = order.next_action === "confirm_cash_payment"
+                                            ? "Confirm only after cash has been received."
+                                            : order.next_action === "retry_or_cancel"
+                                                ? "Customer can retry payment. Cancel if they no longer wish to proceed."
+                                                : order.is_stale_unpaid
+                                                    ? "Stale checkout: verify payment state before cancelling."
+                                                    : "Waiting for payment confirmation.";
+
+                                        return (
+                                            <div key={order.id} className="border rounded-3 p-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                                                <div className="min-w-0">
+                                                    <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                                        <span className="fw-bold">{order.order_number}</span>
+                                                        {order.is_stale_unpaid && <span className="badge rounded-pill bg-danger-subtle text-danger">Over 24 hours</span>}
+                                                        <span className={"badge rounded-pill text-capitalize " + paymentClass(order.payment_status)}>{statusLabel(order.payment_status)}</span>
+                                                        <span className={"badge rounded-pill text-capitalize " + orderClass(order.order_status)}>{statusLabel(order.order_status)}</span>
+                                                    </div>
+                                                    <div className="small text-muted">{order.customer_name} · {paymentLabel(order.payment_method)} · ₱{Number(order.total ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                    <div className={"small mt-1 " + (order.is_stale_unpaid ? "text-danger fw-semibold" : "text-secondary")}>
+                                                        {order.age_hours >= 24
+                                                            ? "Last order update " + Math.floor(order.age_hours / 24) + " day(s) ago"
+                                                            : "Last order update " + order.age_hours + " hour(s) ago"}
+                                                        {" · "}{actionText}
+                                                    </div>
+                                                </div>
+                                                <button type="button" className="btn btn-outline-primary btn-sm fw-bold flex-shrink-0" onClick={() => setViewingOrder(order)}>REVIEW ORDER</button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="border rounded-3 bg-light p-4 text-center">
+                                    <i className="bi bi-check-circle fs-4 text-success d-block mb-2" />
+                                    <div className="fw-semibold">No unpaid orders need attention</div>
+                                    <div className="small text-muted mt-1">New payment issues and pending orders will appear here.</div>
+                                </div>
+                            )}
+                        </section>
 
                         <div
                             className="bg-white border rounded-3 p-3 mb-3"
@@ -705,6 +830,19 @@ export default function AdminPurchases({
                         {viewingOrder.order_status === "payment_failed" && (
                             <div className="alert alert-warning small mt-3 mb-0">
                                 Payment failed. The customer can retry from their own Purchases page. Cancel this order if they no longer want to proceed.
+                            </div>
+                        )}
+
+                        {viewingOrder.is_stale_unpaid && (
+                            <div className="alert alert-danger small mt-3 mb-0">
+                                This unpaid order has not been updated for over 24 hours. Verify the current payment state before cancelling; do not cancel if payment is still pending at the provider.
+                            </div>
+                        )}
+
+                        {viewingOrder.cancellation_reason && (
+                            <div className="border rounded-3 bg-light p-3 mt-3">
+                                <div className="small text-muted fw-bold mb-1">CANCELLATION REASON</div>
+                                <div className="small">{viewingOrder.cancellation_reason}</div>
                             </div>
                         )}
 
