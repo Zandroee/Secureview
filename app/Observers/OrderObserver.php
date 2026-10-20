@@ -4,12 +4,19 @@ namespace App\Observers;
 
 use App\Models\Order;
 use App\Models\OrderEvent;
+use App\Services\OrderNotificationService;
 use Illuminate\Support\Facades\Auth;
 
 class OrderObserver
 {
+    public function __construct(private OrderNotificationService $orderNotifications)
+    {
+    }
+
     public function created(Order $order): void
     {
+        $this->orderNotifications->notifyNewOrderPlaced($order);
+
         $method = $this->paymentMethodLabel($order->payment_method);
 
         $this->record(
