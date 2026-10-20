@@ -8,5 +8,11 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('secureview:send-upcoming-job-reminders')->everyFifteenMinutes()->withoutOverlapping();
-Schedule::call(fn () => \\App\\Models\\Inquiry::escalateOverdueUrgency())->name('escalate-overdue-inquiry-urgency')->dailyAt('00:01')->withoutOverlapping();
+Schedule::command('secureview:send-upcoming-job-reminders')
+    ->everyFifteenMinutes()
+    ->name('send-upcoming-job-reminders')
+    ->withoutOverlapping();
+Schedule::call(fn () => \App\Models\Inquiry::escalateOverdueUrgency())
+    ->name('escalate-overdue-inquiry-urgency')
+    ->dailyAt('00:01')
+    ->withoutOverlapping();
