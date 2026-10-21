@@ -18,9 +18,6 @@
                 };
 
                 applyTheme();
-                if (preference === 'system') {
-                    media.addEventListener('change', applyTheme);
-                }
             })();
         </script>
 
