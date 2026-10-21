@@ -208,6 +208,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/checkout/buy-now', [CheckoutController::class, 'buyNow'])->name('checkout.buy-now');
     Route::get('/checkout/payment/{order}/success', [CheckoutController::class, 'paymentSuccess'])->name('checkout.payment.success');
     Route::get('/checkout/payment/{order}/cancel', [CheckoutController::class, 'paymentCancel'])->name('checkout.payment.cancel');
 
