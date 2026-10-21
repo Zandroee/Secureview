@@ -135,11 +135,11 @@ export default function AdminTransactions({
                             </div>
 
                             <h1 className="fw-bold mb-1">
-                                TRANSACTION LOGS
+                                TRANSACTION RECORDS
                             </h1>
 
                             <div className="small text-muted">
-                                Review payment records linked to orders. Each row shows the latest payment status stored for that order.
+                                Review payment and invoice records linked to each order. You can open an order's invoice directly from this page.
                             </div>
                         </div>
 
@@ -147,7 +147,7 @@ export default function AdminTransactions({
                             <div className="col-6 col-xl-3">
                                 <div className="bg-white border rounded-3 p-3 h-100">
                                     <div className="small text-muted">
-                                        MATCHING TRANSACTIONS
+                                        MATCHING RECORDS
                                     </div>
 
                                     <div className="h4 fw-bold mb-0">
@@ -350,7 +350,7 @@ export default function AdminTransactions({
                                     <thead className="table-light">
                                         <tr>
                                             <th className="ps-3">
-                                                TRANSACTION
+                                                TRANSACTION RECORD
                                             </th>
                                             <th>CUSTOMER</th>
                                             <th>AMOUNT</th>
@@ -385,6 +385,12 @@ export default function AdminTransactions({
                                                         <div className="small text-muted">
                                                             {transaction.order_number}
                                                         </div>
+                                                        {transaction.invoice_record && (
+                                                            <div className="small text-success mt-1">
+                                                                <i className="bi bi-file-earmark-check me-1"></i>
+                                                                {transaction.invoice_record.record_number}
+                                                            </div>
+                                                        )}
                                                     </td>
 
                                                     <td>
@@ -441,17 +447,25 @@ export default function AdminTransactions({
                                                     </td>
 
                                                     <td className="text-end pe-3">
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-outline-primary btn-sm fw-bold"
-                                                            onClick={() =>
-                                                                setViewingTransaction(
-                                                                    transaction
-                                                                )
-                                                            }
-                                                        >
-                                                            VIEW
-                                                        </button>
+                                                        <div className="d-flex flex-column flex-xl-row justify-content-end gap-2">
+                                                            <a
+                                                                href={transaction.invoice_url}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="btn btn-outline-primary btn-sm fw-bold"
+                                                                title={transaction.invoice_record ? "Open saved invoice snapshot" : "Open invoice preview"}
+                                                            >
+                                                                <i className="bi bi-receipt me-1"></i>
+                                                                {transaction.invoice_record ? "VIEW INVOICE" : "INVOICE PREVIEW"}
+                                                            </a>
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-outline-secondary btn-sm fw-bold"
+                                                                onClick={() => setViewingTransaction(transaction)}
+                                                            >
+                                                                DETAILS
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
@@ -459,7 +473,7 @@ export default function AdminTransactions({
                                     </tbody>
                                 </table>
                             </div>
-                            <AdminPagination pagination={transactions} label="transactions" insideCard />
+                            <AdminPagination pagination={transactions} label="transaction records" insideCard />
                         </div>
                     </main>
                 </div>
@@ -496,7 +510,7 @@ export default function AdminTransactions({
                                         fontFamily: "Outfit, sans-serif",
                                     }}
                                 >
-                                    TRANSACTION DETAILS
+                                    TRANSACTION RECORD DETAILS
                                 </h4>
                             </div>
 
@@ -658,7 +672,31 @@ export default function AdminTransactions({
                             )}
                         </div>
 
-                        <div className="d-flex justify-content-end mt-3">
+                        {viewingTransaction.invoice_record ? (
+                            <div className="alert alert-success small mt-3 mb-0">
+                                <div className="fw-bold">Saved internal invoice record</div>
+                                <div>{viewingTransaction.invoice_record.record_number}</div>
+                                {viewingTransaction.invoice_record.issued_at && (
+                                    <div className="text-muted mt-1">Saved {viewingTransaction.invoice_record.issued_at}</div>
+                                )}
+                                <div className="text-muted mt-1">This opens the saved snapshot, not a live version.</div>
+                            </div>
+                        ) : (
+                            <div className="alert alert-secondary small mt-3 mb-0">
+                                No permanent internal invoice record has been saved for this order yet. The invoice button opens the current invoice preview.
+                            </div>
+                        )}
+
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-3">
+                            <a
+                                href={viewingTransaction.invoice_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="btn btn-primary fw-bold"
+                            >
+                                <i className="bi bi-receipt me-2"></i>
+                                {viewingTransaction.invoice_record ? "VIEW SAVED INVOICE" : "VIEW INVOICE PREVIEW"}
+                            </a>
                             <button
                                 type="button"
                                 className="btn btn-outline-primary fw-bold"
