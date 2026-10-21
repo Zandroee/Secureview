@@ -15,12 +15,13 @@ Before uploading the app, confirm the plan supports:
 
 Official references: [Hostinger SSH access](https://www.hostinger.com/support/1583645-how-to-enable-ssh-access-in-hostinger/), [Composer at Hostinger](https://www.hostinger.com/support/5792078-how-to-use-composer-at-hostinger/), [Hostinger Composer/PHP version troubleshooting](https://www.hostinger.com/support/5792082-how-to-solve-common-composer-issues-at-hostinger/).
 
-## 2. Build the front-end assets locally
+## 2. Test and package the Windows release
 
 From the project root on your Windows computer:
 
 ```powershell
 cd D:\secureview-project
+git status
 git switch dev
 git pull origin dev
 npm ci
@@ -28,9 +29,35 @@ npm run build
 php artisan test
 ```
 
-Use a reviewed, tested commit for the actual release rather than deploying unreviewed feature branches. The build should generate `public/build/manifest.json` and versioned files beneath `public/build/assets/`.
+Preserve local uncommitted changes before switching branches. Deploy a reviewed commit that passes GitHub Actions; do not deploy unreviewed feature branches.
 
-Upload the generated `public/build` contents to the deployed Laravel app. When using the split-directory shared-hosting layout below, also copy that build directory to `public_html/build`, because that is the directory the web server exposes as `/build/*`.
+For Hostinger Web Hosting, the repository includes a package helper. Run this from PowerShell at the repository root:
+
+```powershell
+.\scripts\package-hostinger.ps1
+```
+
+The script builds Vite assets, creates a separate staging copy, installs production Composer dependencies in that staging copy, rewrites the public front-controller paths for the split-directory layout, adds a rule blocking script execution inside public catalog uploads, and creates:
+
+```text
+dist\secureview-hostinger-release.zip
+```
+
+It does not use or copy your local `.env`, development `vendor/`, `node_modules/`, tests, local logs, or cached configuration. It also excludes local catalog uploads by default so future packages do not overwrite live media.
+
+For the **first deployment only**, if you want to move existing local product/package images from `storage/app/public`, inspect that folder first and run:
+
+```powershell
+.\scripts\package-hostinger.ps1 -IncludeLocalUploads
+```
+
+Only use that option after confirming the folder contains intended public catalog media. For routine releases, do not use it. Never delete or replace `public_html/storage` on a live site during a code update.
+
+The archive contains sibling `secureview_app/` and `public_html/` directories plus deployment instructions. Extract the private app folder outside the public web root. Merge the contents of the archive's `public_html/` folder into the actual domain `public_html/` directory; do not accidentally create `public_html/public_html/`.
+
+The script requires local Node.js/npm, PHP compatible with the project's `^8.2` requirement, Composer, and Windows `robocopy`. If dependency installation fails because your local PHP CLI lacks a required extension or has the wrong PHP version, fix that first rather than ignoring Composer's platform checks.
+
+If you use SSH to build directly on Hostinger instead, follow the server-side Composer commands in section 6.
 
 ## 3. Create the database in hPanel
 
