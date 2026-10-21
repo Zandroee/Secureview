@@ -17,6 +17,80 @@ use Inertia\Inertia;
 
 class CheckoutController extends Controller
 {
+    public function buyNow(Request $request, InventoryService $inventory)
+    {
+        $validated = $request->validate([
+            'item_type' => ['required', 'in:product,package'],
+            'item_id' => ['required', 'integer', 'min:1'],
+            'quantity' => ['required', 'integer', 'min:1', 'max:99'],
+        ]);
+
+        $modelClass = $validated['item_type'] === 'product'
+            ? Product::class
+            : Package::class;
+        $purchasable = $modelClass::findOrFail($validated['item_id']);
+
+        $stockError = $inventory->getAvailabilityError(
+            $purchasable,
+            (int) $validated['quantity']
+        );
+
+        if ($stockError) {
+            return back()->withErrors([
+                'stock' => $stockError,
+            ]);
+        }
+
+        // A Buy Now selection is session-backed and does not modify the user's cart.
+        $request->session()->forget(['orderNumber', 'paymentMethod', 'buy_now']);
+        $request->session()->put('buy_now', [
+            'item_type' => $validated['item_type'],
+            'item_id' => (int) $purchasable->id,
+            'quantity' => (int) $validated['quantity'],
+        ]);
+
+        return redirect()->route('checkout');
+    }
+
+    private function selectedBuyNowItem(Request $request): ?array
+    {
+        $selection = $request->session()->get('buy_now');
+
+        if (!is_array($selection)) {
+            return null;
+        }
+
+        $itemType = $selection['item_type'] ?? '';
+        $itemId = filter_var($selection['item_id'] ?? null, FILTER_VALIDATE_INT);
+        $quantity = filter_var($selection['quantity'] ?? null, FILTER_VALIDATE_INT);
+
+        if (
+            !in_array($itemType, ['product', 'package'], true) ||
+            $itemId === false ||
+            $itemId < 1 ||
+            $quantity === false ||
+            $quantity < 1 ||
+            $quantity > 99
+        ) {
+            return ['error' => 'Your Buy Now selection is invalid. Please select the item again.'];
+        }
+
+        $modelClass = $itemType === 'product' ? Product::class : Package::class;
+        $purchasable = $modelClass::find($itemId);
+
+        if (!$purchasable) {
+            return ['error' => 'The selected item is no longer available. Please choose it again.'];
+        }
+
+        return [
+            'item_type' => $itemType,
+            'item_id' => $itemId,
+            'quantity' => $quantity,
+            'model_class' => $modelClass,
+            'purchasable' => $purchasable,
+        ];
+    }
+
     public function index(Request $request, InventoryService $inventory)
     {
         $orderNumber = $request->session()->get('orderNumber');
