@@ -73,7 +73,12 @@ class AuthController extends Controller
             'remember' => ['sometimes', 'boolean'],
         ]);
 
-        $user = User::where('email', $credentials['email'])->first();
+        // Keep the remember flag out of credential validation; it is not a user-table column.
+        $loginCredentials = [
+            'email' => $credentials['email'],
+            'password' => $credentials['password'],
+        ];
+        $user = User::where('email', $loginCredentials['email'])->first();
 
         if (!$user) {
             return back()->withErrors([
@@ -82,7 +87,7 @@ class AuthController extends Controller
         }
 
         // Check the password without logging the user in.
-        if (!Auth::validate($credentials)) {
+        if (!Auth::validate($loginCredentials)) {
             return back()->withErrors([
                 'email' => 'The provided credentials are incorrect.',
             ])->onlyInput('email');
