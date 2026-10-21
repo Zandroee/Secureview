@@ -111,6 +111,7 @@ export default function ServiceLocationPicker({
     const markerRef = useRef(null);
     const onChangeRef = useRef(onChange);
     const addressRef = useRef({ streetAddress, city });
+    const lastAddressQueryRef = useRef(makeSearchQuery(streetAddress, city));
     const searchedAddressRef = useRef("");
     const pendingSearchPositionRef = useRef(null);
     const locationNoun = locationType === "delivery" ? "delivery" : "service";
@@ -222,12 +223,18 @@ export default function ServiceLocationPicker({
 
     useEffect(() => {
         const latestQuery = makeSearchQuery(streetAddress, city);
-        if (!searchedAddressRef.current || latestQuery === searchedAddressRef.current) return;
+        if (latestQuery === lastAddressQueryRef.current) return;
 
+        lastAddressQueryRef.current = latestQuery;
         searchedAddressRef.current = "";
         pendingSearchPositionRef.current = null;
         markerRef.current?.remove();
         setPin(null);
+        onChangeRef.current?.({
+            service_latitude: "",
+            service_longitude: "",
+            google_place_id: "",
+        });
         setLocationMessage("Address changed. Search again to update the map, or click the map to place the pin manually.");
     }, [streetAddress, city]);
 
