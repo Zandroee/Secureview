@@ -71,8 +71,8 @@ Route::get('/signup', function (Request $request) {
     ]);
 })->name('signup');
 
-Route::post('/login', [AuthController::class, 'authenticate'])->name('login.authenticate');
-Route::post('/register', [AuthController::class, 'register'])->name('register');
+Route::post('/login', [AuthController::class, 'authenticate'])->middleware('throttle:login')->name('login.authenticate');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register')->name('register');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/email/verify', function () {
@@ -188,7 +188,7 @@ Route::post('/reset-password', function (Request $request) {
         : back()->withErrors([
             'email' => [__($status)],
         ]);
-})->middleware('guest')->name('password.update');
+})->middleware(['guest', 'throttle:5,1'])->name('password.update');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
