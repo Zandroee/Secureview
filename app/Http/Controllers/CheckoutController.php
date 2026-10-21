@@ -17,6 +17,80 @@ use Inertia\Inertia;
 
 class CheckoutController extends Controller
 {
+    public function buyNow(Request $request, InventoryService $inventory)
+    {
+        $validated = $request->validate([
+            'item_type' => ['required', 'in:product,package'],
+            'item_id' => ['required', 'integer', 'min:1'],
+            'quantity' => ['required', 'integer', 'min:1', 'max:99'],
+        ]);
+
+        $modelClass = $validated['item_type'] === 'product'
+            ? Product::class
+            : Package::class;
+        $purchasable = $modelClass::findOrFail($validated['item_id']);
+
+        $stockError = $inventory->getAvailabilityError(
+            $purchasable,
+            (int) $validated['quantity']
+        );
+
+        if ($stockError) {
+            return back()->withErrors([
+                'stock' => $stockError,
+            ]);
+        }
+
+        // A Buy Now selection is session-backed and does not modify the user's cart.
+        $request->session()->forget(['orderNumber', 'paymentMethod', 'buy_now']);
+        $request->session()->put('buy_now', [
+            'item_type' => $validated['item_type'],
+            'item_id' => (int) $purchasable->id,
+            'quantity' => (int) $validated['quantity'],
+        ]);
+
+        return redirect()->route('checkout');
+    }
+
+    private function selectedBuyNowItem(Request $request): ?array
+    {
+        $selection = $request->session()->get('buy_now');
+
+        if (!is_array($selection)) {
+            return null;
+        }
+
+        $itemType = $selection['item_type'] ?? '';
+        $itemId = filter_var($selection['item_id'] ?? null, FILTER_VALIDATE_INT);
+        $quantity = filter_var($selection['quantity'] ?? null, FILTER_VALIDATE_INT);
+
+        if (
+            !in_array($itemType, ['product', 'package'], true) ||
+            $itemId === false ||
+            $itemId < 1 ||
+            $quantity === false ||
+            $quantity < 1 ||
+            $quantity > 99
+        ) {
+            return ['error' => 'Your Buy Now selection is invalid. Please select the item again.'];
+        }
+
+        $modelClass = $itemType === 'product' ? Product::class : Package::class;
+        $purchasable = $modelClass::find($itemId);
+
+        if (!$purchasable) {
+            return ['error' => 'The selected item is no longer available. Please choose it again.'];
+        }
+
+        return [
+            'item_type' => $itemType,
+            'item_id' => $itemId,
+            'quantity' => $quantity,
+            'model_class' => $modelClass,
+            'purchasable' => $purchasable,
+        ];
+    }
+
     public function index(Request $request, InventoryService $inventory)
     {
         $orderNumber = $request->session()->get('orderNumber');
@@ -37,6 +111,66 @@ class CheckoutController extends Controller
                 'success' => true,
                 'orderNumber' => $orderNumber,
                 'paymentMethod' => $request->session()->get('paymentMethod'),
+            ]);
+        }
+
+        $buyNow = $this->selectedBuyNowItem($request);
+
+        if ($buyNow !== null) {
+            if (isset($buyNow['error'])) {
+                $request->session()->forget('buy_now');
+
+                return redirect('/products')->withErrors([
+                    'cart' => $buyNow['error'],
+                ]);
+            }
+
+            $purchasable = $buyNow['purchasable'];
+            $stockError = $inventory->getAvailabilityError(
+                $purchasable,
+                (int) $buyNow['quantity']
+            );
+
+            if ($stockError) {
+                $request->session()->forget('buy_now');
+
+                return redirect(
+                    '/' . ($buyNow['item_type'] === 'package' ? 'packages/' : 'products/') . $buyNow['item_id']
+                )->withErrors([
+                    'stock' => $stockError,
+                ]);
+            }
+
+            $quantity = (int) $buyNow['quantity'];
+            $items = collect([[
+                'id' => 'buy-now-' . $purchasable->id,
+                'type' => $buyNow['item_type'],
+                'name' => $purchasable->name,
+                'image' => $purchasable->image,
+                'price' => (float) $purchasable->price,
+                'quantity' => $quantity,
+                'subtotal' => (float) $purchasable->price * $quantity,
+                'available_stock' => $inventory->getAvailableStock($purchasable),
+            ]]);
+
+            $subtotal = $items->sum('subtotal');
+            $shippingFee = 0;
+
+            return Inertia::render('checkout', [
+                'customer' => [
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    'phone' => $request->user()->phone ?? '',
+                ],
+                'cart' => [
+                    'items' => $items,
+                    'subtotal' => (float) $subtotal,
+                    'shipping_fee' => (float) $shippingFee,
+                    'total' => (float) ($subtotal + $shippingFee),
+                ],
+                'success' => false,
+                'orderNumber' => null,
+                'paymentMethod' => null,
             ]);
         }
 
@@ -137,34 +271,74 @@ class CheckoutController extends Controller
             ])->withInput();
         }
 
-        $cart = $request->user()->cart;
+        $isBuyNow = $request->session()->has('buy_now');
+        $buyNow = $this->selectedBuyNowItem($request);
+        $cart = null;
 
-        if (!$cart) {
-            return back()->withErrors([
-                'cart' => 'Your cart is empty.',
-            ]);
+        if ($isBuyNow) {
+            if ($buyNow === null || isset($buyNow['error'])) {
+                $request->session()->forget('buy_now');
+
+                return back()->withErrors([
+                    'cart' => $buyNow['error'] ?? 'Your Buy Now selection is no longer available. Please choose the item again.',
+                ]);
+            }
+
+            $purchasable = $buyNow['purchasable'];
+            $stockError = $inventory->getAvailabilityError(
+                $purchasable,
+                (int) $buyNow['quantity']
+            );
+
+            if ($stockError) {
+                return back()->withErrors([
+                    'stock' => $stockError,
+                ]);
+            }
+
+            $checkoutItems = collect([[
+                'purchasable' => $purchasable,
+                'purchasable_type' => $buyNow['model_class'],
+                'purchasable_id' => $purchasable->id,
+                'quantity' => (int) $buyNow['quantity'],
+            ]]);
+        } else {
+            $cart = $request->user()->cart;
+
+            if (!$cart) {
+                return back()->withErrors([
+                    'cart' => 'Your cart is empty.',
+                ]);
+            }
+
+            $cart->load('items.purchasable');
+
+            if ($cart->items->isEmpty()) {
+                return back()->withErrors([
+                    'cart' => 'Your cart is empty.',
+                ]);
+            }
+
+            $checkoutItems = $cart->items->map(fn ($cartItem) => [
+                'purchasable' => $cartItem->purchasable,
+                'purchasable_type' => $cartItem->purchasable_type,
+                'purchasable_id' => $cartItem->purchasable_id,
+                'quantity' => (int) $cartItem->quantity,
+            ])->values();
         }
 
-        $cart->load('items.purchasable');
-
-        if ($cart->items->isEmpty()) {
-            return back()->withErrors([
-                'cart' => 'Your cart is empty.',
-            ]);
-        }
-
-        foreach ($cart->items as $cartItem) {
-            $purchasable = $cartItem->purchasable;
+        foreach ($checkoutItems as $checkoutItem) {
+            $purchasable = $checkoutItem['purchasable'];
 
             if (!$purchasable) {
                 return back()->withErrors([
-                    'stock' => 'An item in your cart is no longer available.',
+                    'stock' => 'An item in your checkout is no longer available.',
                 ]);
             }
 
             $stockError = $inventory->getAvailabilityError(
                 $purchasable,
-                (int) $cartItem->quantity
+                (int) $checkoutItem['quantity']
             );
 
             if ($stockError) {
@@ -174,16 +348,18 @@ class CheckoutController extends Controller
             }
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $cart, $deliveryDetails, $deliveryCity) {
+        $order = DB::transaction(function () use ($request, $validated, $checkoutItems, $deliveryDetails, $deliveryCity) {
             $subtotal = 0;
 
-            foreach ($cart->items as $cartItem) {
-                if (!$cartItem->purchasable) {
-                    abort(422, 'An item in your cart is no longer available.');
+            foreach ($checkoutItems as $checkoutItem) {
+                $purchasable = $checkoutItem['purchasable'];
+
+                if (!$purchasable) {
+                    abort(422, 'An item in your checkout is no longer available.');
                 }
 
-                $price = (float) $cartItem->purchasable->price;
-                $quantity = (int) $cartItem->quantity;
+                $price = (float) $purchasable->price;
+                $quantity = (int) $checkoutItem['quantity'];
 
                 $subtotal += $price * $quantity;
             }
@@ -216,14 +392,14 @@ class CheckoutController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            foreach ($cart->items as $cartItem) {
-                $purchasable = $cartItem->purchasable;
+            foreach ($checkoutItems as $checkoutItem) {
+                $purchasable = $checkoutItem['purchasable'];
                 $price = (float) $purchasable->price;
-                $quantity = (int) $cartItem->quantity;
+                $quantity = (int) $checkoutItem['quantity'];
 
                 $order->items()->create([
-                    'purchasable_type' => $cartItem->purchasable_type,
-                    'purchasable_id' => $cartItem->purchasable_id,
+                    'purchasable_type' => $checkoutItem['purchasable_type'],
+                    'purchasable_id' => $checkoutItem['purchasable_id'],
                     'name' => $purchasable->name,
                     'warranty_period' => $purchasable->warranty ?? null,
                     'price' => $price,
@@ -256,7 +432,13 @@ class CheckoutController extends Controller
                 'related_id' => $order->id,
             ]);
 
-            $cart->items()->delete();
+            if ($cart) {
+                $cart->items()->delete();
+            }
+
+            if ($isBuyNow) {
+                $request->session()->forget('buy_now');
+            }
 
             return redirect()->route('checkout')->with([
                 'orderNumber' => $order->order_number,
@@ -368,6 +550,19 @@ class CheckoutController extends Controller
                 'related_id' => $order->id,
             ]);
 
+            if ($isBuyNow) {
+                $buyNowOrderIds = array_map(
+                    'intval',
+                    (array) $request->session()->get('buy_now_order_ids', [])
+                );
+                $buyNowOrderIds[] = (int) $order->id;
+                $request->session()->put(
+                    'buy_now_order_ids',
+                    array_values(array_unique($buyNowOrderIds))
+                );
+                $request->session()->forget('buy_now');
+            }
+
             return Inertia::location($checkoutUrl);
         } catch (\Throwable $exception) {
             report($exception);
@@ -449,7 +644,13 @@ class CheckoutController extends Controller
                             'related_id' => $order->id,
                         ]);
 
-                        if (!$isInstallationCheckout) {
+                        $buyNowOrderIds = array_map(
+                            'intval',
+                            (array) $request->session()->get('buy_now_order_ids', [])
+                        );
+                        $isBuyNowOrder = in_array((int) $order->id, $buyNowOrderIds, true);
+
+                        if (!$isInstallationCheckout && !$isBuyNowOrder) {
                             $request->user()->cart?->items()->delete();
                         }
 
@@ -462,6 +663,23 @@ class CheckoutController extends Controller
         }
 
         $order->refresh();
+
+        if ($order->payment_status === 'paid') {
+            $buyNowOrderIds = array_map(
+                'intval',
+                (array) $request->session()->get('buy_now_order_ids', [])
+            );
+            $buyNowOrderIds = array_values(array_filter(
+                $buyNowOrderIds,
+                fn ($id) => $id !== (int) $order->id
+            ));
+
+            if ($buyNowOrderIds) {
+                $request->session()->put('buy_now_order_ids', $buyNowOrderIds);
+            } else {
+                $request->session()->forget('buy_now_order_ids');
+            }
+        }
 
         // The actual Installation inquiry is created only after PayMongo confirms payment.
         if ($order->payment_status === 'paid') {

@@ -88,14 +88,32 @@ export default function ProductDetails({ product, reviews = [] }) {
     const startIndex = (reviewPage - 1) * reviewsPerPage;
     const currentReviews = filteredReviews.slice(startIndex, startIndex + reviewsPerPage);
 
-    const handleInquiry = () => {
+    const handleBuyNow = () => {
         if (!user?.email_verified_at) {
             router.visit("/login");
             return;
         }
 
-        router.visit(
-            "/inquiry?item_type=product&item_id=" + product.id
+        setCartMessage("");
+        setCartError("");
+
+        router.post(
+            "/checkout/buy-now",
+            {
+                item_type: "product",
+                item_id: product.id,
+                quantity: amount,
+            },
+            {
+                preserveScroll: true,
+                onError: (serverErrors) => {
+                    setCartError(
+                        serverErrors.stock ||
+                        serverErrors.cart ||
+                        "Unable to start checkout for this item."
+                    );
+                },
+            }
         );
     };
 
@@ -233,17 +251,19 @@ export default function ProductDetails({ product, reviews = [] }) {
                             <div className="d-flex gap-2">
                                 <button
                                     type="button"
-                                    className="btn btn-outline-primary fw-bold"
-                                    onClick={handleInquiry}
+                                    className="btn btn-primary fw-bold"
+                                    onClick={handleBuyNow}
+                                    disabled={availableStock < amount || availableStock === 0}
                                 >
-                                    Inquire
+                                    <i className="bi bi-lightning-charge me-2"></i>
+                                    Buy Now
                                 </button>
 
                                 <button
                                     type="button"
-                                    className="btn btn-primary fw-bold"
+                                    className="btn btn-outline-primary fw-bold"
                                     onClick={handleAddToCart}
-                                    disabled={availableStock === 0}
+                                    disabled={availableStock < amount || availableStock === 0}
                                 >
                                     <i className="bi bi-cart3 me-2"></i>
                                     Add To Cart

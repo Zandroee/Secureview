@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 
-export default function ProductCard({ name, image, price, badge, specifications = [], rating = 0, available = true, onDetails, variant = "product" }) {
+export default function ProductCard({ name, image, price, badge, specifications = [], inclusions = [], rating = 0, available = true, onDetails, variant = "product" }) {
     const [isHovered, setIsHovered] = useState(false);
 
     const safeSpecifications = Array.isArray(specifications) ? specifications : [];
+    const safeInclusions = Array.isArray(inclusions) ? inclusions.filter((item) => item && item.name) : [];
 
     const isPackage = variant === "package";
     const imageHeight = isPackage ? "220px" : "180px";
@@ -66,6 +67,31 @@ export default function ProductCard({ name, image, price, badge, specifications 
                         </li>
                     ))}
                 </ul>
+
+                {isPackage && safeInclusions.length > 0 && (
+                    <div className="mb-3">
+                        <div className="small fw-bold text-uppercase mb-1" style={{ fontSize: "0.68rem", letterSpacing: "0.02em" }}>
+                            Includes
+                        </div>
+                        <ul
+                            className="ps-3 mb-0"
+                            style={{
+                                fontSize: "0.72rem",
+                                lineHeight: "1.35",
+                                maxHeight: "108px",
+                                overflowY: "auto",
+                                overflowWrap: "anywhere",
+                            }}
+                        >
+                            {safeInclusions.map((item, index) => (
+                                <li key={item.id ?? (item.name + "-" + index)} className="mb-1">
+                                    {item.name}
+                                    {Number(item.quantity) > 1 ? " × " + Number(item.quantity) : ""}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
 
                 <div className="mt-auto">
 
