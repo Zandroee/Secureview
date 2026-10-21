@@ -12,6 +12,7 @@ export default function Login() {
     const { data, setData, post, processing } = useForm({
         email: "",
         password: "",
+        remember: false,
     });
 
     const handleSubmit = (e) => {
@@ -203,13 +204,25 @@ export default function Login() {
                                 )}
                             </div>
 
-                            {/* FORGOT PASSWORD */}
-                            <div className="mb-4">
+                            {/* REMEMBER ME / FORGOT PASSWORD */}
+                            <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+                                <div className="form-check d-flex align-items-center gap-2 mb-0">
+                                    <input
+                                        id="login-remember"
+                                        type="checkbox"
+                                        className="form-check-input mt-0"
+                                        checked={Boolean(data.remember)}
+                                        onChange={(event) => setData("remember", event.target.checked)}
+                                    />
+                                    <label htmlFor="login-remember" className="form-check-label small">
+                                        Remember Me
+                                    </label>
+                                </div>
                                 <Link
                                     href="/forgot-password"
                                     className="text-primary text-decoration-none small"
                                 >
-                                    Forgot Password
+                                    Forgot Password?
                                 </Link>
                             </div>
 
