@@ -173,7 +173,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                >
+                                 data-bs-dismiss="offcanvas">
                                     HOME
                                 </Link>
                             </li>
@@ -187,7 +187,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                >
+                                 data-bs-dismiss="offcanvas">
                                     PRODUCTS
                                 </Link>
                             </li>
@@ -201,7 +201,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                >
+                                 data-bs-dismiss="offcanvas">
                                     PACKAGES
                                 </Link>
                             </li>
@@ -216,7 +216,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium")
                                     }
-                                >
+                                 data-bs-dismiss="offcanvas">
                                     SERVICES
                                 </Link>
                             </li>
@@ -229,7 +229,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                >
+                                 data-bs-dismiss="offcanvas">
                                     ABOUT
                                 </Link>
                             </li>
@@ -252,7 +252,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         LOGIN
                                     </Link>
 
@@ -266,7 +266,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         SIGN UP
                                     </Link>
                                 </>
@@ -292,7 +292,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         VERIFY EMAIL
                                     </Link>
 
@@ -303,7 +303,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         SIGN OUT
                                     </button>
                                 </>
@@ -335,7 +335,7 @@ export default function Navbar() {
                                                 fontSize: "1.25rem",
                                             }}
                                             aria-label="Notifications"
-                                        >
+                                         data-bs-dismiss="offcanvas">
                                             <i className="bi bi-bell"></i>
 
                                             {notificationCount > 0 && (
@@ -370,7 +370,7 @@ export default function Navbar() {
                                                 fontSize: "1.25rem",
                                             }}
                                             aria-label="Cart"
-                                        >
+                                         data-bs-dismiss="offcanvas">
                                             <i className="bi bi-cart3"></i>
 
                                             {cartCount > 0 && (
@@ -405,7 +405,7 @@ export default function Navbar() {
                                             style={{
                                                 fontFamily: "Outfit, sans-serif",
                                             }}
-                                        >
+                                         data-bs-dismiss="offcanvas">
                                             ADMIN DASHBOARD
                                         </Link>
                                     )}
@@ -415,7 +415,7 @@ export default function Navbar() {
                                             href="/technician/dashboard"
                                             className="btn btn-primary fw-bold w-100"
                                             style={{ fontFamily: "Outfit, sans-serif" }}
-                                        >
+                                         data-bs-dismiss="offcanvas">
                                             TECHNICIAN WORKSPACE
                                         </Link>
                                     )}
@@ -426,7 +426,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         SETTINGS
                                     </Link>
 
@@ -436,7 +436,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         SCHEDULES
                                     </Link>
 
@@ -446,7 +446,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         PURCHASES
                                     </Link>
                                     <Link
@@ -455,7 +455,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         INQUIRIES
                                     </Link>
 
@@ -469,7 +469,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         SIGN OUT
                                     </button>
                                 </>
