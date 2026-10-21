@@ -97,6 +97,12 @@ try {
         Remove-Item -Force -Recurse
     Copy-Item -Path (Join-Path $repoRoot '.env.example') -Destination (Join-Path $appRoot '.env.example') -Force
 
+    # A developer may have `npm run dev` active; never ship Vite's hot file.
+    $viteHotFile = Join-Path $appRoot 'public\hot'
+    if (Test-Path $viteHotFile) {
+        Remove-Item -Path $viteHotFile -Force
+    }
+
     # Remove cached PHP config/routes from a developer environment.
     $bootstrapCache = Join-Path $appRoot 'bootstrap\cache'
     if (Test-Path $bootstrapCache) {
