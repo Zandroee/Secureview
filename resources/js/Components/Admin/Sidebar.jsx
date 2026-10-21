@@ -71,6 +71,12 @@ const menuGroups = [
             icon: "bi-receipt",
         },
         {
+            label: "Settings",
+            href: "/settings",
+            key: "settings",
+            icon: "bi-gear",
+        },
+        {
             label: "Invoice Settings",
             href: "/admin/invoice-settings",
             key: "invoice-settings",
