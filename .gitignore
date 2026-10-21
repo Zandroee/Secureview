@@ -13,6 +13,7 @@
 /.zed
 /auth.json
 /node_modules
+/dist/
 # Do not ignore public/build; keep the generated Vite manifest and assets synchronized with each release.
 /public/hot
 /public/storage
