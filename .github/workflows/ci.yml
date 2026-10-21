@@ -55,3 +55,12 @@ jobs:
 
       - name: Run Laravel feature and unit tests
         run: php artisan test
+
+      - name: Upload production Vite assets for Hostinger
+        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        uses: actions/upload-artifact@v4
+        with:
+          name: secureview-hostinger-vite-${{ github.sha }}
+          path: public/build/
+          if-no-files-found: error
+          retention-days: 7
