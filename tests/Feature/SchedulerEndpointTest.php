@@ -20,6 +20,7 @@ class SchedulerEndpointTest extends TestCase
     public function test_scheduler_endpoint_rejects_missing_or_incorrect_bearer_tokens(): void
     {
         config(['services.cron.secret' => 'unit-test-secret-with-enough-entropy']);
+        Artisan::shouldReceive('call')->never();
 
         $this->getJson('/api/scheduler/run')
             ->assertStatus(401);
@@ -27,8 +28,6 @@ class SchedulerEndpointTest extends TestCase
         $this->withToken('incorrect-secret')
             ->getJson('/api/scheduler/run')
             ->assertStatus(401);
-
-        Artisan::shouldReceive('call')->never();
     }
 
     public function test_authorized_scheduler_request_runs_schedule_command(): void
