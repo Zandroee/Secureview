@@ -91,6 +91,8 @@ domains/YOUR_DOMAIN/
 
 Use your actual domain folder and Hostinger account paths. Upload the whole project into `secureview_app`, then copy the **contents** of its `public/` folder into `public_html/`. Do not put `.env`, `vendor/`, `storage/`, `app/`, or `bootstrap/` in the public web directory.
 
+If you used `scripts/package-hostinger.ps1`, the archive's `public_html/index.php` already contains these path changes. The following manual edit is only needed when you build the folder layout yourself without the package helper.
+
 Edit the copied `public_html/index.php` so its Laravel paths point to the sibling application directory. Replace the original relative paths:
 
 ```php
