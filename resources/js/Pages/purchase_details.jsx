@@ -294,6 +294,18 @@ export default function PurchaseDetails({ order }) {
                                         <div className="fw-semibold">
                                             {order.delivery_address}
                                         </div>
+                                        {order.delivery_latitude != null && order.delivery_longitude != null && (
+                                            <a
+                                                className="d-inline-flex align-items-center gap-2 small text-primary text-decoration-none mt-2"
+                                                href={`https://www.openstreetmap.org/?mlat=${order.delivery_latitude}&mlon=${order.delivery_longitude}#map=18/${order.delivery_latitude}/${order.delivery_longitude}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                            >
+                                                <i className="bi bi-geo-alt-fill" aria-hidden="true"></i>
+                                                View delivery pin on OpenStreetMap
+                                                <i className="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                                            </a>
+                                        )}
                                     </div>
 
                                     {order.cancellation_reason && (
