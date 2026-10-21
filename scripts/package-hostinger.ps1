@@ -83,10 +83,11 @@ try {
         (Join-Path $repoRoot 'public\storage')
     )
 
-    Invoke-Robocopy -Arguments @(
+    $copyArguments = @(
         $repoRoot, $appRoot, '/E', '/COPY:DAT', '/R:2', '/W:1', '/NFL', '/NDL', '/NP',
         '/XD'
     ) + $excludedDirectories + @('/XF', '.env', '.env.backup', '.env.production', '.env.local', '.env.testing')
+    Invoke-Robocopy -Arguments $copyArguments
 
     # Ensure no developer environment file was copied. Keep only the non-secret
     # sample file so the operator can create a new production .env separately.
@@ -129,7 +130,8 @@ try {
     # Copy only Laravel's public directory into the web root. The real app and
     # its environment file remain in a sibling private directory.
     Invoke-Robocopy -Arguments @(
-        (Join-Path $appRoot 'public'), $webRoot, '/E', '/COPY:DAT', '/R:2', '/W:1', '/NFL', '/NDL', '/NP'
+        (Join-Path $appRoot 'public'), $webRoot, '/E', '/COPY:DAT', '/R:2', '/W:1', '/NFL', '/NDL', '/NP',
+        '/XD', (Join-Path $appRoot 'public\storage')
     )
 
     $publicIndex = Join-Path $webRoot 'index.php'
@@ -146,7 +148,11 @@ try {
         $indexContent.Contains("__DIR__.'/../bootstrap/app.php'")) {
         throw 'Could not update all Laravel paths in the staged public index.php.'
     }
-    Set-Content -Path $publicIndex -Value $indexContent -Encoding utf8
+    [System.IO.File]::WriteAllText(
+        $publicIndex,
+        $indexContent,
+        [System.Text.UTF8Encoding]::new($false)
+    )
 
     # Public catalog uploads are served from /storage, but scripts in this
     # directory must never be executable by the web server.
@@ -168,7 +174,7 @@ Options -Indexes
 <FilesMatch "\.(php[0-9]?|phtml|phar|cgi|pl|py|sh)$">
     Require all denied
 </FilesMatch>
-'@ | Set-Content -Path (Join-Path $webStorage '.htaccess') -Encoding ascii
+ '@ | Set-Content -Path (Join-Path $webStorage '.htaccess') -Encoding ascii
 
     @'
 SECUREVIEW HOSTINGER RELEASE
