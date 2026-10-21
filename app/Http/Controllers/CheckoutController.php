@@ -271,34 +271,74 @@ class CheckoutController extends Controller
             ])->withInput();
         }
 
-        $cart = $request->user()->cart;
+        $isBuyNow = $request->session()->has('buy_now');
+        $buyNow = $this->selectedBuyNowItem($request);
+        $cart = null;
 
-        if (!$cart) {
-            return back()->withErrors([
-                'cart' => 'Your cart is empty.',
-            ]);
+        if ($isBuyNow) {
+            if ($buyNow === null || isset($buyNow['error'])) {
+                $request->session()->forget('buy_now');
+
+                return back()->withErrors([
+                    'cart' => $buyNow['error'] ?? 'Your Buy Now selection is no longer available. Please choose the item again.',
+                ]);
+            }
+
+            $purchasable = $buyNow['purchasable'];
+            $stockError = $inventory->getAvailabilityError(
+                $purchasable,
+                (int) $buyNow['quantity']
+            );
+
+            if ($stockError) {
+                return back()->withErrors([
+                    'stock' => $stockError,
+                ]);
+            }
+
+            $checkoutItems = collect([[
+                'purchasable' => $purchasable,
+                'purchasable_type' => $buyNow['model_class'],
+                'purchasable_id' => $purchasable->id,
+                'quantity' => (int) $buyNow['quantity'],
+            ]]);
+        } else {
+            $cart = $request->user()->cart;
+
+            if (!$cart) {
+                return back()->withErrors([
+                    'cart' => 'Your cart is empty.',
+                ]);
+            }
+
+            $cart->load('items.purchasable');
+
+            if ($cart->items->isEmpty()) {
+                return back()->withErrors([
+                    'cart' => 'Your cart is empty.',
+                ]);
+            }
+
+            $checkoutItems = $cart->items->map(fn ($cartItem) => [
+                'purchasable' => $cartItem->purchasable,
+                'purchasable_type' => $cartItem->purchasable_type,
+                'purchasable_id' => $cartItem->purchasable_id,
+                'quantity' => (int) $cartItem->quantity,
+            ])->values();
         }
 
-        $cart->load('items.purchasable');
-
-        if ($cart->items->isEmpty()) {
-            return back()->withErrors([
-                'cart' => 'Your cart is empty.',
-            ]);
-        }
-
-        foreach ($cart->items as $cartItem) {
-            $purchasable = $cartItem->purchasable;
+        foreach ($checkoutItems as $checkoutItem) {
+            $purchasable = $checkoutItem['purchasable'];
 
             if (!$purchasable) {
                 return back()->withErrors([
-                    'stock' => 'An item in your cart is no longer available.',
+                    'stock' => 'An item in your checkout is no longer available.',
                 ]);
             }
 
             $stockError = $inventory->getAvailabilityError(
                 $purchasable,
-                (int) $cartItem->quantity
+                (int) $checkoutItem['quantity']
             );
 
             if ($stockError) {
