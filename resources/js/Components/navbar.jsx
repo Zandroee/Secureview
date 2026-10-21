@@ -9,6 +9,7 @@ export default function Navbar() {
     const cartCount = props.cartCount ?? 0;
     const notificationCount = props.notificationCount ?? 0;
     const latestNotification = props.latestNotification ?? null;
+    const notificationPopupsEnabled = user?.notification_popups_enabled !== false;
 
     const isAuthenticated = Boolean(user);
     const isVerified = Boolean(user?.email_verified_at);
@@ -74,7 +75,9 @@ export default function Navbar() {
 
                     if (latest && (!previousId || latestId > previousId)) {
                         lastNotificationId.current = latest.id;
-                        setLiveNotification(latest);
+                        if (notificationPopupsEnabled) {
+                            setLiveNotification(latest);
+                        }
                     }
                 },
             });
@@ -82,7 +85,13 @@ export default function Navbar() {
 
         const interval = window.setInterval(pollNotifications, 10000);
         return () => window.clearInterval(interval);
-    }, [isLoggedIn, url]);
+    }, [isLoggedIn, url, notificationPopupsEnabled]);
+
+    useEffect(() => {
+        if (!notificationPopupsEnabled) {
+            setLiveNotification(null);
+        }
+    }, [notificationPopupsEnabled]);
 
     return (
         <>
