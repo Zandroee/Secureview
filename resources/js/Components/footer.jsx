@@ -20,15 +20,15 @@ export default function Footer() {
                             Quick Links
                         </h4>
 
-                        <a href="#" className="d-block text-white text-decoration-none mb-2">
+                        <Link href="/" className="d-block text-white text-decoration-none mb-2">
                             HOME
-                        </a>
-                        <a href="#" className="d-block text-white text-decoration-none mb-2">
+                        </Link>
+                        <Link href="/products" className="d-block text-white text-decoration-none mb-2">
                             BROWSE
-                        </a>
-                        <a href="#" className="d-block text-white text-decoration-none">
+                        </Link>
+                        <Link href="/about" className="d-block text-white text-decoration-none">
                             ABOUT
-                        </a>
+                        </Link>
                     </div>
 
                     {/* CONTACT */}
