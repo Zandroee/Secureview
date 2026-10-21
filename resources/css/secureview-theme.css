@@ -1452,3 +1452,20 @@ html[data-bs-theme="dark"] .catalog-search-input::placeholder {
 html[data-bs-theme="dark"] .catalog-search-icon {
     color: #c3cedd !important;
 }
+
+
+/* Use higher specificity than the global input:not(...) dark-mode rule above.
+   That broad selector otherwise wins and makes catalog search inputs blend into
+   the page even though the catalog-specific theme styles are present. */
+html[data-bs-theme="dark"] input.catalog-search-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+html[data-bs-theme="dark"] input.catalog-search-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):focus {
+    background-color: #273449 !important;
+    color: #f3f6fb !important;
+    border: 1px solid #64748b !important;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, .12) !important;
+}
+
+html[data-bs-theme="dark"] input.catalog-search-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"])::placeholder {
+    color: #cbd5e1 !important;
+    opacity: 1;
+}
