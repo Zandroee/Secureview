@@ -20,6 +20,7 @@ function statusClass(status) {
 export default function PurchaseDetails({ order }) {
     const { props } = usePage();
     const [paying, setPaying] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
 
     const payNow = () => {
         setPaying(true);
@@ -38,6 +39,37 @@ export default function PurchaseDetails({ order }) {
         ["gcash", "card", "maya"].includes(order.payment_method) &&
         ["pending", "failed"].includes(order.payment_status) &&
         ["awaiting_payment", "payment_failed"].includes(order.order_status);
+
+    const cancelOrder = () => {
+        const enteredReason = window.prompt(
+            "Why are you cancelling order " + order.order_number + "? Leave blank to record 'Cancelled by customer.'",
+            "Changed my mind"
+        );
+
+        if (enteredReason === null) return;
+
+        const reason = enteredReason.trim() || "Cancelled by customer.";
+        if (reason.length < 5) {
+            window.alert("Please enter at least 5 characters for the cancellation reason.");
+            return;
+        }
+
+        if (!window.confirm(
+            "Cancel unpaid order " + order.order_number + "? This cannot be undone. Paid orders cannot be cancelled here.\n\nReason: " + reason
+        )) {
+            return;
+        }
+
+        setCancelling(true);
+        router.patch(
+            "/purchases/" + order.id + "/cancel",
+            { reason },
+            {
+                preserveScroll: true,
+                onFinish: () => setCancelling(false),
+            }
+        );
+    };
 
     return (
         <div>
@@ -70,18 +102,34 @@ export default function PurchaseDetails({ order }) {
                             </div>
                         </div>
 
-                        <Link
-                            href="/purchases"
-                            className="btn btn-outline-primary fw-bold"
-                        >
-                            BACK TO PURCHASES
-                        </Link>
+                        <div className="d-flex flex-wrap gap-2">
+                            <Link
+                                href={"/purchases/" + order.id + "/invoice"}
+                                className="btn btn-primary fw-bold"
+                            >
+                                <i className="bi bi-receipt me-2"></i>VIEW INVOICE
+                            </Link>
+                            <Link
+                                href="/purchases"
+                                className="btn btn-outline-primary fw-bold"
+                            >
+                                BACK TO PURCHASES
+                            </Link>
+                        </div>
                     </div>
+
+                    {props.flash?.success && (
+                        <div className="alert alert-success mb-4">{props.flash.success}</div>
+                    )}
 
                     {props.errors?.payment && (
                         <div className="alert alert-danger mb-4">
                             {props.errors.payment}
                         </div>
+                    )}
+
+                    {props.errors?.order && (
+                        <div className="alert alert-danger mb-4">{props.errors.order}</div>
                     )}
 
                     <div className="row g-4">
@@ -248,6 +296,13 @@ export default function PurchaseDetails({ order }) {
                                         </div>
                                     </div>
 
+                                    {order.cancellation_reason && (
+                                        <div className="col-12">
+                                            <div className="small text-muted mb-1">CANCELLATION REASON</div>
+                                            <div className="fw-semibold">{order.cancellation_reason}</div>
+                                        </div>
+                                    )}
+
                                     {order.notes && (
                                         <div className="col-12">
                                             <div className="small text-muted mb-1">
@@ -260,6 +315,44 @@ export default function PurchaseDetails({ order }) {
                                     )}
                                 </div>
                             </div>
+                            <div
+                                className="bg-white border rounded-4 p-3 p-md-4 mt-4"
+                                style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}
+                            >
+                                <div className="d-flex flex-column flex-sm-row justify-content-between gap-1 mb-3">
+                                    <h4 className="fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>
+                                        ORDER & PAYMENT HISTORY
+                                    </h4>
+                                    <span className="small text-muted">Payment and order changes recorded by SecureView.</span>
+                                </div>
+                                {order.timeline?.length ? (
+                                    <div className="d-flex flex-column gap-3">
+                                        {[...order.timeline].reverse().map((event) => (
+                                            <div key={event.id} className="d-flex gap-3">
+                                                <div className="d-flex flex-column align-items-center">
+                                                    <span className="rounded-circle bg-primary" style={{ width: "10px", height: "10px", marginTop: "5px" }} />
+                                                    <span className="flex-grow-1 border-start" />
+                                                </div>
+                                                <div className="flex-grow-1 pb-1">
+                                                    <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                                                        <span className="fw-semibold">{event.title}</span>
+                                                        <span className="small text-muted">{event.created_at}</span>
+                                                    </div>
+                                                    {event.description && (
+                                                        <div className="small text-muted mt-1">{event.description}</div>
+                                                    )}
+                                                    <div className="small text-muted mt-1">Recorded by {event.actor_label}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="small text-muted">
+                                        Event history begins when SecureView records new order activity. Earlier status changes cannot be reconstructed for older orders.
+                                    </div>
+                                )}
+                            </div>
+
                         </div>
 
                         <div className="col-lg-4">
@@ -285,9 +378,20 @@ export default function PurchaseDetails({ order }) {
                                         type="button"
                                         className="btn btn-primary fw-bold w-100 mb-3"
                                         onClick={payNow}
-                                        disabled={paying}
+                                        disabled={paying || cancelling}
                                     >
                                         {paying ? "OPENING PAYMENT..." : "PAY NOW"}
+                                    </button>
+                                )}
+
+                                {order.can_cancel && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-danger fw-bold w-100 mb-3"
+                                        onClick={cancelOrder}
+                                        disabled={paying || cancelling}
+                                    >
+                                        {cancelling ? "CANCELLING ORDER..." : "CANCEL UNPAID ORDER"}
                                     </button>
                                 )}
 
@@ -380,8 +484,8 @@ export default function PurchaseDetails({ order }) {
 
                                     <div className="small text-muted">
                                         {order.payment_method === "cash"
-                                            ? "Payment is pending and will be collected on delivery."
-                                            : "Online payment processing will be handled through the payment gateway."}
+                                            ? "Cash payment is still marked pending until SecureView confirms it. Delivery tracking is not currently available in the site."
+                                            : "Online payment is confirmed only after PayMongo reports a successful payment."}
                                     </div>
                                 </div>
                             </div>

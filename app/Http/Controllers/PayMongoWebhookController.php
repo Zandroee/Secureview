@@ -103,6 +103,14 @@ class PayMongoWebhookController extends Controller
             ]);
         }
 
+        if ($order->order_status === 'cancelled') {
+            // Cancellation expires any open checkout session before it is saved
+            // locally. Never let a late duplicate webhook reopen a cancelled order.
+            return response()->json([
+                'received' => true,
+            ]);
+        }
+
         if ($order->payment_status === 'paid') {
             // The browser return may not have happened. Retry finalization from
             // this idempotent webhook when payment was already marked paid.

@@ -22,6 +22,12 @@ const menuGroups = [
             key: "schedules",
             icon: "bi-calendar3",
         },
+        {
+            label: "Service History",
+            href: "/admin/service-history",
+            key: "service-history",
+            icon: "bi-clock-history",
+        },
     ],
     [
         {
@@ -31,10 +37,16 @@ const menuGroups = [
             icon: "bi-camera-video",
         },
         {
-            label: "Stock History",
-            href: "/admin/inventory-adjustments",
-            key: "inventory-adjustments",
-            icon: "bi-clipboard-data",
+            label: "Warranty",
+            href: "/admin/warranty",
+            key: "warranty",
+            icon: "bi-shield-check",
+        },
+        {
+            label: "Orders",
+            href: "/admin/purchases",
+            key: "purchases",
+            icon: "bi-bag-check",
         },
         {
             label: "Packages",
@@ -53,10 +65,22 @@ const menuGroups = [
     ],
     [
         {
-            label: "Transaction Logs",
+            label: "Transaction Records",
             href: "/admin/transactions",
             key: "transactions",
             icon: "bi-receipt",
+        },
+        {
+            label: "Settings",
+            href: "/settings",
+            key: "settings",
+            icon: "bi-gear",
+        },
+        {
+            label: "Invoice Settings",
+            href: "/admin/invoice-settings",
+            key: "invoice-settings",
+            icon: "bi-file-earmark-text",
         },
         {
             label: "Activity Logs",

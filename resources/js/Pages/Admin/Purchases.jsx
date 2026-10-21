@@ -1,7 +1,8 @@
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
-import { router } from "@inertiajs/react";
+import AdminPagination from "../../Components/Admin/AdminPagination";
+import { router, usePage } from "@inertiajs/react";
 import { useState } from "react";
 
 function paymentClass(status) {
@@ -25,7 +26,7 @@ function orderClass(status) {
         return "bg-danger-subtle text-danger";
     }
 
-    if (status === "awaiting_payment") {
+    if (status === "pending" || status === "awaiting_payment") {
         return "bg-warning-subtle text-warning-emphasis";
     }
 
@@ -45,6 +46,7 @@ function statusLabel(status) {
 
 export default function AdminPurchases({
     orders = [],
+    attentionOrders = [],
     summary = {},
     filters = {},
 }) {
@@ -58,7 +60,80 @@ export default function AdminPurchases({
     const [paymentMethod, setPaymentMethod] = useState(
         filters.payment_method ?? ""
     );
+    const [attentionFilter, setAttentionFilter] = useState(filters.attention ?? "");
     const [viewingOrder, setViewingOrder] = useState(null);
+    const [cancellingOrderId, setCancellingOrderId] = useState(null);
+    const [updatingOrderId, setUpdatingOrderId] = useState(null);
+    const [recordingInvoiceId, setRecordingInvoiceId] = useState(null);
+    const { props } = usePage();
+    const orderRows = orders.data ?? (Array.isArray(orders) ? orders : []);
+
+    const cancelOrder = (order) => {
+        const reason = window.prompt(
+            "Enter the cancellation reason for " + order.order_number + " (required, at least 5 characters).",
+            order.payment_status === "failed" ? "Payment failed and customer did not proceed" : "Payment was not completed"
+        );
+
+        if (reason === null) return;
+
+        if (reason.trim().length < 5) {
+            window.alert("Please enter a cancellation reason with at least 5 characters.");
+            return;
+        }
+
+        if (!window.confirm(
+            "Cancel unpaid order " + order.order_number + "? The reason will be saved in order history. Paid orders cannot be cancelled here.\n\nReason: " + reason.trim()
+        )) {
+            return;
+        }
+
+        setCancellingOrderId(order.id);
+        router.patch(
+            "/admin/purchases/" + order.id + "/cancel",
+            { reason: reason.trim() },
+            {
+                preserveScroll: true,
+                onSuccess: () => setViewingOrder(null),
+                onFinish: () => setCancellingOrderId(null),
+            }
+        );
+    };
+
+    const runOrderAction = (order, action) => {
+        const confirmation = action === "confirm-cash-payment"
+            ? "Confirm that cash has actually been received for order " + order.order_number + "? This will mark the payment as paid and move the order to Processing."
+            : "Confirm that order " + order.order_number + " has been fulfilled? This will mark it Completed. SecureView does not track shipments.";
+
+        if (!window.confirm(confirmation)) {
+            return;
+        }
+
+        setUpdatingOrderId(order.id);
+        router.patch(
+            "/admin/purchases/" + order.id + "/" + action,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => setViewingOrder(null),
+                onFinish: () => setUpdatingOrderId(null),
+            }
+        );
+    };
+
+    const recordInvoice = (order) => {
+        const message =
+            "Save an immutable internal invoice record for " + order.order_number + "?\n\n" +
+            "This preserves the seller, customer, item, and total details as they are now. " +
+            "It does not consume an authorized BIR invoice number and is not a BIR-registered tax invoice.";
+        if (!window.confirm(message)) return;
+
+        setRecordingInvoiceId(order.id);
+        router.post("/admin/purchases/" + order.id + "/invoice-record", {}, {
+            preserveScroll: true,
+            onSuccess: () => setViewingOrder(null),
+            onFinish: () => setRecordingInvoiceId(null),
+        });
+    };
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -70,6 +145,7 @@ export default function AdminPurchases({
                 payment_status: paymentStatus,
                 order_status: orderStatus,
                 payment_method: paymentMethod,
+                attention: attentionFilter,
             },
             {
                 preserveState: true,
@@ -79,11 +155,34 @@ export default function AdminPurchases({
         );
     };
 
+    const applyQuickFilter = (preset) => {
+        const next = {
+            search: "",
+            payment_status: preset.payment_status ?? "",
+            order_status: preset.order_status ?? "",
+            payment_method: preset.payment_method ?? "",
+            attention: preset.attention ?? "",
+        };
+
+        setSearch(next.search);
+        setPaymentStatus(next.payment_status);
+        setOrderStatus(next.order_status);
+        setPaymentMethod(next.payment_method);
+        setAttentionFilter(next.attention);
+
+        router.get("/admin/purchases", next, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    };
+
     const clearFilters = () => {
         setSearch("");
         setPaymentStatus("");
         setOrderStatus("");
         setPaymentMethod("");
+        setAttentionFilter("");
 
         router.get(
             "/admin/purchases",
@@ -120,12 +219,29 @@ export default function AdminPurchases({
                             </div>
 
                             <h1 className="fw-bold mb-1">
-                                PURCHASE HISTORY
+                                ORDER MANAGEMENT
                             </h1>
 
                             <div className="small text-muted">
-                                Review customer orders, payment status, and order details.
+                                Review orders, manage failed or pending payments, and cancel eligible unpaid orders.
                             </div>
+                        </div>
+
+                        {props.flash?.success && (
+                            <div className="alert alert-success">{props.flash.success}</div>
+                        )}
+                        {props.errors?.order && (
+                            <div className="alert alert-danger">{props.errors.order}</div>
+                        )}
+                        {props.errors?.stock && (
+                            <div className="alert alert-danger">{props.errors.stock}</div>
+                        )}
+                        {props.errors?.invoice && (
+                            <div className="alert alert-danger">{props.errors.invoice}</div>
+                        )}
+
+                        <div className="small text-muted mb-3">
+                            SecureView does not currently have shipment tracking. “Delivered” is not offered as an action; it will only appear in the dashboard if a legacy delivered order already exists.
                         </div>
 
                         <div className="row g-3 mb-3">
@@ -179,6 +295,93 @@ export default function AdminPurchases({
                                 </div>
                             </div>
                         </div>
+
+                        <section className="bg-white border rounded-3 p-3 p-lg-4 mb-3" style={{ boxShadow: "0 3px 12px rgba(0,0,0,0.04)" }}>
+                            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+                                <div>
+                                    <h2 className="h5 fw-bold mb-1">Payment queue</h2>
+                                    <p className="small text-muted mb-0">Orders that may need follow-up. Selecting a card filters the order list below.</p>
+                                </div>
+                                <span className="small text-muted">{attentionOrders.length} priority orders shown</span>
+                            </div>
+
+                            <div className="row g-2 mb-4">
+                                <div className="col-6 col-xl-3">
+                                    <button type="button" onClick={() => applyQuickFilter({ payment_status: "pending", order_status: "awaiting_payment" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-warning-subtle">
+                                        <div className="small text-secondary fw-semibold">PENDING ONLINE</div>
+                                        <div className="h3 fw-bold mb-1 text-warning-emphasis">{summary.pending_online_payments ?? 0}</div>
+                                        <div className="small text-secondary">Waiting on customer payment</div>
+                                    </button>
+                                </div>
+                                <div className="col-6 col-xl-3">
+                                    <button type="button" onClick={() => applyQuickFilter({ payment_status: "failed", order_status: "payment_failed" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-danger-subtle">
+                                        <div className="small text-secondary fw-semibold">PAYMENT FAILED</div>
+                                        <div className="h3 fw-bold mb-1 text-danger">{summary.failed_payments ?? 0}</div>
+                                        <div className="small text-secondary">Customer may retry or cancel</div>
+                                    </button>
+                                </div>
+                                <div className="col-6 col-xl-3">
+                                    <button type="button" onClick={() => applyQuickFilter({ payment_status: "pending", order_status: "pending", payment_method: "cash" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-info-subtle">
+                                        <div className="small text-secondary fw-semibold">CASH TO CONFIRM</div>
+                                        <div className="h3 fw-bold mb-1 text-info-emphasis">{summary.cash_awaiting_confirmation ?? 0}</div>
+                                        <div className="small text-secondary">Confirm only when cash is received</div>
+                                    </button>
+                                </div>
+                                <div className="col-6 col-xl-3">
+                                    <button type="button" onClick={() => applyQuickFilter({ attention: "stale" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-light">
+                                        <div className="small text-secondary fw-semibold">UNPAID OVER 24 HOURS</div>
+                                        <div className="h3 fw-bold mb-1 text-dark">{summary.stale_unpaid_orders ?? 0}</div>
+                                        <div className="small text-secondary">Review stale checkouts</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                <h3 className="h6 fw-bold mb-0">Needs attention</h3>
+                                <button type="button" className="btn btn-link btn-sm text-decoration-none" onClick={() => applyQuickFilter({})}>View all orders</button>
+                            </div>
+
+                            {attentionOrders.length ? (
+                                <div className="d-flex flex-column gap-2">
+                                    {attentionOrders.map((order) => {
+                                        const actionText = order.next_action === "confirm_cash_payment"
+                                            ? "Confirm only after cash has been received."
+                                            : order.next_action === "retry_or_cancel"
+                                                ? "Customer can retry payment. Cancel if they no longer wish to proceed."
+                                                : order.is_stale_unpaid
+                                                    ? "Stale checkout: verify payment state before cancelling."
+                                                    : "Waiting for payment confirmation.";
+
+                                        return (
+                                            <div key={order.id} className="border rounded-3 p-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                                                <div className="min-w-0">
+                                                    <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                                        <span className="fw-bold">{order.order_number}</span>
+                                                        {order.is_stale_unpaid && <span className="badge rounded-pill bg-danger-subtle text-danger">Over 24 hours</span>}
+                                                        <span className={"badge rounded-pill text-capitalize " + paymentClass(order.payment_status)}>{statusLabel(order.payment_status)}</span>
+                                                        <span className={"badge rounded-pill text-capitalize " + orderClass(order.order_status)}>{statusLabel(order.order_status)}</span>
+                                                    </div>
+                                                    <div className="small text-muted">{order.customer_name} · {paymentLabel(order.payment_method)} · ₱{Number(order.total ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                    <div className={"small mt-1 " + (order.is_stale_unpaid ? "text-danger fw-semibold" : "text-secondary")}>
+                                                        {order.age_hours >= 24
+                                                            ? "Last order update " + Math.floor(order.age_hours / 24) + " day(s) ago"
+                                                            : "Last order update " + order.age_hours + " hour(s) ago"}
+                                                        {" · "}{actionText}
+                                                    </div>
+                                                </div>
+                                                <button type="button" className="btn btn-outline-primary btn-sm fw-bold flex-shrink-0" onClick={() => setViewingOrder(order)}>REVIEW ORDER</button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="border rounded-3 bg-light p-4 text-center">
+                                    <i className="bi bi-check-circle fs-4 text-success d-block mb-2" />
+                                    <div className="fw-semibold">No unpaid orders need attention</div>
+                                    <div className="small text-muted mt-1">New payment issues and pending orders will appear here.</div>
+                                </div>
+                            )}
+                        </section>
 
                         <div
                             className="bg-white border rounded-3 p-3 mb-3"
@@ -328,7 +531,7 @@ export default function AdminPurchases({
                                     </thead>
 
                                     <tbody>
-                                        {orders.length === 0 ? (
+                                        {orderRows.length === 0 ? (
                                             <tr>
                                                 <td
                                                     colSpan="7"
@@ -338,7 +541,7 @@ export default function AdminPurchases({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            orders.map((order) => (
+                                            orderRows.map((order) => (
                                                 <tr key={order.id}>
                                                     <td className="ps-3">
                                                         <div className="fw-semibold">
@@ -351,6 +554,12 @@ export default function AdminPurchases({
                                                                 ? ""
                                                                 : "s"}
                                                         </div>
+                                                        {order.invoice_record && (
+                                                            <div className="small text-success mt-1">
+                                                                <i className="bi bi-file-earmark-check me-1"></i>
+                                                                {order.invoice_record.record_number}
+                                                            </div>
+                                                        )}
                                                     </td>
 
                                                     <td>
@@ -440,6 +649,7 @@ export default function AdminPurchases({
                                     </tbody>
                                 </table>
                             </div>
+                            <AdminPagination pagination={orders} label="orders" insideCard />
                         </div>
                     </main>
                 </div>
@@ -587,6 +797,36 @@ export default function AdminPurchases({
                             </div>
                         </div>
 
+                        <div className="border rounded-3 p-3 mb-3">
+                            <div className="fw-bold mb-3">ORDER & PAYMENT TIMELINE</div>
+                            {viewingOrder.timeline?.length ? (
+                                <div className="d-flex flex-column gap-3">
+                                    {viewingOrder.timeline.map((event) => (
+                                        <div key={event.id} className="d-flex gap-3">
+                                            <div className="d-flex flex-column align-items-center">
+                                                <span className="rounded-circle bg-primary" style={{ width: "10px", height: "10px", marginTop: "5px" }} />
+                                                <span className="flex-grow-1 border-start" />
+                                            </div>
+                                            <div className="flex-grow-1 pb-1">
+                                                <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                                                    <span className="fw-semibold">{event.title}</span>
+                                                    <span className="small text-muted">{event.created_at}</span>
+                                                </div>
+                                                {event.description && (
+                                                    <div className="small text-muted mt-1">{event.description}</div>
+                                                )}
+                                                <div className="small text-muted mt-1">Recorded by {event.actor_name}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="small text-muted">
+                                    No earlier event history is available for this order. SecureView cannot reconstruct status changes that happened before timeline logging was enabled.
+                                </div>
+                            )}
+                        </div>
+
                         <div className="border rounded-3 p-3">
                             <div className="d-flex justify-content-between">
                                 <span className="small text-muted">
@@ -642,7 +882,97 @@ export default function AdminPurchases({
                             )}
                         </div>
 
-                        <div className="d-flex justify-content-end mt-3">
+                        {viewingOrder.order_status === "payment_failed" && (
+                            <div className="alert alert-warning small mt-3 mb-0">
+                                Payment failed. The customer can retry from their own Purchases page. Cancel this order if they no longer want to proceed.
+                            </div>
+                        )}
+
+                        {viewingOrder.is_stale_unpaid && (
+                            <div className="alert alert-danger small mt-3 mb-0">
+                                This unpaid order has not been updated for over 24 hours. Verify the current payment state before cancelling; do not cancel if payment is still pending at the provider.
+                            </div>
+                        )}
+
+                        {viewingOrder.cancellation_reason && (
+                            <div className="border rounded-3 bg-light p-3 mt-3">
+                                <div className="small text-muted fw-bold mb-1">CANCELLATION REASON</div>
+                                <div className="small">{viewingOrder.cancellation_reason}</div>
+                            </div>
+                        )}
+
+                        {props.errors?.invoice && (
+                            <div className="alert alert-danger small mt-3 mb-0">{props.errors.invoice}</div>
+                        )}
+
+                        {!viewingOrder.invoice_record && !viewingOrder.can_record_invoice && (
+                            <div className="alert alert-secondary small mt-3 mb-0">
+                                An internal invoice record is available after payment is confirmed, the order is Processing or Completed, and the seller profile is complete in Invoice Settings.
+                            </div>
+                        )}
+
+                        {viewingOrder.invoice_record && (
+                            <div className="alert alert-info small mt-3 mb-0">
+                                <div className="fw-bold">Saved internal invoice record</div>
+                                <div>{viewingOrder.invoice_record.record_number}</div>
+                                <div className="text-muted">Saved {viewingOrder.invoice_record.issued_at}. The saved invoice page uses this frozen snapshot.</div>
+                            </div>
+                        )}
+
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-3">
+                            <div className="d-flex flex-wrap gap-2">
+                                <a
+                                    href={"/admin/purchases/" + viewingOrder.id + "/invoice"}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="btn btn-outline-primary fw-bold"
+                                >
+                                    <i className="bi bi-receipt me-2"></i>{viewingOrder.invoice_record ? "VIEW SAVED INVOICE" : "VIEW INVOICE"}
+                                </a>
+                                {viewingOrder.can_record_invoice && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary fw-bold"
+                                        onClick={() => recordInvoice(viewingOrder)}
+                                        disabled={recordingInvoiceId === viewingOrder.id || cancellingOrderId === viewingOrder.id || updatingOrderId === viewingOrder.id}
+                                    >
+                                        <i className="bi bi-file-earmark-check me-2"></i>
+                                        {recordingInvoiceId === viewingOrder.id ? "SAVING RECORD..." : "SAVE INTERNAL INVOICE RECORD"}
+                                    </button>
+                                )}
+                                {viewingOrder.can_confirm_cash_payment && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-success fw-bold"
+                                        onClick={() => runOrderAction(viewingOrder, "confirm-cash-payment")}
+                                        disabled={updatingOrderId === viewingOrder.id || cancellingOrderId === viewingOrder.id}
+                                    >
+                                        {updatingOrderId === viewingOrder.id ? "UPDATING..." : "CONFIRM CASH RECEIVED"}
+                                    </button>
+                                )}
+
+                                {viewingOrder.can_mark_completed && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-primary fw-bold"
+                                        onClick={() => runOrderAction(viewingOrder, "complete")}
+                                        disabled={updatingOrderId === viewingOrder.id || cancellingOrderId === viewingOrder.id}
+                                    >
+                                        {updatingOrderId === viewingOrder.id ? "UPDATING..." : "MARK COMPLETED"}
+                                    </button>
+                                )}
+
+                                {viewingOrder.can_cancel && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-danger fw-bold"
+                                        onClick={() => cancelOrder(viewingOrder)}
+                                        disabled={cancellingOrderId === viewingOrder.id || updatingOrderId === viewingOrder.id}
+                                    >
+                                        {cancellingOrderId === viewingOrder.id ? "CANCELLING..." : "CANCEL UNPAID ORDER"}
+                                    </button>
+                                )}
+                            </div>
                             <button
                                 type="button"
                                 className="btn btn-outline-primary fw-bold"

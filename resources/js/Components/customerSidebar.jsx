@@ -25,6 +25,12 @@ const items = [
         href: "/purchases",
         icon: "bi bi-clock-history",
     },
+    {
+        key: "warranty",
+        label: "WARRANTY CLAIMS",
+        href: "/warranty-claims",
+        icon: "bi bi-shield-check",
+    },
 ];
 
 export default function CustomerSidebar({ active }) {

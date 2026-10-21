@@ -114,6 +114,8 @@ class PendingInquiryCheckoutService
                 'related_id' => $inquiry->id,
             ]);
 
+            app(JobNotificationService::class)->notifyNewInquirySubmitted($inquiry);
+
             return $inquiry;
         });
     }

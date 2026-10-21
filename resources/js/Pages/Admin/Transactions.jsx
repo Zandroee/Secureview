@@ -57,7 +57,19 @@ export default function AdminTransactions({
     const [paymentMethod, setPaymentMethod] = useState(
         filters.payment_method ?? ""
     );
+    const [orderStatus, setOrderStatus] = useState(filters.order_status ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
     const [viewingTransaction, setViewingTransaction] = useState(null);
+
+    const exportParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== "" && value !== null && value !== undefined) {
+            exportParams.set(key, String(value));
+        }
+    });
+    exportParams.set("export", "csv");
+    const exportUrl = "/admin/transactions?" + exportParams.toString();
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -68,6 +80,9 @@ export default function AdminTransactions({
                 search,
                 payment_status: paymentStatus,
                 payment_method: paymentMethod,
+                order_status: orderStatus,
+                date_from: dateFrom,
+                date_to: dateTo,
             },
             {
                 preserveState: true,
@@ -81,6 +96,9 @@ export default function AdminTransactions({
         setSearch("");
         setPaymentStatus("");
         setPaymentMethod("");
+        setOrderStatus("");
+        setDateFrom("");
+        setDateTo("");
 
         router.get(
             "/admin/transactions",
@@ -117,11 +135,11 @@ export default function AdminTransactions({
                             </div>
 
                             <h1 className="fw-bold mb-1">
-                                TRANSACTION LOGS
+                                TRANSACTION RECORDS
                             </h1>
 
                             <div className="small text-muted">
-                                Review payment and order transaction records.
+                                Review payment and invoice records linked to each order. You can open an order's invoice directly from this page.
                             </div>
                         </div>
 
@@ -129,7 +147,7 @@ export default function AdminTransactions({
                             <div className="col-6 col-xl-3">
                                 <div className="bg-white border rounded-3 p-3 h-100">
                                     <div className="small text-muted">
-                                        TOTAL TRANSACTIONS
+                                        MATCHING RECORDS
                                     </div>
 
                                     <div className="h4 fw-bold mb-0">
@@ -191,87 +209,131 @@ export default function AdminTransactions({
                             }}
                         >
                             <form
-                                className="row g-2 align-items-end"
                                 onSubmit={applyFilters}
                             >
-                                <div className="col-lg-6">
-                                    <label className="form-label small fw-semibold mb-1">
-                                        SEARCH
-                                    </label>
+                                <div className="row g-2 align-items-end">
+                                    <div className="col-lg-5">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            SEARCH
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            placeholder="Order, customer, email, payment ID, or checkout session"
+                                            value={search}
+                                            onChange={(event) => setSearch(event.target.value)}
+                                        />
+                                    </div>
 
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Order number, customer, email, or payment ID"
-                                        value={search}
-                                        onChange={(event) =>
-                                            setSearch(event.target.value)
-                                        }
-                                    />
+                                    <div className="col-sm-6 col-lg-2">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            PAYMENT
+                                        </label>
+                                        <select
+                                            className="form-select"
+                                            value={paymentStatus}
+                                            onChange={(event) => setPaymentStatus(event.target.value)}
+                                        >
+                                            <option value="">All payment</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="paid">Paid</option>
+                                            <option value="failed">Failed</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="col-sm-6 col-lg-2">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            METHOD
+                                        </label>
+                                        <select
+                                            className="form-select"
+                                            value={paymentMethod}
+                                            onChange={(event) => setPaymentMethod(event.target.value)}
+                                        >
+                                            <option value="">All methods</option>
+                                            <option value="cash">Cash</option>
+                                            <option value="gcash">GCash</option>
+                                            <option value="card">Card</option>
+                                            <option value="maya">Maya</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="col-sm-6 col-lg-3">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            ORDER STATUS
+                                        </label>
+                                        <select
+                                            className="form-select"
+                                            value={orderStatus}
+                                            onChange={(event) => setOrderStatus(event.target.value)}
+                                        >
+                                            <option value="">All order statuses</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="awaiting_payment">Awaiting payment</option>
+                                            <option value="payment_failed">Payment failed</option>
+                                            <option value="processing">Processing</option>
+                                            <option value="delivered">Delivered</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                        </select>
+                                    </div>
                                 </div>
 
-                                <div className="col-sm-6 col-lg-2">
-                                    <label className="form-label small fw-semibold mb-1">
-                                        PAYMENT
-                                    </label>
+                                <div className="row g-2 align-items-end mt-1">
+                                    <div className="col-sm-6 col-md-3 col-lg-2">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            CREATED FROM
+                                        </label>
+                                        <input
+                                            type="date"
+                                            className="form-control"
+                                            value={dateFrom}
+                                            max={dateTo || undefined}
+                                            onChange={(event) => setDateFrom(event.target.value)}
+                                        />
+                                    </div>
 
-                                    <select
-                                        className="form-select"
-                                        value={paymentStatus}
-                                        onChange={(event) =>
-                                            setPaymentStatus(
-                                                event.target.value
-                                            )
-                                        }
-                                    >
-                                        <option value="">All payment</option>
-                                        <option value="pending">
-                                            Pending
-                                        </option>
-                                        <option value="paid">Paid</option>
-                                        <option value="failed">
-                                            Failed
-                                        </option>
-                                    </select>
-                                </div>
+                                    <div className="col-sm-6 col-md-3 col-lg-2">
+                                        <label className="form-label small fw-semibold mb-1">
+                                            CREATED TO
+                                        </label>
+                                        <input
+                                            type="date"
+                                            className="form-control"
+                                            value={dateTo}
+                                            min={dateFrom || undefined}
+                                            onChange={(event) => setDateTo(event.target.value)}
+                                        />
+                                    </div>
 
-                                <div className="col-sm-6 col-lg-2">
-                                    <label className="form-label small fw-semibold mb-1">
-                                        METHOD
-                                    </label>
+                                    <div className="col-6 col-md-2 d-grid">
+                                        <button
+                                            type="submit"
+                                            className="btn btn-primary fw-bold"
+                                        >
+                                            FILTER
+                                        </button>
+                                    </div>
 
-                                    <select
-                                        className="form-select"
-                                        value={paymentMethod}
-                                        onChange={(event) =>
-                                            setPaymentMethod(event.target.value)
-                                        }
-                                    >
-                                        <option value="">All methods</option>
-                                        <option value="cash">Cash</option>
-                                        <option value="gcash">GCash</option>
-                                        <option value="card">Card</option>
-                                        <option value="maya">Maya</option>
-                                    </select>
-                                </div>
+                                    <div className="col-6 col-md-2 d-grid">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary fw-bold"
+                                            onClick={clearFilters}
+                                        >
+                                            CLEAR
+                                        </button>
+                                    </div>
 
-                                <div className="col-6 col-lg-1 d-grid">
-                                    <button
-                                        type="submit"
-                                        className="btn btn-primary fw-bold"
-                                    >
-                                        FILTER
-                                    </button>
-                                </div>
-
-                                <div className="col-6 col-lg-1 d-grid">
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-primary fw-bold"
-                                        onClick={clearFilters}
-                                    >
-                                        CLEAR
-                                    </button>
+                                    <div className="col-12 col-md-3 d-grid">
+                                        <a
+                                            href={exportUrl}
+                                            className="btn btn-outline-primary fw-bold"
+                                        >
+                                            <i className="bi bi-download me-2" aria-hidden="true"></i>
+                                            EXPORT CSV
+                                        </a>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -288,7 +350,7 @@ export default function AdminTransactions({
                                     <thead className="table-light">
                                         <tr>
                                             <th className="ps-3">
-                                                TRANSACTION
+                                                TRANSACTION RECORD
                                             </th>
                                             <th>CUSTOMER</th>
                                             <th>AMOUNT</th>
@@ -323,6 +385,12 @@ export default function AdminTransactions({
                                                         <div className="small text-muted">
                                                             {transaction.order_number}
                                                         </div>
+                                                        {transaction.invoice_record && (
+                                                            <div className="small text-success mt-1">
+                                                                <i className="bi bi-file-earmark-check me-1"></i>
+                                                                {transaction.invoice_record.record_number}
+                                                            </div>
+                                                        )}
                                                     </td>
 
                                                     <td>
@@ -379,17 +447,25 @@ export default function AdminTransactions({
                                                     </td>
 
                                                     <td className="text-end pe-3">
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-outline-primary btn-sm fw-bold"
-                                                            onClick={() =>
-                                                                setViewingTransaction(
-                                                                    transaction
-                                                                )
-                                                            }
-                                                        >
-                                                            VIEW
-                                                        </button>
+                                                        <div className="d-flex flex-column flex-xl-row justify-content-end gap-2">
+                                                            <a
+                                                                href={transaction.invoice_url}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="btn btn-outline-primary btn-sm fw-bold"
+                                                                title={transaction.invoice_record ? "Open saved invoice snapshot" : "Open invoice preview"}
+                                                            >
+                                                                <i className="bi bi-receipt me-1"></i>
+                                                                {transaction.invoice_record ? "VIEW INVOICE" : "INVOICE PREVIEW"}
+                                                            </a>
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-outline-secondary btn-sm fw-bold"
+                                                                onClick={() => setViewingTransaction(transaction)}
+                                                            >
+                                                                DETAILS
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
@@ -397,7 +473,7 @@ export default function AdminTransactions({
                                     </tbody>
                                 </table>
                             </div>
-                            <AdminPagination pagination={transactions} label="transactions" insideCard />
+                            <AdminPagination pagination={transactions} label="transaction records" insideCard />
                         </div>
                     </main>
                 </div>
@@ -434,7 +510,7 @@ export default function AdminTransactions({
                                         fontFamily: "Outfit, sans-serif",
                                     }}
                                 >
-                                    TRANSACTION DETAILS
+                                    TRANSACTION RECORD DETAILS
                                 </h4>
                             </div>
 
@@ -566,7 +642,61 @@ export default function AdminTransactions({
                             )}
                         </div>
 
-                        <div className="d-flex justify-content-end mt-3">
+                        <div className="border rounded-3 p-3 mt-3">
+                            <div className="fw-bold mb-3">ORDER & PAYMENT TIMELINE</div>
+                            {viewingTransaction.timeline?.length ? (
+                                <div className="d-flex flex-column gap-3">
+                                    {viewingTransaction.timeline.map((event) => (
+                                        <div key={event.id} className="d-flex gap-3">
+                                            <div className="d-flex flex-column align-items-center">
+                                                <span className="rounded-circle bg-primary" style={{ width: "10px", height: "10px", marginTop: "5px" }} />
+                                                <span className="flex-grow-1 border-start" />
+                                            </div>
+                                            <div className="flex-grow-1 pb-1">
+                                                <div className="d-flex flex-column flex-sm-row justify-content-between gap-1">
+                                                    <span className="fw-semibold">{event.title}</span>
+                                                    <span className="small text-muted">{event.created_at}</span>
+                                                </div>
+                                                {event.description && (
+                                                    <div className="small text-muted mt-1">{event.description}</div>
+                                                )}
+                                                <div className="small text-muted mt-1">Recorded by {event.actor_name}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="small text-muted">
+                                    No earlier event history is available for this order. SecureView cannot reconstruct status changes from before timeline logging was enabled.
+                                </div>
+                            )}
+                        </div>
+
+                        {viewingTransaction.invoice_record ? (
+                            <div className="alert alert-success small mt-3 mb-0">
+                                <div className="fw-bold">Saved internal invoice record</div>
+                                <div>{viewingTransaction.invoice_record.record_number}</div>
+                                {viewingTransaction.invoice_record.issued_at && (
+                                    <div className="text-muted mt-1">Saved {viewingTransaction.invoice_record.issued_at}</div>
+                                )}
+                                <div className="text-muted mt-1">This opens the saved snapshot, not a live version.</div>
+                            </div>
+                        ) : (
+                            <div className="alert alert-secondary small mt-3 mb-0">
+                                No permanent internal invoice record has been saved for this order yet. The invoice button opens the current invoice preview.
+                            </div>
+                        )}
+
+                        <div className="d-flex flex-column flex-sm-row justify-content-between gap-2 mt-3">
+                            <a
+                                href={viewingTransaction.invoice_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="btn btn-primary fw-bold"
+                            >
+                                <i className="bi bi-receipt me-2"></i>
+                                {viewingTransaction.invoice_record ? "VIEW SAVED INVOICE" : "VIEW INVOICE PREVIEW"}
+                            </a>
                             <button
                                 type="button"
                                 className="btn btn-outline-primary fw-bold"

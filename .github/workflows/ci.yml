@@ -5,9 +5,11 @@ on:
     branches:
       - dev
       - feature/google-maps-service-locations
+      - feature/scheduling-reschedule-warranty
   pull_request:
     branches:
       - dev
+      - main
 
 permissions:
   contents: read

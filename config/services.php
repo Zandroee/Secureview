@@ -45,4 +45,5 @@ return [
         'webhook_secret' => env('PAYMONGO_WEBHOOK_SECRET'),
         'base_url' => env('PAYMONGO_BASE_URL', 'https://api.paymongo.com'),
     ],
+
 ];

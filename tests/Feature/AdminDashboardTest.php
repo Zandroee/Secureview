@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Order;
 use App\Models\Product;
@@ -82,6 +83,26 @@ class AdminDashboardTest extends TestCase
             'status' => 'confirmed',
         ]);
 
+        // Confirmed work belongs in Upcoming Schedule; a separate pending inquiry
+        // belongs in the Recent Inquiries queue awaiting admin review.
+        Inquiry::create([
+            'user_id' => $customer->id,
+            'technician_id' => null,
+            'inquiry_number' => 'INQ-DASH-PENDING-001',
+            'item_name' => 'Dahua Camera',
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'street_address' => '123 Test Street',
+            'city' => 'Taguig',
+            'service_type' => 'CCTV Installation',
+            'urgency' => 'normal',
+            'preferred_date' => today()->addDay(),
+            'preferred_time' => '08:00 AM - 11:00 AM',
+            'notes' => null,
+            'status' => 'pending',
+        ]);
+
         $this->actingAs($admin)
             ->get(route('dashboard'))
             ->assertOk()
@@ -99,7 +120,7 @@ class AdminDashboardTest extends TestCase
                 ->has('revenueData', 12)
                 ->where('revenueData.0.month', 'Jan')
                 ->where('chartPeriod', 'year')
-                ->has('orderStatusData', 7)
+                ->has('orderStatusData', 6)
                 ->where('orderStatusData.3.key', 'processing')
                 ->where('orderStatusData.3.count', 1)
                 ->has('lowStockData.data', 1)
@@ -111,6 +132,86 @@ class AdminDashboardTest extends TestCase
     }
 
 
+
+    public function test_dashboard_marks_capacity_blocked_dates_and_counts_unread_inquiry_alerts(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $date = today()->addDays(5)->toDateString();
+
+        $inquiry = Inquiry::create([
+            'user_id' => $customer->id,
+            'technician_id' => $technician->id,
+            'inquiry_number' => 'INQ-DASH-CAPACITY-001',
+            'item_name' => 'CCTV Camera',
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'street_address' => '123 Test Street',
+            'city' => 'Taguig',
+            'service_type' => 'Site Inspection',
+            'urgency' => 'urgent',
+            'preferred_date' => $date,
+            'preferred_time' => '08:00 AM - 11:00 AM',
+            'notes' => null,
+            'status' => 'confirmed',
+        ]);
+
+        CustomerNotification::create([
+            'user_id' => $admin->id,
+            'type' => 'new_inquiry',
+            'title' => 'New service inquiry received',
+            'message' => 'A new inquiry is waiting for review.',
+            'action_url' => route('admin.inquiries.show', $inquiry),
+            'related_type' => Inquiry::class,
+            'related_id' => $inquiry->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('upcomingScheduleCount', 1)
+                ->has('scheduleData', 1)
+                ->where('scheduleData.0.inquiry_number', 'INQ-DASH-CAPACITY-001')
+                ->where('unreadInquiryNotificationCount', 1)
+                ->where('calendarAvailability.fullyBookedDates', function ($dates) use ($date) {
+                    return collect($dates)->contains($date);
+                }));
+    }
+
+    public function test_dashboard_hides_delivered_stage_until_delivery_tracking_exists(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+
+        Order::create([
+            'user_id' => $customer->id,
+            'order_number' => 'ORD-DASH-LEGACY-DELIVERED',
+            'subtotal' => 799,
+            'shipping_fee' => 0,
+            'total' => 799,
+            'payment_method' => 'gcash',
+            'payment_status' => 'paid',
+            'order_status' => 'delivered',
+            'paid_at' => now(),
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'delivery_address' => '123 Test Street',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('orderStatusData', function ($statuses) {
+                    return collect($statuses)->doesntContain(
+                        fn ($status) => $status['key'] === 'delivered'
+                    );
+                }));
+    }
 
     public function test_dashboard_notice_tables_have_independent_pagination(): void
     {

@@ -28,7 +28,7 @@ function statusClass(status) {
         return "bg-danger-subtle text-danger";
     }
 
-    if (status === "awaiting_payment") {
+    if (status === "pending" || status === "awaiting_payment") {
         return "bg-warning-subtle text-warning-emphasis";
     }
 
@@ -38,6 +38,7 @@ function statusClass(status) {
 export default function Purchases({ orders = [] }) {
     const { props } = usePage();
     const [payingOrderId, setPayingOrderId] = useState(null);
+    const [cancellingOrderId, setCancellingOrderId] = useState(null);
     const [viewingOrder, setViewingOrder] = useState(null);
 
     const payNow = (order) => {
@@ -57,6 +58,37 @@ export default function Purchases({ orders = [] }) {
         ["gcash", "card", "maya"].includes(order.payment_method) &&
         ["pending", "failed"].includes(order.payment_status) &&
         ["awaiting_payment", "payment_failed"].includes(order.order_status);
+
+    const cancelOrder = (order) => {
+        const enteredReason = window.prompt(
+            "Why are you cancelling order " + order.order_number + "? Leave blank to record 'Cancelled by customer.'",
+            "Changed my mind"
+        );
+
+        if (enteredReason === null) return;
+
+        const reason = enteredReason.trim() || "Cancelled by customer.";
+        if (reason.length < 5) {
+            window.alert("Please enter at least 5 characters for the cancellation reason.");
+            return;
+        }
+
+        if (!window.confirm(
+            "Cancel unpaid order " + order.order_number + "? Any active payment checkout must be safely expired first. Paid orders cannot be cancelled.\n\nReason: " + reason
+        )) {
+            return;
+        }
+
+        setCancellingOrderId(order.id);
+        router.patch(
+            "/purchases/" + order.id + "/cancel",
+            { reason },
+            {
+                preserveScroll: true,
+                onFinish: () => setCancellingOrderId(null),
+            }
+        );
+    };
 
     return (
         <div>
@@ -99,10 +131,16 @@ export default function Purchases({ orders = [] }) {
                                     </div>
                                 </div>
 
+                                {props.flash?.success && (
+                                    <div className="alert alert-success small">{props.flash.success}</div>
+                                )}
                                 {props.errors?.payment && (
                                     <div className="alert alert-danger small">
                                         {props.errors.payment}
                                     </div>
+                                )}
+                                {props.errors?.order && (
+                                    <div className="alert alert-danger small">{props.errors.order}</div>
                                 )}
 
                                 {orders.length === 0 ? (
@@ -208,21 +246,31 @@ export default function Purchases({ orders = [] }) {
 
                                                     <div className="col-md-2">
                                                         <div className="small text-muted">
-                                                            STATUS
+                                                            ORDER STATUS
                                                         </div>
 
                                                         <span
                                                             className={
-                                                                "badge rounded-pill px-2 py-1 " +
-                                                                statusClass(
-                                                                    order.payment_status
-                                                                )
+                                                                "badge rounded-pill px-2 py-1 text-capitalize " +
+                                                                statusClass(order.order_status)
                                                             }
                                                         >
-                                                            {order.payment_status.replace(
-                                                                /_/g,
-                                                                " "
-                                                            )}
+                                                            {order.order_status.replace(/_/g, " ")}
+                                                        </span>
+
+                                                        {order.cancellation_reason && (
+                                                            <div className="small text-muted mt-2">
+                                                                <span className="fw-semibold">Cancellation reason:</span> {order.cancellation_reason}
+                                                            </div>
+                                                        )}
+                                                        <div className="small text-muted mt-2">PAYMENT</div>
+                                                        <span
+                                                            className={
+                                                                "badge rounded-pill px-2 py-1 text-capitalize " +
+                                                                statusClass(order.payment_status)
+                                                            }
+                                                        >
+                                                            {order.payment_status.replace(/_/g, " ")}
                                                         </span>
                                                     </div>
 
@@ -244,20 +292,21 @@ export default function Purchases({ orders = [] }) {
                                                                 <button
                                                                     type="button"
                                                                     className="btn btn-outline-primary btn-sm fw-bold"
-                                                                    onClick={() =>
-                                                                        payNow(
-                                                                            order
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        payingOrderId ===
-                                                                        order.id
-                                                                    }
+                                                                    onClick={() => payNow(order)}
+                                                                    disabled={payingOrderId === order.id}
                                                                 >
-                                                                    {payingOrderId ===
-                                                                    order.id
-                                                                        ? "OPENING..."
-                                                                        : "PAY NOW"}
+                                                                    {payingOrderId === order.id ? "OPENING..." : "PAY NOW"}
+                                                                </button>
+                                                            )}
+
+                                                            {order.can_cancel && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-outline-danger btn-sm fw-bold"
+                                                                    onClick={() => cancelOrder(order)}
+                                                                    disabled={cancellingOrderId === order.id}
+                                                                >
+                                                                    {cancellingOrderId === order.id ? "CANCELLING..." : "CANCEL ORDER"}
                                                                 </button>
                                                             )}
 

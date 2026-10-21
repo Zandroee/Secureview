@@ -199,6 +199,7 @@ class CheckoutController extends Controller
                     'purchasable_type' => $cartItem->purchasable_type,
                     'purchasable_id' => $cartItem->purchasable_id,
                     'name' => $purchasable->name,
+                    'warranty_period' => $purchasable->warranty ?? null,
                     'price' => $price,
                     'quantity' => $quantity,
                     'subtotal' => $price * $quantity,
@@ -360,6 +361,12 @@ class CheckoutController extends Controller
     {
         if ($order->user_id !== $request->user()->id) {
             abort(404);
+        }
+
+        if ($order->order_status === 'cancelled') {
+            return redirect()->route('purchases.show', $order)->withErrors([
+                'payment' => 'This order has been cancelled and can no longer be paid.',
+            ]);
         }
 
         if (

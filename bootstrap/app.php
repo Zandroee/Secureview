@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsTechnician;
+use App\Http\Middleware\SecurityHeaders;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,9 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Trust the reverse proxy headers used by Vercel so Laravel recognizes
-        // the original HTTPS request and generates secure asset/redirect URLs.
-        $middleware->trustProxies(at: '*');
+        $middleware->append(SecurityHeaders::class);
 
         $middleware->web(append: [
             HandleInertiaRequests::class,

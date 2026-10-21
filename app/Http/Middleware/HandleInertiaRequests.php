@@ -61,6 +61,9 @@ class HandleInertiaRequests extends Middleware
             'cartCount' => $cartCount,
             'notificationCount' => $notificationCount,
             'latestNotification' => $latestNotification,
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+            ],
         ]);
     }
 }

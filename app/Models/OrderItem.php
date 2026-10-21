@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class OrderItem extends Model
@@ -13,6 +14,7 @@ class OrderItem extends Model
         'purchasable_type',
         'purchasable_id',
         'name',
+        'warranty_period',
         'price',
         'quantity',
         'subtotal',
@@ -32,5 +34,10 @@ class OrderItem extends Model
     public function purchasable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function warrantyClaims(): HasMany
+    {
+        return $this->hasMany(WarrantyClaim::class);
     }
 }

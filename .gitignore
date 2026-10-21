@@ -13,8 +13,7 @@
 /.zed
 /auth.json
 /node_modules
-# Keep Vite production assets in Git so Vercel can serve the built manifest and files.
-# Do not ignore public/build; run npm run build before committing deployment updates.
+# Do not ignore public/build; keep the generated Vite manifest and assets synchronized with each release.
 /public/hot
 /public/storage
 /storage/*.key

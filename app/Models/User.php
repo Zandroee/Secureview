@@ -26,6 +26,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'role',
         'terms_accepted_at',
         'terms_version',
+        'preferred_theme',
+        'notification_popups_enabled',
     ];
 
     protected $hidden = [
@@ -38,6 +40,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
+            'notification_popups_enabled' => 'boolean',
             'password' => 'hashed',
         ];
     }
@@ -77,6 +80,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function customerNotifications(): HasMany
     {
         return $this->hasMany(CustomerNotification::class);
+    }
+
+    public function warrantyClaims(): HasMany
+    {
+        return $this->hasMany(WarrantyClaim::class);
     }
 
     public function reviews()

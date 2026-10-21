@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
@@ -22,6 +23,7 @@ class Order extends Model
         'stock_deducted_at',
         'payment_status',
         'order_status',
+        'cancellation_reason',
         'customer_name',
         'customer_phone',
         'customer_email',
@@ -46,5 +48,15 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(OrderEvent::class)->oldest();
+    }
+
+    public function invoiceRecord(): HasOne
+    {
+        return $this->hasOne(InvoiceRecord::class);
     }
 }

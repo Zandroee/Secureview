@@ -15,7 +15,7 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
-    // Catalog uploads must use persistent object storage on serverless deployments.
+    // Catalog uploads use persistent public storage by default; shared hosting may need an explicit web-root path.
     'catalog_disk' => env('CATALOG_STORAGE_DISK', 'public'),
 
     /*
@@ -43,7 +43,7 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
+            'root' => env('PUBLIC_STORAGE_PATH', storage_path('app/public')),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,
