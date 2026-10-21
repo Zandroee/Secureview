@@ -167,6 +167,14 @@ export default function Navbar() {
             navigateToPage(exactMatch.href);
         } else if (matches.length === 1) {
             navigateToPage(matches[0].href);
+        } else if (matches.length > 1) {
+            // Keep ambiguous page searches open so the user can choose the correct destination.
+            setShowNavigationSearch(true);
+        } else if (
+            normalizedCatalogSuggestions.packages.length > 0 &&
+            normalizedCatalogSuggestions.products.length === 0
+        ) {
+            searchCatalog("packages");
         } else {
             searchCatalog("products");
         }
@@ -222,7 +230,7 @@ export default function Navbar() {
                                     QUICK LINKS
                                 </div>
                                 <div className="navbar-search-results-list">
-                                    {navigationItems.slice(0, 8).map((item) => (
+                                    {navigationItems.map((item) => (
                                         <button
                                             key={item.href}
                                             type="button"
@@ -420,6 +428,8 @@ export default function Navbar() {
         }
 
         const controller = new AbortController();
+        setCatalogSuggestions({ products: [], packages: [] });
+        setCatalogSearchError(false);
         const timer = window.setTimeout(async () => {
             setCatalogSearchLoading(true);
             setCatalogSearchError(false);
