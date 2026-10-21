@@ -158,7 +158,7 @@ class CheckoutDeliveryLocationTest extends TestCase
                 ->where('cart.items.0.type', 'product')
                 ->where('cart.items.0.name', 'Selected Buy Now Camera')
                 ->where('cart.items.0.quantity', 2)
-                ->where('cart.subtotal', 1600.0));
+                ->where('cart.subtotal', 1600));
 
         $this->actingAs($customer)
             ->post(route('checkout.store'), [
@@ -255,7 +255,7 @@ class CheckoutDeliveryLocationTest extends TestCase
                 ->where('cart.items.0.type', 'package')
                 ->where('cart.items.0.name', 'Buy Now Test Package')
                 ->where('cart.items.0.quantity', 1)
-                ->where('cart.subtotal', 2500.0));
+                ->where('cart.subtotal', 2500));
     }
 
 }
