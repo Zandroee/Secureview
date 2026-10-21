@@ -1,4 +1,5 @@
 import { Link, router, usePage } from "@inertiajs/react";
+import { Offcanvas } from "bootstrap";
 import { useEffect, useRef, useState } from "react";
 
 export default function Navbar() {
@@ -21,6 +22,8 @@ export default function Navbar() {
     const [hoveredButton, setHoveredButton] = useState(null);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [liveNotification, setLiveNotification] = useState(null);
+    const [navigationSearch, setNavigationSearch] = useState("");
+    const [showNavigationSearch, setShowNavigationSearch] = useState(false);
 
     const userMenuRef = useRef(null);
     const lastNotificationId = useRef(latestNotification?.id ?? null);
@@ -28,6 +31,211 @@ export default function Navbar() {
     const isActive = (path) => {
         return path === "/" ? url === "/" : url.startsWith(path);
     };
+
+    const navigationItems = [
+        { label: "Home", href: "/", keywords: "landing start main page" },
+        { label: "Products", href: "/products", keywords: "shop cameras cctv hardware" },
+        { label: "Packages", href: "/packages", keywords: "bundles sets deals" },
+        { label: "Services", href: "/services", keywords: "installation repair maintenance service" },
+        { label: "About", href: "/about", keywords: "company information contact" },
+    ];
+
+    if (isAuthenticated) {
+        navigationItems.push(
+            { label: "Account Settings", href: "/settings", keywords: "profile preferences password appearance dark mode" },
+            { label: "Notifications", href: "/notifications", keywords: "alerts messages updates" }
+        );
+    }
+
+    if (isLoggedIn && isAdmin) {
+        navigationItems.push(
+            { label: "Admin Dashboard", href: "/dashboard", keywords: "overview analytics metrics" },
+            { label: "Admin Inquiries", href: "/admin/inquiries", keywords: "customer questions requests" },
+            { label: "Admin Schedules", href: "/admin/schedules", keywords: "appointments calendar technician bookings" },
+            { label: "Service History", href: "/admin/service-history", keywords: "completed jobs" },
+            { label: "Manage Products", href: "/admin/products", keywords: "inventory stock cameras" },
+            { label: "Manage Packages", href: "/admin/packages", keywords: "bundles" },
+            { label: "Warranty", href: "/admin/warranty", keywords: "coverage claims" },
+            { label: "Orders", href: "/admin/purchases", keywords: "purchases payments" },
+            { label: "Users", href: "/admin/users", keywords: "accounts customers" },
+            { label: "Transactions", href: "/admin/transactions", keywords: "payments financial records" },
+            { label: "Activity Logs", href: "/admin/activity-logs", keywords: "audit history" },
+            { label: "Invoice Settings", href: "/admin/invoice-settings", keywords: "billing" }
+        );
+    } else if (isLoggedIn && isTechnician) {
+        navigationItems.push(
+            { label: "Technician Workspace", href: "/technician/dashboard", keywords: "jobs assignments calendar" },
+            { label: "My Schedules", href: "/schedules", keywords: "appointments" }
+        );
+    } else if (isLoggedIn) {
+        navigationItems.push(
+            { label: "My Schedules", href: "/schedules", keywords: "appointments bookings" },
+            { label: "Inquiry History", href: "/inquiries", keywords: "requests service history" },
+            { label: "Purchase History", href: "/purchases", keywords: "orders payments" },
+            { label: "Warranty Claims", href: "/warranty-claims", keywords: "coverage repairs" },
+            { label: "Cart", href: "/cart", keywords: "basket checkout" }
+        );
+    }
+
+    const closeMobileNavigation = () => {
+        const menu = document.getElementById("navbarOffcanvas");
+        if (!menu?.classList.contains("show")) return;
+
+        Offcanvas.getInstance(menu)?.hide();
+    };
+
+    const navigateToPage = (href) => {
+        setShowNavigationSearch(false);
+        setNavigationSearch("");
+        closeMobileNavigation();
+        router.visit(href);
+    };
+
+    const searchCatalog = (catalog) => {
+        const query = navigationSearch.trim();
+        if (!query) return;
+
+        setShowNavigationSearch(false);
+        setNavigationSearch("");
+        closeMobileNavigation();
+        router.get(catalog === "packages" ? "/packages" : "/products", { search: query }, {
+            preserveState: false,
+            preserveScroll: false,
+        });
+    };
+
+    const matchingNavigationItems = navigationSearch.trim()
+        ? navigationItems.filter((item) =>
+            (item.label + " " + item.keywords)
+                .toLowerCase()
+                .includes(navigationSearch.trim().toLowerCase())
+        ).slice(0, 5)
+        : [];
+
+    const handleNavigationSearchSubmit = (event) => {
+        event.preventDefault();
+        const query = navigationSearch.trim();
+        if (!query) return;
+
+        const normalizedQuery = query.toLowerCase();
+        const exactMatch = navigationItems.find(
+            (item) => item.label.toLowerCase() === normalizedQuery
+        );
+        const matches = navigationItems.filter(
+            (item) => (item.label + " " + item.keywords).toLowerCase().includes(normalizedQuery)
+        );
+
+        if (exactMatch) {
+            navigateToPage(exactMatch.href);
+        } else if (matches.length === 1) {
+            navigateToPage(matches[0].href);
+        } else {
+            searchCatalog("products");
+        }
+    };
+
+    const renderNavigationSearch = () => (
+        <form
+            className="navbar-navigation-search"
+            role="search"
+            aria-label="SecureView navigation search"
+            onSubmit={handleNavigationSearchSubmit}
+            onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                    setShowNavigationSearch(false);
+                }
+            }}
+        >
+            <div className="position-relative w-100">
+                <div className="input-group input-group-sm">
+                    <span className="input-group-text bg-body">
+                        <i className="bi bi-search" aria-hidden="true"></i>
+                    </span>
+                    <input
+                        type="search"
+                        className="form-control"
+                        placeholder="Search pages or products"
+                        aria-label="Search pages or products"
+                        aria-expanded={showNavigationSearch && Boolean(navigationSearch.trim())}
+                        aria-controls="navbarNavigationSearchResults"
+                        autoComplete="off"
+                        value={navigationSearch}
+                        onChange={(event) => {
+                            setNavigationSearch(event.target.value);
+                            setShowNavigationSearch(true);
+                        }}
+                        onFocus={() => setShowNavigationSearch(true)}
+                        onKeyDown={(event) => {
+                            if (event.key === "Escape") {
+                                setShowNavigationSearch(false);
+                            }
+                        }}
+                    />
+                </div>
+
+                {showNavigationSearch && navigationSearch.trim() && (
+                    <div
+                        id="navbarNavigationSearchResults"
+                        className="position-absolute top-100 start-0 mt-1 bg-body border rounded-3 shadow p-2"
+                        style={{
+                            width: "min(360px, calc(100vw - 2rem))",
+                            maxHeight: "min(55vh, 420px)",
+                            overflowY: "auto",
+                            zIndex: 1080,
+                        }}
+                        role="listbox"
+                        aria-label="Search suggestions"
+                    >
+                        {matchingNavigationItems.length > 0 ? (
+                            <>
+                                <div className="small fw-semibold text-muted px-2 pt-1 pb-2">
+                                    Pages
+                                </div>
+                                {matchingNavigationItems.map((item) => (
+                                    <button
+                                        key={item.href}
+                                        type="button"
+                                        className="dropdown-item rounded-2 text-body"
+                                        role="option"
+                                        onMouseDown={(event) => event.preventDefault()}
+                                        onClick={() => navigateToPage(item.href)}
+                                    >
+                                        <i className="bi bi-arrow-up-right me-2 text-primary" aria-hidden="true"></i>
+                                        {item.label}
+                                    </button>
+                                ))}
+                            </>
+                        ) : (
+                            <div className="small text-muted px-2 py-2">
+                                No matching pages. Search the catalog below.
+                            </div>
+                        )}
+
+                        <div className="border-top mt-2 pt-2">
+                            <button
+                                type="button"
+                                className="dropdown-item rounded-2 text-body"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => searchCatalog("products")}
+                            >
+                                <i className="bi bi-camera-video me-2 text-primary" aria-hidden="true"></i>
+                                Search products for “{navigationSearch.trim()}”
+                            </button>
+                            <button
+                                type="button"
+                                className="dropdown-item rounded-2 text-body"
+                                onMouseDown={(event) => event.preventDefault()}
+                                onClick={() => searchCatalog("packages")}
+                            >
+                                <i className="bi bi-box-seam me-2 text-primary" aria-hidden="true"></i>
+                                Search packages for “{navigationSearch.trim()}”
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </form>
+    );
 
     const handleLogout = () => {
         setShowUserMenu(false);
@@ -53,6 +261,7 @@ export default function Navbar() {
 
     useEffect(() => {
         setShowUserMenu(false);
+        setShowNavigationSearch(false);
     }, [url]);
 
     useEffect(() => {
@@ -173,7 +382,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                 data-bs-dismiss="offcanvas">
+                                 onClick={closeMobileNavigation}>
                                     HOME
                                 </Link>
                             </li>
@@ -187,7 +396,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                 data-bs-dismiss="offcanvas">
+                                 onClick={closeMobileNavigation}>
                                     PRODUCTS
                                 </Link>
                             </li>
@@ -201,7 +410,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                 data-bs-dismiss="offcanvas">
+                                 onClick={closeMobileNavigation}>
                                     PACKAGES
                                 </Link>
                             </li>
@@ -216,7 +425,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium")
                                     }
-                                 data-bs-dismiss="offcanvas">
+                                 onClick={closeMobileNavigation}>
                                     SERVICES
                                 </Link>
                             </li>
@@ -229,12 +438,13 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                 data-bs-dismiss="offcanvas">
+                                 onClick={closeMobileNavigation}>
                                     ABOUT
                                 </Link>
                             </li>
                         </ul>
 
+                        {renderNavigationSearch()}
 
                         {/* MOBILE AUTH */}
 
