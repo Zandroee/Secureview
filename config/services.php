@@ -46,7 +46,4 @@ return [
         'base_url' => env('PAYMONGO_BASE_URL', 'https://api.paymongo.com'),
     ],
 
-    'cron' => [
-        'secret' => env('CRON_SECRET'),
-    ],
 ];
