@@ -65,7 +65,7 @@ const menuGroups = [
     ],
     [
         {
-            label: "Transaction Logs",
+            label: "Transaction Records",
             href: "/admin/transactions",
             key: "transactions",
             icon: "bi-receipt",
