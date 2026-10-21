@@ -259,7 +259,6 @@ function ImagePicker({
 
 export default function AdminProducts({
     products = [],
-    packages = [],
     categories = [],
     categoryOptions = [],
     warrantyOptions = [],
@@ -438,7 +437,7 @@ export default function AdminProducts({
                                 </h1>
 
                                 <div className="small text-muted">
-                                    Add and maintain products, manage stock, and control package availability.
+                                    Add and maintain products and manage stock.
                                 </div>
                             </div>
 
@@ -720,77 +719,6 @@ export default function AdminProducts({
                             <AdminPagination pagination={products} label="products" insideCard />
                         </div>
 
-                        <div
-                            className="bg-white border rounded-3"
-                            style={{
-                                boxShadow:
-                                    "0 3px 12px rgba(0,0,0,0.05)",
-                            }}
-                        >
-                            <div className="p-3 border-bottom">
-                                <div className="fw-bold">
-                                    PACKAGE AVAILABILITY
-                                </div>
-
-                                <div className="small text-muted">
-                                    Package stock is calculated from its product
-                                    components. Manage the components above to
-                                    change package availability.
-                                </div>
-                            </div>
-
-                            <div className="table-responsive">
-                                <table className="table table-hover align-middle mb-0">
-                                    <thead className="table-light">
-                                        <tr>
-                                            <th className="ps-3">PACKAGE</th>
-                                            <th>AVAILABLE</th>
-                                            <th>STATUS</th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody>
-                                        {packages.length === 0 ? (
-                                            <tr>
-                                                <td
-                                                    colSpan="3"
-                                                    className="text-center text-muted py-4"
-                                                >
-                                                    No packages found.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            packages.map((pkg) => (
-                                                <tr key={pkg.id}>
-                                                    <td className="ps-3 fw-semibold">
-                                                        {pkg.name}
-                                                    </td>
-
-                                                    <td>
-                                                        {pkg.available_stock}
-                                                    </td>
-
-                                                    <td>
-                                                        <span
-                                                            className={
-                                                                "badge rounded-pill px-3 py-2 " +
-                                                                stockClass(
-                                                                    pkg.available_stock
-                                                                )
-                                                            }
-                                                        >
-                                                            {pkg.in_stock
-                                                                ? "In Stock"
-                                                                : "Out of Stock"}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
                     </main>
                 </div>
             </div>
@@ -798,7 +726,7 @@ export default function AdminProducts({
 
             {productModalOpen && (
                 <div
-                    className="modal d-block"
+                    className="modal d-block admin-catalog-modal"
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="productModalTitle"
@@ -809,8 +737,8 @@ export default function AdminProducts({
                         }
                     }}
                 >
-                    <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-                        <div className="modal-content border-0 rounded-4 shadow">
+                    <div className="modal-dialog modal-lg admin-catalog-modal-dialog admin-catalog-modal-dialog-product">
+                        <div className="modal-content border-0 rounded-4 shadow admin-catalog-modal-content">
                             <form onSubmit={saveProduct}>
                                 <div className="modal-header">
                                     <div>
