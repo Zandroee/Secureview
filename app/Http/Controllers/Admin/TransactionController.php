@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\InvoiceRecord;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -79,7 +80,16 @@ class TransactionController extends Controller
      */
     private function buildQuery(array $filters): Builder
     {
-        $query = Order::query()->with('events.actor')->latest();
+        $query = Order::query()
+            ->select('orders.*')
+            ->with(['events.actor', 'invoiceRecord'])
+            ->addSelect([
+                'internal_invoice_record_number' => InvoiceRecord::query()
+                    ->select('record_number')
+                    ->whereColumn('order_id', 'orders.id')
+                    ->limit(1),
+            ])
+            ->latest();
 
         if (!empty($filters['search'])) {
             $search = trim($filters['search']);
@@ -130,6 +140,11 @@ class TransactionController extends Controller
             'payment_status' => $order->payment_status,
             'order_status' => $order->order_status,
             'amount' => (float) $order->total,
+            'invoice_record' => $order->invoiceRecord ? [
+                'record_number' => $order->invoiceRecord->record_number,
+                'issued_at' => $order->invoiceRecord->issued_at?->format('M d, Y h:i A'),
+            ] : null,
+            'invoice_url' => route('admin.purchases.invoice', $order),
             'created_at' => $order->created_at?->format('M d, Y h:i A'),
             'paid_at' => $order->paid_at?->format('M d, Y h:i A'),
             'timeline' => $order->events->map(fn ($event) => [
@@ -149,7 +164,7 @@ class TransactionController extends Controller
 
     private function downloadCsv(Builder $query)
     {
-        $filename = 'secureview-transactions-' . now()->format('Ymd-His') . '.csv';
+        $filename = 'secureview-transaction-records-' . now()->format('Ymd-His') . '.csv';
 
         return response()->streamDownload(function () use ($query) {
             $output = fopen('php://output', 'w');
@@ -171,6 +186,7 @@ class TransactionController extends Controller
                 'Payment Status',
                 'Order Status',
                 'Amount (PHP)',
+                'Internal Invoice Record',
                 'Order Created At',
                 'Paid At',
             ]);
@@ -186,6 +202,7 @@ class TransactionController extends Controller
                     $order->payment_status,
                     $order->order_status,
                     number_format((float) $order->total, 2, '.', ''),
+                    $this->safeCsvCell($order->internal_invoice_record_number),
                     $order->created_at?->format('Y-m-d H:i:s'),
                     $order->paid_at?->format('Y-m-d H:i:s'),
                 ]);
