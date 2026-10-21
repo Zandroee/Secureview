@@ -106,19 +106,6 @@ export default function Navbar() {
         router.visit(href);
     };
 
-    const searchCatalog = (catalog) => {
-        const query = navigationSearch.trim();
-        if (!query) return;
-
-        setShowNavigationSearch(false);
-        setNavigationSearch("");
-        closeMobileNavigation();
-        router.get(catalog === "packages" ? "/packages" : "/products", { search: query }, {
-            preserveState: false,
-            preserveScroll: false,
-        });
-    };
-
     const matchingNavigationItems = navigationSearch.trim()
         ? navigationItems.filter((item) =>
             (item.label + " " + item.keywords)
