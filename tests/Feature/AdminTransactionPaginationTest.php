@@ -32,6 +32,8 @@ class AdminTransactionPaginationTest extends TestCase
                 'customer_phone' => '09171234567',
                 'customer_email' => $customer->email,
                 'delivery_address' => '123 Test Street, Taguig',
+                'created_at' => now()->addSeconds($index),
+                'updated_at' => now()->addSeconds($index),
             ]);
         }
 
