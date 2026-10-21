@@ -1093,7 +1093,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                     onClick={() =>
                                                         selectDate(date)
                                                     }
-                                                    className="btn btn-sm"
+                                                    className={"inquiry-date-option btn btn-sm " + (selected ? "is-selected" : fullyBooked ? "is-booked" : past ? "is-past" : "")}
                                                     style={{
                                                         minHeight: "32px",
                                                         padding: 0,
@@ -1164,7 +1164,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                             slot.label
                                                         )
                                                     }
-                                                    className="btn btn-sm text-start d-flex justify-content-between align-items-center"
+                                                    className={"inquiry-time-slot btn btn-sm text-start d-flex justify-content-between align-items-center " + (selected ? "is-selected" : fullyBooked ? "is-booked" : "")}
                                                     style={{
                                                         border: selected
                                                             ? "1px solid #0d6efd"
