@@ -262,3 +262,22 @@ code,
         height: 220px;
     }
 }
+
+/* Full-screen dialogs must remain reachable when their content is taller than
+   a phone viewport. Safe alignment prevents the top of a centered flex child
+   from becoming inaccessible when the dialog needs to scroll. */
+@media (max-width: 767.98px), (max-height: 620px) {
+    .position-fixed.top-0.start-0.w-100.h-100.d-flex.align-items-center.justify-content-center {
+        align-items: flex-start !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        padding-top: 0.75rem !important;
+        padding-bottom: 0.75rem !important;
+    }
+
+    .position-fixed.top-0.start-0.w-100.h-100.d-flex.align-items-center.justify-content-center > .bg-white {
+        max-height: calc(100dvh - 1.5rem) !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+    }
+}
