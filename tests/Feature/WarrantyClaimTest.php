@@ -188,7 +188,57 @@ class WarrantyClaimTest extends TestCase
                 ->where('warranties.data.0.item_name', $item->name)
                 ->where('warranties.data.0.warranty_period', '18 months')
                 ->where('warranties.data.0.coverage_status', 'active')
-                ->has('claims.data', 0));
+                ->has('warranties.data.0.claims', 0));
+    }
+
+    public function test_admin_warranty_record_contains_all_associated_claims_in_one_paginated_list(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $item = $this->createPaidOrderItem($customer, '1 year', now()->subMonths(2));
+
+        $firstClaim = WarrantyClaim::create([
+            'user_id' => $customer->id,
+            'order_id' => $item->order_id,
+            'order_item_id' => $item->id,
+            'claim_number' => 'WCL-TEST-000101',
+            'issue_description' => 'Camera signal drops.',
+            'status' => 'submitted',
+        ]);
+        WarrantyClaim::create([
+            'user_id' => $customer->id,
+            'order_id' => $item->order_id,
+            'order_item_id' => $item->id,
+            'claim_number' => 'WCL-TEST-000102',
+            'issue_description' => 'Camera fails to record.',
+            'status' => 'resolved',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.warranty.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Warranty')
+                ->has('warranties.data', 1)
+                ->has('warranties.data.0.claims', 2)
+                ->where('warranties.data.0.claims.0.claim_number', 'WCL-TEST-000102')
+                ->where('warranties.data.0.claims.1.claim_number', $firstClaim->claim_number)
+                ->missing('claims'));
+
+        $this->actingAs($admin)
+            ->get(route('admin.warranty.index', ['status' => 'submitted']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Warranty')
+                ->has('warranties.data', 1)
+                ->has('warranties.data.0.claims', 1)
+                ->where('warranties.data.0.claims.0.status', 'submitted'));
     }
 
     private function createPaidOrderItem(User $customer, string $warranty, $paidAt): OrderItem
