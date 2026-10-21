@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-    [string] $OutputZip
+    [string] $OutputZip,
+    [switch] $IncludeLocalUploads
 )
 
 $ErrorActionPreference = 'Stop'
@@ -80,6 +81,7 @@ try {
         (Join-Path $repoRoot 'storage\framework\sessions'),
         (Join-Path $repoRoot 'storage\framework\views'),
         (Join-Path $repoRoot 'storage\framework\testing'),
+        (Join-Path $repoRoot 'storage\app\public'),
         (Join-Path $repoRoot 'public\storage')
     )
 
@@ -162,8 +164,8 @@ try {
     }
     New-Item -ItemType Directory -Path $webStorage -Force | Out-Null
 
-    $sourcePublicUploads = Join-Path $appRoot 'storage\app\public'
-    if (Test-Path $sourcePublicUploads) {
+    $sourcePublicUploads = Join-Path $repoRoot 'storage\app\public'
+    if ($IncludeLocalUploads -and (Test-Path $sourcePublicUploads)) {
         Invoke-Robocopy -Arguments @(
             $sourcePublicUploads, $webStorage, '/E', '/COPY:DAT', '/R:2', '/W:1', '/NFL', '/NDL', '/NP'
         )
@@ -180,10 +182,15 @@ Options -Indexes
 SECUREVIEW HOSTINGER RELEASE
 
 This archive contains two sibling folders:
-- secureview_app: private Laravel application, dependencies, and storage
+- secureview_app: private Laravel application and production dependencies
 - public_html: the web-accessible Laravel public files
 
 Upload/extract both folders one level below the domain folder so they are siblings.
+By default, this archive excludes locally uploaded catalog images. For the initial image
+migration only, build the archive with -IncludeLocalUploads after confirming
+storage/app/public contains only the public catalog images you want to publish.
+For routine updates, do not use -IncludeLocalUploads and never delete or replace an
+existing public_html/storage folder containing live uploads.
 Merge the public_html contents into the domain's actual public_html directory; do not
 create a nested public_html/public_html directory. Keep secureview_app outside the
 web document root and do not copy its .env.example into a production .env unchanged.
