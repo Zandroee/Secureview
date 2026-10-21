@@ -24,6 +24,9 @@ export default function Navbar() {
     const [liveNotification, setLiveNotification] = useState(null);
     const [navigationSearch, setNavigationSearch] = useState("");
     const [showNavigationSearch, setShowNavigationSearch] = useState(false);
+    const [catalogSuggestions, setCatalogSuggestions] = useState({ products: [], packages: [] });
+    const [catalogSearchLoading, setCatalogSearchLoading] = useState(false);
+    const [catalogSearchError, setCatalogSearchError] = useState(false);
 
     const userMenuRef = useRef(null);
     const lastNotificationId = useRef(latestNotification?.id ?? null);
@@ -33,47 +36,59 @@ export default function Navbar() {
     };
 
     const navigationItems = [
-        { label: "Home", href: "/", keywords: "landing start main page" },
-        { label: "Products", href: "/products", keywords: "shop cameras cctv hardware" },
-        { label: "Packages", href: "/packages", keywords: "bundles sets deals" },
-        { label: "Services", href: "/services", keywords: "installation repair maintenance service" },
-        { label: "About", href: "/about", keywords: "company information contact" },
+        { label: "Home", href: "/", icon: "bi-house", keywords: "landing start main homepage" },
+        { label: "Products", href: "/products", icon: "bi-camera-video", keywords: "shop cctv camera cameras hardware devices recorders" },
+        { label: "Packages", href: "/packages", icon: "bi-box-seam", keywords: "bundles sets deals kits package system" },
+        { label: "Services", href: "/services", icon: "bi-tools", keywords: "installation repair maintenance service technical support" },
+        { label: "About", href: "/about", icon: "bi-info-circle", keywords: "company information contact netmax trading" },
     ];
+
+    if (!isAuthenticated) {
+        navigationItems.push(
+            { label: "Log In", href: "/login", icon: "bi-box-arrow-in-right", keywords: "sign in account access" },
+            { label: "Create Account", href: "/signup", icon: "bi-person-plus", keywords: "register sign up new customer" }
+        );
+    }
 
     if (isAuthenticated) {
         navigationItems.push(
-            { label: "Account Settings", href: "/settings", keywords: "profile preferences password appearance dark mode" },
-            { label: "Notifications", href: "/notifications", keywords: "alerts messages updates" }
+            { label: "Account Settings", href: "/settings", icon: "bi-gear", keywords: "profile preferences password appearance theme dark mode notifications security" },
+            { label: "Notifications", href: "/notifications", icon: "bi-bell", keywords: "alerts messages updates unread" }
         );
     }
 
     if (isLoggedIn && isAdmin) {
         navigationItems.push(
-            { label: "Admin Dashboard", href: "/dashboard", keywords: "overview analytics metrics" },
-            { label: "Admin Inquiries", href: "/admin/inquiries", keywords: "customer questions requests" },
-            { label: "Admin Schedules", href: "/admin/schedules", keywords: "appointments calendar technician bookings" },
-            { label: "Service History", href: "/admin/service-history", keywords: "completed jobs" },
-            { label: "Manage Products", href: "/admin/products", keywords: "inventory stock cameras" },
-            { label: "Manage Packages", href: "/admin/packages", keywords: "bundles" },
-            { label: "Warranty", href: "/admin/warranty", keywords: "coverage claims" },
-            { label: "Orders", href: "/admin/purchases", keywords: "purchases payments" },
-            { label: "Users", href: "/admin/users", keywords: "accounts customers" },
-            { label: "Transactions", href: "/admin/transactions", keywords: "payments financial records" },
-            { label: "Activity Logs", href: "/admin/activity-logs", keywords: "audit history" },
-            { label: "Invoice Settings", href: "/admin/invoice-settings", keywords: "billing" }
+            { label: "Admin Dashboard", href: "/dashboard", icon: "bi-speedometer2", keywords: "overview analytics metrics revenue orders stock" },
+            { label: "Manage Inquiries", href: "/admin/inquiries", icon: "bi-chat-left-text", keywords: "customer questions requests pending inquiry" },
+            { label: "Manage Schedules", href: "/admin/schedules", icon: "bi-calendar3", keywords: "appointments calendar technician bookings availability" },
+            { label: "Service History", href: "/admin/service-history", icon: "bi-clock-history", keywords: "completed jobs archived services" },
+            { label: "Manage Products", href: "/admin/products", icon: "bi-camera-video", keywords: "inventory stock cameras catalogue" },
+            { label: "Inventory Adjustments", href: "/admin/inventory-adjustments", icon: "bi-boxes", keywords: "stock changes adjustment reasons audit inventory" },
+            { label: "Manage Packages", href: "/admin/packages", icon: "bi-box-seam", keywords: "bundles package catalogue" },
+            { label: "Warranty Management", href: "/admin/warranty", icon: "bi-shield-check", keywords: "coverage claims warranty" },
+            { label: "Order Management", href: "/admin/purchases", icon: "bi-bag-check", keywords: "orders purchases payments pending" },
+            { label: "User Management", href: "/admin/users", icon: "bi-people", keywords: "accounts customers technicians roles" },
+            { label: "Transaction Records", href: "/admin/transactions", icon: "bi-receipt", keywords: "payments financial records transactions" },
+            { label: "Activity Logs", href: "/admin/activity-logs", icon: "bi-journal-text", keywords: "audit history events activities" },
+            { label: "Invoice Settings", href: "/admin/invoice-settings", icon: "bi-file-earmark-text", keywords: "billing invoice serial numbers" }
         );
     } else if (isLoggedIn && isTechnician) {
         navigationItems.push(
-            { label: "Technician Workspace", href: "/technician/dashboard", keywords: "jobs assignments calendar" },
-            { label: "My Schedules", href: "/schedules", keywords: "appointments" }
+            { label: "Technician Workspace", href: "/technician/dashboard", icon: "bi-tools", keywords: "jobs assignments work field operations" },
+            { label: "My Service Jobs", href: "/technician/dashboard#my-jobs", icon: "bi-clipboard-check", keywords: "assigned ongoing upcoming completed jobs" },
+            { label: "Available Team Jobs", href: "/technician/dashboard#available-jobs", icon: "bi-people", keywords: "join team jobs available services" },
+            { label: "Inventory", href: "/technician/dashboard#inventory", icon: "bi-boxes", keywords: "stock products quantity adjustment" },
+            { label: "My Schedules", href: "/schedules", icon: "bi-calendar3", keywords: "appointments" },
+            { label: "Purchase History", href: "/purchases", icon: "bi-bag-check", keywords: "orders" }
         );
     } else if (isLoggedIn) {
         navigationItems.push(
-            { label: "My Schedules", href: "/schedules", keywords: "appointments bookings" },
-            { label: "Inquiry History", href: "/inquiries", keywords: "requests service history" },
-            { label: "Purchase History", href: "/purchases", keywords: "orders payments" },
-            { label: "Warranty Claims", href: "/warranty-claims", keywords: "coverage repairs" },
-            { label: "Cart", href: "/cart", keywords: "basket checkout" }
+            { label: "My Schedules", href: "/schedules", icon: "bi-calendar3", keywords: "appointments bookings upcoming service" },
+            { label: "Inquiry History", href: "/inquiries", icon: "bi-chat-left-text", keywords: "requests status service inquiry" },
+            { label: "Purchase History", href: "/purchases", icon: "bi-bag-check", keywords: "orders payments receipts" },
+            { label: "Warranty Claims", href: "/warranty-claims", icon: "bi-shield-check", keywords: "coverage repair defective warranty" },
+            { label: "Shopping Cart", href: "/cart", icon: "bi-cart3", keywords: "basket checkout buy" }
         );
     }
 
@@ -109,8 +124,44 @@ export default function Navbar() {
             (item.label + " " + item.keywords)
                 .toLowerCase()
                 .includes(navigationSearch.trim().toLowerCase())
-        ).slice(0, 5)
+        )
         : [];
+
+    const normalizedCatalogSuggestions = {
+        products: catalogSuggestions.products ?? [],
+        packages: catalogSuggestions.packages ?? [],
+    };
+
+    const hasCatalogResults =
+        normalizedCatalogSuggestions.products.length > 0 ||
+        normalizedCatalogSuggestions.packages.length > 0;
+
+    const formatSearchPrice = (price) =>
+        Number(price ?? 0).toLocaleString("en-PH", {
+            style: "currency",
+            currency: "PHP",
+            maximumFractionDigits: 0,
+        });
+
+    const catalogImageUrl = (item) => {
+        const image = item?.image;
+        if (!image) return "";
+        if (/^https?:\/\//i.test(image) || String(image).startsWith("/")) return image;
+        return "/storage/" + String(image).replace(/^\/+/, "");
+    };
+
+    const searchCatalog = (catalog) => {
+        const query = navigationSearch.trim();
+        if (!query) return;
+
+        setShowNavigationSearch(false);
+        setNavigationSearch("");
+        closeMobileNavigation();
+        router.get(catalog === "packages" ? "/packages" : "/products", { search: query }, {
+            preserveState: false,
+            preserveScroll: false,
+        });
+    };
 
     const handleNavigationSearchSubmit = (event) => {
         event.preventDefault();
@@ -138,7 +189,7 @@ export default function Navbar() {
         <form
             className="navbar-navigation-search"
             role="search"
-            aria-label="SecureView navigation search"
+            aria-label="SecureView search"
             onSubmit={handleNavigationSearchSubmit}
             onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) {
@@ -147,95 +198,202 @@ export default function Navbar() {
             }}
         >
             <div className="position-relative w-100">
-                <div className="input-group input-group-sm">
-                    <span className="input-group-text bg-body">
-                        <i className="bi bi-search" aria-hidden="true"></i>
-                    </span>
-                    <input
-                        type="search"
-                        className="form-control"
-                        placeholder="Search pages or products"
-                        aria-label="Search pages or products"
-                        aria-expanded={showNavigationSearch && Boolean(navigationSearch.trim())}
-                        aria-controls="navbarNavigationSearchResults"
-                        autoComplete="off"
-                        value={navigationSearch}
-                        onChange={(event) => {
-                            setNavigationSearch(event.target.value);
-                            setShowNavigationSearch(true);
-                        }}
-                        onFocus={() => setShowNavigationSearch(true)}
-                        onKeyDown={(event) => {
-                            if (event.key === "Escape") {
-                                setShowNavigationSearch(false);
-                            }
-                        }}
-                    />
-                </div>
+                <input
+                    type="search"
+                    className="form-control navbar-navigation-search-input"
+                    placeholder="SEARCH"
+                    aria-label="Search pages, products, and packages"
+                    aria-expanded={showNavigationSearch}
+                    aria-controls="navbarNavigationSearchResults"
+                    autoComplete="off"
+                    value={navigationSearch}
+                    onChange={(event) => {
+                        setNavigationSearch(event.target.value);
+                        setShowNavigationSearch(true);
+                    }}
+                    onFocus={() => setShowNavigationSearch(true)}
+                    onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                            setShowNavigationSearch(false);
+                        }
+                    }}
+                />
+                <i
+                    className="bi bi-search navbar-navigation-search-icon"
+                    aria-hidden="true"
+                />
 
-                {showNavigationSearch && navigationSearch.trim() && (
+                {showNavigationSearch && (
                     <div
                         id="navbarNavigationSearchResults"
-                        className="position-absolute top-100 start-0 mt-1 bg-body border rounded-3 shadow p-2"
-                        style={{
-                            width: "min(360px, calc(100vw - 2rem))",
-                            maxHeight: "min(55vh, 420px)",
-                            overflowY: "auto",
-                            zIndex: 1080,
-                        }}
-                        role="listbox"
+                        className="navbar-search-dropdown bg-body border shadow-lg"
                         aria-label="Search suggestions"
                     >
-                        {matchingNavigationItems.length > 0 ? (
+                        {!navigationSearch.trim() ? (
                             <>
-                                <div className="small fw-semibold text-muted px-2 pt-1 pb-2">
-                                    Pages
+                                <div className="navbar-search-section-heading">
+                                    QUICK LINKS
                                 </div>
-                                {matchingNavigationItems.map((item) => (
-                                    <button
-                                        key={item.href}
-                                        type="button"
-                                        className="dropdown-item rounded-2 text-body"
-                                        role="option"
-                                        onMouseDown={(event) => event.preventDefault()}
-                                        onClick={() => navigateToPage(item.href)}
-                                    >
-                                        <i className="bi bi-arrow-up-right me-2 text-primary" aria-hidden="true"></i>
-                                        {item.label}
-                                    </button>
-                                ))}
+                                <div className="navbar-search-results-list">
+                                    {navigationItems.slice(0, 8).map((item) => (
+                                        <button
+                                            key={item.href}
+                                            type="button"
+                                            className="navbar-search-result"
+                                            onMouseDown={(event) => event.preventDefault()}
+                                            onClick={() => navigateToPage(item.href)}
+                                        >
+                                            <span className="navbar-search-result-icon">
+                                                <i className={"bi " + item.icon} aria-hidden="true" />
+                                            </span>
+                                            <span className="navbar-search-result-copy">
+                                                <span className="navbar-search-result-title">{item.label}</span>
+                                                <span className="navbar-search-result-subtitle">{item.href}</span>
+                                            </span>
+                                            <i className="bi bi-arrow-up-right navbar-search-result-arrow" aria-hidden="true" />
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="navbar-search-hint">
+                                    Type at least 2 characters to search the catalog.
+                                </div>
                             </>
                         ) : (
-                            <div className="small text-muted px-2 py-2">
-                                No matching pages. Search the catalog below.
-                            </div>
-                        )}
+                            <>
+                                {matchingNavigationItems.length > 0 && (
+                                    <section className="navbar-search-section">
+                                        <div className="navbar-search-section-heading">
+                                            PAGES <span>{matchingNavigationItems.length}</span>
+                                        </div>
+                                        <div className="navbar-search-results-list">
+                                            {matchingNavigationItems.map((item) => (
+                                                <button
+                                                    key={item.href}
+                                                    type="button"
+                                                    className="navbar-search-result"
+                                                    onMouseDown={(event) => event.preventDefault()}
+                                                    onClick={() => navigateToPage(item.href)}
+                                                >
+                                                    <span className="navbar-search-result-icon">
+                                                        <i className={"bi " + item.icon} aria-hidden="true" />
+                                                    </span>
+                                                    <span className="navbar-search-result-copy">
+                                                        <span className="navbar-search-result-title">{item.label}</span>
+                                                        <span className="navbar-search-result-subtitle">{item.href}</span>
+                                                    </span>
+                                                    <i className="bi bi-arrow-up-right navbar-search-result-arrow" aria-hidden="true" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </section>
+                                )}
 
-                        <div className="border-top mt-2 pt-2">
-                            <button
-                                type="button"
-                                className="dropdown-item rounded-2 text-body"
-                                onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => searchCatalog("products")}
-                            >
-                                <i className="bi bi-camera-video me-2 text-primary" aria-hidden="true"></i>
-                                Search products for “{navigationSearch.trim()}”
-                            </button>
-                            <button
-                                type="button"
-                                className="dropdown-item rounded-2 text-body"
-                                onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => searchCatalog("packages")}
-                            >
-                                <i className="bi bi-box-seam me-2 text-primary" aria-hidden="true"></i>
-                                Search packages for “{navigationSearch.trim()}”
-                            </button>
-                        </div>
+                                {navigationSearch.trim().length < 2 ? (
+                                    <div className="navbar-search-hint">
+                                        Keep typing to search matching products and packages.
+                                    </div>
+                                ) : catalogSearchError ? (
+                                    <div className="navbar-search-state">
+                                        Catalog suggestions are temporarily unavailable. You can still open the full search results below.
+                                    </div>
+                                ) : catalogSearchLoading ? (
+                                    <div className="navbar-search-state">
+                                        <span className="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true" />
+                                        Searching products and packages…
+                                    </div>
+                                ) : (
+                                    <>
+                                        {normalizedCatalogSuggestions.products.length > 0 && (
+                                            <section className="navbar-search-section">
+                                                <div className="navbar-search-section-heading">
+                                                    PRODUCTS <span>{normalizedCatalogSuggestions.products.length}</span>
+                                                </div>
+                                                <div className="navbar-search-results-list">
+                                                    {normalizedCatalogSuggestions.products.map((item) => (
+                                                        <button
+                                                            key={"product-" + item.id}
+                                                            type="button"
+                                                            className="navbar-search-catalog-result"
+                                                            onMouseDown={(event) => event.preventDefault()}
+                                                            onClick={() => navigateToPage(item.href)}
+                                                        >
+                                                            {catalogImageUrl(item) ? (
+                                                                <img src={catalogImageUrl(item)} alt="" className="navbar-search-thumbnail" loading="lazy" />
+                                                            ) : (
+                                                                <span className="navbar-search-thumbnail navbar-search-thumbnail-placeholder"><i className="bi bi-camera-video" aria-hidden="true" /></span>
+                                                            )}
+                                                            <span className="navbar-search-result-copy">
+                                                                <span className="navbar-search-result-title">{item.name}</span>
+                                                                <span className="navbar-search-result-subtitle">{item.category || "CCTV product"}</span>
+                                                            </span>
+                                                            <span className="navbar-search-price">{formatSearchPrice(item.price)}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <button type="button" className="navbar-search-view-all" onMouseDown={(event) => event.preventDefault()} onClick={() => searchCatalog("products")}>
+                                                    View all matching products <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
+                                                </button>
+                                            </section>
+                                        )}
+
+                                        {normalizedCatalogSuggestions.packages.length > 0 && (
+                                            <section className="navbar-search-section">
+                                                <div className="navbar-search-section-heading">
+                                                    PACKAGES <span>{normalizedCatalogSuggestions.packages.length}</span>
+                                                </div>
+                                                <div className="navbar-search-results-list">
+                                                    {normalizedCatalogSuggestions.packages.map((item) => (
+                                                        <button
+                                                            key={"package-" + item.id}
+                                                            type="button"
+                                                            className="navbar-search-catalog-result"
+                                                            onMouseDown={(event) => event.preventDefault()}
+                                                            onClick={() => navigateToPage(item.href)}
+                                                        >
+                                                            {catalogImageUrl(item) ? (
+                                                                <img src={catalogImageUrl(item)} alt="" className="navbar-search-thumbnail" loading="lazy" />
+                                                            ) : (
+                                                                <span className="navbar-search-thumbnail navbar-search-thumbnail-placeholder"><i className="bi bi-box-seam" aria-hidden="true" /></span>
+                                                            )}
+                                                            <span className="navbar-search-result-copy">
+                                                                <span className="navbar-search-result-title">{item.name}</span>
+                                                                <span className="navbar-search-result-subtitle">{item.category || "CCTV package"}</span>
+                                                            </span>
+                                                            <span className="navbar-search-price">{formatSearchPrice(item.price)}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <button type="button" className="navbar-search-view-all" onMouseDown={(event) => event.preventDefault()} onClick={() => searchCatalog("packages")}>
+                                                    View all matching packages <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
+                                                </button>
+                                            </section>
+                                        )}
+
+                                        {!hasCatalogResults && matchingNavigationItems.length === 0 && (
+                                            <div className="navbar-search-empty">
+                                                <i className="bi bi-search fs-4 text-secondary mb-2" aria-hidden="true" />
+                                                <strong>No exact matches found</strong>
+                                                <span>Search all products or packages using this phrase.</span>
+                                            </div>
+                                        )}
+
+                                        <div className="navbar-search-footer">
+                                            <button type="button" className="navbar-search-footer-action" onMouseDown={(event) => event.preventDefault()} onClick={() => searchCatalog("products")}>
+                                                Search products for “{navigationSearch.trim()}”
+                                            </button>
+                                            <button type="button" className="navbar-search-footer-action" onMouseDown={(event) => event.preventDefault()} onClick={() => searchCatalog("packages")}>
+                                                Search packages for “{navigationSearch.trim()}”
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </>
+                        )}
                     </div>
                 )}
             </div>
         </form>
-    );
+    ); 
 
     const handleLogout = () => {
         setShowUserMenu(false);
@@ -263,6 +421,62 @@ export default function Navbar() {
         setShowUserMenu(false);
         setShowNavigationSearch(false);
     }, [url]);
+
+    useEffect(() => {
+        const query = navigationSearch.trim();
+
+        if (!showNavigationSearch || query.length < 2) {
+            setCatalogSuggestions({ products: [], packages: [] });
+            setCatalogSearchLoading(false);
+            setCatalogSearchError(false);
+            return undefined;
+        }
+
+        const controller = new AbortController();
+        const timer = window.setTimeout(async () => {
+            setCatalogSearchLoading(true);
+            setCatalogSearchError(false);
+
+            try {
+                const response = await fetch("/search/suggestions?q=" + encodeURIComponent(query), {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                    signal: controller.signal,
+                });
+
+                if (!response.ok) {
+                    throw new Error("Search suggestions request failed.");
+                }
+
+                const result = await response.json();
+                if (!controller.signal.aborted) {
+                    setCatalogSuggestions({
+                        products: Array.isArray(result.products) ? result.products : [],
+                        packages: Array.isArray(result.packages) ? result.packages : [],
+                    });
+                }
+            } catch (error) {
+                if (error.name !== "AbortError" && !controller.signal.aborted) {
+                    setCatalogSuggestions({ products: [], packages: [] });
+                    setCatalogSearchError(true);
+                }
+            } finally {
+                if (!controller.signal.aborted) {
+                    setCatalogSearchLoading(false);
+                }
+            }
+        }, 220);
+
+        return () => {
+            window.clearTimeout(timer);
+            controller.abort();
+        };
+    }, [navigationSearch, showNavigationSearch]);
+
+
 
     useEffect(() => {
         if (!isLoggedIn) return;
