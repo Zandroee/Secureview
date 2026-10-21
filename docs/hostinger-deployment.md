@@ -8,10 +8,12 @@ Before uploading the app, confirm the plan supports:
 
 - PHP 8.2 or newer (the project requires PHP `^8.2`) and Laravel's required PHP extensions, including PDO MySQL, OpenSSL, Mbstring, Fileinfo, Ctype, Tokenizer, XML/DOM, cURL, and GD for the image-related workflows.
 - A persistent MySQL database and enough disk space for `vendor/`, uploads, logs, and generated assets.
-- SSH/terminal access is strongly recommended because deployments need Composer and Artisan commands. Hostinger documents SSH access on Premium Web plans and above; Composer 2 is available over SSH on Premium Web, Business/Unlimited Web, and Cloud plans. Check your current plan's capabilities before proceeding.
+- PHP CLI access is strongly recommended because SecureView needs Composer, safe Artisan migrations, cache management, and scheduled jobs. Hostinger's current documentation says SSH is unavailable on Single Web Hosting; SSH and preinstalled Composer 2 are available on Premium Web and above. Check the exact plan in hPanel before proceeding.
 - HTTPS for the site and the PayMongo webhook.
 
-Official references: [Hostinger SSH access](https://www.hostinger.com/support/1583645-how-to-enable-ssh-access-in-hostinger/), [Composer at Hostinger](https://www.hostinger.com/support/5792078-how-to-use-composer-at-hostinger/).
+**Plan note:** Premium or Business Web Hosting is the safer choice for this Laravel application because routine deployment and recovery require CLI commands. If your plan is Single and has no supported CLI command runner, the local package script below can prepare the files, but it does not itself apply database migrations. Do not create a public unauthenticated route to execute Artisan; confirm a supported migration path with Hostinger or upgrade to a plan with SSH/CLI access.
+
+Official references: [Hostinger SSH access](https://www.hostinger.com/support/1583645-how-to-enable-ssh-access-in-hostinger/), [Composer at Hostinger](https://www.hostinger.com/support/5792078-how-to-use-composer-at-hostinger/), [Hostinger Composer/PHP version troubleshooting](https://www.hostinger.com/support/5792082-how-to-solve-common-composer-issues-at-hostinger/).
 
 ## 2. Build the front-end assets locally
 
