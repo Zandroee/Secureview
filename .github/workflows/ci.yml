@@ -142,9 +142,13 @@ jobs:
               throw "Development-only folders were included in the release archive."
             }
 
+            # Check only the application and document-root levels. Some Composer
+            # packages may contain nested .env fixtures/examples that are not app secrets.
             $unexpectedEnvFiles = @(
-              Get-ChildItem -Path $inspectRoot -Recurse -File -Force |
-                Where-Object { $_.Name -in @(".env", ".env.backup", ".env.production", ".env.local", ".env.testing") }
+              foreach ($rootPath in @($appRoot, $webRoot)) {
+                Get-ChildItem -Path $rootPath -File -Force |
+                  Where-Object { $_.Name -in @(".env", ".env.backup", ".env.production", ".env.local", ".env.testing") }
+              }
             )
             if ($unexpectedEnvFiles.Count -gt 0) {
               Write-Host ("Unexpected environment files were found: " + (($unexpectedEnvFiles | ForEach-Object { $_.FullName }) -join "; "))
