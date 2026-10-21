@@ -26,11 +26,13 @@ class SearchController extends Controller
             ->where(function ($query) use ($like) {
                 $query->where('name', 'like', $like)
                     ->orWhere('category', 'like', $like)
-                    ->orWhere('badge', 'like', $like);
+                    ->orWhere('badge', 'like', $like)
+                    ->orWhere('warranty', 'like', $like)
+                    ->orWhere('specifications', 'like', $like);
             })
             ->orderByDesc('is_featured')
             ->orderBy('name')
-            ->limit(6)
+            ->limit(8)
             ->get(['id', 'name', 'category', 'price', 'image', 'badge'])
             ->map(fn (Product $product) => [
                 'id' => $product->id,
@@ -47,11 +49,15 @@ class SearchController extends Controller
             ->where(function ($query) use ($like) {
                 $query->where('packages.name', 'like', $like)
                     ->orWhere('packages.category', 'like', $like)
-                    ->orWhere('packages.badge', 'like', $like);
+                    ->orWhere('packages.badge', 'like', $like)
+                    ->orWhere('packages.warranty', 'like', $like)
+                    ->orWhere('packages.specifications', 'like', $like);
             })
             ->orWhereHas('packageItems.product', function ($query) use ($like) {
                 $query->where('name', 'like', $like)
-                    ->orWhere('category', 'like', $like);
+                    ->orWhere('category', 'like', $like)
+                    ->orWhere('warranty', 'like', $like)
+                    ->orWhere('specifications', 'like', $like);
             })
             ->orderByDesc('is_featured')
             ->orderBy('name')
