@@ -1264,3 +1264,145 @@ html[data-bs-theme="dark"] .site-footer a {
     color: #dbeafe !important;
 }
 
+
+
+/* Targeted fixes for light surfaces shown in the QA screenshots. */
+html[data-bs-theme="dark"] .order-status-overview .order-status-card {
+    background-color: #1f2937 !important;
+    border-color: #435166 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .order-status-overview .order-status-card .fw-semibold,
+html[data-bs-theme="dark"] .order-status-overview .order-status-card .fw-bold,
+html[data-bs-theme="dark"] .order-status-overview .order-status-card .text-dark {
+    color: #f3f6fb !important;
+}
+
+html[data-bs-theme="dark"] .order-status-overview .order-status-card .text-muted,
+html[data-bs-theme="dark"] .order-status-overview .order-status-total .text-muted {
+    color: #bac6d6 !important;
+}
+
+html[data-bs-theme="dark"] .order-status-overview .order-status-total,
+html[data-bs-theme="dark"] .order-status-overview .order-status-empty {
+    background-color: #273449 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .service-location-map-card {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .service-location-map-empty {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .service-location-map-empty .text-muted {
+    color: #bac6d6 !important;
+}
+
+html[data-bs-theme="dark"] .service-location-map-card .border-top {
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-selected-item {
+    background-color: #1c2e43 !important;
+    border-color: #3c5877 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-selected-item .text-muted,
+html[data-bs-theme="dark"] .inquiry-selected-item .small:not(.text-primary) {
+    color: #bac6d6 !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-selected-item .fw-bold,
+html[data-bs-theme="dark"] .inquiry-selected-item .fw-semibold {
+    color: #f3f6fb !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-selected-item a {
+    color: #93c5fd !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-no-item {
+    background-color: #273449 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-no-item .text-muted {
+    color: #bac6d6 !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-why-card {
+    background-color: #1c2e43 !important;
+    color: #f3f6fb !important;
+    border: 1px solid #3c5877;
+}
+
+html[data-bs-theme="dark"] .inquiry-why-card .text-muted {
+    color: #c3d0e0 !important;
+}
+
+/* Time-slot buttons in the booking calendar use inline light-mode colors. */
+html[data-bs-theme="dark"] .inquiry-time-slot {
+    background-color: #273449 !important;
+    border-color: #435166 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-time-slot.is-selected {
+    background-color: #17365c !important;
+    border-color: #60a5fa !important;
+    color: #bfdbfe !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-time-slot.is-booked {
+    background-color: #48282d !important;
+    border-color: #7f3d46 !important;
+    color: #fecaca !important;
+}
+
+/* Invoice Settings previously painted the full-page wrapper light regardless
+   of theme. Its status cards, guidance alert, labels, and controls now remain
+   readable on the same theme-aware surface as the rest of the admin area. */
+html[data-bs-theme="dark"] .invoice-settings-page {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page main {
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page .card,
+html[data-bs-theme="dark"] .invoice-settings-page .card-body {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page .alert-warning {
+    background-color: #3a2c17 !important;
+    color: #f9e8c8 !important;
+    border-color: #73572a !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page .alert-success {
+    background-color: #123728 !important;
+    color: #d1fae5 !important;
+    border-color: #226447 !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page .invalid-feedback {
+    color: #fca5a5 !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page .form-text {
+    color: #bac6d6 !important;
+}
