@@ -432,7 +432,13 @@ class CheckoutController extends Controller
                 'related_id' => $order->id,
             ]);
 
-            $cart->items()->delete();
+            if ($cart) {
+                $cart->items()->delete();
+            }
+
+            if ($isBuyNow) {
+                $request->session()->forget('buy_now');
+            }
 
             return redirect()->route('checkout')->with([
                 'orderNumber' => $order->order_number,
@@ -544,6 +550,19 @@ class CheckoutController extends Controller
                 'related_id' => $order->id,
             ]);
 
+            if ($isBuyNow) {
+                $buyNowOrderIds = array_map(
+                    'intval',
+                    (array) $request->session()->get('buy_now_order_ids', [])
+                );
+                $buyNowOrderIds[] = (int) $order->id;
+                $request->session()->put(
+                    'buy_now_order_ids',
+                    array_values(array_unique($buyNowOrderIds))
+                );
+                $request->session()->forget('buy_now');
+            }
+
             return Inertia::location($checkoutUrl);
         } catch (\Throwable $exception) {
             report($exception);
@@ -625,7 +644,13 @@ class CheckoutController extends Controller
                             'related_id' => $order->id,
                         ]);
 
-                        if (!$isInstallationCheckout) {
+                        $buyNowOrderIds = array_map(
+                            'intval',
+                            (array) $request->session()->get('buy_now_order_ids', [])
+                        );
+                        $isBuyNowOrder = in_array((int) $order->id, $buyNowOrderIds, true);
+
+                        if (!$isInstallationCheckout && !$isBuyNowOrder) {
                             $request->user()->cart?->items()->delete();
                         }
 
@@ -638,6 +663,23 @@ class CheckoutController extends Controller
         }
 
         $order->refresh();
+
+        if ($order->payment_status === 'paid') {
+            $buyNowOrderIds = array_map(
+                'intval',
+                (array) $request->session()->get('buy_now_order_ids', [])
+            );
+            $buyNowOrderIds = array_values(array_filter(
+                $buyNowOrderIds,
+                fn ($id) => $id !== (int) $order->id
+            ));
+
+            if ($buyNowOrderIds) {
+                $request->session()->put('buy_now_order_ids', $buyNowOrderIds);
+            } else {
+                $request->session()->forget('buy_now_order_ids');
+            }
+        }
 
         // The actual Installation inquiry is created only after PayMongo confirms payment.
         if ($order->payment_status === 'paid') {
