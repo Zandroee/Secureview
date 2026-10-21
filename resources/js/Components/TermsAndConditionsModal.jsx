@@ -46,7 +46,9 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                padding: "20px",
+                padding: "12px",
+                overflowY: "auto",
+                overscrollBehavior: "contain",
                 fontFamily: "Outfit, sans-serif",
             }}
         >
@@ -56,7 +58,8 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                 style={{
                     width: "100%",
                     maxWidth: "760px",
-                    maxHeight: "90vh",
+                    height: "min(90vh, 90dvh)",
+                    maxHeight: "90dvh",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
@@ -99,10 +102,13 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                 <div
                     ref={contentRef}
                     onScroll={checkReadComplete}
-                    className="px-4 py-3"
+                    className="px-3 px-sm-4 py-3"
                     style={{
+                        flex: "1 1 auto",
+                        minHeight: 0,
                         overflowY: "auto",
-                        minHeight: "260px",
+                        overscrollBehavior: "contain",
+                        WebkitOverflowScrolling: "touch",
                         lineHeight: 1.65,
                         fontSize: "0.9rem",
                     }}
