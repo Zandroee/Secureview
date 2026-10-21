@@ -136,9 +136,9 @@ jobs:
               throw "The public upload directory is missing its script-blocking .htaccess."
             }
 
-            if (Test-Path (Join-Path $appRoot "tests") -or
-                Test-Path (Join-Path $appRoot "node_modules") -or
-                Test-Path (Join-Path $appRoot ".git")) {
+            if ((Test-Path (Join-Path $appRoot "tests")) -or
+                (Test-Path (Join-Path $appRoot "node_modules")) -or
+                (Test-Path (Join-Path $appRoot ".git"))) {
               throw "Development-only folders were included in the release archive."
             }
 
