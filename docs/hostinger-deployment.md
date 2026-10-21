@@ -8,10 +8,14 @@ Before uploading the app, confirm the plan supports:
 
 - PHP 8.2 or newer (the project requires PHP `^8.2`) and Laravel's required PHP extensions, including PDO MySQL, OpenSSL, Mbstring, Fileinfo, Ctype, Tokenizer, XML/DOM, cURL, and GD for the image-related workflows.
 - A persistent MySQL database and enough disk space for `vendor/`, uploads, logs, and generated assets.
-- SSH/terminal access is strongly recommended because deployments need Composer and Artisan commands. Hostinger documents SSH access on Premium Web plans and above; Composer 2 is available over SSH on Premium Web, Business/Unlimited Web, and Cloud plans. Check your current plan's capabilities before proceeding.
+- SSH/terminal access is strongly recommended because this project needs Composer and Artisan commands for safe dependency installation, migrations, cache management, and scheduler testing. Hostinger's plan features vary: its documentation lists SSH access on Premium Web plans and above and Composer 2 over SSH on Premium Web, Business/Unlimited Web, and Cloud plans. **If you have Single Web Hosting, verify SSH/Composer availability in your hPanel before choosing the deployment route.** Do not assume commands such as `php artisan migrate --force` can be run from File Manager.
 - HTTPS for the site and the PayMongo webhook.
 
-Official references: [Hostinger SSH access](https://www.hostinger.com/support/1583645-how-to-enable-ssh-access-in-hostinger/), [Composer at Hostinger](https://www.hostinger.com/support/5792078-how-to-use-composer-at-hostinger/).
+Official references: [Hostinger SSH access](https://www.hostinger.com/support/1583645-how-to-enable-ssh-access-in-hostinger/), [Composer at Hostinger](https://www.hostinger.com/support/5792078-how-to-use-composer-at-hostinger/), [supported frameworks and Laravel](https://www.hostinger.com/support/which-programming-languages-and-frameworks-are-supported-at-hostinger/).
+
+### If your plan does not include SSH/terminal access
+
+Pause before deploying. The frontend can be built on your Windows computer, but SecureView also needs Composer production dependencies and database migrations. The safer options are to enable a plan feature that provides SSH/Composer, use a supported Hostinger Git/terminal deployment workflow, or ask Hostinger support which method is supported by your exact plan. Uploading the whole Laravel project into `public_html` or trying to run migrations through a public PHP page is not a safe workaround. Do not expose an Artisan runner or database credentials over HTTP.
 
 ## 2. Build the front-end assets locally
 
