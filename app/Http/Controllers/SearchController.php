@@ -61,7 +61,7 @@ class SearchController extends Controller
             })
             ->orderByDesc('is_featured')
             ->orderBy('name')
-            ->limit(6)
+            ->limit(8)
             ->get(['id', 'name', 'category', 'price', 'image', 'badge'])
             ->map(fn (Package $package) => [
                 'id' => $package->id,
