@@ -114,6 +114,66 @@ class CheckoutController extends Controller
             ]);
         }
 
+        $buyNow = $this->selectedBuyNowItem($request);
+
+        if ($buyNow !== null) {
+            if (isset($buyNow['error'])) {
+                $request->session()->forget('buy_now');
+
+                return redirect('/products')->withErrors([
+                    'cart' => $buyNow['error'],
+                ]);
+            }
+
+            $purchasable = $buyNow['purchasable'];
+            $stockError = $inventory->getAvailabilityError(
+                $purchasable,
+                (int) $buyNow['quantity']
+            );
+
+            if ($stockError) {
+                $request->session()->forget('buy_now');
+
+                return redirect(
+                    '/' . ($buyNow['item_type'] === 'package' ? 'packages/' : 'products/') . $buyNow['item_id']
+                )->withErrors([
+                    'stock' => $stockError,
+                ]);
+            }
+
+            $quantity = (int) $buyNow['quantity'];
+            $items = collect([[
+                'id' => 'buy-now-' . $purchasable->id,
+                'type' => $buyNow['item_type'],
+                'name' => $purchasable->name,
+                'image' => $purchasable->image,
+                'price' => (float) $purchasable->price,
+                'quantity' => $quantity,
+                'subtotal' => (float) $purchasable->price * $quantity,
+                'available_stock' => $inventory->getAvailableStock($purchasable),
+            ]]);
+
+            $subtotal = $items->sum('subtotal');
+            $shippingFee = 0;
+
+            return Inertia::render('checkout', [
+                'customer' => [
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    'phone' => $request->user()->phone ?? '',
+                ],
+                'cart' => [
+                    'items' => $items,
+                    'subtotal' => (float) $subtotal,
+                    'shipping_fee' => (float) $shippingFee,
+                    'total' => (float) ($subtotal + $shippingFee),
+                ],
+                'success' => false,
+                'orderNumber' => null,
+                'paymentMethod' => null,
+            ]);
+        }
+
         $cart = $request->user()->cart;
 
         if (!$cart) {
