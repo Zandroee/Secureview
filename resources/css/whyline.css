@@ -87,3 +87,26 @@
         font-size: 0.9rem;
     }
 }
+
+
+/* Color-scheme support for custom FAQ surfaces. */
+html[data-bs-theme="dark"] .about-faq-section {
+    background: #111827;
+    color: #e5e7eb;
+}
+
+html[data-bs-theme="dark"] .about-faq-item,
+html[data-bs-theme="dark"] .about-faq-question,
+html[data-bs-theme="dark"] .about-faq-cta {
+    background: #1f2937;
+    color: #e5e7eb;
+    border-color: #435166;
+}
+
+html[data-bs-theme="dark"] .about-faq-question:hover {
+    background: #273449;
+}
+
+html[data-bs-theme="dark"] .about-faq-answer {
+    color: #c3cedd;
+}
