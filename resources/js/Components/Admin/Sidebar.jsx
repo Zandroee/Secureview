@@ -116,7 +116,7 @@ export default function Sidebar({ active = "dashboard" }) {
         </div>
     );
 
-    const renderNavigation = () => (
+    const renderNavigation = (mobile = false) => (
         <nav aria-label="Admin navigation">
             {menuGroups.map((group, groupIndex) => (
                 <div key={group[0].key}>
@@ -139,6 +139,7 @@ export default function Sidebar({ active = "dashboard" }) {
                                     key={item.key}
                                     href={item.href}
                                     aria-current={isActive ? "page" : undefined}
+                                    data-bs-dismiss={mobile ? "offcanvas" : undefined}
                                     className={
                                         "btn text-start rounded-2 fw-semibold " +
                                         (isActive ? "btn-primary" : "btn-light")
@@ -193,7 +194,7 @@ export default function Sidebar({ active = "dashboard" }) {
                     <aside className="bg-white p-3" style={{ fontFamily: "Outfit, sans-serif" }}>
                         {renderUserIdentity()}
                         <hr />
-                        {renderNavigation()}
+                        {renderNavigation(true)}
                     </aside>
                 </div>
             </div>
