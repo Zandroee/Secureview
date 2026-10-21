@@ -93,6 +93,10 @@ class PurchaseController extends Controller
                 'customer_phone' => $order->customer_phone,
                 'customer_email' => $order->customer_email,
                 'delivery_address' => $order->delivery_address,
+                'delivery_address_details' => $order->delivery_address_details,
+                'delivery_city' => $order->delivery_city,
+                'delivery_latitude' => $order->delivery_latitude,
+                'delivery_longitude' => $order->delivery_longitude,
                 'notes' => $order->notes,
                 'created_at' => $order->created_at?->format('M d, Y h:i A'),
                 'items' => $order->items->map(function ($item) {
