@@ -3,8 +3,6 @@ import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import { Link, router } from "@inertiajs/react";
 import AdminPagination from "../../Components/Admin/AdminPagination";
-import ConfirmInquiryModal from "../../Components/Admin/ConfirmInquiryModal";
-import ManageTechnicianTeamModal from "../../Components/Admin/ManageTechnicianTeamModal";
 import { googleMapsSearchUrl } from "../../Components/GoogleMaps/ServiceLocation";
 import { useState } from "react";
 
@@ -46,18 +44,12 @@ function formatStatus(status) {
 
 export default function AdminInquiries({
     inquiries = [],
-    technicians = [],
-    technicianBookings = [],
     filters = {},
-    bookingTimeSlots = [],
-    todayDate = "",
 }) {
     const inquiryRows = inquiries.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
     const [urgency, setUrgency] = useState(filters.urgency ?? "");
-    const [confirmingInquiry, setConfirmingInquiry] = useState(null);
-    const [managingInquiry, setManagingInquiry] = useState(null);
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -89,23 +81,6 @@ export default function AdminInquiries({
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,
-            }
-        );
-    };
-
-    const updateStatus = (inquiry, nextStatus) => {
-        if (nextStatus === "confirmed" && inquiry.status !== "confirmed") {
-            setConfirmingInquiry(inquiry);
-            return;
-        }
-
-        router.patch(
-            "/admin/inquiries/" + inquiry.id + "/status",
-            {
-                status: nextStatus,
-            },
-            {
-                preserveScroll: true,
             }
         );
     };
@@ -359,24 +334,17 @@ export default function AdminInquiries({
                                                     </td>
 
                                                     <td>
-                                                        <div className="d-flex flex-column gap-2">
+                                                        <div className="d-flex flex-column gap-1">
                                                             {(inquiry.technicians ?? []).length ? inquiry.technicians.map((technician) => (
                                                                 <div key={technician.id} className="small">
                                                                     {technician.name}
                                                                 </div>
                                                             )) : <span className="small text-muted">Unassigned</span>}
-                                                            <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => setManagingInquiry(inquiry)}>
-                                                                Manage team
-                                                            </button>
                                                         </div>
 
-                                                        {inquiry.technician && (
+                                                        {inquiry.technician?.email && (
                                                             <div className="small text-muted mt-1">
-                                                                {
-                                                                    inquiry
-                                                                        .technician
-                                                                        .email
-                                                                }
+                                                                {inquiry.technician.email}
                                                             </div>
                                                         )}
                                                     </td>
@@ -396,45 +364,13 @@ export default function AdminInquiries({
                                                     </td>
 
                                                     <td>
-                                                        <select
-                                                            className="form-select form-select-sm text-capitalize"
-                                                            value={inquiry.status}
-                                                            onChange={(event) =>
-                                                                updateStatus(
-                                                                    inquiry,
-                                                                    event.target
-                                                                        .value
-                                                                )
-                                                            }
-                                                        >
-                                                            <option value="pending" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
-                                                                Pending
-                                                            </option>
-                                                            <option value="confirmed" disabled={inquiry.status !== "pending" && inquiry.status !== "confirmed"}>
-                                                                Confirmed
-                                                            </option>
-                                                            <option value="in_progress" disabled={inquiry.status === "pending"}>
-                                                                In Progress
-                                                            </option>
-                                                            <option value="completed">
-                                                                Completed
-                                                            </option>
-                                                            <option value="cancelled">
-                                                                Cancelled
-                                                            </option>
-                                                        </select>
-
                                                         <span
                                                             className={
-                                                                "badge rounded-pill mt-1 text-capitalize " +
-                                                                statusClass(
-                                                                    inquiry.status
-                                                                )
+                                                                "badge rounded-pill text-capitalize px-3 py-2 " +
+                                                                statusClass(inquiry.status)
                                                             }
                                                         >
-                                                            {formatStatus(
-                                                                inquiry.status
-                                                            )}
+                                                            {formatStatus(inquiry.status)}
                                                         </span>
                                                     </td>
 
@@ -465,25 +401,6 @@ export default function AdminInquiries({
 
             <Footer />
 
-            {confirmingInquiry && (
-                <ConfirmInquiryModal
-                    inquiry={confirmingInquiry}
-                    technicians={technicians}
-                    technicianBookings={technicianBookings}
-                    bookingTimeSlots={bookingTimeSlots}
-                    todayDate={todayDate}
-                    onClose={() => setConfirmingInquiry(null)}
-                />
-            )}
-
-            {managingInquiry && (
-                <ManageTechnicianTeamModal
-                    inquiry={managingInquiry}
-                    technicians={technicians}
-                    technicianBookings={technicianBookings}
-                    onClose={() => setManagingInquiry(null)}
-                />
-            )}
         </div>
     );
 }
