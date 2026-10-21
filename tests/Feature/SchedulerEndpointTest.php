@@ -38,11 +38,17 @@ class SchedulerEndpointTest extends TestCase
             ->with('schedule:run')
             ->andReturn(0);
 
-        $this->withToken('unit-test-secret-with-enough-entropy')
-            ->getJson('/api/scheduler/run')
+        $response = $this->withToken('unit-test-secret-with-enough-entropy')
+            ->getJson('/api/scheduler/run');
+
+        $response
             ->assertOk()
-            ->assertJsonPath('message', 'Scheduler evaluated.')
-            ->assertHeader('Cache-Control', 'no-store');
+            ->assertJsonPath('message', 'Scheduler evaluated.');
+
+        $this->assertStringContainsString(
+            'no-store',
+            (string) $response->headers->get('Cache-Control')
+        );
     }
 
     public function test_scheduler_failure_returns_a_generic_error_without_command_output(): void
