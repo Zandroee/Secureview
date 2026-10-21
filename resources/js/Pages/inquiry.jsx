@@ -782,7 +782,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                 </div>
 
                                 {selectedCatalogItem ? (
-                                    <div className="border rounded-3 p-3 mb-3" style={{ backgroundColor: "#eef7ff", borderColor: "#cfe2ff" }}>
+                                    <div className="inquiry-selected-item border rounded-3 p-3 mb-3" style={{ backgroundColor: "#eef7ff", borderColor: "#cfe2ff" }}>
                                         <div className="d-flex align-items-start gap-3">
                                             {selectedCatalogItem.image ? (
                                                 <img src={selectedCatalogItem.image} alt={selectedCatalogItem.name} className="rounded-2" style={{ width: 64, height: 64, objectFit: "cover" }} />
@@ -821,7 +821,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="rounded-3 p-3 mb-3" style={{ backgroundColor: "#f6f6f7" }}>
+                                    <div className="inquiry-no-item rounded-3 p-3 mb-3" style={{ backgroundColor: "#f6f6f7" }}>
                                         <div className="fw-bold small">{data.service_type === "Installation" ? "Choose an item from your cart" : "No item selected"}</div>
                                         <div className="small text-muted mt-1">
                                             {data.service_type === "Installation"
@@ -915,7 +915,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                 </div>
 
                                 <div
-                                    className="rounded-3 p-3"
+                                    className="inquiry-why-card rounded-3 p-3"
                                     style={{
                                         backgroundColor: "#eef7ff",
                                     }}
@@ -1093,7 +1093,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                     onClick={() =>
                                                         selectDate(date)
                                                     }
-                                                    className="btn btn-sm"
+                                                    className={"inquiry-date-option btn btn-sm " + (selected ? "is-selected" : fullyBooked ? "is-booked" : past ? "is-past" : "")}
                                                     style={{
                                                         minHeight: "32px",
                                                         padding: 0,
@@ -1164,7 +1164,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                             slot.label
                                                         )
                                                     }
-                                                    className="btn btn-sm text-start d-flex justify-content-between align-items-center"
+                                                    className={"inquiry-time-slot btn btn-sm text-start d-flex justify-content-between align-items-center " + (selected ? "is-selected" : fullyBooked ? "is-booked" : "")}
                                                     style={{
                                                         border: selected
                                                             ? "1px solid #0d6efd"

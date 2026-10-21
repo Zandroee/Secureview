@@ -61,7 +61,7 @@ export default function InvoiceSettings({ settings = {}, profile_ready: profileR
     return (
         <div>
             <Navbar />
-            <div className="container-fluid py-4" style={{ fontFamily: "Outfit, sans-serif", background: "#f7f7f8", minHeight: "70vh" }}>
+            <div className="invoice-settings-page container-fluid py-4" style={{ fontFamily: "Outfit, sans-serif", background: "#f7f7f8", minHeight: "70vh" }}>
                 <div className="row g-0">
                     <div className="col-lg-3 col-xl-2 mb-4 mb-lg-0">
                         <Sidebar active="invoice-settings" />

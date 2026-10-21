@@ -416,7 +416,7 @@ export function ServiceLocationMap({
     }, [latitude, longitude]);
 
     return (
-        <div className="border rounded-3 overflow-hidden bg-white">
+        <div className="service-location-map-card border rounded-3 overflow-hidden bg-white">
             {position ? (
                 <>
                     <div ref={mapHostRef} style={{ width: "100%", height, background: "#f1f4f8" }} />
@@ -424,7 +424,7 @@ export function ServiceLocationMap({
                     {mapReady && <div className="small text-muted px-3 pt-1">© OpenStreetMap contributors</div>}
                 </>
             ) : (
-                <div className="d-flex align-items-center gap-3 p-3" style={{ minHeight: Math.min(height, 130), background: "#f7f9fc" }}>
+                <div className="service-location-map-empty d-flex align-items-center gap-3 p-3" style={{ minHeight: Math.min(height, 130), background: "#f7f9fc" }}>
                     <div className="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: 42, height: 42 }}>
                         <i className="bi bi-geo-alt-fill fs-5" />
                     </div>
