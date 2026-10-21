@@ -70,6 +70,7 @@ class AuthController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
+            'remember' => ['sometimes', 'boolean'],
         ]);
 
         $user = User::where('email', $credentials['email'])->first();
@@ -102,7 +103,7 @@ class AuthController extends Controller
         }
 
         // Only verified users are actually logged in.
-        Auth::login($user);
+        Auth::login($user, $request->boolean('remember'));
 
         $request->session()->regenerate();
 
