@@ -72,6 +72,7 @@ try {
 
     $excludedDirectories = @(
         (Join-Path $repoRoot '.git'),
+        (Join-Path $repoRoot '.github'),
         (Join-Path $repoRoot 'node_modules'),
         (Join-Path $repoRoot 'vendor'),
         (Join-Path $repoRoot 'tests'),
