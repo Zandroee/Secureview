@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Order;
+use App\Models\InvoiceRecord;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -34,6 +35,18 @@ class AdminTransactionPaginationTest extends TestCase
             ]);
         }
 
+        $firstOrder = Order::query()->where('order_number', 'ORD-PAGE-001')->firstOrFail();
+        InvoiceRecord::create([
+            'order_id' => $firstOrder->id,
+            'record_number' => 'SV-INT-INV-2026-00000001',
+            'snapshot' => [
+                'reference_number' => $firstOrder->order_number,
+                'total' => 1000,
+            ],
+            'issued_at' => now(),
+            'issued_by' => $admin->id,
+        ]);
+
         $this->actingAs($admin)
             ->get(route('admin.transactions.index', [
                 'payment_status' => 'pending',
@@ -46,6 +59,8 @@ class AdminTransactionPaginationTest extends TestCase
                 ->where('transactions.total', 13)
                 ->where('transactions.current_page', 2)
                 ->where('filters.payment_status', 'pending')
+                ->where('transactions.data.0.invoice_record.record_number', 'SV-INT-INV-2026-00000001')
+                ->where('transactions.data.0.invoice_url', route('admin.purchases.invoice', $firstOrder))
             );
     }
 }
