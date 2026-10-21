@@ -78,9 +78,7 @@ return new class extends Migration
         }
 
         if (!Schema::hasTable('invoice_records')) {
-            $tableCreated = false;
-
-            Schema::create('invoice_records', function (Blueprint $table) use (&$tableCreated) {
+            Schema::create('invoice_records', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('order_id')->unique()->constrained()->restrictOnDelete();
                 $table->string('record_number', 80)->unique();
@@ -90,7 +88,6 @@ return new class extends Migration
                 $table->timestamps();
 
                 $table->index('issued_at');
-                $tableCreated = true;
             });
         }
 
