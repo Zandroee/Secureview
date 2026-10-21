@@ -564,7 +564,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                 <h2 className="h3 fw-bold mb-1">Inventory</h2>
                                 <p className="text-secondary mb-0">Record every stock adjustment with a reason. Each update creates an audit record.</p>
                             </div>
-                            <div className="d-flex flex-column flex-sm-row gap-2" style={{ minWidth: 300 }}>
+                            <div className="d-flex flex-column flex-sm-row gap-2" style={{ width: "100%", maxWidth: "520px", minWidth: 0, flex: "1 1 300px" }}>
                                 <div className="input-group">
                                     <span className="input-group-text bg-white"><i className="bi bi-search" /></span>
                                     <input
