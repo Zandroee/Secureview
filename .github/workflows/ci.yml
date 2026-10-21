@@ -53,5 +53,16 @@ jobs:
       - name: Build Vite assets
         run: npm run build
 
+      - name: Validate Hostinger packaging script syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("scripts/package-hostinger.ps1", [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+
       - name: Run Laravel feature and unit tests
         run: php artisan test
