@@ -19,7 +19,7 @@ class AdminTransactionPaginationTest extends TestCase
         $customer = User::factory()->create(['role' => 'user']);
 
         for ($index = 1; $index <= 13; $index++) {
-            Order::create([
+            $order = Order::create([
                 'user_id' => $customer->id,
                 'order_number' => sprintf('ORD-PAGE-%03d', $index),
                 'subtotal' => 1000,
@@ -32,9 +32,13 @@ class AdminTransactionPaginationTest extends TestCase
                 'customer_phone' => '09171234567',
                 'customer_email' => $customer->email,
                 'delivery_address' => '123 Test Street, Taguig',
-                'created_at' => now()->addSeconds($index),
-                'updated_at' => now()->addSeconds($index),
             ]);
+
+            $timestamp = now()->addSeconds($index);
+            $order->forceFill([
+                'created_at' => $timestamp,
+                'updated_at' => $timestamp,
+            ])->saveQuietly();
         }
 
         $firstOrder = Order::query()->where('order_number', 'ORD-PAGE-001')->firstOrFail();
