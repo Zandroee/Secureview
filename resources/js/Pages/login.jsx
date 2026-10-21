@@ -2,6 +2,7 @@ import { Link, useForm } from "@inertiajs/react";
 import { useState } from "react";
 
 import Navbar from "../Components/navbar";
+import GoogleLoginButton from "../Components/GoogleLoginButton";
 import "../../css/login.css";
 
 export default function Login() {
@@ -12,6 +13,7 @@ export default function Login() {
     const { data, setData, post, processing } = useForm({
         email: "",
         password: "",
+        remember: false,
     });
 
     const handleSubmit = (e) => {
@@ -203,13 +205,24 @@ export default function Login() {
                                 )}
                             </div>
 
-                            {/* FORGOT PASSWORD */}
-                            <div className="mb-4">
+                            {/* REMEMBER ME / FORGOT PASSWORD */}
+                            <div className="login-options-row">
+                                <label htmlFor="login-remember" className="login-remember-control">
+                                    <input
+                                        id="login-remember"
+                                        name="remember"
+                                        type="checkbox"
+                                        className="login-remember-checkbox"
+                                        checked={Boolean(data.remember)}
+                                        onChange={(event) => setData("remember", event.target.checked)}
+                                    />
+                                    <span className="login-remember-label">Remember Me</span>
+                                </label>
                                 <Link
                                     href="/forgot-password"
-                                    className="text-primary text-decoration-none small"
+                                    className="login-forgot-password"
                                 >
-                                    Forgot Password
+                                    Forgot Password?
                                 </Link>
                             </div>
 
@@ -239,13 +252,7 @@ export default function Login() {
                             </div>
 
                             <div className="d-flex flex-column gap-2">
-                                <a
-                                    href="/auth/google"
-                                    className="btn btn-outline-dark fw-semibold py-2"
-                                >
-                                    <i className="bi bi-google me-2"></i>
-                                    Continue with Google
-                                </a>
+                                <GoogleLoginButton />
 
                                 <a
                                     href="/auth/facebook"

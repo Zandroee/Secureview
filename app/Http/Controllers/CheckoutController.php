@@ -104,10 +104,32 @@ class CheckoutController extends Controller
                 'regex:/^09\d{9}$/',
             ],
             'customer_email' => ['required', 'email', 'max:255'],
-            'delivery_address' => ['required', 'string', 'min:10', 'max:1000'],
+            // The structured address is used by the OpenStreetMap checkout picker.
+            // Keep the old single-field address accepted for older clients during rollout.
+            'delivery_street_address' => ['required_without:delivery_address', 'nullable', 'string', 'min:5', 'max:500'],
+            'delivery_address_details' => ['nullable', 'string', 'max:500'],
+            'delivery_city' => ['required_without:delivery_address', 'nullable', 'string', 'max:180'],
+            'delivery_latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:delivery_longitude'],
+            'delivery_longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:delivery_latitude'],
+            'delivery_address' => ['nullable', 'string', 'min:10', 'max:1000'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['required', 'in:cash,gcash,card,maya'],
         ]);
+
+        $deliveryStreet = trim((string) ($validated['delivery_street_address'] ?? ''));
+        $deliveryDetails = trim((string) ($validated['delivery_address_details'] ?? ''));
+        $deliveryCity = trim((string) ($validated['delivery_city'] ?? ''));
+
+        $formattedDeliveryAddress = collect([
+            $deliveryStreet,
+            $deliveryDetails,
+            $deliveryCity,
+        ])->filter(fn ($part) => $part !== '')->implode(', ');
+
+        // Maintain compatibility with older checkout clients that still send delivery_address.
+        $validated['delivery_address'] = $formattedDeliveryAddress !== ''
+            ? $formattedDeliveryAddress
+            : trim((string) ($validated['delivery_address'] ?? ''));
 
         if ($validated['payment_method'] !== 'cash' && !config('services.paymongo.secret_key')) {
             return back()->withErrors([
@@ -152,7 +174,7 @@ class CheckoutController extends Controller
             }
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $cart) {
+        $order = DB::transaction(function () use ($request, $validated, $cart, $deliveryDetails, $deliveryCity) {
             $subtotal = 0;
 
             foreach ($cart->items as $cartItem) {
@@ -187,6 +209,10 @@ class CheckoutController extends Controller
                 'customer_phone' => $validated['customer_phone'],
                 'customer_email' => $validated['customer_email'],
                 'delivery_address' => $validated['delivery_address'],
+                'delivery_address_details' => $deliveryDetails !== '' ? $deliveryDetails : null,
+                'delivery_city' => $deliveryCity !== '' ? $deliveryCity : null,
+                'delivery_latitude' => $validated['delivery_latitude'] ?? null,
+                'delivery_longitude' => $validated['delivery_longitude'] ?? null,
                 'notes' => $validated['notes'] ?? null,
             ]);
 

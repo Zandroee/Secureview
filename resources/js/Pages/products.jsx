@@ -4,12 +4,22 @@ import Footer from "../Components/footer";
 import ProductCard from "../Components/ProductCard";
 import Pagination from "../Components/Pagination";
 
-import { router } from "@inertiajs/react";
-import { useMemo, useState } from "react";
+import { router, usePage } from "@inertiajs/react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function Products({ products }) {
 
-    const [search, setSearch] = useState("");
+function searchableValues(value) {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object") return Object.values(value);
+    return value === null || value === undefined ? [] : [value];
+}
+
+    const { url } = usePage();
+    const queryString = url.includes("?") ? url.split("?")[1].split("#")[0] : "";
+    const searchFromUrl = new URLSearchParams(queryString).get("search") ?? "";
+
+    const [search, setSearch] = useState(searchFromUrl);
     const [category, setCategory] = useState({
         dome: false,
         bullet: false,
@@ -20,12 +30,24 @@ export default function Products({ products }) {
     const [rating, setRating] = useState("");
 
     const [currentPage, setCurrentPage] = useState(1);
+
+    useEffect(() => {
+        setSearch(searchFromUrl);
+        setCurrentPage(1);
+    }, [searchFromUrl]);
     const productsPerPage = 8;
 
     const filteredProducts = useMemo(() => {
         return products.filter((product) => {
 
-            const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
+            const productSearchText = [
+                product.name,
+                product.category,
+                product.badge,
+                product.warranty,
+                ...searchableValues(product.specifications),
+            ].filter(Boolean).join(" ").toLowerCase();
+            const matchesSearch = productSearchText.includes(search.toLowerCase());
 
             const selectedCategories = Object.entries(category).filter(([_, selected]) => selected).map(([key]) => key);
 

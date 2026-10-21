@@ -729,6 +729,18 @@ export default function AdminPurchases({
                                     <div className="fw-semibold">
                                         {viewingOrder.delivery_address}
                                     </div>
+                                    {viewingOrder.delivery_latitude != null && viewingOrder.delivery_longitude != null && (
+                                        <a
+                                            className="d-inline-flex align-items-center gap-2 small text-primary text-decoration-none mt-2"
+                                            href={`https://www.openstreetmap.org/?mlat=${viewingOrder.delivery_latitude}&mlon=${viewingOrder.delivery_longitude}#map=18/${viewingOrder.delivery_latitude}/${viewingOrder.delivery_longitude}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            <i className="bi bi-geo-alt-fill" aria-hidden="true"></i>
+                                            View delivery pin on OpenStreetMap
+                                            <i className="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                         </div>

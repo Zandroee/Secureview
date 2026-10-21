@@ -28,6 +28,10 @@ class Order extends Model
         'customer_phone',
         'customer_email',
         'delivery_address',
+        'delivery_address_details',
+        'delivery_city',
+        'delivery_latitude',
+        'delivery_longitude',
         'notes',
     ];
 
@@ -38,6 +42,8 @@ class Order extends Model
         'total' => 'float',
         'paid_at' => 'datetime',
         'stock_deducted_at' => 'datetime',
+        'delivery_latitude' => 'float',
+        'delivery_longitude' => 'float',
     ];
 
     public function user(): BelongsTo

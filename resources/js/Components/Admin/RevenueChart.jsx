@@ -90,7 +90,7 @@ export default function RevenueChart({
                     </select>
                 </div>
 
-                <div style={{ height: "300px" }}>
+                <div className="admin-revenue-chart-plot">
                     {data.length > 0 ? (
                         <Line data={chartData} options={options} />
                     ) : (

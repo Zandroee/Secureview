@@ -70,9 +70,15 @@ class AuthController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
+            'remember' => ['sometimes', 'boolean'],
         ]);
 
-        $user = User::where('email', $credentials['email'])->first();
+        // Keep the remember flag out of credential validation; it is not a user-table column.
+        $loginCredentials = [
+            'email' => $credentials['email'],
+            'password' => $credentials['password'],
+        ];
+        $user = User::where('email', $loginCredentials['email'])->first();
 
         if (!$user) {
             return back()->withErrors([
@@ -81,7 +87,7 @@ class AuthController extends Controller
         }
 
         // Check the password without logging the user in.
-        if (!Auth::validate($credentials)) {
+        if (!Auth::validate($loginCredentials)) {
             return back()->withErrors([
                 'email' => 'The provided credentials are incorrect.',
             ])->onlyInput('email');
@@ -102,7 +108,7 @@ class AuthController extends Controller
         }
 
         // Only verified users are actually logged in.
-        Auth::login($user);
+        Auth::login($user, $request->boolean('remember'));
 
         $request->session()->regenerate();
 
@@ -167,8 +173,11 @@ class AuthController extends Controller
                 'google_id' => $googleUser->id,
                 'password' => Str::random(40),
                 'role' => 'user',
-                'email_verified_at' => now(),
             ]);
+
+            // email_verified_at is intentionally not mass assignable, so set it
+            // explicitly for an account authenticated through the OAuth provider.
+            $user->forceFill(['email_verified_at' => now()])->save();
         } else {
             if (!$user->google_id) {
                 $user->google_id = $googleUser->id;
@@ -227,8 +236,11 @@ class AuthController extends Controller
                 'facebook_id' => $facebookUser->id,
                 'password' => Str::random(40),
                 'role' => 'user',
-                'email_verified_at' => now(),
             ]);
+
+            // email_verified_at is intentionally not mass assignable, so set it
+            // explicitly for an account authenticated through the OAuth provider.
+            $user->forceFill(['email_verified_at' => now()])->save();
         } else {
             if (!$user->facebook_id) {
                 $user->facebook_id = $facebookUser->id;

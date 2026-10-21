@@ -104,20 +104,24 @@ function makeSearchQuery(streetAddress, city) {
 
 export default function ServiceLocationPicker({
     streetAddress = "", city = "", latitude = null, longitude = null, placeId = "", apiErrors = {}, onChange,
+    locationType = "service",
 }) {
     const mapHostRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const markerRef = useRef(null);
     const onChangeRef = useRef(onChange);
     const addressRef = useRef({ streetAddress, city });
+    const lastAddressQueryRef = useRef(makeSearchQuery(streetAddress, city));
     const searchedAddressRef = useRef("");
     const pendingSearchPositionRef = useRef(null);
+    const locationNoun = locationType === "delivery" ? "delivery" : "service";
+    const locationTitle = locationNoun.charAt(0).toUpperCase() + locationNoun.slice(1);
     const [mapReady, setMapReady] = useState(false);
     const [mapError, setMapError] = useState("");
     const [searching, setSearching] = useState(false);
     const [pin, setPin] = useState(null);
     const [locationMessage, setLocationMessage] = useState(
-        "Enter an address above, then find it on the map. You can also click the map to place a pin."
+        "Enter the " + locationNoun + " address above, then find it on the map. You can also click the map to place a pin."
     );
 
     onChangeRef.current = onChange;
@@ -144,7 +148,7 @@ export default function ServiceLocationPicker({
 
             const marker = L.marker(
                 initialPosition ? [initialPosition.lat, initialPosition.lng] : DEFAULT_CENTER,
-                { draggable: true, title: "Service entrance" }
+                { draggable: true, title: locationTitle + " entrance" }
             );
 
             if (initialPosition) marker.addTo(map);
@@ -153,7 +157,7 @@ export default function ServiceLocationPicker({
                 const position = positionFromLeaflet(marker.getLatLng());
                 pendingSearchPositionRef.current = null;
                 setPin({ ...position, manuallyPinned: true });
-                setLocationMessage("Exact entrance saved. These coordinates will be included with your inquiry.");
+                setLocationMessage("Exact entrance saved. These coordinates will be included with your " + locationNoun + ".");
                 onChangeRef.current?.({
                     service_latitude: String(position.lat),
                     service_longitude: String(position.lng),
@@ -166,7 +170,7 @@ export default function ServiceLocationPicker({
                 pendingSearchPositionRef.current = null;
                 showMarker(map, marker, position);
                 setPin({ ...position, manuallyPinned: true });
-                setLocationMessage("Exact entrance saved. These coordinates will be included with your inquiry.");
+                setLocationMessage("Exact entrance saved. These coordinates will be included with your " + locationNoun + ".");
                 onChangeRef.current?.({
                     service_latitude: String(position.lat),
                     service_longitude: String(position.lng),
@@ -219,12 +223,18 @@ export default function ServiceLocationPicker({
 
     useEffect(() => {
         const latestQuery = makeSearchQuery(streetAddress, city);
-        if (!searchedAddressRef.current || latestQuery === searchedAddressRef.current) return;
+        if (latestQuery === lastAddressQueryRef.current) return;
 
+        lastAddressQueryRef.current = latestQuery;
         searchedAddressRef.current = "";
         pendingSearchPositionRef.current = null;
         markerRef.current?.remove();
         setPin(null);
+        onChangeRef.current?.({
+            service_latitude: "",
+            service_longitude: "",
+            google_place_id: "",
+        });
         setLocationMessage("Address changed. Search again to update the map, or click the map to place the pin manually.");
     }, [streetAddress, city]);
 
@@ -285,7 +295,7 @@ export default function ServiceLocationPicker({
         <section className="mb-3">
             <div className="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
                 <div>
-                    <div className="fw-bold small">Service location map</div>
+                    <div className="fw-bold small">{locationTitle} location map</div>
                     <div className="small text-muted mt-1">
                         Find the address, then refine the pin to the actual entrance.
                     </div>
@@ -325,7 +335,7 @@ export default function ServiceLocationPicker({
                     ref={mapHostRef}
                     className="service-location-leaflet-map"
                     style={{ width: "100%", height: 280, background: "#eef2f6" }}
-                    aria-label="Interactive service location map"
+                    aria-label={"Interactive " + locationNoun + " location map"}
                 />
             </div>
 
@@ -345,7 +355,7 @@ export default function ServiceLocationPicker({
                 )} />
                 <div className="small">
                     <div className="fw-semibold">
-                        {pin?.manuallyPinned ? "Exact entrance pin saved" : pin ? "Approximate address located" : mapReady ? "Pin your service entrance" : "Loading map"}
+                        {pin?.manuallyPinned ? "Exact entrance pin saved" : pin ? "Approximate address located" : mapReady ? "Pin your " + locationNoun + " entrance" : "Loading map"}
                     </div>
                     <div>{locationMessage}</div>
                     {pin?.manuallyPinned && (

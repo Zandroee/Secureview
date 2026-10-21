@@ -1,6 +1,7 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import { Link, useForm } from "@inertiajs/react";
+import ServiceLocationPicker from "../Components/GoogleMaps/ServiceLocation";
 
 const paymentMethods = [
     {
@@ -54,7 +55,11 @@ export default function Checkout({
         customer_name: customer?.name ?? "",
         customer_phone: customer?.phone ?? "",
         customer_email: customer?.email ?? "",
-        delivery_address: "",
+        delivery_street_address: "",
+        delivery_address_details: "",
+        delivery_city: "",
+        delivery_latitude: "",
+        delivery_longitude: "",
         notes: "",
         payment_method: "cash",
     });
@@ -323,34 +328,97 @@ export default function Checkout({
 
                                     <div className="mb-4">
                                         <div style={sectionTitleStyle}>
-                                            CUSTOMER'S ADDRESS
+                                            CUSTOMER'S DELIVERY ADDRESS
                                         </div>
 
-                                        <label className="form-label small fw-semibold">
-                                            Delivery Address <span className="text-danger">*</span>
-                                        </label>
-
-                                        <textarea
-                                            rows="3"
-                                            className={`form-control ${errors.delivery_address ? "is-invalid" : ""}`}
-                                            style={{
-                                                ...fieldStyle,
-                                                resize: "vertical",
-                                            }}
-                                            placeholder="House/Unit, Street, Barangay, City, Province, ZIP Code"
-                                            value={data.delivery_address}
-                                            onChange={(event) =>
-                                                setData(
-                                                    "delivery_address",
-                                                    event.target.value
-                                                )
-                                            }
-                                        ></textarea>
-
-                                        {errors.delivery_address && (
-                                            <div className="invalid-feedback">
-                                                {errors.delivery_address}
+                                        <div className="row g-3">
+                                            <div className="col-12">
+                                                <label htmlFor="checkout-delivery-street" className="form-label small fw-semibold">
+                                                    Street address / Barangay <span className="text-danger">*</span>
+                                                </label>
+                                                <input
+                                                    id="checkout-delivery-street"
+                                                    type="text"
+                                                    maxLength={500}
+                                                    autoComplete="street-address"
+                                                    className={`form-control ${errors.delivery_street_address ? "is-invalid" : ""}`}
+                                                    style={fieldStyle}
+                                                    placeholder="House number, street, barangay"
+                                                    value={data.delivery_street_address}
+                                                    onChange={(event) => setData("delivery_street_address", event.target.value)}
+                                                />
+                                                {errors.delivery_street_address && (
+                                                    <div className="invalid-feedback">{errors.delivery_street_address}</div>
+                                                )}
                                             </div>
+
+                                            <div className="col-12">
+                                                <label htmlFor="checkout-delivery-details" className="form-label small fw-semibold">
+                                                    Unit / Building / Landmark <span className="text-muted fw-normal">(optional)</span>
+                                                </label>
+                                                <input
+                                                    id="checkout-delivery-details"
+                                                    type="text"
+                                                    maxLength={500}
+                                                    className={`form-control ${errors.delivery_address_details ? "is-invalid" : ""}`}
+                                                    style={fieldStyle}
+                                                    placeholder="Unit, floor, gate, or nearby landmark"
+                                                    value={data.delivery_address_details}
+                                                    onChange={(event) => setData("delivery_address_details", event.target.value)}
+                                                />
+                                                {errors.delivery_address_details && (
+                                                    <div className="invalid-feedback">{errors.delivery_address_details}</div>
+                                                )}
+                                            </div>
+
+                                            <div className="col-12">
+                                                <label htmlFor="checkout-delivery-city" className="form-label small fw-semibold">
+                                                    City / Municipality and Province <span className="text-danger">*</span>
+                                                </label>
+                                                <input
+                                                    id="checkout-delivery-city"
+                                                    type="text"
+                                                    maxLength={180}
+                                                    autoComplete="address-level2"
+                                                    className={`form-control ${errors.delivery_city ? "is-invalid" : ""}`}
+                                                    style={fieldStyle}
+                                                    placeholder="City / Municipality, Province"
+                                                    value={data.delivery_city}
+                                                    onChange={(event) => setData("delivery_city", event.target.value)}
+                                                />
+                                                {errors.delivery_city && (
+                                                    <div className="invalid-feedback">{errors.delivery_city}</div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="small text-muted mt-2 mb-3">
+                                            Search your address on OpenStreetMap, then drag the marker or click the map to pin the exact delivery entrance.
+                                        </div>
+
+                                        <ServiceLocationPicker
+                                            locationType="delivery"
+                                            streetAddress={data.delivery_street_address}
+                                            city={data.delivery_city}
+                                            latitude={data.delivery_latitude}
+                                            longitude={data.delivery_longitude}
+                                            apiErrors={{
+                                                service_location: errors.delivery_latitude || errors.delivery_longitude || errors.delivery_location,
+                                            }}
+                                            onChange={(changes) =>
+                                                setData((current) => ({
+                                                    ...current,
+                                                    delivery_latitude: changes.service_latitude ?? current.delivery_latitude,
+                                                    delivery_longitude: changes.service_longitude ?? current.delivery_longitude,
+                                                }))
+                                            }
+                                        />
+
+                                        {errors.delivery_location && (
+                                            <div className="small text-danger mt-2">{errors.delivery_location}</div>
+                                        )}
+                                        {errors.delivery_address && (
+                                            <div className="small text-danger mt-2">{errors.delivery_address}</div>
                                         )}
                                     </div>
 

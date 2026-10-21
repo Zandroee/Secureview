@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm, Link } from "@inertiajs/react";
 
 import Navbar from "../Components/navbar";
+import GoogleLoginButton from "../Components/GoogleLoginButton";
 import PasswordInput from "../Components/PasswordInput";
 import PasswordStrength from "../Components/PasswordStrength";
 import EmailVerificationModal from "../Components/EmailVerificationModal";
@@ -454,13 +455,7 @@ export default function Signup({ verificationSent = false, verificationEmail = "
                         </div>
 
                         <div className="d-flex flex-column gap-2">
-                            <a
-                                href="/auth/google"
-                                className="btn btn-outline-dark fw-semibold py-2"
-                            >
-                                <i className="bi bi-google me-2"></i>
-                                Continue with Google
-                            </a>
+                            <GoogleLoginButton />
 
                             <a
                                 href="/auth/facebook"

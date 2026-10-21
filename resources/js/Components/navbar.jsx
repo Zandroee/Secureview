@@ -1,4 +1,5 @@
 import { Link, router, usePage } from "@inertiajs/react";
+import { Offcanvas } from "bootstrap";
 import { useEffect, useRef, useState } from "react";
 
 export default function Navbar() {
@@ -21,6 +22,11 @@ export default function Navbar() {
     const [hoveredButton, setHoveredButton] = useState(null);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [liveNotification, setLiveNotification] = useState(null);
+    const [navigationSearch, setNavigationSearch] = useState("");
+    const [showNavigationSearch, setShowNavigationSearch] = useState(false);
+    const [catalogSuggestions, setCatalogSuggestions] = useState({ products: [], packages: [] });
+    const [catalogSearchLoading, setCatalogSearchLoading] = useState(false);
+    const [catalogSearchError, setCatalogSearchError] = useState(false);
 
     const userMenuRef = useRef(null);
     const lastNotificationId = useRef(latestNotification?.id ?? null);
@@ -29,10 +35,412 @@ export default function Navbar() {
         return path === "/" ? url === "/" : url.startsWith(path);
     };
 
+    const navigationItems = [
+        { label: "Home", href: "/", icon: "bi-house", keywords: "landing start main homepage" },
+        { label: "Products", href: "/products", icon: "bi-camera-video", keywords: "shop cctv camera cameras hardware devices recorders" },
+        { label: "Packages", href: "/packages", icon: "bi-box-seam", keywords: "bundles sets deals kits package system" },
+        { label: "Services", href: "/services", icon: "bi-tools", keywords: "installation repair maintenance service technical support" },
+        { label: "About", href: "/about", icon: "bi-info-circle", keywords: "company information contact netmax trading" },
+    ];
+
+    if (!isAuthenticated) {
+        navigationItems.push(
+            { label: "Log In", href: "/login", icon: "bi-box-arrow-in-right", keywords: "sign in account access" },
+            { label: "Create Account", href: "/signup", icon: "bi-person-plus", keywords: "register sign up new customer" }
+        );
+    }
+
+    if (isAuthenticated) {
+        navigationItems.push(
+            { label: "Account Settings", href: "/settings", icon: "bi-gear", keywords: "profile preferences password appearance theme dark mode notifications security" },
+            { label: "Notifications", href: "/notifications", icon: "bi-bell", keywords: "alerts messages updates unread" }
+        );
+    }
+
+    if (isLoggedIn && isAdmin) {
+        navigationItems.push(
+            { label: "Admin Dashboard", href: "/dashboard", icon: "bi-speedometer2", keywords: "overview analytics metrics revenue orders stock" },
+            { label: "Manage Inquiries", href: "/admin/inquiries", icon: "bi-chat-left-text", keywords: "customer questions requests pending inquiry" },
+            { label: "Manage Schedules", href: "/admin/schedules", icon: "bi-calendar3", keywords: "appointments calendar technician bookings availability" },
+            { label: "Service History", href: "/admin/service-history", icon: "bi-clock-history", keywords: "completed jobs archived services" },
+            { label: "Manage Products", href: "/admin/products", icon: "bi-camera-video", keywords: "inventory stock cameras catalogue" },
+            { label: "Inventory Adjustments", href: "/admin/inventory-adjustments", icon: "bi-boxes", keywords: "stock changes adjustment reasons audit inventory" },
+            { label: "Manage Packages", href: "/admin/packages", icon: "bi-box-seam", keywords: "bundles package catalogue" },
+            { label: "Warranty Management", href: "/admin/warranty", icon: "bi-shield-check", keywords: "coverage claims warranty" },
+            { label: "Order Management", href: "/admin/purchases", icon: "bi-bag-check", keywords: "orders purchases payments pending" },
+            { label: "User Management", href: "/admin/users", icon: "bi-people", keywords: "accounts customers technicians roles" },
+            { label: "Transaction Records", href: "/admin/transactions", icon: "bi-receipt", keywords: "payments financial records transactions" },
+            { label: "Activity Logs", href: "/admin/activity-logs", icon: "bi-journal-text", keywords: "audit history events activities" },
+            { label: "Invoice Settings", href: "/admin/invoice-settings", icon: "bi-file-earmark-text", keywords: "billing invoice serial numbers" }
+        );
+    } else if (isLoggedIn && isTechnician) {
+        navigationItems.push(
+            { label: "Technician Workspace", href: "/technician/dashboard", icon: "bi-tools", keywords: "jobs assignments work field operations" },
+            { label: "My Service Jobs", href: "/technician/dashboard#my-jobs", icon: "bi-clipboard-check", keywords: "assigned ongoing upcoming completed jobs" },
+            { label: "Available Team Jobs", href: "/technician/dashboard#available-jobs", icon: "bi-people", keywords: "join team jobs available services" },
+            { label: "Inventory", href: "/technician/dashboard#inventory", icon: "bi-boxes", keywords: "stock products quantity adjustment" },
+            { label: "My Schedules", href: "/schedules", icon: "bi-calendar3", keywords: "appointments" },
+            { label: "Purchase History", href: "/purchases", icon: "bi-bag-check", keywords: "orders" }
+        );
+    } else if (isLoggedIn) {
+        navigationItems.push(
+            { label: "My Schedules", href: "/schedules", icon: "bi-calendar3", keywords: "appointments bookings upcoming service" },
+            { label: "Inquiry History", href: "/inquiries", icon: "bi-chat-left-text", keywords: "requests status service inquiry" },
+            { label: "Purchase History", href: "/purchases", icon: "bi-bag-check", keywords: "orders payments receipts" },
+            { label: "Warranty Claims", href: "/warranty-claims", icon: "bi-shield-check", keywords: "coverage repair defective warranty" },
+            { label: "Shopping Cart", href: "/cart", icon: "bi-cart3", keywords: "basket checkout buy" }
+        );
+    }
+
+    const closeMobileNavigation = () => {
+        const menu = document.getElementById("navbarOffcanvas");
+        if (!menu?.classList.contains("show")) return;
+
+        Offcanvas.getOrCreateInstance(menu, {
+            backdrop: true,
+            keyboard: true,
+            scroll: false,
+        }).hide();
+    };
+
+    const navigateToPage = (href) => {
+        setShowNavigationSearch(false);
+        setNavigationSearch("");
+        closeMobileNavigation();
+        router.visit(href);
+    };
+
+    const matchingNavigationItems = navigationSearch.trim()
+        ? navigationItems.filter((item) =>
+            (item.label + " " + item.keywords)
+                .toLowerCase()
+                .includes(navigationSearch.trim().toLowerCase())
+        )
+        : [];
+
+    const normalizedCatalogSuggestions = {
+        products: catalogSuggestions.products ?? [],
+        packages: catalogSuggestions.packages ?? [],
+    };
+
+    const hasCatalogResults =
+        normalizedCatalogSuggestions.products.length > 0 ||
+        normalizedCatalogSuggestions.packages.length > 0;
+
+    const formatSearchPrice = (price) =>
+        Number(price ?? 0).toLocaleString("en-PH", {
+            style: "currency",
+            currency: "PHP",
+            maximumFractionDigits: 0,
+        });
+
+    const catalogImageUrl = (item) => {
+        const image = item?.image;
+        if (!image) return "";
+        if (/^https?:\/\//i.test(image) || String(image).startsWith("/")) return image;
+        return "/storage/" + String(image).replace(/^\/+/, "");
+    };
+
+    const searchCatalog = (catalog) => {
+        const query = navigationSearch.trim();
+        if (!query) return;
+
+        setShowNavigationSearch(false);
+        setNavigationSearch("");
+        closeMobileNavigation();
+        router.get(catalog === "packages" ? "/packages" : "/products", { search: query }, {
+            preserveState: false,
+            preserveScroll: false,
+        });
+    };
+
+    const handleNavigationSearchSubmit = (event) => {
+        event.preventDefault();
+        const query = navigationSearch.trim();
+        if (!query) return;
+
+        const normalizedQuery = query.toLowerCase();
+        const exactMatch = navigationItems.find(
+            (item) => item.label.toLowerCase() === normalizedQuery
+        );
+        const matches = navigationItems.filter(
+            (item) => (item.label + " " + item.keywords).toLowerCase().includes(normalizedQuery)
+        );
+
+        if (exactMatch) {
+            navigateToPage(exactMatch.href);
+        } else if (matches.length === 1) {
+            navigateToPage(matches[0].href);
+        } else if (matches.length > 1) {
+            // Keep ambiguous page searches open so the user can choose the correct destination.
+            setShowNavigationSearch(true);
+        } else if (
+            normalizedCatalogSuggestions.packages.length > 0 &&
+            normalizedCatalogSuggestions.products.length === 0
+        ) {
+            searchCatalog("packages");
+        } else {
+            searchCatalog("products");
+        }
+    };
+
+    const renderNavigationSearch = () => (
+        <form
+            className="navbar-navigation-search"
+            role="search"
+            aria-label="SecureView search"
+            onSubmit={handleNavigationSearchSubmit}
+            onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) {
+                    setShowNavigationSearch(false);
+                }
+            }}
+        >
+            <div className="position-relative w-100">
+                <input
+                    type="search"
+                    className="form-control navbar-navigation-search-input"
+                    placeholder="SEARCH"
+                    aria-label="Search pages, products, and packages"
+                    aria-expanded={showNavigationSearch}
+                    aria-controls="navbarNavigationSearchResults"
+                    autoComplete="off"
+                    value={navigationSearch}
+                    onChange={(event) => {
+                        setNavigationSearch(event.target.value);
+                        setShowNavigationSearch(true);
+                    }}
+                    onFocus={() => setShowNavigationSearch(true)}
+                    onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                            setShowNavigationSearch(false);
+                        }
+                    }}
+                />
+                <i
+                    className="bi bi-search navbar-navigation-search-icon"
+                    aria-hidden="true"
+                />
+
+                {showNavigationSearch && (
+                    <div
+                        id="navbarNavigationSearchResults"
+                        className="navbar-search-dropdown bg-body border shadow-lg"
+                        aria-label="Search suggestions"
+                    >
+                        {!navigationSearch.trim() ? (
+                            <>
+                                <div className="navbar-search-section-heading">
+                                    QUICK LINKS
+                                </div>
+                                <div className="navbar-search-results-list">
+                                    {navigationItems.map((item) => (
+                                        <button
+                                            key={item.href}
+                                            type="button"
+                                            className="navbar-search-result"
+                                            onMouseDown={(event) => event.preventDefault()}
+                                            onClick={() => navigateToPage(item.href)}
+                                        >
+                                            <span className="navbar-search-result-icon">
+                                                <i className={"bi " + item.icon} aria-hidden="true" />
+                                            </span>
+                                            <span className="navbar-search-result-copy">
+                                                <span className="navbar-search-result-title">{item.label}</span>
+                                                <span className="navbar-search-result-subtitle">{item.href}</span>
+                                            </span>
+                                            <i className="bi bi-arrow-up-right navbar-search-result-arrow" aria-hidden="true" />
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="navbar-search-hint">
+                                    Type at least 2 characters to search the catalog.
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                {matchingNavigationItems.length > 0 && (
+                                    <section className="navbar-search-section">
+                                        <div className="navbar-search-section-heading">
+                                            PAGES <span>{matchingNavigationItems.length}</span>
+                                        </div>
+                                        <div className="navbar-search-results-list">
+                                            {matchingNavigationItems.map((item) => (
+                                                <button
+                                                    key={item.href}
+                                                    type="button"
+                                                    className="navbar-search-result"
+                                                    onMouseDown={(event) => event.preventDefault()}
+                                                    onClick={() => navigateToPage(item.href)}
+                                                >
+                                                    <span className="navbar-search-result-icon">
+                                                        <i className={"bi " + item.icon} aria-hidden="true" />
+                                                    </span>
+                                                    <span className="navbar-search-result-copy">
+                                                        <span className="navbar-search-result-title">{item.label}</span>
+                                                        <span className="navbar-search-result-subtitle">{item.href}</span>
+                                                    </span>
+                                                    <i className="bi bi-arrow-up-right navbar-search-result-arrow" aria-hidden="true" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </section>
+                                )}
+
+                                {navigationSearch.trim().length < 2 ? (
+                                    <div className="navbar-search-hint">
+                                        Keep typing to search matching products and packages.
+                                    </div>
+                                ) : catalogSearchError ? (
+                                    <div className="navbar-search-state">
+                                        Catalog suggestions are temporarily unavailable. You can still open the full search results below.
+                                    </div>
+                                ) : catalogSearchLoading ? (
+                                    <div className="navbar-search-state">
+                                        <span className="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true" />
+                                        Searching products and packages…
+                                    </div>
+                                ) : (
+                                    <>
+                                        {normalizedCatalogSuggestions.products.length > 0 && (
+                                            <section className="navbar-search-section">
+                                                <div className="navbar-search-section-heading">
+                                                    PRODUCTS <span>{normalizedCatalogSuggestions.products.length}</span>
+                                                </div>
+                                                <div className="navbar-search-results-list">
+                                                    {normalizedCatalogSuggestions.products.map((item) => (
+                                                        <button
+                                                            key={"product-" + item.id}
+                                                            type="button"
+                                                            className="navbar-search-catalog-result"
+                                                            onMouseDown={(event) => event.preventDefault()}
+                                                            onClick={() => navigateToPage(item.href)}
+                                                        >
+                                                            {catalogImageUrl(item) ? (
+                                                                <img src={catalogImageUrl(item)} alt="" className="navbar-search-thumbnail" loading="lazy" />
+                                                            ) : (
+                                                                <span className="navbar-search-thumbnail navbar-search-thumbnail-placeholder"><i className="bi bi-camera-video" aria-hidden="true" /></span>
+                                                            )}
+                                                            <span className="navbar-search-result-copy">
+                                                                <span className="navbar-search-result-title">{item.name}</span>
+                                                                <span className="navbar-search-result-subtitle">{item.category || "CCTV product"}</span>
+                                                            </span>
+                                                            <span className="navbar-search-price">{formatSearchPrice(item.price)}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <button type="button" className="navbar-search-view-all" onMouseDown={(event) => event.preventDefault()} onClick={() => searchCatalog("products")}>
+                                                    View all matching products <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
+                                                </button>
+                                            </section>
+                                        )}
+
+                                        {normalizedCatalogSuggestions.packages.length > 0 && (
+                                            <section className="navbar-search-section">
+                                                <div className="navbar-search-section-heading">
+                                                    PACKAGES <span>{normalizedCatalogSuggestions.packages.length}</span>
+                                                </div>
+                                                <div className="navbar-search-results-list">
+                                                    {normalizedCatalogSuggestions.packages.map((item) => (
+                                                        <button
+                                                            key={"package-" + item.id}
+                                                            type="button"
+                                                            className="navbar-search-catalog-result"
+                                                            onMouseDown={(event) => event.preventDefault()}
+                                                            onClick={() => navigateToPage(item.href)}
+                                                        >
+                                                            {catalogImageUrl(item) ? (
+                                                                <img src={catalogImageUrl(item)} alt="" className="navbar-search-thumbnail" loading="lazy" />
+                                                            ) : (
+                                                                <span className="navbar-search-thumbnail navbar-search-thumbnail-placeholder"><i className="bi bi-box-seam" aria-hidden="true" /></span>
+                                                            )}
+                                                            <span className="navbar-search-result-copy">
+                                                                <span className="navbar-search-result-title">{item.name}</span>
+                                                                <span className="navbar-search-result-subtitle">{item.category || "CCTV package"}</span>
+                                                            </span>
+                                                            <span className="navbar-search-price">{formatSearchPrice(item.price)}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <button type="button" className="navbar-search-view-all" onMouseDown={(event) => event.preventDefault()} onClick={() => searchCatalog("packages")}>
+                                                    View all matching packages <i className="bi bi-arrow-right ms-1" aria-hidden="true" />
+                                                </button>
+                                            </section>
+                                        )}
+
+                                        {!hasCatalogResults && matchingNavigationItems.length === 0 && (
+                                            <div className="navbar-search-empty">
+                                                <i className="bi bi-search fs-4 text-secondary mb-2" aria-hidden="true" />
+                                                <strong>No exact matches found</strong>
+                                                <span>Search all products or packages using this phrase.</span>
+                                            </div>
+                                        )}
+
+                                        <div className="navbar-search-footer">
+                                            <button type="button" className="navbar-search-footer-action" onMouseDown={(event) => event.preventDefault()} onClick={() => searchCatalog("products")}>
+                                                Search products for “{navigationSearch.trim()}”
+                                            </button>
+                                            <button type="button" className="navbar-search-footer-action" onMouseDown={(event) => event.preventDefault()} onClick={() => searchCatalog("packages")}>
+                                                Search packages for “{navigationSearch.trim()}”
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
+        </form>
+    ); 
+
     const handleLogout = () => {
         setShowUserMenu(false);
         router.post("/logout");
     };
+
+    useEffect(() => {
+        const menu = document.getElementById("navbarOffcanvas");
+        if (!menu) return undefined;
+
+        const cleanupOrphanedBackdrop = () => {
+            window.requestAnimationFrame(() => {
+                const anotherOffcanvasIsOpen = Array.from(
+                    document.querySelectorAll(".offcanvas")
+                ).some((element) => element !== menu && element.classList.contains("show"));
+                const modalIsOpen = Boolean(document.querySelector(".modal.show"));
+
+                if (menu.classList.contains("show") || anotherOffcanvasIsOpen || modalIsOpen) {
+                    return;
+                }
+
+                document.querySelectorAll(".offcanvas-backdrop").forEach((backdrop) => {
+                    backdrop.remove();
+                });
+                document.body.style.removeProperty("overflow");
+                document.body.style.removeProperty("padding-right");
+            });
+        };
+
+        menu.addEventListener("hidden.bs.offcanvas", cleanupOrphanedBackdrop);
+
+        const closeOnDesktopResize = () => {
+            if (window.matchMedia("(min-width: 992px)").matches && menu.classList.contains("show")) {
+                Offcanvas.getOrCreateInstance(menu, {
+                    backdrop: true,
+                    keyboard: true,
+                    scroll: false,
+                }).hide();
+            }
+        };
+
+        window.addEventListener("resize", closeOnDesktopResize);
+
+        return () => {
+            menu.removeEventListener("hidden.bs.offcanvas", cleanupOrphanedBackdrop);
+            window.removeEventListener("resize", closeOnDesktopResize);
+        };
+    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -53,7 +461,66 @@ export default function Navbar() {
 
     useEffect(() => {
         setShowUserMenu(false);
+        setShowNavigationSearch(false);
     }, [url]);
+
+    useEffect(() => {
+        const query = navigationSearch.trim();
+
+        if (!showNavigationSearch || query.length < 2) {
+            setCatalogSuggestions({ products: [], packages: [] });
+            setCatalogSearchLoading(false);
+            setCatalogSearchError(false);
+            return undefined;
+        }
+
+        const controller = new AbortController();
+        setCatalogSuggestions({ products: [], packages: [] });
+        setCatalogSearchError(false);
+        const timer = window.setTimeout(async () => {
+            setCatalogSearchLoading(true);
+            setCatalogSearchError(false);
+
+            try {
+                const response = await fetch("/search/suggestions?q=" + encodeURIComponent(query), {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                    signal: controller.signal,
+                });
+
+                if (!response.ok) {
+                    throw new Error("Search suggestions request failed.");
+                }
+
+                const result = await response.json();
+                if (!controller.signal.aborted) {
+                    setCatalogSuggestions({
+                        products: Array.isArray(result.products) ? result.products : [],
+                        packages: Array.isArray(result.packages) ? result.packages : [],
+                    });
+                }
+            } catch (error) {
+                if (error.name !== "AbortError" && !controller.signal.aborted) {
+                    setCatalogSuggestions({ products: [], packages: [] });
+                    setCatalogSearchError(true);
+                }
+            } finally {
+                if (!controller.signal.aborted) {
+                    setCatalogSearchLoading(false);
+                }
+            }
+        }, 220);
+
+        return () => {
+            window.clearTimeout(timer);
+            controller.abort();
+        };
+    }, [navigationSearch, showNavigationSearch]);
+
+
 
     useEffect(() => {
         if (!isLoggedIn) return;
@@ -131,6 +598,9 @@ export default function Navbar() {
                     className="offcanvas offcanvas-end"
                     tabIndex={-1}
                     id="navbarOffcanvas"
+                    data-bs-backdrop="true"
+                    data-bs-scroll="false"
+                    data-bs-keyboard="true"
                     aria-labelledby="navbarOffcanvasLabel"
                 >
                     <div className="offcanvas-header">
@@ -173,7 +643,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                >
+                                 onClick={closeMobileNavigation}>
                                     HOME
                                 </Link>
                             </li>
@@ -187,7 +657,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                >
+                                 onClick={closeMobileNavigation}>
                                     PRODUCTS
                                 </Link>
                             </li>
@@ -201,7 +671,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                >
+                                 onClick={closeMobileNavigation}>
                                     PACKAGES
                                 </Link>
                             </li>
@@ -216,7 +686,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium")
                                     }
-                                >
+                                 onClick={closeMobileNavigation}>
                                     SERVICES
                                 </Link>
                             </li>
@@ -229,12 +699,13 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                >
+                                 onClick={closeMobileNavigation}>
                                     ABOUT
                                 </Link>
                             </li>
                         </ul>
 
+                        {renderNavigationSearch()}
 
                         {/* MOBILE AUTH */}
 
@@ -252,7 +723,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         LOGIN
                                     </Link>
 
@@ -266,7 +737,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         SIGN UP
                                     </Link>
                                 </>
@@ -292,7 +763,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         VERIFY EMAIL
                                     </Link>
 
@@ -303,7 +774,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         SIGN OUT
                                     </button>
                                 </>
@@ -335,7 +806,7 @@ export default function Navbar() {
                                                 fontSize: "1.25rem",
                                             }}
                                             aria-label="Notifications"
-                                        >
+                                         data-bs-dismiss="offcanvas">
                                             <i className="bi bi-bell"></i>
 
                                             {notificationCount > 0 && (
@@ -370,7 +841,7 @@ export default function Navbar() {
                                                 fontSize: "1.25rem",
                                             }}
                                             aria-label="Cart"
-                                        >
+                                         data-bs-dismiss="offcanvas">
                                             <i className="bi bi-cart3"></i>
 
                                             {cartCount > 0 && (
@@ -405,7 +876,7 @@ export default function Navbar() {
                                             style={{
                                                 fontFamily: "Outfit, sans-serif",
                                             }}
-                                        >
+                                         data-bs-dismiss="offcanvas">
                                             ADMIN DASHBOARD
                                         </Link>
                                     )}
@@ -415,7 +886,7 @@ export default function Navbar() {
                                             href="/technician/dashboard"
                                             className="btn btn-primary fw-bold w-100"
                                             style={{ fontFamily: "Outfit, sans-serif" }}
-                                        >
+                                         data-bs-dismiss="offcanvas">
                                             TECHNICIAN WORKSPACE
                                         </Link>
                                     )}
@@ -426,7 +897,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         SETTINGS
                                     </Link>
 
@@ -436,7 +907,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         SCHEDULES
                                     </Link>
 
@@ -446,7 +917,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         PURCHASES
                                     </Link>
                                     <Link
@@ -455,7 +926,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         INQUIRIES
                                     </Link>
 
@@ -469,7 +940,7 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                    >
+                                     data-bs-dismiss="offcanvas">
                                         SIGN OUT
                                     </button>
                                 </>
@@ -487,7 +958,7 @@ export default function Navbar() {
                 {/* DESKTOP AUTH */}
 
                 <div
-                    className="d-none d-lg-flex align-items-center gap-3"
+                    className="navbar-desktop-auth d-none d-lg-flex align-items-center gap-3"
                     style={{
                         position: "relative",
                     }}
@@ -654,158 +1125,76 @@ export default function Navbar() {
 
                             <div
                                 ref={userMenuRef}
-                                style={{
-                                    position: "relative",
-                                }}
+                                className="navbar-user-menu-wrapper"
                             >
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                        setShowUserMenu((previous) => !previous)
-                                    }
-                                    className="border-0 d-flex align-items-center justify-content-center"
-                                    style={{
-                                        width: "38px",
-                                        height: "38px",
-                                        padding: 0,
-                                        borderRadius: "50%",
-                                        backgroundColor: "#dee2e6",
-                                        color: "#ffffff",
-                                        cursor: "pointer",
-                                        boxShadow: showUserMenu
-                                            ? "0 0 0 3px rgba(13, 110, 253, 0.15)"
-                                            : "none",
-                                        transition: "all 0.2s ease",
-                                    }}
-                                    aria-label="User menu"
+                                    onClick={() => setShowUserMenu((previous) => !previous)}
+                                    className={"navbar-user-trigger border-0 d-flex align-items-center justify-content-center" + (showUserMenu ? " is-open" : "")}
+                                    aria-label="Open account menu"
+                                    aria-haspopup="true"
                                     aria-expanded={showUserMenu}
                                 >
-                                    <i
-                                        className="bi bi-person-fill"
-                                        style={{
-                                            fontSize: "1.25rem",
-                                        }}
-                                    ></i>
+                                    <i className="bi bi-person-fill" aria-hidden="true"></i>
                                 </button>
 
                                 {showUserMenu && (
-                                    <div
-                                        className="bg-white border rounded-3 shadow-sm"
-                                        style={{
-                                            position: "absolute",
-                                            top: "calc(100% + 10px)",
-                                            right: "-50px",
-                                            width: "165px",
-                                            padding: "7px 0",
-                                            zIndex: 1050,
-                                            overflow: "hidden",
-                                        }}
-                                    >
-                                        {isAdmin && (
-                                            <Link
-                                                href="/dashboard"
-                                                className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                                style={{
-                                                    padding: "9px 12px",
-                                                    fontFamily: "Outfit, sans-serif",
-                                                    fontSize: "0.88rem",
-                                                    transition: "background-color 0.15s ease",
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.backgroundColor = "#f8f9fa";
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.backgroundColor = "transparent";
-                                                }}
-                                            >
-                                                ADMIN DASHBOARD
+                                    <div className="navbar-account-menu bg-body border shadow-lg" role="menu" aria-label="Account menu">
+                                        <div className="navbar-account-menu-profile">
+                                            <div className="navbar-account-avatar">
+                                                <i className="bi bi-person-fill" aria-hidden="true"></i>
+                                            </div>
+                                            <div className="navbar-account-profile-copy">
+                                                <strong title={user?.name}>{user?.name || "SecureView Account"}</strong>
+                                                <span title={user?.email}>{user?.email || "Signed-in account"}</span>
+                                                <span className="navbar-account-role">
+                                                    {isAdmin ? "Administrator" : isTechnician ? "Technician" : "Customer"}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="navbar-account-menu-links">
+                                            {(isAdmin || isTechnician) && (
+                                                <Link
+                                                    href={isAdmin ? "/dashboard" : "/technician/dashboard"}
+                                                    className="navbar-account-menu-link"
+                                                    role="menuitem"
+                                                    onClick={() => setShowUserMenu(false)}
+                                                >
+                                                    <i className={isAdmin ? "bi bi-speedometer2" : "bi bi-tools"} aria-hidden="true"></i>
+                                                    <span>{isAdmin ? "Admin dashboard" : "Technician workspace"}</span>
+                                                    <i className="bi bi-arrow-up-right ms-auto" aria-hidden="true"></i>
+                                                </Link>
+                                            )}
+                                            <Link href="/settings" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                <i className="bi bi-gear" aria-hidden="true"></i>
+                                                <span>Account settings</span>
                                             </Link>
-                                        )}
-
-                                        {isTechnician && (
-                                            <Link
-                                                href="/technician/dashboard"
-                                                className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                                style={{ padding: "9px 12px", fontFamily: "Outfit, sans-serif", fontSize: "0.88rem" }}
-                                            >
-                                                TECHNICIAN WORKSPACE
+                                            <Link href="/schedules" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                <i className="bi bi-calendar3" aria-hidden="true"></i>
+                                                <span>Schedules</span>
                                             </Link>
-                                        )}
-
-                                        <Link
-                                            href="/settings"
-                                            className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                            style={{
-                                                padding: "9px 12px",
-                                                fontFamily: "Outfit, sans-serif",
-                                                fontSize: "0.88rem",
-                                                transition: "background-color 0.15s ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = "#f8f9fa";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = "transparent";
-                                            }}
-                                        >
-                                            SETTINGS
-                                        </Link>
-
-                                        <Link
-                                            href="/schedules"
-                                            className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                            style={{
-                                                padding: "9px 12px",
-                                                fontFamily: "Outfit, sans-serif",
-                                                fontSize: "0.88rem",
-                                                transition: "background-color 0.15s ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = "#f8f9fa";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = "transparent";
-                                            }}
-                                        >
-                                            SCHEDULES
-                                        </Link>
-
-                                        <Link
-                                            href="/purchases"
-                                            className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                            style={{
-                                                padding: "9px 12px",
-                                                fontFamily: "Outfit, sans-serif",
-                                                fontSize: "0.88rem",
-                                                transition: "background-color 0.15s ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = "#f8f9fa";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = "transparent";
-                                            }}
-                                        >
-                                            PURCHASES
-                                        </Link>
-                                        <Link
-                                            href="/inquiries"
-                                            className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                            style={{
-                                                padding: "9px 12px",
-                                                fontFamily: "Outfit, sans-serif",
-                                                fontSize: "0.88rem",
-                                                transition: "background-color 0.15s ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = "#f8f9fa";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = "transparent";
-                                            }}
-                                        >
-                                            INQUIRIES
-                                        </Link>
+                                            <Link href="/purchases" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                <i className="bi bi-bag-check" aria-hidden="true"></i>
+                                                <span>Purchases</span>
+                                            </Link>
+                                            <Link href="/inquiries" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                <i className="bi bi-chat-left-text" aria-hidden="true"></i>
+                                                <span>Inquiries</span>
+                                            </Link>
+                                            {!isAdmin && !isTechnician && (
+                                                <Link href="/warranty-claims" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                    <i className="bi bi-shield-check" aria-hidden="true"></i>
+                                                    <span>Warranty claims</span>
+                                                </Link>
+                                            )}
+                                        </div>
+                                        <div className="navbar-account-menu-footer">
+                                            <Link href="/settings" className="navbar-account-settings-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                <i className="bi bi-sliders" aria-hidden="true"></i>
+                                                Manage account
+                                            </Link>
+                                        </div>
                                     </div>
                                 )}
                             </div>

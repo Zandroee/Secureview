@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\PackageController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
@@ -41,6 +42,10 @@ use Illuminate\Support\Str;
 use App\Models\User;
 
 Route::get('/', [LandingController::class, 'index']);
+
+Route::get('/search/suggestions', [SearchController::class, 'suggestions'])
+    ->middleware('throttle:60,1')
+    ->name('search.suggestions');
 
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);

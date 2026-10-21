@@ -6,7 +6,7 @@ import '../css/secureview-theme.css';
 import './bootstrap';
 import Chatbot from './Components/Chatbot';
 
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { applyUserTheme } from './theme';
 import { createRoot } from 'react-dom/client';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -21,7 +21,22 @@ createInertiaApp({
 
     setup({ el, App, props }) {
         installTableSorting();
-        applyUserTheme(document.documentElement.getAttribute('data-theme-preference') || 'system');
+
+        // Prefer the user's persisted setting from the initial Inertia page props.
+        // The Blade root template applies an early theme to prevent first-paint flashing,
+        // while this keeps the React app in sync when authentication changes via Inertia.
+        const initialPreference =
+            props.auth?.user?.preferred_theme ??
+            document.documentElement.getAttribute('data-theme-preference') ??
+            'system';
+        applyUserTheme(initialPreference);
+
+        router.on('navigate', (event) => {
+            const pageProps = event.detail?.page?.props ?? {};
+            const userPreference = pageProps.auth?.user?.preferred_theme ?? 'system';
+            applyUserTheme(userPreference);
+        });
+
         createRoot(el).render(
             <>
                 <App {...props} />
