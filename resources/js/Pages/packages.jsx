@@ -262,7 +262,23 @@ function searchableValues(value) {
 
                                 {currentPackages.map((pkg) => (
                                     <div className="col-sm-6 col-lg-4" key={pkg.id}>
-                                        <PackageCard name={pkg.name} image={pkg.image} price={pkg.price} badge={pkg.badge} specifications={pkg.specifications} rating={pkg.rating} available={Number(pkg.available_stock) > 0} onDetails={() => router.visit(`/packages/${pkg.id}`)} />
+                                        <PackageCard
+                                            name={pkg.name}
+                                            image={pkg.image}
+                                            price={pkg.price}
+                                            badge={pkg.badge}
+                                            specifications={pkg.specifications}
+                                            inclusions={(pkg.package_items ?? pkg.packageItems ?? [])
+                                                .map((item) => ({
+                                                    id: item.id,
+                                                    name: item.product?.name,
+                                                    quantity: item.quantity,
+                                                }))
+                                                .filter((item) => item.name)}
+                                            rating={pkg.rating}
+                                            available={Number(pkg.available_stock) > 0}
+                                            onDetails={() => router.visit(`/packages/${pkg.id}`)}
+                                        />
                                     </div>
                                 ))}
 
