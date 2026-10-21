@@ -161,20 +161,40 @@ Use PayMongo **test** credentials first. Configure OAuth callback URLs in Google
 
 ## 6. Install PHP dependencies and run migrations
 
-Use SSH/terminal, change into the Laravel application root, and verify that the CLI PHP version matches the version selected for the site:
+Choose the method that matches your deployment:
+
+### If you uploaded the ZIP from section 2
+
+The package helper already created `vendor/` with production-only dependencies. Do not run Composer again on the server unless you are intentionally rebuilding dependencies there.
+
+You still need a supported CLI command runner to perform Artisan checks, apply migrations, and optimize Laravel. From the private application root:
 
 ```bash
 php -v
 php -m
-composer2 install --no-dev --optimize-autoloader
 php artisan about
 php artisan config:clear
 php artisan migrate:status
 ```
 
-If Hostinger's configured PHP executable or Composer command has a different name, use the version/path shown by hPanel or SSH. Do not continue if the CLI PHP version is incompatible or the `pdo_mysql` extension is missing.
+### If you are deploying source code and have SSH
 
-After verifying that the database backup exists and the intended production database is selected, apply outstanding migrations deliberately:
+Change into the private Laravel application root. Verify the CLI PHP version and extensions before installing dependencies:
+
+```bash
+php -v
+php -m
+composer2 install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+php artisan about
+php artisan config:clear
+php artisan migrate:status
+```
+
+If the CLI PHP version is different from the PHP version selected for the website, use the exact PHP binary for your plan. Hostinger documents a pattern such as `/opt/alt/php84/usr/bin/php /usr/local/bin/composer2 install ...`; the `php84` segment is only an example and must match the version enabled in hPanel. Do not ignore Composer platform-check failures or run the site on a PHP version lower than the project's `^8.2` requirement.
+
+### Apply migrations carefully
+
+Before applying schema changes, confirm the intended production database and create a fresh backup. Then, from the private application root:
 
 ```bash
 php artisan migrate --force
@@ -185,6 +205,7 @@ Do not run these commands until the production `.env` has been checked carefully
 
 Make Laravel's `storage/` and `bootstrap/cache/` writable by the account that runs PHP. Do not apply broad world-writable permissions such as `chmod -R 777`.
 
+**If your plan is Single and does not provide a supported CLI command runner:** do not create a temporary public web route to invoke Artisan. A deployment ZIP alone cannot safely apply Laravel database migrations. Confirm a supported migration/CLI path with Hostinger before putting production data online, or move to a Web Hosting plan with SSH/CLI access.
 ## 7. Set up Laravel's scheduler in Hostinger
 
 SecureView already defines scheduled tasks in `routes/console.php`: upcoming-job reminders every fifteen minutes and overdue-inquiry urgency escalation daily. Hostinger's Cron Jobs feature should invoke Laravel's scheduler command every minute so Laravel can decide which tasks are due.
