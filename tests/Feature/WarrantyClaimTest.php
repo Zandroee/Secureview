@@ -211,6 +211,9 @@ class WarrantyClaimTest extends TestCase
             'issue_description' => 'Camera signal drops.',
             'status' => 'submitted',
         ]);
+        WarrantyClaim::whereKey($firstClaim->id)
+            ->update(['created_at' => now()->subMinute()]);
+
         WarrantyClaim::create([
             'user_id' => $customer->id,
             'order_id' => $item->order_id,
