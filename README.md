@@ -32,7 +32,7 @@ Do not use `php artisan migrate:fresh` against any database containing data you 
 
 ## Deployment
 
-Production deployment target: **Hostinger**. Follow [the Hostinger deployment guide](docs/hostinger-deployment.md) for the required PHP/MySQL configuration, secure public directory layout, environment variables, migrations, scheduler cron job, backups, and go-live checks.
+Production deployment target: **Hostinger Web Hosting**. Follow [the Hostinger deployment guide](docs/hostinger-deployment.md) for the required PHP/MySQL configuration, secure public directory layout, environment variables, migrations, scheduler cron job, backups, and go-live checks. On Windows, `scripts/package-hostinger.ps1` creates a production ZIP with dependencies and a split `secureview_app` / `public_html` layout; read the guide before uploading it.
 
 Before release, review the changes, require a green GitHub Actions run, back up the production database, and test a restore. Use PayMongo test mode until the deployed webhook and payment workflow have been verified. Keep production secrets in the hosting environment or private `.env`; never commit them.
 

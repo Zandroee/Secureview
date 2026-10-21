@@ -8,17 +8,20 @@ Before uploading the app, confirm the plan supports:
 
 - PHP 8.2 or newer (the project requires PHP `^8.2`) and Laravel's required PHP extensions, including PDO MySQL, OpenSSL, Mbstring, Fileinfo, Ctype, Tokenizer, XML/DOM, cURL, and GD for the image-related workflows.
 - A persistent MySQL database and enough disk space for `vendor/`, uploads, logs, and generated assets.
-- SSH/terminal access is strongly recommended because deployments need Composer and Artisan commands. Hostinger documents SSH access on Premium Web plans and above; Composer 2 is available over SSH on Premium Web, Business/Unlimited Web, and Cloud plans. Check your current plan's capabilities before proceeding.
+- PHP CLI access is strongly recommended because SecureView needs Composer, safe Artisan migrations, cache management, and scheduled jobs. Hostinger's current documentation says SSH is unavailable on Single Web Hosting; SSH and preinstalled Composer 2 are available on Premium Web and above. Check the exact plan in hPanel before proceeding.
 - HTTPS for the site and the PayMongo webhook.
 
-Official references: [Hostinger SSH access](https://www.hostinger.com/support/1583645-how-to-enable-ssh-access-in-hostinger/), [Composer at Hostinger](https://www.hostinger.com/support/5792078-how-to-use-composer-at-hostinger/).
+**Plan note:** Premium or Business Web Hosting is the safer choice for this Laravel application because routine deployment and recovery require CLI commands. If your plan is Single and has no supported CLI command runner, the local package script below can prepare the files, but it does not itself apply database migrations. Do not create a public unauthenticated route to execute Artisan; confirm a supported migration path with Hostinger or upgrade to a plan with SSH/CLI access.
 
-## 2. Build the front-end assets locally
+Official references: [Hostinger SSH access](https://www.hostinger.com/support/1583645-how-to-enable-ssh-access-in-hostinger/), [Composer at Hostinger](https://www.hostinger.com/support/5792078-how-to-use-composer-at-hostinger/), [Hostinger Composer/PHP version troubleshooting](https://www.hostinger.com/support/5792082-how-to-solve-common-composer-issues-at-hostinger/).
+
+## 2. Test and package the Windows release
 
 From the project root on your Windows computer:
 
 ```powershell
 cd D:\secureview-project
+git status
 git switch dev
 git pull origin dev
 npm ci
@@ -26,9 +29,35 @@ npm run build
 php artisan test
 ```
 
-Use a reviewed, tested commit for the actual release rather than deploying unreviewed feature branches. The build should generate `public/build/manifest.json` and versioned files beneath `public/build/assets/`.
+Preserve local uncommitted changes before switching branches. Deploy a reviewed commit that passes GitHub Actions; do not deploy unreviewed feature branches.
 
-Upload the generated `public/build` contents to the deployed Laravel app. When using the split-directory shared-hosting layout below, also copy that build directory to `public_html/build`, because that is the directory the web server exposes as `/build/*`.
+For Hostinger Web Hosting, the repository includes a package helper. Run this from PowerShell at the repository root:
+
+```powershell
+.\scripts\package-hostinger.ps1
+```
+
+The script builds Vite assets, creates a separate staging copy, installs production Composer dependencies in that staging copy, rewrites the public front-controller paths for the split-directory layout, adds a rule blocking script execution inside public catalog uploads, and creates:
+
+```text
+dist\secureview-hostinger-release.zip
+```
+
+It does not use or copy your local `.env`, development `vendor/`, `node_modules/`, tests, local logs, or cached configuration. It also excludes local catalog uploads by default so future packages do not overwrite live media.
+
+For the **first deployment only**, if you want to move existing local product/package images from `storage/app/public`, inspect that folder first and run:
+
+```powershell
+.\scripts\package-hostinger.ps1 -IncludeLocalUploads
+```
+
+Only use that option after confirming the folder contains intended public catalog media. For routine releases, do not use it. Never delete or replace `public_html/storage` on a live site during a code update.
+
+The archive contains sibling `secureview_app/` and `public_html/` directories plus deployment instructions. Extract the private app folder outside the public web root. Merge the contents of the archive's `public_html/` folder into the actual domain `public_html/` directory; do not accidentally create `public_html/public_html/`.
+
+The script requires local Node.js/npm, PHP compatible with the project's `^8.2` requirement, Composer, and Windows `robocopy`. If dependency installation fails because your local PHP CLI lacks a required extension or has the wrong PHP version, fix that first rather than ignoring Composer's platform checks.
+
+If you use SSH to build directly on Hostinger instead, follow the server-side Composer commands in section 6.
 
 ## 3. Create the database in hPanel
 
@@ -61,6 +90,8 @@ domains/YOUR_DOMAIN/
 ```
 
 Use your actual domain folder and Hostinger account paths. Upload the whole project into `secureview_app`, then copy the **contents** of its `public/` folder into `public_html/`. Do not put `.env`, `vendor/`, `storage/`, `app/`, or `bootstrap/` in the public web directory.
+
+If you used `scripts/package-hostinger.ps1`, the archive's `public_html/index.php` already contains these path changes. The following manual edit is only needed when you build the folder layout yourself without the package helper.
 
 Edit the copied `public_html/index.php` so its Laravel paths point to the sibling application directory. Replace the original relative paths:
 
@@ -132,20 +163,40 @@ Use PayMongo **test** credentials first. Configure OAuth callback URLs in Google
 
 ## 6. Install PHP dependencies and run migrations
 
-Use SSH/terminal, change into the Laravel application root, and verify that the CLI PHP version matches the version selected for the site:
+Choose the method that matches your deployment:
+
+### If you uploaded the ZIP from section 2
+
+The package helper already created `vendor/` with production-only dependencies. Do not run Composer again on the server unless you are intentionally rebuilding dependencies there.
+
+You still need a supported CLI command runner to perform Artisan checks, apply migrations, and optimize Laravel. From the private application root:
 
 ```bash
 php -v
 php -m
-composer2 install --no-dev --optimize-autoloader
 php artisan about
 php artisan config:clear
 php artisan migrate:status
 ```
 
-If Hostinger's configured PHP executable or Composer command has a different name, use the version/path shown by hPanel or SSH. Do not continue if the CLI PHP version is incompatible or the `pdo_mysql` extension is missing.
+### If you are deploying source code and have SSH
 
-After verifying that the database backup exists and the intended production database is selected, apply outstanding migrations deliberately:
+Change into the private Laravel application root. Verify the CLI PHP version and extensions before installing dependencies:
+
+```bash
+php -v
+php -m
+composer2 install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+php artisan about
+php artisan config:clear
+php artisan migrate:status
+```
+
+If the CLI PHP version is different from the PHP version selected for the website, use the exact PHP binary for your plan. Hostinger documents a pattern such as `/opt/alt/php84/usr/bin/php /usr/local/bin/composer2 install ...`; the `php84` segment is only an example and must match the version enabled in hPanel. Do not ignore Composer platform-check failures or run the site on a PHP version lower than the project's `^8.2` requirement.
+
+### Apply migrations carefully
+
+Before applying schema changes, confirm the intended production database and create a fresh backup. Then, from the private application root:
 
 ```bash
 php artisan migrate --force
@@ -156,6 +207,7 @@ Do not run these commands until the production `.env` has been checked carefully
 
 Make Laravel's `storage/` and `bootstrap/cache/` writable by the account that runs PHP. Do not apply broad world-writable permissions such as `chmod -R 777`.
 
+**If your plan is Single and does not provide a supported CLI command runner:** do not create a temporary public web route to invoke Artisan. A deployment ZIP alone cannot safely apply Laravel database migrations. Confirm a supported migration/CLI path with Hostinger before putting production data online, or move to a Web Hosting plan with SSH/CLI access.
 ## 7. Set up Laravel's scheduler in Hostinger
 
 SecureView already defines scheduled tasks in `routes/console.php`: upcoming-job reminders every fifteen minutes and overdue-inquiry urgency escalation daily. Hostinger's Cron Jobs feature should invoke Laravel's scheduler command every minute so Laravel can decide which tasks are due.

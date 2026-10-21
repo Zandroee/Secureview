@@ -55,3 +55,108 @@ jobs:
 
       - name: Run Laravel feature and unit tests
         run: php artisan test
+
+  hostinger-package:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: bcmath, ctype, curl, dom, fileinfo, gd, mbstring, openssl, pdo_mysql, pdo_sqlite, sqlite3, tokenizer, xml, zip
+          coverage: none
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Add sentinel files that must never ship
+        shell: pwsh
+        run: |
+          Set-Content -Path ".env" -Value "PACKAGE_TEST_SECRET_DO_NOT_INCLUDE=sentinel"
+          New-Item -ItemType Directory -Path "storage/app/public" -Force | Out-Null
+          Set-Content -Path "storage/app/public/package-test-marker.txt" -Value "local upload sentinel"
+          New-Item -ItemType Directory -Path "public" -Force | Out-Null
+          Set-Content -Path "public/hot" -Value "http://localhost:5173"
+
+      - name: Build and verify Hostinger release archive
+        shell: pwsh
+        run: |
+          $workspace = $env:GITHUB_WORKSPACE
+          $archivePath = Join-Path $workspace "dist/secureview-hostinger-release.zip"
+          $inspectRoot = Join-Path $env:RUNNER_TEMP "hostinger-package-inspect"
+
+          try {
+            & (Join-Path $workspace "scripts/package-hostinger.ps1")
+            if (-not (Test-Path $archivePath)) {
+              throw "Hostinger release archive was not created."
+            }
+
+            Expand-Archive -LiteralPath $archivePath -DestinationPath $inspectRoot -Force
+            $appRoot = Join-Path $inspectRoot "secureview_app"
+            $webRoot = Join-Path $inspectRoot "public_html"
+
+            if (-not (Test-Path (Join-Path $appRoot "vendor/autoload.php"))) {
+              throw "Production Composer dependencies are missing from the archive."
+            }
+            if (Test-Path (Join-Path $appRoot ".env")) {
+              throw "A local .env file was included in the archive."
+            }
+            if (-not (Test-Path (Join-Path $appRoot ".env.example"))) {
+              throw "The safe .env.example template is missing from the archive."
+            }
+            if (-not (Test-Path (Join-Path $webRoot "build/manifest.json"))) {
+              throw "Compiled Vite assets are missing from the public web root."
+            }
+            if (Test-Path (Join-Path $webRoot "hot")) {
+              throw "Vite's local hot-reload marker was included in the release."
+            }
+            if (Test-Path (Join-Path $appRoot "storage/app/public/package-test-marker.txt")) {
+              throw "Local uploaded media was included by default in the private app."
+            }
+            if (Test-Path (Join-Path $webRoot "storage/package-test-marker.txt")) {
+              throw "Local uploaded media was included by default in the public web root."
+            }
+
+            $indexPath = Join-Path $webRoot "index.php"
+            $indexContent = Get-Content -Path $indexPath -Raw
+            if ($indexContent -notmatch "secureview_app/vendor/autoload\.php" -or
+                $indexContent -notmatch "secureview_app/bootstrap/app\.php") {
+              throw "The packaged front controller does not point to the private application folder."
+            }
+
+            $storageHtaccess = Join-Path $webRoot "storage/.htaccess"
+            if (-not (Test-Path $storageHtaccess) -or
+                (Get-Content -Path $storageHtaccess -Raw) -notmatch "Require all denied") {
+              throw "The public upload directory is missing its script-blocking .htaccess."
+            }
+
+            if ((Test-Path (Join-Path $appRoot "tests")) -or
+                (Test-Path (Join-Path $appRoot "node_modules")) -or
+                (Test-Path (Join-Path $appRoot ".git"))) {
+              throw "Development-only folders were included in the release archive."
+            }
+
+            # Check only the application and document-root levels. Some Composer
+            # packages may contain nested .env fixtures/examples that are not app secrets.
+            $unexpectedEnvFiles = @(
+              foreach ($rootPath in @($appRoot, $webRoot)) {
+                Get-ChildItem -Path $rootPath -File -Force |
+                  Where-Object { $_.Name -in @(".env", ".env.backup", ".env.production", ".env.local", ".env.testing") }
+              }
+            )
+            if ($unexpectedEnvFiles.Count -gt 0) {
+              Write-Host ("Unexpected environment files were found: " + (($unexpectedEnvFiles | ForEach-Object { $_.FullName }) -join "; "))
+              throw "Environment files other than the safe .env.example were included in the release archive."
+            }
+          } finally {
+            Remove-Item -Path (Join-Path $workspace ".env") -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path (Join-Path $workspace "storage/app/public/package-test-marker.txt") -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path (Join-Path $workspace "public/hot") -Force -ErrorAction SilentlyContinue
+            Remove-Item -Path (Join-Path $env:RUNNER_TEMP "hostinger-package-inspect") -Recurse -Force -ErrorAction SilentlyContinue
+          }
