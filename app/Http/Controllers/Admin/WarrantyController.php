@@ -29,62 +29,6 @@ class WarrantyController extends Controller
             'status' => ['nullable', 'in:' . implode(',', self::STATUSES)],
         ]);
 
-        $query = WarrantyClaim::query()
-            ->with(['user', 'order', 'orderItem.purchasable'])
-            ->latest();
-
-        if (!empty($filters['search'])) {
-            $search = $filters['search'];
-
-            $query->where(function ($builder) use ($search) {
-                $builder
-                    ->where('claim_number', 'like', '%' . $search . '%')
-                    ->orWhere('issue_description', 'like', '%' . $search . '%')
-                    ->orWhereHas('user', fn ($userQuery) => $userQuery
-                        ->where('name', 'like', '%' . $search . '%')
-                        ->orWhere('email', 'like', '%' . $search . '%'))
-                    ->orWhereHas('order', fn ($orderQuery) => $orderQuery
-                        ->where('order_number', 'like', '%' . $search . '%'))
-                    ->orWhereHas('orderItem', fn ($itemQuery) => $itemQuery
-                        ->where('name', 'like', '%' . $search . '%'));
-            });
-        }
-
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        $claims = $query
-            ->paginate(12)
-            ->withQueryString()
-            ->through(function (WarrantyClaim $claim) use ($warrantyEligibility) {
-                $item = $claim->orderItem;
-                $startDate = $claim->order
-                    ? $warrantyEligibility->startDateFor($claim->order)
-                    : null;
-                $expiryDate = $item
-                    ? $warrantyEligibility->expiryDateFor($item)
-                    : null;
-
-                return [
-                    'id' => $claim->id,
-                    'claim_number' => $claim->claim_number,
-                    'customer_name' => $claim->user?->name ?? $claim->order?->customer_name ?? 'Unknown customer',
-                    'customer_email' => $claim->user?->email ?? $claim->order?->customer_email,
-                    'order_number' => $claim->order?->order_number,
-                    'item_name' => $item?->name ?? 'Purchased item',
-                    'warranty_period' => $item ? $warrantyEligibility->periodFor($item) : null,
-                    'warranty_start_date' => $startDate?->format('M d, Y'),
-                    'warranty_expiry_date' => $expiryDate?->format('M d, Y'),
-                    'issue_description' => $claim->issue_description,
-                    'status' => $claim->status,
-                    'admin_notes' => $claim->admin_notes,
-                    'submitted_at' => $claim->created_at?->format('M d, Y h:i A'),
-                    'reviewed_at' => $claim->reviewed_at?->format('M d, Y h:i A'),
-                    'resolved_at' => $claim->resolved_at?->format('M d, Y h:i A'),
-                ];
-            });
-
         $warrantyQuery = OrderItem::query()
             ->with(['order', 'purchasable', 'warrantyClaims'])
             ->whereHas('order', fn ($orderQuery) => $orderQuery
@@ -100,8 +44,17 @@ class WarrantyController extends Controller
                     ->orWhereHas('order', fn ($orderQuery) => $orderQuery
                         ->where('order_number', 'like', '%' . $search . '%')
                         ->orWhere('customer_name', 'like', '%' . $search . '%')
-                        ->orWhere('customer_email', 'like', '%' . $search . '%'));
+                        ->orWhere('customer_email', 'like', '%' . $search . '%'))
+                    ->orWhereHas('warrantyClaims', fn ($claimQuery) => $claimQuery
+                        ->where('claim_number', 'like', '%' . $search . '%')
+                        ->orWhere('issue_description', 'like', '%' . $search . '%'));
             });
+        }
+
+        if (!empty($filters['status'])) {
+            $warrantyQuery->whereHas('warrantyClaims', fn ($claimQuery) =>
+                $claimQuery->where('status', $filters['status'])
+            );
         }
 
         $warranties = $warrantyQuery
@@ -109,9 +62,20 @@ class WarrantyController extends Controller
             ->paginate(10, ['*'], 'coverage_page')
             ->withQueryString()
             ->through(function (OrderItem $item) use ($warrantyEligibility) {
-                $latestClaim = $item->warrantyClaims
+                $associatedClaims = $item->warrantyClaims
                     ->sortByDesc('created_at')
-                    ->first();
+                    ->map(fn (WarrantyClaim $claim) => [
+                        'id' => $claim->id,
+                        'claim_number' => $claim->claim_number,
+                        'status' => $claim->status,
+                        'issue_description' => $claim->issue_description,
+                        'admin_notes' => $claim->admin_notes,
+                        'submitted_at' => $claim->created_at?->format('M d, Y h:i A'),
+                        'reviewed_at' => $claim->reviewed_at?->format('M d, Y h:i A'),
+                        'resolved_at' => $claim->resolved_at?->format('M d, Y h:i A'),
+                    ])
+                    ->values();
+                $latestClaim = $associatedClaims->first();
                 $startDate = $item->order
                     ? $warrantyEligibility->startDateFor($item->order)
                     : null;
@@ -128,13 +92,13 @@ class WarrantyController extends Controller
                     'warranty_start_date' => $startDate?->format('M d, Y'),
                     'warranty_expiry_date' => $expiryDate?->format('M d, Y'),
                     'coverage_status' => $warrantyEligibility->coverageStatusFor($item),
-                    'latest_claim_number' => $latestClaim?->claim_number,
-                    'latest_claim_status' => $latestClaim?->status,
+                    'latest_claim_number' => $latestClaim['claim_number'] ?? null,
+                    'latest_claim_status' => $latestClaim['status'] ?? null,
+                    'claims' => $associatedClaims,
                 ];
             });
 
         return Inertia::render('Admin/Warranty', [
-            'claims' => $claims,
             'warranties' => $warranties,
             'filters' => [
                 'search' => $filters['search'] ?? '',
