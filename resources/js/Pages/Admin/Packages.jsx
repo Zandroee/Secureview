@@ -734,7 +734,7 @@ export default function AdminPackages({
 
             {showForm && (
                 <div
-                    className="modal d-block"
+                    className="modal d-block admin-catalog-modal"
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="packageFormTitle"
@@ -743,8 +743,8 @@ export default function AdminPackages({
                         if (event.target === event.currentTarget) closeForm();
                     }}
                 >
-                    <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-                        <div className="modal-content border-0 rounded-4 shadow">
+                    <div className="modal-dialog modal-xl admin-catalog-modal-dialog admin-catalog-modal-dialog-package">
+                        <div className="modal-content border-0 rounded-4 shadow admin-catalog-modal-content">
                             <form onSubmit={submit}>
                                 <div className="modal-header">
                                     <div>
