@@ -175,12 +175,12 @@ export default function AdminWarranty({
                         <section className="bg-white border rounded-3 p-3 mb-3" style={{ boxShadow: "0 3px 12px rgba(0,0,0,0.04)" }}>
                             <form className="row g-2 align-items-end" onSubmit={applyFilters}>
                                 <div className="col-lg-7">
-                                    <label className="form-label small fw-semibold mb-1">SEARCH CLAIMS</label>
+                                    <label className="form-label small fw-semibold mb-1">SEARCH WARRANTIES & CLAIMS</label>
                                     <input
                                         className="form-control"
                                         value={search}
                                         onChange={(event) => setSearch(event.target.value)}
-                                        placeholder="Claim number, customer, order number, or product"
+                                        placeholder="Claim or order number, customer, or product"
                                     />
                                 </div>
                                 <div className="col-sm-8 col-lg-3">
@@ -316,7 +316,7 @@ export default function AdminWarranty({
                             <div className="border-top">
                                 <AdminPagination pagination={warranties} label="purchase records" insideCard />
                             </div>
-                            {rows.length > 0 && (
+                            {(claims.total ?? rows.length) > 0 && (
                                 <div className="border-top">
                                     <AdminPagination pagination={claims} label="service claims" insideCard />
                                 </div>
