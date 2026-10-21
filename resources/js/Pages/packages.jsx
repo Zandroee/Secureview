@@ -8,6 +8,13 @@ import { router, usePage } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
 
 export default function Packages({ packages = [] }) {
+
+function searchableValues(value) {
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object") return Object.values(value);
+    return value === null || value === undefined ? [] : [value];
+}
+
     const { url } = usePage();
     const queryString = url.includes("?") ? url.split("?")[1].split("#")[0] : "";
     const searchFromUrl = new URLSearchParams(queryString).get("search") ?? "";
@@ -32,7 +39,26 @@ export default function Packages({ packages = [] }) {
     const filteredPackages = useMemo(() => {
         return packages.filter((pkg) => {
 
-            const matchesSearch = pkg.name.toLowerCase().includes(search.toLowerCase());
+            const packageItems = Array.isArray(pkg.package_items)
+                ? pkg.package_items
+                : Array.isArray(pkg.packageItems)
+                  ? pkg.packageItems
+                  : [];
+            const itemSearchText = packageItems.flatMap((item) => [
+                item?.product?.name,
+                item?.product?.category,
+                item?.product?.warranty,
+                ...searchableValues(item?.product?.specifications),
+            ]);
+            const packageSearchText = [
+                pkg.name,
+                pkg.category,
+                pkg.badge,
+                pkg.warranty,
+                ...searchableValues(pkg.specifications),
+                ...itemSearchText,
+            ].filter(Boolean).join(" ").toLowerCase();
+            const matchesSearch = packageSearchText.includes(search.toLowerCase());
 
             const matchesCategory = category.length === 0 || category.includes(pkg.category);
 
