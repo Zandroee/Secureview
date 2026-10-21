@@ -37,7 +37,8 @@
     flex-direction: column;
     width: min(380px, calc(100vw - 32px));
     height: min(560px, calc(100dvh - 120px));
-    min-height: 360px;
+    min-height: min(360px, calc(100dvh - 140px));
+    max-height: calc(100dvh - 90px);
     overflow: hidden;
     border: 1px solid #e3e9f2;
     border-radius: 18px;
@@ -88,6 +89,7 @@
 
 .sv-chat-messages {
     display: flex;
+    min-height: 0;
     flex: 1;
     flex-direction: column;
     gap: 12px;
@@ -167,5 +169,12 @@
 @media (max-width: 575.98px) {
     .secureview-chatbot { right: 12px; bottom: 12px; }
     .sv-chat-launcher { min-height: 50px; padding: 0 16px; }
-    .sv-chat-panel { right: -4px; bottom: 62px; width: calc(100vw - 24px); height: min(560px, calc(100dvh - 90px)); }
+    .sv-chat-panel {
+        right: -4px;
+        bottom: 62px;
+        width: calc(100vw - 24px);
+        height: min(560px, calc(100dvh - 90px));
+        min-height: min(320px, calc(100dvh - 110px));
+        max-height: calc(100dvh - 80px);
+    }
 }
