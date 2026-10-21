@@ -174,7 +174,7 @@ Options -Indexes
 <FilesMatch "\.(php[0-9]?|phtml|phar|cgi|pl|py|sh)$">
     Require all denied
 </FilesMatch>
- '@ | Set-Content -Path (Join-Path $webStorage '.htaccess') -Encoding ascii
+'@ | Set-Content -Path (Join-Path $webStorage '.htaccess') -Encoding ascii
 
     @'
 SECUREVIEW HOSTINGER RELEASE
