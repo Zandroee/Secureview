@@ -4,12 +4,12 @@ import Footer from "../Components/footer";
 import ProductCard from "../Components/ProductCard";
 import Pagination from "../Components/Pagination";
 
-import { router } from "@inertiajs/react";
-import { useMemo, useState } from "react";
+import { router, usePage } from "@inertiajs/react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function Products({ products }) {
 
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState(searchFromUrl);
     const [category, setCategory] = useState({
         dome: false,
         bullet: false,
@@ -20,6 +20,11 @@ export default function Products({ products }) {
     const [rating, setRating] = useState("");
 
     const [currentPage, setCurrentPage] = useState(1);
+
+    useEffect(() => {
+        setSearch(searchFromUrl);
+        setCurrentPage(1);
+    }, [searchFromUrl]);
     const productsPerPage = 8;
 
     const filteredProducts = useMemo(() => {
