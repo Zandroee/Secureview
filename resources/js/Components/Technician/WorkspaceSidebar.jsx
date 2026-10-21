@@ -87,19 +87,34 @@ export default function WorkspaceSidebar({ jobs = [], notifications = [], notifi
                 .technician-workspace-sidebar .react-calendar {
                     width: 100%;
                     max-width: 100%;
+                    min-width: 0;
+                    box-sizing: border-box;
                     border: 0;
                     font-family: inherit;
                     background: transparent;
                     line-height: 1.35;
                 }
                 .technician-workspace-sidebar .react-calendar__navigation {
+                    display: flex;
+                    gap: 2px;
                     margin-bottom: .5rem;
-                    height: 40px;
+                    height: auto;
+                    min-height: 40px;
                 }
                 .technician-workspace-sidebar .react-calendar__navigation button {
-                    min-width: 28px;
+                    min-width: 0;
+                    flex: 1 1 0;
+                    padding: .35rem .1rem;
+                    font-size: .82rem;
                     font-weight: 600;
                     border-radius: 8px;
+                    white-space: nowrap;
+                }
+                .technician-workspace-sidebar .react-calendar__navigation__label {
+                    flex: 3 1 0;
+                    min-width: 0;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
                 .technician-workspace-sidebar .react-calendar__month-view__weekdays {
                     font-size: .66rem;
@@ -110,11 +125,20 @@ export default function WorkspaceSidebar({ jobs = [], notifications = [], notifi
                 .technician-workspace-sidebar .react-calendar__month-view__weekdays abbr {
                     text-decoration: none;
                 }
+                .technician-workspace-sidebar .react-calendar__month-view__weekdays {
+                    font-size: clamp(.56rem, .7vw, .68rem);
+                }
+                .technician-workspace-sidebar .react-calendar__month-view__weekdays__weekday {
+                    padding: .35em .05em;
+                }
                 .technician-workspace-sidebar .react-calendar__tile {
-                    min-height: 43px;
-                    padding: .35rem .1rem;
-                    border-radius: 9px;
-                    font-size: .78rem;
+                    width: 14.2857%;
+                    min-width: 0;
+                    max-width: 100%;
+                    min-height: clamp(2.35rem, 3vw, 2.8rem);
+                    padding: .35rem .05rem;
+                    border-radius: 8px;
+                    font-size: clamp(.68rem, .76vw, .78rem);
                 }
                 .technician-workspace-sidebar .react-calendar__tile--now {
                     background: #eef5ff;
@@ -139,6 +163,16 @@ export default function WorkspaceSidebar({ jobs = [], notifications = [], notifi
                 .technician-workspace-sidebar .sidebar-appointment:hover {
                     border-color: #a9c9ff;
                     background: #f8fbff;
+                }
+                @media (max-width: 575.98px) {
+                    .technician-workspace-sidebar .react-calendar__navigation button {
+                        font-size: .78rem;
+                    }
+                    .technician-workspace-sidebar .react-calendar__tile {
+                        min-height: 2.25rem;
+                        padding: .3rem 0;
+                        font-size: .73rem;
+                    }
                 }
                 @media (prefers-reduced-motion: reduce) {
                     .technician-workspace-sidebar .sidebar-appointment { transition: none; }
