@@ -1,0 +1,156 @@
+/*
+ * SecureView theme adjustments.
+ * Bootstrap handles semantic component variables through data-bs-theme.
+ * These rules cover the app's existing fixed white/gray utility classes and
+ * inline dashboard backgrounds so dark mode remains usable across older pages.
+ */
+html {
+    color-scheme: light;
+}
+
+html[data-bs-theme="dark"] {
+    color-scheme: dark;
+    background-color: #111827;
+}
+
+html[data-bs-theme="dark"] body {
+    background-color: #111827;
+    color: #e5e7eb;
+}
+
+html[data-bs-theme="dark"] main,
+html[data-bs-theme="dark"] [style*="background-color: rgb(245, 246, 248)"] {
+    background-color: #111827 !important;
+    color: #e5e7eb;
+}
+
+html[data-bs-theme="dark"] .bg-white,
+html[data-bs-theme="dark"] .bg-light {
+    background-color: #1f2937 !important;
+    color: #e5e7eb;
+}
+
+html[data-bs-theme="dark"] .bg-body,
+html[data-bs-theme="dark"] .bg-body-tertiary {
+    background-color: #18212f !important;
+}
+
+html[data-bs-theme="dark"] .text-dark {
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .text-muted {
+    color: #aab6c6 !important;
+}
+
+html[data-bs-theme="dark"] .border,
+html[data-bs-theme="dark"] .border-top,
+html[data-bs-theme="dark"] .border-bottom,
+html[data-bs-theme="dark"] .border-start,
+html[data-bs-theme="dark"] .border-end,
+html[data-bs-theme="dark"] hr {
+    border-color: #374151 !important;
+}
+
+html[data-bs-theme="dark"] .table {
+    --bs-table-color: #e5e7eb;
+    --bs-table-bg: #1f2937;
+    --bs-table-border-color: #374151;
+    --bs-table-striped-bg: #202d3e;
+    --bs-table-hover-bg: #26364a;
+    --bs-table-hover-color: #f9fafb;
+}
+
+html[data-bs-theme="dark"] .table-light,
+html[data-bs-theme="dark"] .table-light > th,
+html[data-bs-theme="dark"] .table-light > td {
+    --bs-table-color: #e5e7eb;
+    --bs-table-bg: #26364a;
+    --bs-table-border-color: #374151;
+}
+
+html[data-bs-theme="dark"] .form-control,
+html[data-bs-theme="dark"] .form-select {
+    background-color: #111827;
+    color: #e5e7eb;
+    border-color: #4b5563;
+}
+
+html[data-bs-theme="dark"] .form-control::placeholder {
+    color: #94a3b8;
+}
+
+html[data-bs-theme="dark"] .form-control:focus,
+html[data-bs-theme="dark"] .form-select:focus {
+    background-color: #111827;
+    color: #f9fafb;
+}
+
+html[data-bs-theme="dark"] .btn-light {
+    --bs-btn-color: #e5e7eb;
+    --bs-btn-bg: #273449;
+    --bs-btn-border-color: #374151;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #334155;
+    --bs-btn-hover-border-color: #475569;
+}
+
+html[data-bs-theme="dark"] .invoice-sheet {
+    background: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #374151 !important;
+}
+
+html[data-bs-theme="dark"] .invoice-meta {
+    background: #111827 !important;
+    border-color: #374151 !important;
+}
+
+html[data-bs-theme="dark"] .invoice-table th {
+    background: #26364a !important;
+    color: #dbeafe !important;
+}
+
+html[data-bs-theme="dark"] .settings-theme-option {
+    background: #1f2937;
+    color: #e5e7eb;
+    border-color: #4b5563;
+}
+
+html[data-bs-theme="dark"] .settings-theme-option:hover {
+    border-color: #60a5fa;
+    background: #243449;
+}
+
+html[data-bs-theme="dark"] .settings-theme-option.is-selected {
+    border-color: #60a5fa;
+    background: #172b45;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.16);
+}
+
+html[data-bs-theme="dark"] .settings-theme-preview {
+    background: #111827;
+    border-color: #4b5563;
+}
+
+html[data-bs-theme="dark"] .settings-theme-preview-top {
+    background: #273449;
+}
+
+html[data-bs-theme="dark"] [style*="background-color: rgb(248, 249, 250)"] {
+    background-color: #273449 !important;
+}
+
+@media print {
+    html[data-bs-theme="dark"],
+    html[data-bs-theme="dark"] body,
+    html[data-bs-theme="dark"] .invoice-page {
+        background: #fff !important;
+        color: #20252b !important;
+    }
+
+    html[data-bs-theme="dark"] .invoice-sheet {
+        background: #fff !important;
+        color: #20252b !important;
+    }
+}
