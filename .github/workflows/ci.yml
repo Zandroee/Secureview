@@ -142,9 +142,15 @@ jobs:
               throw "Development-only folders were included in the release archive."
             }
 
-            $secretCheck = Get-ChildItem -Path $inspectRoot -Recurse -File |
-              Select-String -SimpleMatch "PACKAGE_TEST_SECRET_DO_NOT_INCLUDE" -Quiet
-            if ($secretCheck) {
+            $secretMatches = @(
+              Get-ChildItem -Path $inspectRoot -Recurse -File | ForEach-Object {
+                if (Select-String -LiteralPath $_.FullName -SimpleMatch "PACKAGE_TEST_SECRET_DO_NOT_INCLUDE" -Quiet -ErrorAction SilentlyContinue) {
+                  $_.FullName
+                }
+              }
+            )
+            if ($secretMatches.Count -gt 0) {
+              Write-Host ("Sentinel was found in: " + ($secretMatches -join "; "))
               throw "A test secret marker was found inside the release archive."
             }
           } finally {
