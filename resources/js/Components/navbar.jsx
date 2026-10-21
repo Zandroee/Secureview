@@ -96,7 +96,11 @@ export default function Navbar() {
         const menu = document.getElementById("navbarOffcanvas");
         if (!menu?.classList.contains("show")) return;
 
-        Offcanvas.getInstance(menu)?.hide();
+        Offcanvas.getOrCreateInstance(menu, {
+            backdrop: true,
+            keyboard: true,
+            scroll: false,
+        }).hide();
     };
 
     const navigateToPage = (href) => {
@@ -396,6 +400,49 @@ export default function Navbar() {
     };
 
     useEffect(() => {
+        const menu = document.getElementById("navbarOffcanvas");
+        if (!menu) return undefined;
+
+        const cleanupOrphanedBackdrop = () => {
+            window.requestAnimationFrame(() => {
+                const anotherOffcanvasIsOpen = Array.from(
+                    document.querySelectorAll(".offcanvas")
+                ).some((element) => element !== menu && element.classList.contains("show"));
+                const modalIsOpen = Boolean(document.querySelector(".modal.show"));
+
+                if (menu.classList.contains("show") || anotherOffcanvasIsOpen || modalIsOpen) {
+                    return;
+                }
+
+                document.querySelectorAll(".offcanvas-backdrop").forEach((backdrop) => {
+                    backdrop.remove();
+                });
+                document.body.style.removeProperty("overflow");
+                document.body.style.removeProperty("padding-right");
+            });
+        };
+
+        menu.addEventListener("hidden.bs.offcanvas", cleanupOrphanedBackdrop);
+
+        const closeOnDesktopResize = () => {
+            if (window.matchMedia("(min-width: 992px)").matches && menu.classList.contains("show")) {
+                Offcanvas.getOrCreateInstance(menu, {
+                    backdrop: true,
+                    keyboard: true,
+                    scroll: false,
+                }).hide();
+            }
+        };
+
+        window.addEventListener("resize", closeOnDesktopResize);
+
+        return () => {
+            menu.removeEventListener("hidden.bs.offcanvas", cleanupOrphanedBackdrop);
+            window.removeEventListener("resize", closeOnDesktopResize);
+        };
+    }, []);
+
+    useEffect(() => {
         const handleClickOutside = (event) => {
             if (
                 userMenuRef.current &&
@@ -551,6 +598,9 @@ export default function Navbar() {
                     className="offcanvas offcanvas-end"
                     tabIndex={-1}
                     id="navbarOffcanvas"
+                    data-bs-backdrop="true"
+                    data-bs-scroll="false"
+                    data-bs-keyboard="true"
                     aria-labelledby="navbarOffcanvasLabel"
                 >
                     <div className="offcanvas-header">
@@ -908,7 +958,7 @@ export default function Navbar() {
                 {/* DESKTOP AUTH */}
 
                 <div
-                    className="d-none d-lg-flex align-items-center gap-3"
+                    className="navbar-desktop-auth d-none d-lg-flex align-items-center gap-3"
                     style={{
                         position: "relative",
                     }}
@@ -1075,158 +1125,76 @@ export default function Navbar() {
 
                             <div
                                 ref={userMenuRef}
-                                style={{
-                                    position: "relative",
-                                }}
+                                className="navbar-user-menu-wrapper"
                             >
                                 <button
                                     type="button"
-                                    onClick={() =>
-                                        setShowUserMenu((previous) => !previous)
-                                    }
-                                    className="border-0 d-flex align-items-center justify-content-center"
-                                    style={{
-                                        width: "38px",
-                                        height: "38px",
-                                        padding: 0,
-                                        borderRadius: "50%",
-                                        backgroundColor: "#dee2e6",
-                                        color: "#ffffff",
-                                        cursor: "pointer",
-                                        boxShadow: showUserMenu
-                                            ? "0 0 0 3px rgba(13, 110, 253, 0.15)"
-                                            : "none",
-                                        transition: "all 0.2s ease",
-                                    }}
-                                    aria-label="User menu"
+                                    onClick={() => setShowUserMenu((previous) => !previous)}
+                                    className={"navbar-user-trigger border-0 d-flex align-items-center justify-content-center" + (showUserMenu ? " is-open" : "")}
+                                    aria-label="Open account menu"
+                                    aria-haspopup="true"
                                     aria-expanded={showUserMenu}
                                 >
-                                    <i
-                                        className="bi bi-person-fill"
-                                        style={{
-                                            fontSize: "1.25rem",
-                                        }}
-                                    ></i>
+                                    <i className="bi bi-person-fill" aria-hidden="true"></i>
                                 </button>
 
                                 {showUserMenu && (
-                                    <div
-                                        className="bg-white border rounded-3 shadow-sm"
-                                        style={{
-                                            position: "absolute",
-                                            top: "calc(100% + 10px)",
-                                            right: "-50px",
-                                            width: "165px",
-                                            padding: "7px 0",
-                                            zIndex: 1050,
-                                            overflow: "hidden",
-                                        }}
-                                    >
-                                        {isAdmin && (
-                                            <Link
-                                                href="/dashboard"
-                                                className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                                style={{
-                                                    padding: "9px 12px",
-                                                    fontFamily: "Outfit, sans-serif",
-                                                    fontSize: "0.88rem",
-                                                    transition: "background-color 0.15s ease",
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.backgroundColor = "#f8f9fa";
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.backgroundColor = "transparent";
-                                                }}
-                                            >
-                                                ADMIN DASHBOARD
+                                    <div className="navbar-account-menu bg-body border shadow-lg" role="menu" aria-label="Account menu">
+                                        <div className="navbar-account-menu-profile">
+                                            <div className="navbar-account-avatar">
+                                                <i className="bi bi-person-fill" aria-hidden="true"></i>
+                                            </div>
+                                            <div className="navbar-account-profile-copy">
+                                                <strong title={user?.name}>{user?.name || "SecureView Account"}</strong>
+                                                <span title={user?.email}>{user?.email || "Signed-in account"}</span>
+                                                <span className="navbar-account-role">
+                                                    {isAdmin ? "Administrator" : isTechnician ? "Technician" : "Customer"}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="navbar-account-menu-links">
+                                            {(isAdmin || isTechnician) && (
+                                                <Link
+                                                    href={isAdmin ? "/dashboard" : "/technician/dashboard"}
+                                                    className="navbar-account-menu-link"
+                                                    role="menuitem"
+                                                    onClick={() => setShowUserMenu(false)}
+                                                >
+                                                    <i className={isAdmin ? "bi bi-speedometer2" : "bi bi-tools"} aria-hidden="true"></i>
+                                                    <span>{isAdmin ? "Admin dashboard" : "Technician workspace"}</span>
+                                                    <i className="bi bi-arrow-up-right ms-auto" aria-hidden="true"></i>
+                                                </Link>
+                                            )}
+                                            <Link href="/settings" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                <i className="bi bi-gear" aria-hidden="true"></i>
+                                                <span>Account settings</span>
                                             </Link>
-                                        )}
-
-                                        {isTechnician && (
-                                            <Link
-                                                href="/technician/dashboard"
-                                                className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                                style={{ padding: "9px 12px", fontFamily: "Outfit, sans-serif", fontSize: "0.88rem" }}
-                                            >
-                                                TECHNICIAN WORKSPACE
+                                            <Link href="/schedules" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                <i className="bi bi-calendar3" aria-hidden="true"></i>
+                                                <span>Schedules</span>
                                             </Link>
-                                        )}
-
-                                        <Link
-                                            href="/settings"
-                                            className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                            style={{
-                                                padding: "9px 12px",
-                                                fontFamily: "Outfit, sans-serif",
-                                                fontSize: "0.88rem",
-                                                transition: "background-color 0.15s ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = "#f8f9fa";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = "transparent";
-                                            }}
-                                        >
-                                            SETTINGS
-                                        </Link>
-
-                                        <Link
-                                            href="/schedules"
-                                            className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                            style={{
-                                                padding: "9px 12px",
-                                                fontFamily: "Outfit, sans-serif",
-                                                fontSize: "0.88rem",
-                                                transition: "background-color 0.15s ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = "#f8f9fa";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = "transparent";
-                                            }}
-                                        >
-                                            SCHEDULES
-                                        </Link>
-
-                                        <Link
-                                            href="/purchases"
-                                            className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                            style={{
-                                                padding: "9px 12px",
-                                                fontFamily: "Outfit, sans-serif",
-                                                fontSize: "0.88rem",
-                                                transition: "background-color 0.15s ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = "#f8f9fa";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = "transparent";
-                                            }}
-                                        >
-                                            PURCHASES
-                                        </Link>
-                                        <Link
-                                            href="/inquiries"
-                                            className="d-block text-dark text-decoration-none fw-semibold text-center"
-                                            style={{
-                                                padding: "9px 12px",
-                                                fontFamily: "Outfit, sans-serif",
-                                                fontSize: "0.88rem",
-                                                transition: "background-color 0.15s ease",
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = "#f8f9fa";
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = "transparent";
-                                            }}
-                                        >
-                                            INQUIRIES
-                                        </Link>
+                                            <Link href="/purchases" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                <i className="bi bi-bag-check" aria-hidden="true"></i>
+                                                <span>Purchases</span>
+                                            </Link>
+                                            <Link href="/inquiries" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                <i className="bi bi-chat-left-text" aria-hidden="true"></i>
+                                                <span>Inquiries</span>
+                                            </Link>
+                                            {!isAdmin && !isTechnician && (
+                                                <Link href="/warranty-claims" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                    <i className="bi bi-shield-check" aria-hidden="true"></i>
+                                                    <span>Warranty claims</span>
+                                                </Link>
+                                            )}
+                                        </div>
+                                        <div className="navbar-account-menu-footer">
+                                            <Link href="/settings" className="navbar-account-settings-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
+                                                <i className="bi bi-sliders" aria-hidden="true"></i>
+                                                Manage account
+                                            </Link>
+                                        </div>
                                     </div>
                                 )}
                             </div>
