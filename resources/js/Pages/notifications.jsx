@@ -63,7 +63,7 @@ export default function Notifications({ notifications = [] }) {
     };
 
     return (
-        <div>
+        <div className="notifications-page">
             <Navbar />
 
             <main
@@ -189,7 +189,7 @@ export default function Notifications({ notifications = [] }) {
 
                         {notifications.length === 0 ? (
                             <div
-                                className="border rounded-3 p-5 text-center"
+                                className="notification-empty border rounded-3 p-5 text-center"
                                 style={{ backgroundColor: "#fafafa" }}
                             >
                                 <div
@@ -226,7 +226,7 @@ export default function Notifications({ notifications = [] }) {
                                     <button
                                         key={notification.id}
                                         type="button"
-                                        className="w-100 text-start border rounded-3 p-3"
+                                        className="notification-item w-100 text-start border rounded-3 p-3"
                                         style={{
                                             backgroundColor: notification.read
                                                 ? "#fff"
