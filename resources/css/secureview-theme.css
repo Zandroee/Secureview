@@ -245,3 +245,20 @@ code,
         padding: 1rem !important;
     }
 }
+
+.admin-revenue-chart-plot {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: clamp(220px, 27vw, 300px);
+}
+
+.admin-revenue-chart-plot canvas {
+    max-width: 100% !important;
+}
+
+@media (max-width: 575.98px) {
+    .admin-revenue-chart-plot {
+        height: 220px;
+    }
+}
