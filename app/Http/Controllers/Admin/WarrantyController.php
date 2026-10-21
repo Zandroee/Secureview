@@ -61,7 +61,7 @@ class WarrantyController extends Controller
             ->orderByDesc('order_items.created_at')
             ->paginate(10, ['*'], 'coverage_page')
             ->withQueryString()
-            ->through(function (OrderItem $item) use ($warrantyEligibility) {
+            ->through(function (OrderItem $item) use ($warrantyEligibility, $filters) {
                 $associatedClaims = $item->warrantyClaims
                     ->sortByDesc('created_at')
                     ->map(fn (WarrantyClaim $claim) => [
@@ -75,6 +75,13 @@ class WarrantyController extends Controller
                         'resolved_at' => $claim->resolved_at?->format('M d, Y h:i A'),
                     ])
                     ->values();
+
+                if (!empty($filters['status'])) {
+                    $associatedClaims = $associatedClaims
+                        ->where('status', $filters['status'])
+                        ->values();
+                }
+
                 $latestClaim = $associatedClaims->first();
                 $startDate = $item->order
                     ? $warrantyEligibility->startDateFor($item->order)
