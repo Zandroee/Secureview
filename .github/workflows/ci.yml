@@ -57,7 +57,7 @@ jobs:
         run: php artisan test
 
       - name: Upload production Vite assets for Hostinger
-        if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
         uses: actions/upload-artifact@v4
         with:
           name: secureview-hostinger-vite-${{ github.sha }}
