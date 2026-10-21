@@ -48,7 +48,16 @@ Do not run `php artisan migrate:fresh` against any database containing real data
 
 Laravel schedules are defined in `routes/console.php`, including upcoming-job reminders and overdue-inquiry urgency escalation. Vercel does not run a persistent Laravel scheduler process merely because these schedule definitions exist.
 
-Verify that a trusted scheduled invocation of `php artisan schedule:run` actually runs in the deployed environment at the required frequency. Use a supported scheduler/cron integration with authentication appropriate for the hosting provider. Do not expose an unauthenticated public route that triggers the scheduler. Confirm reminder timestamps and overdue urgency behavior using a controlled test record after setup.
+The application exposes `GET /api/scheduler/run` for a trusted cron integration. It fails closed unless the `CRON_SECRET` environment variable is configured and the caller sends the matching `Authorization: Bearer <CRON_SECRET>` header. The route returns only a generic status, never Artisan output or exception details, and disables response caching.
+
+Setup:
+
+1. Generate a random secret of at least 32 characters. Add it as `CRON_SECRET` in the Vercel **Production** environment variables; do not put the real value in Git or documentation.
+2. Configure a scheduler to request `https://YOUR_DOMAIN/api/scheduler/run` using **GET** and the header `Authorization: Bearer YOUR_CRON_SECRET`.
+3. Invoke it every minute so Laravel can evaluate its own schedule frequency. If using Vercel Cron, first check your plan's minimum interval: Vercel's Hobby plan currently allows only daily cron execution, while Pro and Enterprise support per-minute scheduling. See [Vercel Cron usage limits](https://vercel.com/docs/cron-jobs/usage-and-pricing) and [how to secure cron jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs). On a plan that does not allow per-minute scheduling, use a trusted external scheduler that supports the required frequency.
+4. After setting `CRON_SECRET`, redeploy if required for the production function to receive the environment value. Test the endpoint with the correct bearer token, check the runtime logs, and confirm reminder/urgency behavior using a controlled test record. Requests without a valid token must return HTTP 401.
+
+Do not configure a cron to invoke this endpoint at an interval more frequent than your hosting plan allows. Do not expose an unauthenticated public route that triggers the scheduler.
 
 ## 6. Routine maintenance
 
