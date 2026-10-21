@@ -122,8 +122,13 @@ export default function Invoice({ invoice }) {
                             INVOICE
                         </h1>
                         <div className="text-muted small">
-                            Reference {invoice.reference_number}
+                            Order reference {invoice.reference_number}
                         </div>
+                        {invoice.is_recorded && (
+                            <div className="small text-success fw-semibold mt-1">
+                                Internal record: {invoice.record_number}
+                            </div>
+                        )}
                     </div>
                     <div className="d-flex flex-wrap gap-2">
                         <Link
@@ -140,11 +145,20 @@ export default function Invoice({ invoice }) {
                     </div>
                 </div>
 
-                {!hasRegistrationDetails && (
-                    <div className="alert alert-warning no-print" role="status">
-                        <strong>Invoice preview:</strong> business registration and BIR-authorized invoice details are not fully configured.
-                        This printout is an internal order document, not a representation of a BIR-registered tax invoice.
+                {invoice.is_recorded ? (
+                    <div className="alert alert-info no-print" role="status">
+                        <strong>Saved internal invoice record:</strong> {invoice.record_number}
+                        {invoice.record_issued_at ? " · Saved " + invoice.record_issued_at : ""}.
+                        This page uses the preserved snapshot, so later order or seller-profile changes will not rewrite it.
+                        The reference is internal only; it is not a BIR-authorized serial number or a BIR-registered tax invoice.
                     </div>
+                ) : (
+                    !hasRegistrationDetails && (
+                        <div className="alert alert-warning no-print" role="status">
+                            <strong>Invoice preview:</strong> business registration and BIR-authorized invoice details are not fully configured.
+                            This printout is an internal order document, not a representation of a BIR-registered tax invoice.
+                        </div>
+                    )
                 )}
 
                 <article className="invoice-sheet">
@@ -178,7 +192,13 @@ export default function Invoice({ invoice }) {
                         <div className="text-md-end">
                             <div className="display-6 fw-bold text-primary" style={{ letterSpacing: ".04em" }}>INVOICE</div>
                             <div className="fw-semibold mt-1">{invoice.reference_number}</div>
+                            {invoice.is_recorded && (
+                                <div className="small fw-semibold mt-1">Internal record: {invoice.record_number}</div>
+                            )}
                             <div className="small text-muted mt-1">Order placed: {invoice.document_date || "—"}</div>
+                            {invoice.is_recorded && invoice.record_issued_at && (
+                                <div className="small text-muted mt-1">Record saved: {invoice.record_issued_at}</div>
+                            )}
                             <span className={"badge rounded-pill mt-3 px-3 py-2 " + (invoice.is_cancelled ? "text-bg-danger" : invoice.is_paid ? "text-bg-success" : "text-bg-warning")}>
                                 {invoice.is_cancelled ? "CANCELLED" : invoice.is_paid ? "PAID" : "PAYMENT " + humanize(invoice.payment_status).toUpperCase()}
                             </span>
@@ -275,10 +295,14 @@ export default function Invoice({ invoice }) {
                     </div>
 
                     <div className="invoice-disclaimer">
-                        <div className="fw-semibold mb-1">SecureView order document</div>
-                        This document is generated from the order and payment records stored in SecureView. It is not represented as a BIR-registered tax invoice.
-                        No VAT, withholding tax, or other tax amount is calculated by this document. Confirm the business's registration, authorized serial numbering,
-                        required invoice information, and applicable electronic-invoicing obligations with your accountant before using an invoice for tax purposes.
+                        <div className="fw-semibold mb-1">
+                            {invoice.is_recorded ? "Saved SecureView internal invoice record" : "SecureView order document"}
+                        </div>
+                        This document is an internal order document, not a BIR-registered tax invoice.
+                        {invoice.is_recorded
+                            ? " The saved version preserves the order, customer, item, and seller details as recorded on " + (invoice.record_issued_at || "the saved date") + ". Its internal reference is not a BIR-authorized invoice serial number."
+                            : " It reflects the order and payment details currently stored in SecureView."}
+                        {" "}No VAT, withholding tax, or other tax amount is calculated by this document. The authorized BIR serial-number series is not consumed by saving an internal record. Confirm applicable tax treatment, required invoice information, and electronic-invoicing obligations with your accountant before using an invoice for tax purposes.
                     </div>
                     <div className="small text-muted mt-3 invoice-print-note">
                         Generated {invoice.generated_at}

@@ -7,6 +7,7 @@ use App\Models\CustomerNotification;
 use App\Models\Order;
 use App\Services\AdminActivityLogger;
 use App\Services\InventoryService;
+use App\Services\InvoiceDocumentService;
 use App\Services\OrderCancellationService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -33,7 +34,9 @@ class PurchaseController extends Controller
             'attention' => ['nullable', 'in:stale'],
         ]);
 
-        $query = Order::with(['user', 'items', 'events.actor'])
+        $invoiceProfileReady = app(InvoiceDocumentService::class)->profileReady();
+
+        $query = Order::with(['user', 'items', 'events.actor', 'invoiceRecord'])
             ->latest();
 
         if (!empty($filters['search'])) {
@@ -70,7 +73,7 @@ class PurchaseController extends Controller
         $orders = $query
             ->paginate(12)
             ->withQueryString()
-            ->through(fn (Order $order) => $this->formatOrder($order));
+            ->through(fn (Order $order) => $this->formatOrder($order, $invoiceProfileReady));
 
         $unpaidOrderQuery = Order::query()
             ->whereNull('paid_at')
@@ -78,12 +81,12 @@ class PurchaseController extends Controller
             ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed']);
 
         $attentionOrders = (clone $unpaidOrderQuery)
-            ->with(['user', 'items', 'events.actor'])
+            ->with(['user', 'items', 'events.actor', 'invoiceRecord'])
             ->orderByRaw("CASE WHEN payment_status = 'failed' OR order_status = 'payment_failed' THEN 0 WHEN payment_method = 'cash' THEN 1 ELSE 2 END")
             ->orderBy('updated_at')
             ->limit(6)
             ->get()
-            ->map(fn (Order $order) => $this->formatOrder($order))
+            ->map(fn (Order $order) => $this->formatOrder($order, $invoiceProfileReady))
             ->values();
 
         return Inertia::render('Admin/Purchases', [
@@ -257,8 +260,14 @@ class PurchaseController extends Controller
         return back()->with('success', 'Order ' . $order->order_number . ' has been marked Completed.');
     }
 
-    private function formatOrder(Order $order): array
+    private function formatOrder(Order $order, bool $invoiceProfileReady): array
     {
+        $invoiceRecord = $order->invoiceRecord;
+        $canRecordInvoice = $invoiceProfileReady
+            && $order->payment_status === 'paid'
+            && in_array($order->order_status, ['processing', 'completed', 'delivered'], true)
+            && !$invoiceRecord;
+
         return [
             'id' => $order->id,
             'order_number' => $order->order_number,
@@ -289,6 +298,11 @@ class PurchaseController extends Controller
             'paid_at' => $order->paid_at?->format('M d, Y h:i A'),
             'created_at' => $order->created_at?->format('M d, Y h:i A'),
             'updated_at' => $order->updated_at?->format('M d, Y h:i A'),
+            'invoice_record' => $invoiceRecord ? [
+                'record_number' => $invoiceRecord->record_number,
+                'issued_at' => $invoiceRecord->issued_at?->format('M d, Y h:i A'),
+            ] : null,
+            'can_record_invoice' => $canRecordInvoice,
             'age_hours' => $order->updated_at ? (int) $order->updated_at->diffInHours(now()) : 0,
             'is_stale_unpaid' => $order->payment_status !== 'paid'
                 && $order->paid_at === null
