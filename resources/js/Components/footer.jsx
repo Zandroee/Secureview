@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 
 export default function Footer() {
     return (
-        <footer className="bg-primary text-white mt-5 pt-4 pb-4">
+        <footer className="site-footer bg-primary text-white mt-5 pt-4 pb-4">
             <div className="container-fluid px-5">
 
                 <div className="row align-items-start">
