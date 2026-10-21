@@ -8,6 +8,9 @@ import { router, usePage } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
 
 export default function Packages({ packages = [] }) {
+    const { url } = usePage();
+    const queryString = url.includes("?") ? url.split("?")[1].split("#")[0] : "";
+    const searchFromUrl = new URLSearchParams(queryString).get("search") ?? "";
 
     const [search, setSearch] = useState(searchFromUrl);
     const [category, setCategory] = useState([]);
