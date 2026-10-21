@@ -51,7 +51,20 @@ class SecurityHardeningTest extends TestCase
 
         $this->from('/login')
             ->post(route('login.authenticate'), $payload)
-            ->assertTooManyRequests();
+            ->assertStatus(429);
+    }
+
+    public function test_registration_is_rate_limited_by_client_ip(): void
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->from('/signup')
+                ->post(route('register'), [])
+                ->assertRedirect('/signup');
+        }
+
+        $this->from('/signup')
+            ->post(route('register'), [])
+            ->assertStatus(429);
     }
 
     public function test_web_responses_include_baseline_security_headers(): void
