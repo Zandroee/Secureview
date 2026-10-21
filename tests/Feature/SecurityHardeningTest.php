@@ -36,6 +36,30 @@ class SecurityHardeningTest extends TestCase
         ]);
     }
 
+    public function test_remember_me_creates_a_persistent_login_token(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'remember-me@example.test',
+            'email_verified_at' => now(),
+            'remember_token' => null,
+            'password' => 'CorrectPass123!',
+        ]);
+
+        $this->from('/login')
+            ->post(route('login.authenticate'), [
+                'email' => 'remember-me@example.test',
+                'password' => 'CorrectPass123!',
+                'remember' => true,
+            ])
+            ->assertRedirect('/');
+
+        $this->assertAuthenticatedAs($user);
+        $rememberToken = $user->fresh()->getRememberToken();
+
+        $this->assertNotNull($rememberToken);
+        $this->assertSame(60, strlen($rememberToken));
+    }
+
     public function test_login_is_rate_limited_for_repeated_attempts_with_the_same_email_and_ip(): void
     {
         $payload = [
