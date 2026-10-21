@@ -13,7 +13,7 @@ class AdminTransactionPaginationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_transaction_logs_are_paginated_and_keep_payment_filters(): void
+    public function test_admin_transaction_records_are_paginated_and_expose_invoice_links(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = User::factory()->create(['role' => 'user']);
