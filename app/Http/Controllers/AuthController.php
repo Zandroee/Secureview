@@ -76,14 +76,14 @@ class AuthController extends Controller
 
         if (!$user) {
             return back()->withErrors([
-                'email' => 'Account does not exist.',
+                'email' => 'The provided credentials are incorrect.',
             ])->onlyInput('email');
         }
 
         // Check the password without logging the user in.
         if (!Auth::validate($credentials)) {
             return back()->withErrors([
-                'password' => 'Incorrect password.',
+                'email' => 'The provided credentials are incorrect.',
             ])->onlyInput('email');
         }
 
