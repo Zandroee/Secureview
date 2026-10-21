@@ -95,70 +95,119 @@ export default function Sidebar({ active = "dashboard" }) {
     const { props } = usePage();
     const user = props.auth?.user;
 
+    const renderUserIdentity = () => (
+        <div className="d-flex align-items-center gap-2 mb-4">
+            <div
+                className="bg-primary rounded-circle d-flex justify-content-center align-items-center flex-shrink-0"
+                style={{
+                    width: "40px",
+                    height: "40px",
+                }}
+            >
+                <i className="bi bi-person text-white"></i>
+            </div>
+
+            <div className="min-w-0">
+                <div className="small text-muted">ADMIN</div>
+                <strong className="text-truncate d-block">
+                    {user?.name || "Administrator"}
+                </strong>
+            </div>
+        </div>
+    );
+
+    const renderNavigation = () => (
+        <nav aria-label="Admin navigation">
+            {menuGroups.map((group, groupIndex) => (
+                <div key={group[0].key}>
+                    {groupIndex > 0 && (
+                        <hr
+                            className="my-2"
+                            style={{
+                                borderTop: "1px solid #dfe3e8",
+                                opacity: 1,
+                            }}
+                        />
+                    )}
+
+                    <div className="d-flex flex-column gap-2">
+                        {group.map((item) => {
+                            const isActive = active === item.key;
+
+                            return (
+                                <Link
+                                    key={item.key}
+                                    href={item.href}
+                                    aria-current={isActive ? "page" : undefined}
+                                    className={
+                                        "btn text-start rounded-2 fw-semibold " +
+                                        (isActive ? "btn-primary" : "btn-light")
+                                    }
+                                >
+                                    <i className={"bi " + item.icon + " me-2"}></i>
+                                    {item.label}
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
+        </nav>
+    );
+
     return (
-        <aside
-            className="bg-white border-end min-vh-100 p-3"
-            style={{
-                fontFamily: "Outfit, sans-serif",
-            }}
-        >
-            <div className="d-flex align-items-center gap-2 mb-4">
-                <div
-                    className="bg-primary rounded-circle d-flex justify-content-center align-items-center flex-shrink-0"
-                    style={{
-                        width: "40px",
-                        height: "40px",
-                    }}
+        <>
+            <div className="admin-mobile-sidebar-toggle d-xl-none bg-white border-bottom px-3 py-2">
+                <button
+                    type="button"
+                    className="btn btn-outline-primary fw-semibold"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#adminSidebarOffcanvas"
+                    aria-controls="adminSidebarOffcanvas"
+                    aria-label="Open admin navigation"
                 >
-                    <i className="bi bi-person text-white"></i>
+                    <i className="bi bi-list me-2" aria-hidden="true"></i>
+                    Admin menu
+                </button>
+            </div>
+
+            <div
+                className="offcanvas offcanvas-start d-xl-none"
+                tabIndex={-1}
+                id="adminSidebarOffcanvas"
+                aria-labelledby="adminSidebarOffcanvasLabel"
+            >
+                <div className="offcanvas-header border-bottom">
+                    <h2 className="offcanvas-title h5 fw-bold mb-0" id="adminSidebarOffcanvasLabel">
+                        SecureView Admin
+                    </h2>
+                    <button
+                        type="button"
+                        className="btn-close"
+                        data-bs-dismiss="offcanvas"
+                        aria-label="Close admin navigation"
+                    ></button>
                 </div>
 
-                <div className="min-w-0">
-                    <div className="small text-muted">ADMIN</div>
-                    <strong className="text-truncate d-block">
-                        {user?.name || "Administrator"}
-                    </strong>
+                <div className="offcanvas-body p-0">
+                    <aside className="bg-white p-3" style={{ fontFamily: "Outfit, sans-serif" }}>
+                        {renderUserIdentity()}
+                        <hr />
+                        {renderNavigation()}
+                    </aside>
                 </div>
             </div>
 
-            <hr />
-
-            <nav aria-label="Admin navigation">
-                {menuGroups.map((group, groupIndex) => (
-                    <div key={group[0].key}>
-                        {groupIndex > 0 && (
-                            <hr
-                                className="my-2"
-                                style={{
-                                    borderTop: "1px solid #dfe3e8",
-                                    opacity: 1,
-                                }}
-                            />
-                        )}
-
-                        <div className="d-flex flex-column gap-2">
-                            {group.map((item) => {
-                                const isActive = active === item.key;
-
-                                return (
-                                    <Link
-                                        key={item.key}
-                                        href={item.href}
-                                        aria-current={isActive ? "page" : undefined}
-                                        className={
-                                            "btn text-start rounded-2 fw-semibold " +
-                                            (isActive ? "btn-primary" : "btn-light")
-                                        }
-                                    >
-                                        <i className={"bi " + item.icon + " me-2"}></i>
-                                        {item.label}
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    </div>
-                ))}
-            </nav>
-        </aside>
+            <aside
+                className="admin-sidebar-desktop d-none d-xl-block bg-white border-end min-vh-100 p-3"
+                style={{
+                    fontFamily: "Outfit, sans-serif",
+                }}
+            >
+                {renderUserIdentity()}
+                <hr />
+                {renderNavigation()}
+            </aside>
+        </>
     );
 }
