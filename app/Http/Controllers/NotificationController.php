@@ -79,11 +79,71 @@ class NotificationController extends Controller
             ]);
         }
 
-        if ($notification->action_url) {
-            return redirect($notification->action_url);
+        $destination = $this->internalNotificationDestination(
+            $notification->action_url,
+            $request
+        );
+
+        if ($destination !== null) {
+            return redirect()->to($destination);
         }
 
         return back();
+    }
+
+    /**
+     * Keep notification actions on this application.
+     *
+     * Some legacy rows may contain absolute URLs generated on a local
+     * development machine (for example, https://localhost:8000/...). Convert
+     * those to same-origin paths when a customer clicks them in production.
+     * Also refuse unrelated external URLs to avoid open redirects.
+     */
+    private function internalNotificationDestination(?string $actionUrl, Request $request): ?string
+    {
+        if (!is_string($actionUrl) || trim($actionUrl) === '') {
+            return null;
+        }
+
+        $actionUrl = trim($actionUrl);
+
+        if (str_starts_with($actionUrl, '/') && !str_starts_with($actionUrl, '//')) {
+            return $actionUrl;
+        }
+
+        $parts = parse_url($actionUrl);
+
+        if (
+            !is_array($parts)
+            || !isset($parts['scheme'], $parts['host'])
+            || !in_array(strtolower($parts['scheme']), ['http', 'https'], true)
+        ) {
+            return null;
+        }
+
+        $host = strtolower($parts['host']);
+        $currentHost = strtolower($request->getHost());
+        $developmentHosts = ['localhost', '127.0.0.1', '::1'];
+
+        if ($host !== $currentHost && !in_array($host, $developmentHosts, true)) {
+            return null;
+        }
+
+        $path = $parts['path'] ?? '/';
+
+        if (!str_starts_with($path, '/') || str_starts_with($path, '//')) {
+            return null;
+        }
+
+        if (isset($parts['query'])) {
+            $path .= '?' . $parts['query'];
+        }
+
+        if (isset($parts['fragment'])) {
+            $path .= '#' . $parts['fragment'];
+        }
+
+        return $path;
     }
 
     public function markAllAsRead(Request $request)
