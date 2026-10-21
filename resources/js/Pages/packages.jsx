@@ -4,16 +4,21 @@ import Footer from "../Components/footer";
 import PackageCard from "../Components/PackageCard";
 import Pagination from "../Components/Pagination";
 
-import { router } from "@inertiajs/react";
-import { useMemo, useState } from "react";
+import { router, usePage } from "@inertiajs/react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function Packages({ packages = [] }) {
 
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState(searchFromUrl);
     const [category, setCategory] = useState([]);
     const [price, setPrice] = useState("");
     const [rating, setRating] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
+
+    useEffect(() => {
+        setSearch(searchFromUrl);
+        setCurrentPage(1);
+    }, [searchFromUrl]);
 
     const packagesPerPage = 6;
 
