@@ -168,8 +168,11 @@ class AuthController extends Controller
                 'google_id' => $googleUser->id,
                 'password' => Str::random(40),
                 'role' => 'user',
-                'email_verified_at' => now(),
             ]);
+
+            // email_verified_at is intentionally not mass assignable, so set it
+            // explicitly for an account authenticated through the OAuth provider.
+            $user->forceFill(['email_verified_at' => now()])->save();
         } else {
             if (!$user->google_id) {
                 $user->google_id = $googleUser->id;
@@ -228,8 +231,11 @@ class AuthController extends Controller
                 'facebook_id' => $facebookUser->id,
                 'password' => Str::random(40),
                 'role' => 'user',
-                'email_verified_at' => now(),
             ]);
+
+            // email_verified_at is intentionally not mass assignable, so set it
+            // explicitly for an account authenticated through the OAuth provider.
+            $user->forceFill(['email_verified_at' => now()])->save();
         } else {
             if (!$user->facebook_id) {
                 $user->facebook_id = $facebookUser->id;
