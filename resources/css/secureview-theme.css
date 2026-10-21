@@ -1006,3 +1006,271 @@ html[data-bs-theme="dark"] .navbar-search-catalog-result:focus-visible {
         transition: none;
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * Dark-mode accessibility pass
+ * Normalize the fixed light backgrounds and inline-styled controls used by
+ * older pages. Bootstrap's data-bs-theme handles semantic components; these
+ * rules cover the remaining custom screens and inline declarations.
+ * -------------------------------------------------------------------------- */
+
+html[data-bs-theme="dark"] {
+    color-scheme: dark;
+    --sv-surface: #1f2937;
+    --sv-surface-raised: #243244;
+    --sv-surface-input: #111827;
+    --sv-border: #435166;
+    --sv-text: #e5e7eb;
+    --sv-text-muted: #bac6d6;
+}
+
+html[data-bs-theme="dark"] body,
+html[data-bs-theme="dark"] #app {
+    background-color: #111827;
+    color: var(--sv-text);
+}
+
+html[data-bs-theme="dark"] main,
+html[data-bs-theme="dark"] section,
+html[data-bs-theme="dark"] article {
+    color: inherit;
+}
+
+html[data-bs-theme="dark"] .form-control,
+html[data-bs-theme="dark"] .form-select,
+html[data-bs-theme="dark"] select,
+html[data-bs-theme="dark"] textarea,
+html[data-bs-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]) {
+    background-color: var(--sv-surface-input) !important;
+    color: var(--sv-text) !important;
+    border-color: var(--sv-border) !important;
+    color-scheme: dark;
+}
+
+html[data-bs-theme="dark"] select option,
+html[data-bs-theme="dark"] select optgroup {
+    background-color: var(--sv-surface);
+    color: var(--sv-text);
+}
+
+html[data-bs-theme="dark"] .form-control::placeholder,
+html[data-bs-theme="dark"] input::placeholder,
+html[data-bs-theme="dark"] textarea::placeholder {
+    color: #a9b7ca !important;
+    opacity: 1;
+}
+
+html[data-bs-theme="dark"] .form-control:focus,
+html[data-bs-theme="dark"] .form-select:focus,
+html[data-bs-theme="dark"] select:focus,
+html[data-bs-theme="dark"] textarea:focus,
+html[data-bs-theme="dark"] input:focus {
+    background-color: #111827 !important;
+    color: #f8fafc !important;
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 .2rem rgba(59, 130, 246, .2) !important;
+}
+
+html[data-bs-theme="dark"] .form-label,
+html[data-bs-theme="dark"] label {
+    color: #e5e7eb;
+}
+
+html[data-bs-theme="dark"] .form-text,
+html[data-bs-theme="dark"] .text-secondary,
+html[data-bs-theme="dark"] .text-muted {
+    color: #bac6d6 !important;
+}
+
+html[data-bs-theme="dark"] .bg-white,
+html[data-bs-theme="dark"] .bg-light,
+html[data-bs-theme="dark"] .card,
+html[data-bs-theme="dark"] .modal-content,
+html[data-bs-theme="dark"] .dropdown-menu,
+html[data-bs-theme="dark"] .list-group-item {
+    background-color: var(--sv-surface) !important;
+    color: var(--sv-text);
+    border-color: var(--sv-border);
+}
+
+html[data-bs-theme="dark"] .bg-body,
+html[data-bs-theme="dark"] .bg-body-tertiary {
+    background-color: #18212f !important;
+    color: var(--sv-text);
+}
+
+html[data-bs-theme="dark"] .text-dark {
+    color: var(--sv-text) !important;
+}
+
+html[data-bs-theme="dark"] .border,
+html[data-bs-theme="dark"] .border-top,
+html[data-bs-theme="dark"] .border-bottom,
+html[data-bs-theme="dark"] .border-start,
+html[data-bs-theme="dark"] .border-end,
+html[data-bs-theme="dark"] hr {
+    border-color: var(--sv-border) !important;
+}
+
+/* Correct inline light-gray backgrounds that bypass ordinary theme rules. */
+html[data-bs-theme="dark"] [style*="background-color: rgb(242, 242, 244)"],
+html[data-bs-theme="dark"] [style*="background-color: rgb(245, 246, 248)"],
+html[data-bs-theme="dark"] [style*="background-color: rgb(241, 241, 243)"],
+html[data-bs-theme="dark"] [style*="background-color: rgb(250, 250, 250)"],
+html[data-bs-theme="dark"] [style*="background-color: rgb(248, 249, 250)"] {
+    background-color: #111827 !important;
+    color: var(--sv-text) !important;
+}
+
+/* Notifications were rendered with inline pale-blue surfaces, which made
+   inherited light-mode text unreadable on dark mode. */
+html[data-bs-theme="dark"] .notifications-page .notification-item {
+    background-color: #1f2937 !important;
+    color: #f3f6fb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .notifications-page .notification-item:hover,
+html[data-bs-theme="dark"] .notifications-page .notification-item:focus-visible {
+    background-color: #273449 !important;
+    color: #f8fafc !important;
+}
+
+html[data-bs-theme="dark"] .notifications-page .notification-item .text-muted,
+html[data-bs-theme="dark"] .notifications-page .notification-item small {
+    color: #c3cedd !important;
+}
+
+html[data-bs-theme="dark"] .notifications-page .notification-empty {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+/* About-page FAQ used hard-coded white surfaces and dark text. */
+html[data-bs-theme="dark"] .about-faq-section {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .about-faq-item,
+html[data-bs-theme="dark"] .about-faq-question,
+html[data-bs-theme="dark"] .about-faq-cta {
+    background: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .about-faq-question:hover {
+    background: #273449 !important;
+}
+
+html[data-bs-theme="dark"] .about-faq-answer {
+    color: #c3cedd !important;
+}
+
+/* Technician workspace: neutralize the page's locally defined light-only
+   hero, metric cards, panels, job cards, filters, and table colors. */
+html[data-bs-theme="dark"] .technician-workspace {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .workspace-hero {
+    background: linear-gradient(125deg, #1b2738 0%, #172b45 100%) !important;
+    border-color: #435166 !important;
+    color: #f3f6fb !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .workspace-section,
+html[data-bs-theme="dark"] .technician-workspace .workspace-stat,
+html[data-bs-theme="dark"] .technician-workspace .technician-job-card {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .bg-light,
+html[data-bs-theme="dark"] .technician-workspace .workspace-filter:not(.active),
+html[data-bs-theme="dark"] .technician-workspace form.bg-light {
+    background-color: #273449 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .workspace-filter:not(.active) {
+    color: #d6deea !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .workspace-table {
+    --bs-table-color: #e5e7eb;
+    --bs-table-bg: #1f2937;
+    --bs-table-border-color: #435166;
+    --bs-table-striped-bg: #243244;
+    --bs-table-hover-bg: #2a3a50;
+    --bs-table-hover-color: #ffffff;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .workspace-table thead th {
+    color: #c3cedd !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .text-secondary,
+html[data-bs-theme="dark"] .technician-workspace .text-muted {
+    color: #bac6d6 !important;
+}
+
+/* Keep short pages' footers at the bottom without fixing them over content.
+   The :has selectors progressively enhance layouts with the site footer. */
+#app {
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+#app:has(> .site-footer) {
+    display: flex;
+    flex-direction: column;
+}
+
+#app:has(> .site-footer) > main {
+    flex: 1 0 auto;
+}
+
+#app > div:has(> .site-footer) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+#app > div:has(> .site-footer) > main {
+    flex: 1 0 auto;
+}
+
+.site-footer {
+    width: 100%;
+    flex-shrink: 0;
+    margin-top: auto !important;
+}
+
+html[data-bs-theme="dark"] .site-footer {
+    background: #0b1220 !important;
+    color: #e5e7eb !important;
+    border-top: 1px solid #273449;
+}
+
+html[data-bs-theme="dark"] .site-footer a {
+    color: #dbeafe !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
