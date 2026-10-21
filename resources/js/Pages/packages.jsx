@@ -141,9 +141,9 @@ function searchableValues(value) {
 
                 <div className="position-relative w-50 mx-auto mb-5">
 
-                    <input type="text" className="form-control border-0" placeholder="SEARCH" value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} style={{ height: "60px", borderRadius: "24px", backgroundColor: "#f1f1f1", padding: "0 48px 0 30px", fontSize: "1rem", fontFamily: "Outfit, sans-serif", color: "#555", boxShadow: "none", textTransform: "uppercase" }} />
+                    <input type="text" className="form-control catalog-search-input" placeholder="SEARCH" value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} style={{ height: "60px", borderRadius: "24px", backgroundColor: "#f1f1f1", padding: "0 48px 0 30px", fontSize: "1rem", fontFamily: "Outfit, sans-serif", color: "#555", boxShadow: "none", textTransform: "uppercase" }} />
 
-                    <i className="bi bi-search position-absolute top-50 end-0 translate-middle-y me-4 text-secondary" style={{ fontSize: "1rem" }}></i>
+                    <i className="bi bi-search position-absolute top-50 end-0 translate-middle-y me-4 text-secondary catalog-search-icon" style={{ fontSize: "1rem" }}></i>
 
                 </div>
 
