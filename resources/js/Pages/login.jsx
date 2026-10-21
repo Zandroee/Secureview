@@ -2,6 +2,7 @@ import { Link, useForm } from "@inertiajs/react";
 import { useState } from "react";
 
 import Navbar from "../Components/navbar";
+import GoogleLoginButton from "../Components/GoogleLoginButton";
 import "../../css/login.css";
 
 export default function Login() {
@@ -205,22 +206,21 @@ export default function Login() {
                             </div>
 
                             {/* REMEMBER ME / FORGOT PASSWORD */}
-                            <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-                                <div className="form-check d-flex align-items-center gap-2 mb-0">
+                            <div className="login-options-row">
+                                <label htmlFor="login-remember" className="login-remember-control">
                                     <input
                                         id="login-remember"
+                                        name="remember"
                                         type="checkbox"
-                                        className="form-check-input mt-0"
+                                        className="login-remember-checkbox"
                                         checked={Boolean(data.remember)}
                                         onChange={(event) => setData("remember", event.target.checked)}
                                     />
-                                    <label htmlFor="login-remember" className="form-check-label small">
-                                        Remember Me
-                                    </label>
-                                </div>
+                                    <span className="login-remember-label">Remember Me</span>
+                                </label>
                                 <Link
                                     href="/forgot-password"
-                                    className="text-primary text-decoration-none small"
+                                    className="login-forgot-password"
                                 >
                                     Forgot Password?
                                 </Link>
@@ -252,13 +252,7 @@ export default function Login() {
                             </div>
 
                             <div className="d-flex flex-column gap-2">
-                                <a
-                                    href="/auth/google"
-                                    className="btn btn-outline-dark fw-semibold py-2"
-                                >
-                                    <i className="bi bi-google me-2"></i>
-                                    Continue with Google
-                                </a>
+                                <GoogleLoginButton />
 
                                 <a
                                     href="/auth/facebook"
