@@ -142,16 +142,13 @@ jobs:
               throw "Development-only folders were included in the release archive."
             }
 
-            $secretMatches = @(
-              Get-ChildItem -Path $inspectRoot -Recurse -File | ForEach-Object {
-                if (Select-String -LiteralPath $_.FullName -SimpleMatch "PACKAGE_TEST_SECRET_DO_NOT_INCLUDE" -Quiet -ErrorAction SilentlyContinue) {
-                  $_.FullName
-                }
-              }
+            $unexpectedEnvFiles = @(
+              Get-ChildItem -Path $inspectRoot -Recurse -File -Force |
+                Where-Object { $_.Name -in @(".env", ".env.backup", ".env.production", ".env.local", ".env.testing") }
             )
-            if ($secretMatches.Count -gt 0) {
-              Write-Host ("Sentinel was found in: " + ($secretMatches -join "; "))
-              throw "A test secret marker was found inside the release archive."
+            if ($unexpectedEnvFiles.Count -gt 0) {
+              Write-Host ("Unexpected environment files were found: " + (($unexpectedEnvFiles | ForEach-Object { $_.FullName }) -join "; "))
+              throw "Environment files other than the safe .env.example were included in the release archive."
             }
           } finally {
             Remove-Item -Path (Join-Path $workspace ".env") -Force -ErrorAction SilentlyContinue
