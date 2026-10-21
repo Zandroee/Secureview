@@ -174,7 +174,7 @@ class CheckoutController extends Controller
             }
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $cart) {
+        $order = DB::transaction(function () use ($request, $validated, $cart, $deliveryDetails, $deliveryCity) {
             $subtotal = 0;
 
             foreach ($cart->items as $cartItem) {
