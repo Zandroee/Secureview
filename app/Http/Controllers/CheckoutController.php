@@ -348,16 +348,18 @@ class CheckoutController extends Controller
             }
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $cart, $deliveryDetails, $deliveryCity) {
+        $order = DB::transaction(function () use ($request, $validated, $checkoutItems, $deliveryDetails, $deliveryCity) {
             $subtotal = 0;
 
-            foreach ($cart->items as $cartItem) {
-                if (!$cartItem->purchasable) {
-                    abort(422, 'An item in your cart is no longer available.');
+            foreach ($checkoutItems as $checkoutItem) {
+                $purchasable = $checkoutItem['purchasable'];
+
+                if (!$purchasable) {
+                    abort(422, 'An item in your checkout is no longer available.');
                 }
 
-                $price = (float) $cartItem->purchasable->price;
-                $quantity = (int) $cartItem->quantity;
+                $price = (float) $purchasable->price;
+                $quantity = (int) $checkoutItem['quantity'];
 
                 $subtotal += $price * $quantity;
             }
@@ -390,14 +392,14 @@ class CheckoutController extends Controller
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            foreach ($cart->items as $cartItem) {
-                $purchasable = $cartItem->purchasable;
+            foreach ($checkoutItems as $checkoutItem) {
+                $purchasable = $checkoutItem['purchasable'];
                 $price = (float) $purchasable->price;
-                $quantity = (int) $cartItem->quantity;
+                $quantity = (int) $checkoutItem['quantity'];
 
                 $order->items()->create([
-                    'purchasable_type' => $cartItem->purchasable_type,
-                    'purchasable_id' => $cartItem->purchasable_id,
+                    'purchasable_type' => $checkoutItem['purchasable_type'],
+                    'purchasable_id' => $checkoutItem['purchasable_id'],
                     'name' => $purchasable->name,
                     'warranty_period' => $purchasable->warranty ?? null,
                     'price' => $price,
