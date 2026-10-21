@@ -154,3 +154,94 @@ html[data-bs-theme="dark"] [style*="background-color: rgb(248, 249, 250)"] {
         color: #20252b !important;
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * Responsive layout foundation
+ * Keep the document as the primary vertical scroll container and allow
+ * components to shrink within Bootstrap rows instead of forcing page overflow.
+ * -------------------------------------------------------------------------- */
+html {
+    min-height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: clip;
+    overflow-y: auto;
+}
+
+#app {
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+img,
+picture,
+video,
+canvas,
+iframe {
+    max-width: 100%;
+}
+
+.container,
+.container-fluid,
+.row,
+.row > *,
+.card,
+.card-body,
+.modal-content,
+.offcanvas,
+.table-responsive {
+    min-width: 0;
+}
+
+.form-control,
+.form-select,
+textarea {
+    max-width: 100%;
+}
+
+.table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+pre,
+code,
+.text-break {
+    overflow-wrap: anywhere;
+}
+
+/* Admin pages use the same shared sidebar and content grid. Below laptop
+   widths, let the content use the full row and expose navigation as an
+   offcanvas menu instead of squeezing the desktop sidebar into a column. */
+@media (max-width: 1199.98px) {
+    .container-fluid > .row > aside.col-md-3.col-lg-2,
+    .container-fluid > .row > main.col-md-9.col-lg-10 {
+        flex: 0 0 100%;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .container-fluid > .row > main.col-md-9.col-lg-10 {
+        padding: 1rem !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    footer .container-fluid.px-5 {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem auto;
+    }
+
+    .admin-dashboard-calendar .card-body {
+        padding: 1rem !important;
+    }
+}
