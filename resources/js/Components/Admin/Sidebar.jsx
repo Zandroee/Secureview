@@ -1,4 +1,6 @@
-import { Link, usePage } from "@inertiajs/react";
+import { Link, router, usePage } from "@inertiajs/react";
+import { Offcanvas } from "bootstrap";
+import { useEffect } from "react";
 
 const menuGroups = [
     [
@@ -95,6 +97,96 @@ export default function Sidebar({ active = "dashboard" }) {
     const { props } = usePage();
     const user = props.auth?.user;
 
+    const getMobileSidebar = () => document.getElementById("adminSidebarOffcanvas");
+
+    const getMobileSidebarInstance = (menu = getMobileSidebar()) => {
+        if (!menu) return null;
+        return Offcanvas.getOrCreateInstance(menu, {
+            backdrop: true,
+            keyboard: true,
+            scroll: false,
+        });
+    };
+
+    const closeMobileSidebar = () => {
+        const menu = getMobileSidebar();
+        if (!menu?.classList.contains("show")) return;
+        getMobileSidebarInstance(menu)?.hide();
+    };
+
+    const openMobileSidebar = () => {
+        getMobileSidebarInstance()?.show();
+    };
+
+    const runAfterMobileSidebarCloses = (action) => {
+        const menu = getMobileSidebar();
+
+        if (!menu?.classList.contains("show")) {
+            action();
+            return;
+        }
+
+        let completed = false;
+        let fallbackTimer;
+
+        const finish = () => {
+            if (completed) return;
+            completed = true;
+            window.clearTimeout(fallbackTimer);
+            menu.removeEventListener("hidden.bs.offcanvas", finish);
+
+            window.requestAnimationFrame(() => {
+                const anotherOffcanvasIsOpen = Array.from(
+                    document.querySelectorAll(".offcanvas")
+                ).some((element) => element !== menu && element.classList.contains("show"));
+                const modalIsOpen = Boolean(document.querySelector(".modal.show"));
+
+                if (!menu.classList.contains("show") && !anotherOffcanvasIsOpen && !modalIsOpen) {
+                    document.querySelectorAll(".offcanvas-backdrop").forEach((backdrop) => backdrop.remove());
+                    document.body.style.removeProperty("overflow");
+                    document.body.style.removeProperty("padding-right");
+                }
+
+                action();
+            });
+        };
+
+        menu.addEventListener("hidden.bs.offcanvas", finish, { once: true });
+        getMobileSidebarInstance(menu)?.hide();
+        fallbackTimer = window.setTimeout(finish, 600);
+    };
+
+    const handleNavigationClick = (event, href, mobile) => {
+        const menu = getMobileSidebar();
+        if (!mobile || !menu?.classList.contains("show")) return;
+
+        event.preventDefault();
+        runAfterMobileSidebarCloses(() => router.visit(href));
+    };
+
+    useEffect(() => {
+        const menu = getMobileSidebar();
+        if (!menu) return undefined;
+
+        const cleanupOrphanedBackdrop = () => {
+            window.requestAnimationFrame(() => {
+                const anotherOffcanvasIsOpen = Array.from(
+                    document.querySelectorAll(".offcanvas")
+                ).some((element) => element !== menu && element.classList.contains("show"));
+                const modalIsOpen = Boolean(document.querySelector(".modal.show"));
+
+                if (menu.classList.contains("show") || anotherOffcanvasIsOpen || modalIsOpen) return;
+
+                document.querySelectorAll(".offcanvas-backdrop").forEach((backdrop) => backdrop.remove());
+                document.body.style.removeProperty("overflow");
+                document.body.style.removeProperty("padding-right");
+            });
+        };
+
+        menu.addEventListener("hidden.bs.offcanvas", cleanupOrphanedBackdrop);
+        return () => menu.removeEventListener("hidden.bs.offcanvas", cleanupOrphanedBackdrop);
+    }, []);
+
     const renderUserIdentity = () => (
         <div className="d-flex align-items-center gap-2 mb-4">
             <div
@@ -139,11 +231,11 @@ export default function Sidebar({ active = "dashboard" }) {
                                     key={item.key}
                                     href={item.href}
                                     aria-current={isActive ? "page" : undefined}
-                                    data-bs-dismiss={mobile ? "offcanvas" : undefined}
                                     className={
                                         "btn text-start rounded-2 fw-semibold " +
                                         (isActive ? "btn-primary" : "btn-light")
                                     }
+                                    onClick={(event) => handleNavigationClick(event, item.href, mobile)}
                                 >
                                     <i className={"bi " + item.icon + " me-2"}></i>
                                     {item.label}
@@ -162,8 +254,7 @@ export default function Sidebar({ active = "dashboard" }) {
                 <button
                     type="button"
                     className="btn btn-outline-primary fw-semibold"
-                    data-bs-toggle="offcanvas"
-                    data-bs-target="#adminSidebarOffcanvas"
+                    onClick={openMobileSidebar}
                     aria-controls="adminSidebarOffcanvas"
                     aria-label="Open admin navigation"
                 >
@@ -185,7 +276,7 @@ export default function Sidebar({ active = "dashboard" }) {
                     <button
                         type="button"
                         className="btn-close"
-                        data-bs-dismiss="offcanvas"
+                        onClick={closeMobileSidebar}
                         aria-label="Close admin navigation"
                     ></button>
                 </div>
