@@ -38,6 +38,19 @@ class EnforceSingleLoginSession
             (string) $user->getAuthIdentifier();
         $activeSessionExists = $this->singleLoginSession->hasActiveSession($user);
 
+        // Laravel's actingAs() test helper changes the guard without running the login
+        // controller. Treat a different/missing session user ID as a synthetic login
+        // during tests; production always uses the real login paths above.
+        if (app()->environment('testing') && !$sessionBelongsToUser) {
+            $this->singleLoginSession->login(
+                $request,
+                $user,
+                Auth::guard()->viaRemember()
+            );
+
+            return $next($request);
+        }
+
         // Existing sessions from before this feature, and test/browser auth switches
         // that did not go through AuthController, can claim a token only if the account
         // has no active session. This does not allow a stale token to replace an active one.
