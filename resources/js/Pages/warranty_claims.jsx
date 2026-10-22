@@ -1,6 +1,5 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
-import CustomerSidebar from "../Components/customerSidebar";
 import AdminPagination from "../Components/Admin/AdminPagination";
 import { router, usePage } from "@inertiajs/react";
 import { useState } from "react";
@@ -49,11 +48,7 @@ export default function WarrantyClaims({ claims = [], eligibleItems = [] }) {
             <main style={{ backgroundColor: "#f5f6f8", minHeight: "65vh" }}>
                 <div className="container py-4">
                     <div className="row g-3 align-items-start">
-                        <div className="col-lg-3">
-                            <CustomerSidebar active="warranty" />
-                        </div>
-
-                        <div className="col-lg-9">
+                        <div className="col-12">
                             <div className="bg-white border rounded-3 p-3 p-md-4 mb-3">
                                 <div className="small text-primary fw-bold">SECUREVIEW</div>
                                 <h1 className="h3 fw-bold mb-1" style={{ fontFamily: "Outfit, sans-serif" }}>
