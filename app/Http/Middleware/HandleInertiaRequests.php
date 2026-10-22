@@ -64,6 +64,9 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'status' => fn () => $request->session()->get('status'),
+                'message' => fn () => $request->session()->get('message'),
+                'verificationRequired' => fn () => $request->session()->get('verificationRequired', false),
+                'verificationEmail' => fn () => $request->session()->get('verificationEmail'),
             ],
         ]);
     }
