@@ -1,4 +1,4 @@
-import { Link, useForm, usePage } from "@inertiajs/react";
+import { Link, router, useForm, usePage } from "@inertiajs/react";
 import { useState } from "react";
 
 import Navbar from "../Components/navbar";
@@ -10,6 +10,8 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [emailError, setEmailError] = useState("");
     const [passwordError, setPasswordError] = useState("");
+    const [resendingVerification, setResendingVerification] = useState(false);
+    const [verificationActionError, setVerificationActionError] = useState("");
 
     const { data, setData, post, processing } = useForm({
         email: "",
@@ -67,6 +69,32 @@ export default function Login() {
         });
     };
 
+    const resendVerification = () => {
+        const email = String(props.flash?.verificationEmail || data.email || "").trim();
+
+        if (!email) {
+            setVerificationActionError("Enter the email address used to create your account.");
+            return;
+        }
+
+        setVerificationActionError("");
+        setResendingVerification(true);
+
+        router.post(
+            "/email/verification-notification",
+            { email },
+            {
+                preserveScroll: true,
+                onError: (errors) => {
+                    setVerificationActionError(
+                        errors.email || "We could not resend the verification email. Please try again shortly."
+                    );
+                },
+                onFinish: () => setResendingVerification(false),
+            }
+        );
+    };
+
     const emailHasError = Boolean(emailError);
     const passwordHasError = Boolean(passwordError);
 
@@ -79,6 +107,41 @@ export default function Login() {
                 className="container-fluid px-3 px-md-4 py-5"
                 style={{ minHeight: "calc(100vh - 75px)" }}
             >
+                {props.flash?.verificationRequired && (
+                    <div className="alert alert-warning mx-auto mb-4" role="alert" style={{ maxWidth: "820px" }}>
+                        <div className="fw-bold mb-1">
+                            <i className="bi bi-envelope-exclamation me-2"></i>
+                            Email verification required
+                        </div>
+                        <p className="mb-2">
+                            Your password is correct, but this account has not verified its email address yet.
+                            {props.flash.verificationEmail ? (
+                                <> We are checking <strong>{props.flash.verificationEmail}</strong>. Please check your inbox and spam folder for the verification link before logging in.</>
+                            ) : (
+                                <> Please check the inbox and spam folder for the verification link before logging in.</>
+                            )}
+                        </p>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-outline-dark fw-semibold"
+                            onClick={resendVerification}
+                            disabled={resendingVerification}
+                        >
+                            {resendingVerification ? "Sending..." : "Resend verification email"}
+                        </button>
+                        {props.flash?.message && (
+                            <div className="small mt-2" role="status">{props.flash.message}</div>
+                        )}
+                        {verificationActionError && (
+                            <div className="small text-danger mt-2" role="alert">{verificationActionError}</div>
+                        )}
+                    </div>
+                )}
+                {!props.flash?.verificationRequired && props.flash?.message && (
+                    <div className="alert alert-info mx-auto mb-4" role="status" style={{ maxWidth: "820px" }}>
+                        {props.flash.message}
+                    </div>
+                )}
                 {props.flash?.status && (
                     <div
                         className="alert alert-info mx-auto mb-4"
