@@ -154,9 +154,11 @@ export default function Navbar() {
 
     const handleMobileOffcanvasLinkClick = (event) => {
         const menu = getMobileNavigationMenu();
+        const isMobileViewport = window.matchMedia("(max-width: 991.98px)").matches;
 
-        // On desktop the mobile menu is closed; keep the normal Inertia link flow.
-        if (!menu?.classList.contains("show")) return;
+        // Keep desktop links on Inertia, but use a full navigation from the
+        // mobile drawer so Bootstrap can never leave a stale body scroll lock.
+        if (!isMobileViewport) return;
 
         const href = event.currentTarget.getAttribute("href");
         if (!href) return;
@@ -164,7 +166,13 @@ export default function Navbar() {
         event.preventDefault();
         setShowNavigationSearch(false);
         setNavigationSearch("");
-        runAfterMobileNavigationCloses(() => router.visit(href));
+
+        const navigate = () => window.location.assign(href);
+        if (menu?.classList.contains("show")) {
+            runAfterMobileNavigationCloses(navigate);
+        } else {
+            navigate();
+        }
     };
 
     const openMobileNavigation = () => {
@@ -174,7 +182,14 @@ export default function Navbar() {
     const navigateToPage = (href) => {
         setShowNavigationSearch(false);
         setNavigationSearch("");
-        runAfterMobileNavigationCloses(() => router.visit(href));
+
+        const menu = getMobileNavigationMenu();
+        if (window.matchMedia("(max-width: 991.98px)").matches && menu?.classList.contains("show")) {
+            runAfterMobileNavigationCloses(() => window.location.assign(href));
+            return;
+        }
+
+        router.visit(href);
     };
 
     const matchingNavigationItems = navigationSearch.trim()
@@ -485,6 +500,7 @@ export default function Navbar() {
                 document.querySelectorAll(".offcanvas-backdrop").forEach((backdrop) => {
                     backdrop.remove();
                 });
+                document.body.classList.remove("offcanvas-open");
                 document.body.style.removeProperty("overflow");
                 document.body.style.removeProperty("padding-right");
             });
