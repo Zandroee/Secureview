@@ -13,7 +13,7 @@ class ChatbotController extends Controller
     public function reply(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'messages' => ['required', 'array', 'min:1', 'max:8'],
+            'messages' => ['required', 'array', 'min:1', 'max:6'],
             'messages.*.role' => ['required', 'in:user,assistant'],
             'messages.*.content' => ['required', 'string', 'max:1500'],
         ]);
