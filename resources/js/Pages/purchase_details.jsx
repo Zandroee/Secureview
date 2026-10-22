@@ -230,6 +230,19 @@ export default function PurchaseDetails({ order }) {
                                                         item.price
                                                     ).toLocaleString()}
                                                 </div>
+                                                {order.payment_status === "paid" &&
+                                                    order.order_status !== "cancelled" &&
+                                                    item.purchasable_id && (
+                                                        <div className="mt-2">
+                                                            <Link
+                                                                href={`/${item.type === "package" ? "packages" : "products"}/${item.purchasable_id}#reviews`}
+                                                                className="btn btn-outline-primary btn-sm"
+                                                            >
+                                                                <i className="bi bi-star me-1"></i>
+                                                                Review &amp; rating
+                                                            </Link>
+                                                        </div>
+                                                    )}
                                             </div>
 
                                             <div className="fw-bold text-end">
