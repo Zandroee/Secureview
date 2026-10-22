@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Models\User;
+use App\Services\SingleLoginSessionService;
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
+
+class EnforceSingleLoginSession
+{
+    public function __construct(
+        private readonly SingleLoginSessionService $singleLoginSession
+    ) {
+    }
+
+    public function handle(Request $request, Closure $next): Response
+    {
+        $user = $request->user();
+
+        if (!$user instanceof User) {
+            return $next($request);
+        }
+
+        if ($this->singleLoginSession->isCurrent($request, $user)) {
+            return $next($request);
+        }
+
+        // A valid remember-me cookie belongs to the latest successful login because
+        // SingleLoginSessionService rotates the database remember token at each login.
+        // Let that same browser recreate its session after the regular session expires.
+        if (
+            !$request->session()->has(SingleLoginSessionService::SESSION_TOKEN_KEY)
+            && Auth::guard()->viaRemember()
+        ) {
+            $this->singleLoginSession->restoreRememberedSession($request, $user);
+
+            return $next($request);
+        }
+
+        $message = $this->singleLoginSession->invalidateStaleSession($request, $user);
+
+        return redirect()->route('login')->with('status', $message);
+    }
+}
