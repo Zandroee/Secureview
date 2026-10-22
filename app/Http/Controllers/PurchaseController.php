@@ -43,7 +43,8 @@ class PurchaseController extends Controller
                             'type' => $item->purchasable_type === \App\Models\Package::class
                                 ? 'package'
                                 : 'product',
-                            'image' => $item->purchasable?->image,
+                            'purchasable_id' => (int) $item->purchasable_id,
+                        'image' => $item->purchasable?->image,
                         ];
                     })->values(),
                 ];
@@ -109,6 +110,7 @@ class PurchaseController extends Controller
                         'type' => $item->purchasable_type === \App\Models\Package::class
                             ? 'package'
                             : 'product',
+                        'purchasable_id' => (int) $item->purchasable_id,
                         'image' => $item->purchasable?->image,
                     ];
                 })->values(),
