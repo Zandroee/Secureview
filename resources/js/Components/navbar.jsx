@@ -92,22 +92,89 @@ export default function Navbar() {
         );
     }
 
-    const closeMobileNavigation = () => {
-        const menu = document.getElementById("navbarOffcanvas");
-        if (!menu?.classList.contains("show")) return;
+    const getMobileNavigationMenu = () => document.getElementById("navbarOffcanvas");
 
-        Offcanvas.getOrCreateInstance(menu, {
+    const getMobileNavigationInstance = (menu = getMobileNavigationMenu()) => {
+        if (!menu) return null;
+
+        return Offcanvas.getOrCreateInstance(menu, {
             backdrop: true,
             keyboard: true,
             scroll: false,
-        }).hide();
+        });
+    };
+
+    const closeMobileNavigation = () => {
+        const menu = getMobileNavigationMenu();
+        if (!menu?.classList.contains("show")) return;
+
+        getMobileNavigationInstance(menu)?.hide();
+    };
+
+    // Wait for Bootstrap to finish hiding the menu before navigating away.
+    // Inertia must not unmount the offcanvas before Bootstrap removes its backdrop
+    // and restores document scrolling.
+    const runAfterMobileNavigationCloses = (action) => {
+        const menu = getMobileNavigationMenu();
+
+        if (!menu?.classList.contains("show")) {
+            action();
+            return;
+        }
+
+        let completed = false;
+        let fallbackTimer;
+
+        const finish = () => {
+            if (completed) return;
+            completed = true;
+            window.clearTimeout(fallbackTimer);
+            menu.removeEventListener("hidden.bs.offcanvas", finish);
+
+            window.requestAnimationFrame(() => {
+                const anotherOffcanvasIsOpen = Array.from(
+                    document.querySelectorAll(".offcanvas")
+                ).some((element) => element !== menu && element.classList.contains("show"));
+                const modalIsOpen = Boolean(document.querySelector(".modal.show"));
+
+                if (!menu.classList.contains("show") && !anotherOffcanvasIsOpen && !modalIsOpen) {
+                    document.querySelectorAll(".offcanvas-backdrop").forEach((backdrop) => backdrop.remove());
+                    document.body.style.removeProperty("overflow");
+                    document.body.style.removeProperty("padding-right");
+                }
+
+                action();
+            });
+        };
+
+        menu.addEventListener("hidden.bs.offcanvas", finish, { once: true });
+        getMobileNavigationInstance(menu)?.hide();
+        fallbackTimer = window.setTimeout(finish, 600);
+    };
+
+    const handleMobileOffcanvasLinkClick = (event) => {
+        const menu = getMobileNavigationMenu();
+
+        // On desktop the mobile menu is closed; keep the normal Inertia link flow.
+        if (!menu?.classList.contains("show")) return;
+
+        const href = event.currentTarget.getAttribute("href");
+        if (!href) return;
+
+        event.preventDefault();
+        setShowNavigationSearch(false);
+        setNavigationSearch("");
+        runAfterMobileNavigationCloses(() => router.visit(href));
+    };
+
+    const openMobileNavigation = () => {
+        getMobileNavigationInstance()?.show();
     };
 
     const navigateToPage = (href) => {
         setShowNavigationSearch(false);
         setNavigationSearch("");
-        closeMobileNavigation();
-        router.visit(href);
+        runAfterMobileNavigationCloses(() => router.visit(href));
     };
 
     const matchingNavigationItems = navigationSearch.trim()
@@ -147,10 +214,11 @@ export default function Navbar() {
 
         setShowNavigationSearch(false);
         setNavigationSearch("");
-        closeMobileNavigation();
-        router.get(catalog === "packages" ? "/packages" : "/products", { search: query }, {
-            preserveState: false,
-            preserveScroll: false,
+        runAfterMobileNavigationCloses(() => {
+            router.get(catalog === "packages" ? "/packages" : "/products", { search: query }, {
+                preserveState: false,
+                preserveScroll: false,
+            });
         });
     };
 
@@ -396,7 +464,7 @@ export default function Navbar() {
 
     const handleLogout = () => {
         setShowUserMenu(false);
-        router.post("/logout");
+        runAfterMobileNavigationCloses(() => router.post("/logout"));
     };
 
     useEffect(() => {
@@ -583,8 +651,7 @@ export default function Navbar() {
                 <button
                     className="navbar-toggler"
                     type="button"
-                    data-bs-toggle="offcanvas"
-                    data-bs-target="#navbarOffcanvas"
+                    onClick={openMobileNavigation}
                     aria-controls="navbarOffcanvas"
                     aria-label="Open navigation menu"
                 >
@@ -618,7 +685,7 @@ export default function Navbar() {
                         <button
                             type="button"
                             className="btn-close"
-                            data-bs-dismiss="offcanvas"
+                            onClick={closeMobileNavigation}
                             aria-label="Close"
                         ></button>
                     </div>
@@ -643,7 +710,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                 onClick={closeMobileNavigation}>
+                                 onClick={handleMobileOffcanvasLinkClick}>
                                     HOME
                                 </Link>
                             </li>
@@ -657,7 +724,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                 onClick={closeMobileNavigation}>
+                                 onClick={handleMobileOffcanvasLinkClick}>
                                     PRODUCTS
                                 </Link>
                             </li>
@@ -671,7 +738,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                 onClick={closeMobileNavigation}>
+                                 onClick={handleMobileOffcanvasLinkClick}>
                                     PACKAGES
                                 </Link>
                             </li>
@@ -686,7 +753,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium")
                                     }
-                                 onClick={closeMobileNavigation}>
+                                 onClick={handleMobileOffcanvasLinkClick}>
                                     SERVICES
                                 </Link>
                             </li>
@@ -699,7 +766,7 @@ export default function Navbar() {
                                             ? "text-primary fw-bold border-bottom border-primary border-2"
                                             : "fw-medium"
                                     }`}
-                                 onClick={closeMobileNavigation}>
+                                 onClick={handleMobileOffcanvasLinkClick}>
                                     ABOUT
                                 </Link>
                             </li>
@@ -723,7 +790,8 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                     data-bs-dismiss="offcanvas">
+                                        onClick={handleMobileOffcanvasLinkClick}
+                                    >
                                         LOGIN
                                     </Link>
 
@@ -737,7 +805,8 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                     data-bs-dismiss="offcanvas">
+                                        onClick={handleMobileOffcanvasLinkClick}
+                                    >
                                         SIGN UP
                                     </Link>
                                 </>
@@ -763,7 +832,8 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                     data-bs-dismiss="offcanvas">
+                                        onClick={handleMobileOffcanvasLinkClick}
+                                    >
                                         VERIFY EMAIL
                                     </Link>
 
@@ -773,8 +843,7 @@ export default function Navbar() {
                                         onClick={handleLogout}
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
-                                        }}
-                                     data-bs-dismiss="offcanvas">
+                                        }}>
                                         SIGN OUT
                                     </button>
                                 </>
@@ -806,7 +875,8 @@ export default function Navbar() {
                                                 fontSize: "1.25rem",
                                             }}
                                             aria-label="Notifications"
-                                         data-bs-dismiss="offcanvas">
+                                        onClick={handleMobileOffcanvasLinkClick}
+                                    >
                                             <i className="bi bi-bell"></i>
 
                                             {notificationCount > 0 && (
@@ -841,7 +911,8 @@ export default function Navbar() {
                                                 fontSize: "1.25rem",
                                             }}
                                             aria-label="Cart"
-                                         data-bs-dismiss="offcanvas">
+                                        onClick={handleMobileOffcanvasLinkClick}
+                                    >
                                             <i className="bi bi-cart3"></i>
 
                                             {cartCount > 0 && (
@@ -876,7 +947,8 @@ export default function Navbar() {
                                             style={{
                                                 fontFamily: "Outfit, sans-serif",
                                             }}
-                                         data-bs-dismiss="offcanvas">
+                                        onClick={handleMobileOffcanvasLinkClick}
+                                    >
                                             ADMIN DASHBOARD
                                         </Link>
                                     )}
@@ -886,7 +958,8 @@ export default function Navbar() {
                                             href="/technician/dashboard"
                                             className="btn btn-primary fw-bold w-100"
                                             style={{ fontFamily: "Outfit, sans-serif" }}
-                                         data-bs-dismiss="offcanvas">
+                                        onClick={handleMobileOffcanvasLinkClick}
+                                    >
                                             TECHNICIAN WORKSPACE
                                         </Link>
                                     )}
@@ -897,7 +970,8 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                     data-bs-dismiss="offcanvas">
+                                        onClick={handleMobileOffcanvasLinkClick}
+                                    >
                                         SETTINGS
                                     </Link>
 
@@ -907,7 +981,8 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                     data-bs-dismiss="offcanvas">
+                                        onClick={handleMobileOffcanvasLinkClick}
+                                    >
                                         SCHEDULES
                                     </Link>
 
@@ -917,7 +992,8 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                     data-bs-dismiss="offcanvas">
+                                        onClick={handleMobileOffcanvasLinkClick}
+                                    >
                                         PURCHASES
                                     </Link>
                                     <Link
@@ -926,7 +1002,8 @@ export default function Navbar() {
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
                                         }}
-                                     data-bs-dismiss="offcanvas">
+                                        onClick={handleMobileOffcanvasLinkClick}
+                                    >
                                         INQUIRIES
                                     </Link>
 
@@ -939,8 +1016,7 @@ export default function Navbar() {
                                         onClick={handleLogout}
                                         style={{
                                             fontFamily: "Outfit, sans-serif",
-                                        }}
-                                     data-bs-dismiss="offcanvas">
+                                        }}>
                                         SIGN OUT
                                     </button>
                                 </>
