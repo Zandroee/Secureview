@@ -39,9 +39,9 @@ class SingleLoginSessionService
      */
     public function restoreRememberedSession(Request $request, User $user): void
     {
-        $request->session()->regenerate();
-
-        $this->setActiveSession($request, $user);
+        // Reissue a remember-me cookie with a rotated token, so a second browser
+        // holding an old remember-me cookie cannot take over the active session.
+        $this->login($request, $user, true);
     }
 
     public function isCurrent(Request $request, User $user): bool
