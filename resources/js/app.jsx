@@ -35,6 +35,30 @@ createInertiaApp({
             const pageProps = event.detail?.page?.props ?? {};
             const userPreference = pageProps.auth?.user?.preferred_theme ?? 'system';
             applyUserTheme(userPreference);
+
+            // Defensive recovery for Inertia visits that remove an offcanvas
+            // before Bootstrap's transition/backdrop cleanup has completed.
+            // Never unlock scrolling while another offcanvas or modal is open.
+            window.requestAnimationFrame(() => {
+                const anOffcanvasIsOpen = Boolean(document.querySelector('.offcanvas.show'));
+                const aModalIsOpen = Boolean(document.querySelector('.modal.show'));
+
+                if (anOffcanvasIsOpen || aModalIsOpen) return;
+
+                const hasOrphanedBackdrop = Boolean(document.querySelector('.offcanvas-backdrop'));
+                const bodyScrollIsLocked =
+                    document.body.style.overflow === 'hidden' ||
+                    document.body.style.paddingRight !== '';
+
+                if (!hasOrphanedBackdrop && !bodyScrollIsLocked) return;
+
+                document.querySelectorAll('.offcanvas-backdrop').forEach((backdrop) => {
+                    backdrop.remove();
+                });
+                document.body.classList.remove('offcanvas-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            });
         });
 
         createRoot(el).render(
