@@ -74,6 +74,11 @@ jobs:
           cp app/Http/Controllers/CheckoutController.php hostinger-release/app/Http/Controllers/CheckoutController.php
           cp app/Http/Controllers/AuthController.php hostinger-release/app/Http/Controllers/AuthController.php
           cp app/Http/Controllers/NotificationController.php hostinger-release/app/Http/Controllers/NotificationController.php
+          cp app/Http/Controllers/LandingController.php hostinger-release/app/Http/Controllers/LandingController.php
+          cp app/Http/Controllers/ProductController.php hostinger-release/app/Http/Controllers/ProductController.php
+          cp app/Http/Controllers/PackageController.php hostinger-release/app/Http/Controllers/PackageController.php
+          cp app/Http/Controllers/PurchaseController.php hostinger-release/app/Http/Controllers/PurchaseController.php
+          cp app/Http/Controllers/ReviewController.php hostinger-release/app/Http/Controllers/ReviewController.php
           cp app/Http/Middleware/EnforceSingleLoginSession.php hostinger-release/app/Http/Middleware/EnforceSingleLoginSession.php
           cp app/Http/Middleware/HandleInertiaRequests.php hostinger-release/app/Http/Middleware/HandleInertiaRequests.php
           cp app/Services/SingleLoginSessionService.php hostinger-release/app/Services/SingleLoginSessionService.php
