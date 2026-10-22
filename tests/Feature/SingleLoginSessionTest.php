@@ -20,6 +20,7 @@ class SingleLoginSessionTest extends TestCase
         $this->actingAs($user)
             ->withSession([
                 SingleLoginSessionService::SESSION_TOKEN_KEY => 'old-device-token',
+                SingleLoginSessionService::SESSION_USER_ID_KEY => $user->id,
             ])
             ->get('/settings')
             ->assertRedirect(route('login'))
@@ -43,6 +44,7 @@ class SingleLoginSessionTest extends TestCase
         $this->actingAs($user)
             ->withSession([
                 SingleLoginSessionService::SESSION_TOKEN_KEY => 'current-device-token',
+                SingleLoginSessionService::SESSION_USER_ID_KEY => $user->id,
             ])
             ->get('/settings')
             ->assertOk();
@@ -61,13 +63,14 @@ class SingleLoginSessionTest extends TestCase
 
         Cache::forever(SingleLoginSessionService::cacheKey($user->id), 'previous-device-token');
 
-        $this->post(route('login.authenticate'), [
+        $response = $this->post(route('login.authenticate'), [
             'email' => 'single-session@example.test',
             'password' => 'CorrectPass123!',
         ])->assertRedirect('/');
 
         $this->assertAuthenticatedAs($user);
-        $this->assertSessionHas(SingleLoginSessionService::SESSION_TOKEN_KEY);
+        $response->assertSessionHas(SingleLoginSessionService::SESSION_TOKEN_KEY);
+        $response->assertSessionHas(SingleLoginSessionService::SESSION_USER_ID_KEY, $user->id);
 
         $sessionToken = session(SingleLoginSessionService::SESSION_TOKEN_KEY);
 
