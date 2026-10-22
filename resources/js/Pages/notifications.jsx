@@ -40,25 +40,28 @@ export default function Notifications({ notifications: paginator = {}, unreadCou
     const unreadCount = Number(totalUnreadCount) || 0;
 
     const visibleIds = notifications.map((notification) => String(notification.id));
+    const safeSelectedIds = Array.isArray(selectedIds) ? selectedIds : [];
     const allVisibleSelected =
         visibleIds.length > 0 &&
-        visibleIds.every((id) => selectedIds.includes(id));
+        visibleIds.every((id) => safeSelectedIds.includes(id));
 
     const toggleSelection = (id) => {
         const normalizedId = String(id);
-        setSelectedIds((current) =>
-            current.includes(normalizedId)
-                ? current.filter((selectedId) => selectedId !== normalizedId)
-                : [...current, normalizedId]
-        );
+        setSelectedIds((current) => {
+            const existing = Array.isArray(current) ? current : [];
+            return existing.includes(normalizedId)
+                ? existing.filter((selectedId) => selectedId !== normalizedId)
+                : [...existing, normalizedId];
+        });
     };
 
     const toggleSelectAllVisible = () => {
-        setSelectedIds((current) =>
-            allVisibleSelected
-                ? current.filter((id) => !visibleIds.includes(id))
-                : [...new Set([...current, ...visibleIds])]
-        );
+        setSelectedIds((current) => {
+            const existing = Array.isArray(current) ? current : [];
+            return allVisibleSelected
+                ? existing.filter((id) => !visibleIds.includes(id))
+                : [...new Set([...existing, ...visibleIds])];
+        });
     };
 
     const openNotification = (notification) => {
