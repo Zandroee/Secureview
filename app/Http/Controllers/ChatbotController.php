@@ -58,7 +58,7 @@ Do not invent prices, stock, coverage, availability, warranty terms, technical s
 PROMPT;
 
         try {
-            $model = config('services.gemini.model', 'gemini-2.5-flash');
+            $model = config('services.gemini.model', 'gemini-3.5-flash-lite');
             $generationConfig = ['maxOutputTokens' => 240];
 
             if (str_starts_with($model, 'gemini-3.')) {
