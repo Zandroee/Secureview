@@ -157,11 +157,21 @@ export default function Sidebar({ active = "dashboard" }) {
     };
 
     const handleNavigationClick = (event, href, mobile) => {
-        const menu = getMobileSidebar();
-        if (!mobile || !menu?.classList.contains("show")) return;
+        if (!mobile) return;
 
+        // The mobile drawer uses a document navigation after its close
+        // transition. This avoids stale Bootstrap scroll locks across Inertia
+        // page swaps and keeps the admin navigation reliable on touch devices.
         event.preventDefault();
-        runAfterMobileSidebarCloses(() => router.visit(href));
+
+        const menu = getMobileSidebar();
+        const navigate = () => window.location.assign(href);
+
+        if (menu?.classList.contains("show")) {
+            runAfterMobileSidebarCloses(navigate);
+        } else {
+            navigate();
+        }
     };
 
     useEffect(() => {
@@ -178,6 +188,7 @@ export default function Sidebar({ active = "dashboard" }) {
                 if (menu.classList.contains("show") || anotherOffcanvasIsOpen || modalIsOpen) return;
 
                 document.querySelectorAll(".offcanvas-backdrop").forEach((backdrop) => backdrop.remove());
+                document.body.classList.remove("offcanvas-open");
                 document.body.style.removeProperty("overflow");
                 document.body.style.removeProperty("padding-right");
             });
