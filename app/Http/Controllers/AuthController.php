@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\AdminActivityLogger;
+use App\Services\SingleLoginSessionService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -65,7 +66,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function authenticate(Request $request, AdminActivityLogger $activityLogger)
+    public function authenticate(Request $request, AdminActivityLogger $activityLogger, SingleLoginSessionService $singleLoginSession)
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -107,10 +108,9 @@ class AuthController extends Controller
             ]);
         }
 
-        // Only verified users are actually logged in.
-        Auth::login($user, $request->boolean('remember'));
-
-        $request->session()->regenerate();
+        // Only verified users are actually logged in. Starting a new login
+        // replaces the previous active browser/device session.
+        $singleLoginSession->login($request, $user, $request->boolean('remember'));
 
         $activityLogger->record(
             $request,
@@ -132,7 +132,7 @@ class AuthController extends Controller
         return redirect()->intended('/');
     }
 
-    public function logout(Request $request, AdminActivityLogger $activityLogger)
+    public function logout(Request $request, AdminActivityLogger $activityLogger, SingleLoginSessionService $singleLoginSession)
     {
         $actor = $request->user();
 
@@ -144,6 +144,8 @@ class AuthController extends Controller
                 : ($actor?->isTechnician() ? 'Technician signed out.' : 'User signed out.'),
             $actor
         );
+
+        $singleLoginSession->forgetIfCurrent($request, $actor);
 
         Auth::logout();
 
@@ -158,7 +160,7 @@ class AuthController extends Controller
         return Socialite::driver('google')->redirect();
     }
 
-    public function googleCallback(Request $request, AdminActivityLogger $activityLogger)
+    public function googleCallback(Request $request, AdminActivityLogger $activityLogger, SingleLoginSessionService $singleLoginSession)
     {
         $googleUser = Socialite::driver('google')->user();
 
@@ -190,9 +192,7 @@ class AuthController extends Controller
             $user->save();
         }
 
-        Auth::login($user);
-
-        $request->session()->regenerate();
+        $singleLoginSession->login($request, $user);
 
         $activityLogger->record(
             $request,
@@ -221,7 +221,7 @@ class AuthController extends Controller
             ->redirect();
     }
 
-    public function facebookCallback(Request $request, AdminActivityLogger $activityLogger)
+    public function facebookCallback(Request $request, AdminActivityLogger $activityLogger, SingleLoginSessionService $singleLoginSession)
     {
         $facebookUser = Socialite::driver('facebook')->user();
 
