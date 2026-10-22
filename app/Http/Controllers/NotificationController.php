@@ -31,6 +31,7 @@ class NotificationController extends Controller
 
         return Inertia::render('notifications', [
             'notifications' => $notifications,
+            'unreadCount' => $request->user()->customerNotifications()->whereNull('read_at')->count(),
         ]);
     }
 
