@@ -24,9 +24,14 @@ function iconBackground(type) {
     return "#f2f2f4";
 }
 
-export default function Notifications({ notifications = [] }) {
+export default function Notifications({ notifications: paginator = {} }) {
     const { props } = usePage();
+    const notifications = Array.isArray(paginator) ? paginator : (paginator.data ?? []);
+    const currentPage = paginator.current_page ?? 1;
+    const totalPages = paginator.last_page ?? 1;
+    const totalNotifications = paginator.total ?? notifications.length;
     const [working, setWorking] = useState(false);
+    const [selectedIds, setSelectedIds] = useState([]);
     const [announcementTitle, setAnnouncementTitle] = useState("");
     const [announcementMessage, setAnnouncementMessage] = useState("");
     const [announcementWorking, setAnnouncementWorking] = useState(false);
@@ -35,6 +40,28 @@ export default function Notifications({ notifications = [] }) {
     const unreadCount = notifications.filter(
         (notification) => !notification.read
     ).length;
+
+    const visibleIds = notifications.map((notification) => String(notification.id));
+    const allVisibleSelected =
+        visibleIds.length > 0 &&
+        visibleIds.every((id) => selectedIds.includes(id));
+
+    const toggleSelection = (id) => {
+        const normalizedId = String(id);
+        setSelectedIds((current) =>
+            current.includes(normalizedId)
+                ? current.filter((selectedId) => selectedId !== normalizedId)
+                : [...current, normalizedId]
+        );
+    };
+
+    const toggleSelectAllVisible = () => {
+        setSelectedIds((current) =>
+            allVisibleSelected
+                ? current.filter((id) => !visibleIds.includes(id))
+                : [...new Set([...current, ...visibleIds])]
+        );
+    };
 
     const openNotification = (notification) => {
         setWorking(true);
@@ -60,6 +87,59 @@ export default function Notifications({ notifications = [] }) {
                 onFinish: () => setWorking(false),
             }
         );
+    };
+
+    const deleteNotification = (notification) => {
+        if (!window.confirm("Delete this notification? This cannot be undone.")) {
+            return;
+        }
+
+        setWorking(true);
+        router.delete("/notifications/" + notification.id, {
+            data: { page: currentPage },
+            preserveScroll: true,
+            onSuccess: () => {
+                setSelectedIds((current) =>
+                    current.filter((id) => id !== String(notification.id))
+                );
+            },
+            onFinish: () => setWorking(false),
+        });
+    };
+
+    const deleteSelected = () => {
+        if (selectedIds.length === 0) return;
+
+        if (
+            !window.confirm(
+                "Delete the " +
+                    selectedIds.length +
+                    " selected notification(s)? This cannot be undone."
+            )
+        ) {
+            return;
+        }
+
+        setWorking(true);
+        router.delete("/notifications", {
+            data: {
+                ids: selectedIds.map(Number),
+                page: currentPage,
+            },
+            preserveScroll: true,
+            onSuccess: () => setSelectedIds([]),
+            onFinish: () => setWorking(false),
+        });
+    };
+
+    const navigateToPage = (url) => {
+        if (!url || working) return;
+
+        setSelectedIds([]);
+        router.get(url, {}, {
+            preserveScroll: true,
+            preserveState: false,
+        });
     };
 
     return (
@@ -94,18 +174,24 @@ export default function Notifications({ notifications = [] }) {
                                 >
                                     NOTIFICATIONS
                                 </h1>
+                                <div className="small text-muted mt-1">
+                                    {totalNotifications} notification(s) total
+                                    {unreadCount > 0 ? " · " + unreadCount + " unread on this page" : ""}
+                                </div>
                             </div>
 
-                            {unreadCount > 0 && (
-                                <button
-                                    type="button"
-                                    className="btn btn-outline-primary btn-sm fw-bold"
-                                    onClick={markAll}
-                                    disabled={working}
-                                >
-                                    MARK ALL AS READ
-                                </button>
-                            )}
+                            <div className="d-flex flex-wrap gap-2">
+                                {unreadCount > 0 && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-primary btn-sm fw-bold"
+                                        onClick={markAll}
+                                        disabled={working}
+                                    >
+                                        MARK ALL AS READ
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {props.errors?.notification && (
@@ -208,93 +294,167 @@ export default function Notifications({ notifications = [] }) {
 
                                 <h5
                                     className="fw-bold mt-3 mb-2"
-                                    style={{
-                                        fontFamily: "Outfit, sans-serif",
-                                    }}
+                                    style={{ fontFamily: "Outfit, sans-serif" }}
                                 >
                                     NO NOTIFICATIONS
                                 </h5>
 
                                 <p className="small text-muted mb-0">
-                                    Important updates about your orders and
-                                    inquiries will appear here.
+                                    Important updates about your orders and inquiries will appear here.
                                 </p>
                             </div>
                         ) : (
-                            <div className="d-flex flex-column gap-2">
-                                {notifications.map((notification) => (
+                            <>
+                                <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-2">
+                                    <label className="form-check d-flex align-items-center gap-2 mb-0">
+                                        <input
+                                            className="form-check-input mt-0"
+                                            type="checkbox"
+                                            checked={allVisibleSelected}
+                                            onChange={toggleSelectAllVisible}
+                                            disabled={working}
+                                            aria-label="Select all notifications on this page"
+                                        />
+                                        <span className="small fw-semibold">
+                                            Select all on this page
+                                        </span>
+                                    </label>
+
                                     <button
-                                        key={notification.id}
                                         type="button"
-                                        className="notification-item w-100 text-start border rounded-3 p-3"
-                                        style={{
-                                            backgroundColor: notification.read
-                                                ? "#fff"
-                                                : "#edf5ff",
-                                            borderColor: notification.read
-                                                ? "#e1e2e4"
-                                                : "#b9d7ff",
-                                            cursor: "pointer",
-                                        }}
-                                        onClick={() =>
-                                            openNotification(notification)
-                                        }
-                                        disabled={working}
+                                        className="btn btn-danger btn-sm fw-semibold"
+                                        onClick={deleteSelected}
+                                        disabled={working || selectedIds.length === 0}
                                     >
-                                        <div className="d-flex gap-3 align-items-start">
-                                            <div
-                                                className="d-flex align-items-center justify-content-center rounded-circle"
-                                                style={{
-                                                    width: "42px",
-                                                    height: "42px",
-                                                    minWidth: "42px",
-                                                    backgroundColor:
-                                                        iconBackground(
-                                                            notification.type
-                                                        ),
-                                                }}
-                                            >
-                                                <i
-                                                    className={
-                                                        iconForType(
-                                                            notification.type
-                                                        ) + " text-primary"
-                                                    }
-                                                ></i>
-                                            </div>
-
-                                            <div className="flex-grow-1">
-                                                <div className="d-flex flex-column flex-md-row justify-content-between gap-1">
-                                                    <div className="fw-bold">
-                                                        {notification.title}
-                                                    </div>
-
-                                                    <small className="text-muted">
-                                                        {
-                                                            notification.created_at
-                                                        }
-                                                    </small>
-                                                </div>
-
-                                                <div className="small text-muted mt-1">
-                                                    {notification.message}
-                                                </div>
-                                            </div>
-
-                                            {!notification.read && (
-                                                <span
-                                                    className="rounded-circle bg-primary"
-                                                    style={{
-                                                        width: "9px",
-                                                        height: "9px",
-                                                        marginTop: "6px",
-                                                    }}
-                                                ></span>
-                                            )}
-                                        </div>
+                                        <i className="bi bi-trash me-1" />
+                                        Delete selected{selectedIds.length > 0 ? " (" + selectedIds.length + ")" : ""}
                                     </button>
-                                ))}
-                            </div>
+                                </div>
+
+                                <div className="d-flex flex-column gap-2">
+                                    {notifications.map((notification) => (
+                                        <div
+                                            key={notification.id}
+                                            className="notification-item w-100 border rounded-3 p-3"
+                                            style={{
+                                                backgroundColor: notification.read
+                                                    ? "#fff"
+                                                    : "#edf5ff",
+                                                borderColor: notification.read
+                                                    ? "#e1e2e4"
+                                                    : "#b9d7ff",
+                                            }}
+                                        >
+                                            <div className="d-flex gap-3 align-items-start">
+                                                <input
+                                                    className="form-check-input mt-1"
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(String(notification.id))}
+                                                    onChange={() => toggleSelection(notification.id)}
+                                                    disabled={working}
+                                                    aria-label={"Select notification: " + notification.title}
+                                                />
+
+                                                <button
+                                                    type="button"
+                                                    className="flex-grow-1 text-start border-0 bg-transparent p-0"
+                                                    style={{ color: "inherit", minWidth: 0, cursor: "pointer" }}
+                                                    onClick={() => openNotification(notification)}
+                                                    disabled={working}
+                                                >
+                                                    <div className="d-flex gap-3 align-items-start">
+                                                        <div
+                                                            className="d-flex align-items-center justify-content-center rounded-circle"
+                                                            style={{
+                                                                width: "42px",
+                                                                height: "42px",
+                                                                minWidth: "42px",
+                                                                backgroundColor: iconBackground(notification.type),
+                                                            }}
+                                                        >
+                                                            <i className={iconForType(notification.type) + " text-primary"}></i>
+                                                        </div>
+
+                                                        <div className="flex-grow-1" style={{ minWidth: 0 }}>
+                                                            <div className="d-flex flex-column flex-md-row justify-content-between gap-1">
+                                                                <div className="fw-bold">
+                                                                    {notification.title}
+                                                                </div>
+
+                                                                <small className="text-muted text-nowrap">
+                                                                    {notification.created_at}
+                                                                </small>
+                                                            </div>
+
+                                                            <div className="small text-muted mt-1">
+                                                                {notification.message}
+                                                            </div>
+                                                        </div>
+
+                                                        {!notification.read && (
+                                                            <span
+                                                                className="rounded-circle bg-primary flex-shrink-0"
+                                                                style={{
+                                                                    width: "9px",
+                                                                    height: "9px",
+                                                                    marginTop: "6px",
+                                                                }}
+                                                                aria-label="Unread"
+                                                            ></span>
+                                                        )}
+                                                    </div>
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-danger btn-sm flex-shrink-0"
+                                                    onClick={() => deleteNotification(notification)}
+                                                    disabled={working}
+                                                    aria-label={"Delete notification: " + notification.title}
+                                                    title="Delete notification"
+                                                >
+                                                    <i className="bi bi-trash" />
+                                                    <span className="d-none d-md-inline ms-1">Delete</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {totalNotifications > 0 && (
+                                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mt-3">
+                                        <div className="small text-muted">
+                                            Showing {paginator.from ?? 0}–{paginator.to ?? notifications.length} of {totalNotifications}
+                                        </div>
+
+                                        <div className="d-flex align-items-center gap-2">
+                                            <button
+                                                type="button"
+                                                className="btn btn-outline-primary btn-sm"
+                                                onClick={() => navigateToPage(paginator.prev_page_url)}
+                                                disabled={working || !paginator.prev_page_url}
+                                            >
+                                                <i className="bi bi-chevron-left me-1" />
+                                                Previous
+                                            </button>
+
+                                            <span className="small text-muted text-nowrap">
+                                                Page {currentPage} of {totalPages}
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                className="btn btn-outline-primary btn-sm"
+                                                onClick={() => navigateToPage(paginator.next_page_url)}
+                                                disabled={working || !paginator.next_page_url}
+                                            >
+                                                Next
+                                                <i className="bi bi-chevron-right ms-1" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
