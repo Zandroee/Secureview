@@ -21,7 +21,7 @@ class ChatbotTest extends TestCase
                     [
                         'content' => [
                             'parts' => [
-                                ['text' => 'You can request an installation from the Services page.'],
+                                ['text' => 'ONVIF is a standard that helps compatible network video devices work together.'],
                             ],
                         ],
                     ],
@@ -37,7 +37,7 @@ class ChatbotTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonPath('message', 'You can request an installation from the Services page.');
+            ->assertJsonPath('message', 'ONVIF is a standard that helps compatible network video devices work together.');
 
         Http::assertSent(fn ($request) =>
             str_contains($request->url(), 'generativelanguage.googleapis.com')
@@ -129,7 +129,7 @@ class ChatbotTest extends TestCase
 
         $this->postJson('/chatbot/message', [
             'messages' => [
-                ['role' => 'user', 'content' => 'What services do you offer?'],
+                ['role' => 'user', 'content' => 'Can you explain ONVIF compatibility with network video recorders?'],
             ],
         ])
             ->assertStatus(504)
