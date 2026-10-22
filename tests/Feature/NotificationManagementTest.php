@@ -31,6 +31,7 @@ class NotificationManagementTest extends TestCase
                 ->where('notifications.current_page', 1)
                 ->where('notifications.last_page', 2)
                 ->where('notifications.total', 12)
+                ->where('unreadCount', 12)
                 ->has('notifications.data', 10)
             );
 
