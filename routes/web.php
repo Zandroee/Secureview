@@ -12,6 +12,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\NotificationController;
@@ -217,6 +218,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
     Route::patch('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
+    Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
 
     Route::get('/warranty-claims', [WarrantyClaimController::class, 'index'])->name('warranty-claims.index');
     Route::post('/warranty-claims', [WarrantyClaimController::class, 'store'])->name('warranty-claims.store');
