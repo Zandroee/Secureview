@@ -1,4 +1,4 @@
-import { Link, useForm } from "@inertiajs/react";
+import { Link, useForm, usePage } from "@inertiajs/react";
 import { useState } from "react";
 
 import Navbar from "../Components/navbar";
@@ -6,6 +6,7 @@ import GoogleLoginButton from "../Components/GoogleLoginButton";
 import "../../css/login.css";
 
 export default function Login() {
+    const { props } = usePage();
     const [showPassword, setShowPassword] = useState(false);
     const [emailError, setEmailError] = useState("");
     const [passwordError, setPasswordError] = useState("");
@@ -78,6 +79,16 @@ export default function Login() {
                 className="container-fluid px-3 px-md-4 py-5"
                 style={{ minHeight: "calc(100vh - 75px)" }}
             >
+                {props.flash?.status && (
+                    <div
+                        className="alert alert-info mx-auto mb-4"
+                        role="status"
+                        style={{ maxWidth: "820px" }}
+                    >
+                        {props.flash.status}
+                    </div>
+                )}
+
                 <h1
                     className="text-center fw-bold mb-5"
                     style={{
