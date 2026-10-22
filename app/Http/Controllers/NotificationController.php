@@ -9,13 +9,15 @@ use Inertia\Inertia;
 
 class NotificationController extends Controller
 {
+    private const NOTIFICATIONS_PER_PAGE = 10;
+
     public function index(Request $request)
     {
         $notifications = $request->user()
             ->customerNotifications()
             ->latest()
-            ->get()
-            ->map(function (CustomerNotification $notification) {
+            ->paginate(self::NOTIFICATIONS_PER_PAGE)
+            ->through(function (CustomerNotification $notification) {
                 return [
                     'id' => $notification->id,
                     'type' => $notification->type,
@@ -25,11 +27,11 @@ class NotificationController extends Controller
                     'read' => $notification->read_at !== null,
                     'created_at' => $notification->created_at?->format('M d, Y h:i A'),
                 ];
-            })
-            ->values();
+            });
 
         return Inertia::render('notifications', [
             'notifications' => $notifications,
+            'unreadCount' => $request->user()->customerNotifications()->whereNull('read_at')->count(),
         ]);
     }
 
@@ -89,6 +91,63 @@ class NotificationController extends Controller
         }
 
         return back();
+    }
+
+    public function destroy(Request $request, CustomerNotification $notification)
+    {
+        if ((int) $notification->user_id !== (int) $request->user()->id) {
+            abort(404);
+        }
+
+        $notification->delete();
+
+        return $this->redirectToValidNotificationPage(
+            $request,
+            'Notification deleted.'
+        );
+    }
+
+    public function destroySelected(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'distinct'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+        ]);
+
+        $user = $request->user();
+        $requestedIds = array_map('intval', $validated['ids']);
+        $ownedIds = $user->customerNotifications()
+            ->whereIn('id', $requestedIds)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        // Never delete another account's notifications, even if IDs are tampered with.
+        if (count($ownedIds) !== count($requestedIds)) {
+            abort(404);
+        }
+
+        $deletedCount = $user->customerNotifications()
+            ->whereIn('id', $ownedIds)
+            ->delete();
+
+        return $this->redirectToValidNotificationPage(
+            $request,
+            $deletedCount . ' notification(s) deleted.'
+        );
+    }
+
+    private function redirectToValidNotificationPage(Request $request, string $message)
+    {
+        $total = $request->user()->customerNotifications()->count();
+        $requestedPage = max(1, (int) $request->input('page', $request->query('page', 1)));
+        $lastPage = max(1, (int) ceil($total / self::NOTIFICATIONS_PER_PAGE));
+        $page = min($requestedPage, $lastPage);
+
+        return redirect()
+            ->route('notifications.index', ['page' => $page])
+            ->with('success', $message);
     }
 
     /**
