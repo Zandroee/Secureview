@@ -1,6 +1,5 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
-import CustomerSidebar from "../Components/customerSidebar";
 import { Link } from "@inertiajs/react";
 import { useState } from "react";
 
@@ -27,11 +26,7 @@ export default function Schedules({ schedules = [] }) {
             >
                 <div className="container py-4">
                     <div className="row g-3 align-items-start">
-                        <div className="col-lg-3">
-                            <CustomerSidebar active="schedules" />
-                        </div>
-
-                        <div className="col-lg-8">
+                        <div className="col-12">
                             <div
                                 className="bg-white border rounded-3 p-3"
                                 style={{

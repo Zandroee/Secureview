@@ -1,6 +1,5 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
-import CustomerSidebar from "../Components/customerSidebar";
 import { googleMapsSearchUrl } from "../Components/GoogleMaps/ServiceLocation";
 import { Link } from "@inertiajs/react";
 
@@ -45,11 +44,7 @@ export default function Inquiries({ inquiries = [] }) {
             >
                 <div className="container py-4">
                     <div className="row g-3 align-items-start">
-                        <div className="col-lg-3">
-                            <CustomerSidebar active="inquiries" />
-                        </div>
-
-                        <div className="col-lg-8">
+                        <div className="col-12">
                             <div
                                 className="bg-white border rounded-3 p-3"
                                 style={{
