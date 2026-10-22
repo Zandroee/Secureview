@@ -84,7 +84,7 @@ export default function Chatbot() {
         if (!content || isSending) return;
 
         const userMessage = { role: "user", content };
-        const history = [...messages.slice(1), userMessage].slice(-8);
+        const history = [...messages.slice(1), userMessage].slice(-6);
         while (history.length > 0 && history[0].role !== "user") history.shift();
         setMessages((previous) => [...previous, userMessage]);
         setInput("");

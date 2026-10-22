@@ -21,7 +21,7 @@ class ChatbotTest extends TestCase
                     [
                         'content' => [
                             'parts' => [
-                                ['text' => 'You can request an installation from the Services page.'],
+                                ['text' => 'ONVIF is a standard that helps compatible network video devices work together.'],
                             ],
                         ],
                     ],
@@ -31,13 +31,13 @@ class ChatbotTest extends TestCase
 
         $response = $this->postJson('/chatbot/message', [
             'messages' => [
-                ['role' => 'user', 'content' => 'How do I book an installation?'],
+                ['role' => 'user', 'content' => 'Can you explain ONVIF compatibility with network video recorders?'],
             ],
         ]);
 
         $response
             ->assertOk()
-            ->assertJsonPath('message', 'You can request an installation from the Services page.');
+            ->assertJsonPath('message', 'ONVIF is a standard that helps compatible network video devices work together.');
 
         Http::assertSent(fn ($request) =>
             str_contains($request->url(), 'generativelanguage.googleapis.com')
@@ -51,11 +51,26 @@ class ChatbotTest extends TestCase
 
         $this->postJson('/chatbot/message', [
             'messages' => [
-                ['role' => 'user', 'content' => 'What services do you offer?'],
+                ['role' => 'user', 'content' => 'Can you explain what a wide dynamic range camera does?'],
             ],
         ])
             ->assertStatus(503)
             ->assertJsonPath('message', 'The AI assistant is not configured yet. Please contact Netmax Trading or send an inquiry through the Services page.');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_common_faq_is_answered_without_waiting_for_gemini(): void
+    {
+        config(['services.gemini.key' => null]);
+
+        $this->postJson('/chatbot/message', [
+            'messages' => [
+                ['role' => 'user', 'content' => 'How do I book an installation?'],
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('message', "To request an installation or another service, open the Services page (/services) and submit the inquiry form (/inquiry). You can choose a preferred time slot; our team will confirm the appointment.");
 
         Http::assertNothingSent();
     }
@@ -89,7 +104,7 @@ class ChatbotTest extends TestCase
 
         $this->postJson('/chatbot/message', [
             'messages' => [
-                ['role' => 'user', 'content' => 'How do I book an installation?'],
+                ['role' => 'user', 'content' => 'Can you explain ONVIF compatibility with network video recorders?'],
             ],
         ])->assertOk();
 
@@ -114,7 +129,7 @@ class ChatbotTest extends TestCase
 
         $this->postJson('/chatbot/message', [
             'messages' => [
-                ['role' => 'user', 'content' => 'What services do you offer?'],
+                ['role' => 'user', 'content' => 'Can you explain ONVIF compatibility with network video recorders?'],
             ],
         ])
             ->assertStatus(504)
