@@ -162,19 +162,25 @@ html[data-bs-theme="dark"] [style*="background-color: rgb(248, 249, 250)"] {
  * components to shrink within Bootstrap rows instead of forcing page overflow.
  * -------------------------------------------------------------------------- */
 html {
+    height: auto;
     min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 body {
+    height: auto;
     min-height: 100vh;
     min-height: 100dvh;
     overflow-x: clip;
-    overflow-y: auto;
+    overflow-y: visible;
 }
 
 #app {
     min-height: 100vh;
     min-height: 100dvh;
+    overflow: visible;
 }
 
 img,
@@ -1561,5 +1567,31 @@ html[data-bs-theme="dark"] input.catalog-search-input:not([type="checkbox"]):not
     .admin-catalog-modal-content .modal-header,
     .admin-catalog-modal-content .modal-footer {
         padding: .75rem 1rem;
+    }
+}
+
+
+/* On mobile, let the document (html) remain the vertical scroll container.
+   Bootstrap temporarily locks body scrolling while an offcanvas is open;
+   after it closes, the page must still scroll without requiring another tap. */
+@media (max-width: 991.98px) {
+    .offcanvas {
+        max-height: 100dvh;
+    }
+
+    .offcanvas .offcanvas-body {
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+    }
+
+    /* The chat launcher has a high fixed z-index. Keep it behind an open
+       navigation drawer so it cannot cover Sign Out or the last admin links. */
+    body:has(.offcanvas.show) .secureview-chatbot {
+        z-index: 1030 !important;
+        pointer-events: none;
     }
 }
