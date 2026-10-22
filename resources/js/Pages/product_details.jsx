@@ -64,7 +64,7 @@ function ReviewSummary({ reviews, rating }) {
     );
 }
 
-export default function ProductDetails({ product, reviews = [] }) {
+export default function ProductDetails({ product, reviews = [], canReview = false, userReview = null }) {
     const { props } = usePage();
     const user = props.auth?.user;
 
@@ -80,6 +80,34 @@ export default function ProductDetails({ product, reviews = [] }) {
     const availableStock = Math.max(0, Number(product.stock_quantity ?? 0));
     const [reviewPage, setReviewPage] = useState(1);
     const [reviewFilter, setReviewFilter] = useState("all");
+    const [reviewRating, setReviewRating] = useState(Number(userReview?.rating || 5));
+    const [reviewComment, setReviewComment] = useState(userReview?.comment || "");
+    const [reviewSubmitting, setReviewSubmitting] = useState(false);
+    const [reviewSubmitError, setReviewSubmitError] = useState("");
+    const [reviewSubmitSuccess, setReviewSubmitSuccess] = useState("");
+
+    const handleSubmitReview = (event) => {
+        event.preventDefault();
+        setReviewSubmitError("");
+        setReviewSubmitSuccess("");
+        setReviewSubmitting(true);
+
+        router.post("/reviews", {
+            item_type: "product",
+            item_id: product.id,
+            rating: reviewRating,
+            comment: reviewComment.trim(),
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setReviewSubmitSuccess(userReview ? "Your review has been updated." : "Thank you for reviewing this product.");
+            },
+            onError: (errors) => {
+                setReviewSubmitError(errors.review || errors.rating || errors.comment || "Unable to save your review. Please try again.");
+            },
+            onFinish: () => setReviewSubmitting(false),
+        });
+    };
 
     const specifications = Array.isArray(product.specifications) ? product.specifications : [];
     const filteredReviews = reviewFilter === "all" ? reviews : reviews.filter((review) => Number(review.rating) === Number(reviewFilter));
@@ -290,7 +318,63 @@ export default function ProductDetails({ product, reviews = [] }) {
 
                 </section>
 
-                <section className="mt-4">
+
+                {(canReview || userReview) && (
+                    <div className="border rounded-3 p-3 p-md-4 mb-4" style={{ backgroundColor: "#fff" }}>
+                        <h3 className="fw-bold mb-1">
+                            {userReview ? "Update your review" : "Rate this product"}
+                        </h3>
+                        <p className="text-muted small mb-3">
+                            Reviews are available to customers who have paid for this product.
+                        </p>
+                        {reviewSubmitError && (
+                            <div className="alert alert-danger py-2" role="alert">{reviewSubmitError}</div>
+                        )}
+                        {reviewSubmitSuccess && (
+                            <div className="alert alert-success py-2" role="status">{reviewSubmitSuccess}</div>
+                        )}
+                        <form onSubmit={handleSubmitReview}>
+                            <label className="form-label fw-semibold d-block">Your rating</label>
+                            <div className="d-flex align-items-center gap-2 mb-3" role="group" aria-label="Choose a rating from one to five stars">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        className="btn btn-link p-0 text-decoration-none"
+                                        style={{ color: star <= reviewRating ? "#f0ad00" : "#adb5bd", fontSize: "1.6rem" }}
+                                        onClick={() => setReviewRating(star)}
+                                        aria-label={star + " star" + (star === 1 ? "" : "s")}
+                                        aria-pressed={reviewRating === star}
+                                    >
+                                        <i className={star <= reviewRating ? "bi bi-star-fill" : "bi bi-star"}></i>
+                                    </button>
+                                ))}
+                                <span className="small text-muted ms-1">{reviewRating}/5</span>
+                            </div>
+                            <label htmlFor="customer-review-comment" className="form-label fw-semibold">Your review</label>
+                            <textarea
+                                id="customer-review-comment"
+                                className="form-control mb-3"
+                                value={reviewComment}
+                                onChange={(event) => setReviewComment(event.target.value)}
+                                minLength={3}
+                                maxLength={2000}
+                                rows={3}
+                                required
+                                placeholder="Share your experience with this item..."
+                            />
+                            <button
+                                type="submit"
+                                className="btn btn-primary fw-semibold"
+                                disabled={reviewSubmitting || reviewComment.trim().length < 3}
+                            >
+                                {reviewSubmitting ? "Saving review..." : (userReview ? "Update review" : "Submit review")}
+                            </button>
+                        </form>
+                    </div>
+                )}
+
+                <section className="mt-4" id="reviews">
 
                     <div className="row align-items-center g-4">
 

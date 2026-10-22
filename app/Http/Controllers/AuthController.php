@@ -102,8 +102,8 @@ class AuthController extends Controller
                 $user->sendEmailVerificationNotification();
             }
 
-            return redirect()->route('verification.notice')->with([
-                'verificationSent' => true,
+            return redirect()->route('login')->with([
+                'verificationRequired' => true,
                 'verificationEmail' => $user->email,
             ]);
         }
