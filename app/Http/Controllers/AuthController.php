@@ -253,9 +253,7 @@ class AuthController extends Controller
             $user->save();
         }
 
-        Auth::login($user);
-
-        $request->session()->regenerate();
+        $singleLoginSession->login($request, $user);
 
         $activityLogger->record(
             $request,
