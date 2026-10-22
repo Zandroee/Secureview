@@ -68,10 +68,15 @@ jobs:
       - name: Assemble Hostinger release bundle
         if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
         run: |
-          mkdir -p hostinger-release/build hostinger-release/app/Http/Controllers/Admin hostinger-release/app/Http/Controllers hostinger-release/routes
+          mkdir -p hostinger-release/build hostinger-release/app/Http/Controllers/Admin hostinger-release/app/Http/Controllers hostinger-release/app/Http/Middleware hostinger-release/app/Services hostinger-release/bootstrap hostinger-release/routes
           cp -a public/build/. hostinger-release/build/
           cp app/Http/Controllers/Admin/WarrantyController.php hostinger-release/app/Http/Controllers/Admin/WarrantyController.php
           cp app/Http/Controllers/CheckoutController.php hostinger-release/app/Http/Controllers/CheckoutController.php
+          cp app/Http/Controllers/AuthController.php hostinger-release/app/Http/Controllers/AuthController.php
+          cp app/Http/Middleware/EnforceSingleLoginSession.php hostinger-release/app/Http/Middleware/EnforceSingleLoginSession.php
+          cp app/Http/Middleware/HandleInertiaRequests.php hostinger-release/app/Http/Middleware/HandleInertiaRequests.php
+          cp app/Services/SingleLoginSessionService.php hostinger-release/app/Services/SingleLoginSessionService.php
+          cp bootstrap/app.php hostinger-release/bootstrap/app.php
           cp routes/web.php hostinger-release/routes/web.php
 
       - name: Upload complete Hostinger release bundle
