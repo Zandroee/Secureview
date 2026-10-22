@@ -20,6 +20,7 @@ class SingleLoginSessionTest extends TestCase
         $this->actingAs($user)
             ->withSession([
                 SingleLoginSessionService::SESSION_TOKEN_KEY => 'old-device-token',
+                SingleLoginSessionService::SESSION_USER_ID_KEY => $user->id,
             ])
             ->get('/settings')
             ->assertRedirect(route('login'))
@@ -43,6 +44,7 @@ class SingleLoginSessionTest extends TestCase
         $this->actingAs($user)
             ->withSession([
                 SingleLoginSessionService::SESSION_TOKEN_KEY => 'current-device-token',
+                SingleLoginSessionService::SESSION_USER_ID_KEY => $user->id,
             ])
             ->get('/settings')
             ->assertOk();
