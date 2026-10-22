@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 class SingleLoginSessionService
 {
     public const SESSION_TOKEN_KEY = 'secureview_active_login_token';
+    public const SESSION_USER_ID_KEY = 'secureview_active_login_user_id';
 
     public static function cacheKey(int|string $userId): string
     {
@@ -44,13 +45,20 @@ class SingleLoginSessionService
         $this->login($request, $user, true);
     }
 
+    public function hasActiveSession(User $user): bool
+    {
+        return is_string(Cache::get(self::cacheKey($user->getAuthIdentifier())));
+    }
+
     public function isCurrent(Request $request, User $user): bool
     {
         $sessionToken = $request->session()->get(self::SESSION_TOKEN_KEY);
+        $sessionUserId = $request->session()->get(self::SESSION_USER_ID_KEY);
         $activeToken = Cache::get(self::cacheKey($user->getAuthIdentifier()));
 
         return is_string($sessionToken)
             && $sessionToken !== ''
+            && (string) $sessionUserId === (string) $user->getAuthIdentifier()
             && is_string($activeToken)
             && hash_equals($activeToken, $sessionToken);
     }
@@ -92,8 +100,11 @@ class SingleLoginSessionService
         $cacheKey = self::cacheKey($user->getAuthIdentifier());
         $activeToken = Cache::get($cacheKey);
 
+        $sessionUserId = $request->session()->get(self::SESSION_USER_ID_KEY);
+
         if (
             is_string($sessionToken)
+            && (string) $sessionUserId === (string) $user->getAuthIdentifier()
             && is_string($activeToken)
             && hash_equals($activeToken, $sessionToken)
         ) {
@@ -107,5 +118,6 @@ class SingleLoginSessionService
 
         Cache::forever(self::cacheKey($user->getAuthIdentifier()), $token);
         $request->session()->put(self::SESSION_TOKEN_KEY, $token);
+        $request->session()->put(self::SESSION_USER_ID_KEY, $user->getAuthIdentifier());
     }
 }
