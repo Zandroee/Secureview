@@ -24,7 +24,7 @@ function iconBackground(type) {
     return "#f2f2f4";
 }
 
-export default function Notifications({ notifications: paginator = {} }) {
+export default function Notifications({ notifications: paginator = {}, unreadCount: totalUnreadCount = 0 }) {
     const { props } = usePage();
     const notifications = Array.isArray(paginator) ? paginator : (paginator.data ?? []);
     const currentPage = paginator.current_page ?? 1;
@@ -37,9 +37,7 @@ export default function Notifications({ notifications: paginator = {} }) {
     const [announcementWorking, setAnnouncementWorking] = useState(false);
     const isAdmin = props.auth?.user?.role === "admin" || props.auth?.user?.is_admin === true;
 
-    const unreadCount = notifications.filter(
-        (notification) => !notification.read
-    ).length;
+    const unreadCount = Number(totalUnreadCount) || 0;
 
     const visibleIds = notifications.map((notification) => String(notification.id));
     const allVisibleSelected =
@@ -176,7 +174,7 @@ export default function Notifications({ notifications: paginator = {} }) {
                                 </h1>
                                 <div className="small text-muted mt-1">
                                     {totalNotifications} notification(s) total
-                                    {unreadCount > 0 ? " · " + unreadCount + " unread on this page" : ""}
+                                    {unreadCount > 0 ? " · " + unreadCount + " unread" : ""}
                                 </div>
                             </div>
 
