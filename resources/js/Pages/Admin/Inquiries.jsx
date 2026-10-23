@@ -43,10 +43,10 @@ function formatStatus(status) {
 }
 
 export default function AdminServices({
-    services = [],
+    inquiries = [],
     filters = {},
 }) {
-    const serviceRows = services.data ?? [];
+    const serviceRows = inquiries.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
     const [urgency, setUrgency] = useState(filters.urgency ?? "");
@@ -126,7 +126,7 @@ export default function AdminServices({
                                 </span>
 
                                 <div className="fw-bold text-primary">
-                                    {services.total ?? serviceRows.length}
+                                    {inquiries.total ?? serviceRows.length}
                                 </div>
                             </div>
                         </div>
@@ -391,7 +391,7 @@ export default function AdminServices({
                                     </tbody>
                                 </table>
                             </div>
-                            <AdminPagination pagination={services} label="services" insideCard />
+                            <AdminPagination pagination={inquiries} label="services" insideCard />
                         </div>
 
 
