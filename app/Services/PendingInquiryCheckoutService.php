@@ -78,6 +78,8 @@ class PendingInquiryCheckoutService
 
             $inquiry = Inquiry::create([
                 'user_id' => $pending->user_id,
+                'order_id' => $order->id,
+                'payment_status' => 'paid',
                 'inquiry_number' => $inquiryNumber,
                 'inquirable_type' => get_class($item),
                 'inquirable_id' => $item->id,
@@ -107,7 +109,7 @@ class PendingInquiryCheckoutService
             CustomerNotification::create([
                 'user_id' => $pending->user_id,
                 'type' => 'inquiry',
-                'title' => 'Installation service request received',
+                'title' => 'Installation service booking submitted',
                 'message' => 'Your payment is confirmed and installation service request ' . $inquiry->inquiry_number . ' has been received.',
                 'action_url' => route('inquiries.show', $inquiry),
                 'related_type' => Inquiry::class,
