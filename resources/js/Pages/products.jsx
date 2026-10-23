@@ -27,6 +27,7 @@ export default function Products({ products = [] }) {
 
     const [search, setSearch] = useState(searchFromUrl);
     const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
     const [minPrice, setMinPrice] = useState("");
     const [maxPrice, setMaxPrice] = useState("");
     const [rating, setRating] = useState("");
@@ -45,9 +46,16 @@ export default function Products({ products = [] }) {
         [products]
     );
 
+    const productBrands = useMemo(
+        () => [...new Set(products.map((product) => String(product.brand ?? "").trim()).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b)),
+        [products]
+    );
+
     const filteredProducts = useMemo(() => {
         const query = normalize(search);
         const selectedCategories = new Set(categories.map(normalize));
+        const selectedBrands = new Set(brands.map(normalize));
         const minimum = minPrice.trim() === "" ? null : Number(minPrice);
         const maximum = maxPrice.trim() === "" ? null : Number(maxPrice);
 
@@ -62,6 +70,7 @@ export default function Products({ products = [] }) {
             ].filter(Boolean).join(" ");
             const matchesSearch = !query || normalize(text).includes(query);
             const matchesCategory = selectedCategories.size === 0 || selectedCategories.has(normalize(product.category));
+            const matchesBrand = selectedBrands.size === 0 || selectedBrands.has(normalize(product.brand));
             const priceValue = Number(product.price || 0);
             const matchesMinimum = minimum === null || priceValue >= minimum;
             const matchesMaximum = maximum === null || priceValue <= maximum;
@@ -72,7 +81,7 @@ export default function Products({ products = [] }) {
                 || (availability === "in_stock" && inStock)
                 || (availability === "out_of_stock" && !inStock);
 
-            return matchesSearch && matchesCategory && matchesMinimum && matchesMaximum
+            return matchesSearch && matchesCategory && matchesBrand && matchesMinimum && matchesMaximum
                 && matchesRating && matchesAvailability;
         });
 
@@ -86,7 +95,7 @@ export default function Products({ products = [] }) {
         };
 
         return sortBy === "recommended" ? result : result.sort(sorters[sortBy] ?? (() => 0));
-    }, [products, search, categories, minPrice, maxPrice, rating, availability, sortBy]);
+    }, [products, search, categories, brands, minPrice, maxPrice, rating, availability, sortBy]);
 
     const productsPerPage = 8;
     const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
@@ -106,9 +115,17 @@ export default function Products({ products = [] }) {
         setCurrentPage(1);
     };
 
+    const toggleBrand = (value) => {
+        setBrands((previous) => previous.includes(value)
+            ? previous.filter((item) => item !== value)
+            : [...previous, value]);
+        setCurrentPage(1);
+    };
+
     const resetFilters = () => {
         setSearch("");
         setCategories([]);
+        setBrands([]);
         setMinPrice("");
         setMaxPrice("");
         setRating("");
@@ -120,6 +137,7 @@ export default function Products({ products = [] }) {
     const activeFilters = [
         ...(search.trim() ? [{ key: "search", label: `Search: “${search.trim()}”`, remove: () => setSearch("") }] : []),
         ...categories.map((value) => ({ key: "category-" + value, label: value, remove: () => toggleCategory(value) })),
+        ...brands.map((value) => ({ key: "brand-" + value, label: "Brand: " + value, remove: () => toggleBrand(value) })),
         ...(minPrice !== "" ? [{ key: "minPrice", label: "From " + money(minPrice), remove: () => setMinPrice("") }] : []),
         ...(maxPrice !== "" ? [{ key: "maxPrice", label: "Up to " + money(maxPrice), remove: () => setMaxPrice("") }] : []),
         ...(rating !== "" ? [{ key: "rating", label: rating + "+ stars", remove: () => setRating("") }] : []),
@@ -141,7 +159,7 @@ export default function Products({ products = [] }) {
                         id="product-search"
                         type="search"
                         className="form-control catalog-search-input"
-                        placeholder="Search products by name, category, feature, or warranty"
+                        placeholder="Search products by name, brand, category, feature, or warranty"
                         value={search}
                         onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
                         style={{
@@ -182,6 +200,22 @@ export default function Products({ products = [] }) {
                                             <label className="form-check-label" htmlFor={"product-category-" + item}>{item}</label>
                                         </div>
                                     )) : <p className="small text-muted mb-0">No categories available</p>}
+                                </div>
+
+                                <div className="mb-4">
+                                    <h3 className="h6 fw-bold mb-2">Brand</h3>
+                                    {productBrands.length ? productBrands.map((item) => (
+                                        <div className="form-check mb-1" key={item}>
+                                            <input
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                id={"product-brand-" + item}
+                                                checked={brands.includes(item)}
+                                                onChange={() => toggleBrand(item)}
+                                            />
+                                            <label className="form-check-label" htmlFor={"product-brand-" + item}>{item}</label>
+                                        </div>
+                                    )) : <p className="small text-muted mb-0">No brands available</p>}
                                 </div>
 
                                 <div className="mb-4">
