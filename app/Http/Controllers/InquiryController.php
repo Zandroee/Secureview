@@ -557,7 +557,7 @@ class InquiryController extends Controller
 
         $inquiries = $request->user()
             ->inquiries()
-            ->with(['technician', 'technicians'])
+            ->with(['technician', 'technicians', 'pendingCheckout.order'])
             ->latest()
             ->get()
             ->map(function (Inquiry $inquiry) {
@@ -586,6 +586,8 @@ class InquiryController extends Controller
                     'google_place_id' => $inquiry->google_place_id,
                     'street_address' => $inquiry->street_address,
                     'status' => $inquiry->status,
+                    'payment_status' => $inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable',
+                    'payment_method' => $inquiry->pendingCheckout?->order?->payment_method,
                     'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
                     'created_date' => $inquiry->created_at?->format('M d, Y'),
                     'created_time' => $inquiry->created_at?->format('h:i A'),
@@ -605,7 +607,7 @@ class InquiryController extends Controller
             abort(404);
         }
 
-        $inquiry->load(['inquirable', 'technician', 'technicians']);
+        $inquiry->load(['inquirable', 'technician', 'technicians', 'pendingCheckout.order']);
 
         return Inertia::render('inquiry_details', [
             'inquiry' => [
@@ -646,6 +648,8 @@ class InquiryController extends Controller
                 'reschedule_request_note' => $inquiry->reschedule_request_note,
                 'notes' => $inquiry->notes,
                 'status' => $inquiry->status,
+                'payment_status' => $inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable',
+                'payment_method' => $inquiry->pendingCheckout?->order?->payment_method,
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
             ],
             'success' => $request->session()->get('success'),
