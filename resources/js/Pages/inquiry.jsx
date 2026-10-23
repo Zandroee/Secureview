@@ -298,7 +298,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                             fontFamily: "Outfit, sans-serif",
                                         }}
                                     >
-                                        Inquiry
+                                        Service Request
                                     </div>
                                 </div>
 
@@ -707,7 +707,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                     </select>
                                                     {errors.payment_method && <div className="invalid-feedback">{errors.payment_method}</div>}
                                                     <div className="form-text">
-                                                        You will be redirected to PayMongo. SecureView creates the installation inquiry only after payment is confirmed.
+                                                        You will be redirected to PayMongo. SecureView creates the installation service request only after payment is confirmed.
                                                     </div>
                                                 </div>
                                             )}
@@ -760,7 +760,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                             ? "PROCESSING..."
                                             : data.service_type === "Installation"
                                                 ? "CONTINUE TO PAYMENT"
-                                                : "CONFIRM INQUIRY"}
+                                                : "CONFIRM SERVICE REQUEST"}
                                     </button>
                                 </form>
                             </div>
@@ -871,7 +871,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                             }))}
                                                         >
                                                             <i className={"bi " + (isSelected ? "bi-check-circle me-1" : "bi-box-arrow-in-down-right me-1")} />
-                                                            {isSelected ? "Selected" : data.service_type === "Installation" ? "Use for installation" : "Attach to inquiry"}
+                                                            {isSelected ? "Selected" : data.service_type === "Installation" ? "Use for installation" : "Attach to service request"}
                                                         </button>
                                                         <button
                                                             type="button"
@@ -899,7 +899,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                         <div className="small fw-semibold mt-2">{selectedCatalogItem ? "No additional items in your cart" : "Your cart is empty"}</div>
                                         <div className="small text-muted mt-1 mb-2">
                                             {selectedCatalogItem
-                                                ? "Your selected catalog item is still attached to this inquiry. Add other products or packages from their details pages if needed."
+                                                ? "Your selected catalog item is still attached to this service request. Add other products or packages from their details pages if needed."
                                                 : "Add a product or package from its details page, then return here to select it."}
                                         </div>
                                         <div className="d-flex justify-content-center gap-2">
