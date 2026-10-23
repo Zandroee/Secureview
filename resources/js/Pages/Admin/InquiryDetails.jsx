@@ -412,7 +412,7 @@ export default function AdminInquiryDetails({
 
             {managingTeam && (
                 <ManageTechnicianTeamModal
-                    service={service}
+                    inquiry={service}
                     technicians={technicians}
                     onClose={() => setManagingTeam(false)}
                 />
