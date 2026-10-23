@@ -73,7 +73,7 @@ export default function ServiceHistory({ services = [], filters = {} }) {
                                         id="service-history-search"
                                         type="text"
                                         className="form-control"
-                                        placeholder="Inquiry number, customer, or service"
+                                        placeholder="Service number, customer, or service type"
                                         value={search}
                                         onChange={(event) => setSearch(event.target.value)}
                                     />
