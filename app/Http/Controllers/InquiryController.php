@@ -591,8 +591,6 @@ class InquiryController extends Controller
                     'order_id' => $inquiry->pendingCheckout?->order?->id,
                     'order_number' => $inquiry->pendingCheckout?->order?->order_number,
                     'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
-                'created_date' => $inquiry->created_at?->format('M d, Y'),
-                'created_time' => $inquiry->created_at?->format('h:i A'),
                     'created_date' => $inquiry->created_at?->format('M d, Y'),
                     'created_time' => $inquiry->created_at?->format('h:i A'),
                 ];
@@ -657,6 +655,8 @@ class InquiryController extends Controller
                 'order_id' => $inquiry->pendingCheckout?->order?->id,
                 'order_number' => $inquiry->pendingCheckout?->order?->order_number,
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
+                'created_date' => $inquiry->created_at?->format('M d, Y'),
+                'created_time' => $inquiry->created_at?->format('h:i A'),
             ],
             'success' => $request->session()->get('success'),
         ]);
