@@ -40,8 +40,14 @@ class TechnicianWorkspaceController extends Controller
             ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, true))
             ->values();
 
-        $busySlots = $technician->assignedInquiries()
+        // Include both current team assignments and legacy technician_id assignments.
+        $busySlots = Inquiry::query()
             ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->where(function ($query) use ($technician) {
+                $query->where('technician_id', $technician->id)
+                    ->orWhereHas('technicians', fn ($team) => $team->where('users.id', $technician->id));
+            })
             ->get(['preferred_date', 'preferred_time'])
             ->map(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d') . '|' . $job->preferred_time)
             ->all();
