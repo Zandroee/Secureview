@@ -7,6 +7,7 @@ use App\Services\InventoryService;
 use App\Services\OrderCancellationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -33,6 +34,8 @@ class PurchaseController extends Controller
                     'cancellation_reason' => $order->cancellation_reason,
                     'can_cancel' => $this->canCancel($order),
                     'created_at' => $order->created_at?->format('M d, Y h:i A'),
+                    'payment_deadline_at' => $this->paymentDeadlineAt($order)?->format('M d, Y h:i A'),
+                    'payment_deadline_passed' => $this->paymentDeadlinePassed($order),
                     'items' => $order->items->map(function ($item) {
                         return [
                             'id' => $item->id,
@@ -100,6 +103,9 @@ class PurchaseController extends Controller
                 'delivery_longitude' => $order->delivery_longitude,
                 'notes' => $order->notes,
                 'created_at' => $order->created_at?->format('M d, Y h:i A'),
+                'payment_deadline_at' => $this->paymentDeadlineAt($order)?->format('M d, Y h:i A'),
+                'payment_deadline_passed' => $this->paymentDeadlinePassed($order),
+                'payment_days_remaining' => $this->paymentDaysRemaining($order),
                 'items' => $order->items->map(function ($item) {
                     return [
                         'id' => $item->id,
@@ -138,6 +144,38 @@ class PurchaseController extends Controller
         return back()->with('success', 'Order ' . $order->order_number . ' was cancelled.');
     }
 
+    private function paymentDeadlineAt(Order $order): ?\Illuminate\Support\Carbon
+    {
+        if ($order->created_at === null || $order->payment_status === 'paid' || $order->paid_at !== null) {
+            return null;
+        }
+
+        if (!in_array($order->order_status, ['pending', 'awaiting_payment', 'payment_failed'], true)
+            || !in_array($order->payment_status, ['pending', 'failed'], true)) {
+            return null;
+        }
+
+        return $order->created_at->copy()->addDays(14);
+    }
+
+    private function paymentDeadlinePassed(Order $order): bool
+    {
+        $deadline = $this->paymentDeadlineAt($order);
+
+        return $deadline !== null && $deadline->lte(now());
+    }
+
+    private function paymentDaysRemaining(Order $order): ?int
+    {
+        $deadline = $this->paymentDeadlineAt($order);
+
+        if ($deadline === null) {
+            return null;
+        }
+
+        return max(0, (int) now()->diffInDays($deadline, false));
+    }
+
     private function canCancel(Order $order): bool
     {
         return $order->payment_status !== 'paid'
@@ -146,10 +184,40 @@ class PurchaseController extends Controller
             && in_array($order->order_status, ['pending', 'awaiting_payment', 'payment_failed'], true);
     }
 
-    public function pay(Request $request, Order $order, InventoryService $inventory)
-    {
+    public function pay(
+        Request $request,
+        Order $order,
+        InventoryService $inventory,
+        OrderCancellationService $cancellation
+    ) {
         if ($order->user_id !== $request->user()->id) {
             abort(404);
+        }
+
+        if (
+            $order->paid_at === null
+            && $order->payment_status !== 'paid'
+            && $this->paymentDeadlinePassed($order)
+            && in_array($order->order_status, ['pending', 'awaiting_payment', 'payment_failed'], true)
+        ) {
+            try {
+                $cancellation->cancel(
+                    $order,
+                    $inventory,
+                    'Automatically cancelled after 14 days without payment.'
+                );
+            } catch (ValidationException $exception) {
+                throw $exception;
+            } catch (\Throwable $exception) {
+                report($exception);
+
+                return back()->withErrors([
+                    'payment' => 'The payment deadline has passed, but SecureView could not safely verify or expire the checkout. Please contact SecureView support before trying again.',
+                ]);
+            }
+
+            return redirect()->route('purchases.show', $order)
+                ->with('success', 'This unpaid order was cancelled because its 14-day payment window expired.');
         }
 
         if ($order->payment_method === 'cash') {
