@@ -55,6 +55,16 @@ class JobNotificationService
         return $sent;
     }
 
+    public function notifyUrgencyEscalations($inquiries): void
+    {
+        foreach ($inquiries as $inquiry) {
+            if ($inquiry instanceof Inquiry && in_array($inquiry->urgency, ['urgent', 'emergency'], true)) {
+                $date = $inquiry->preferred_date?->format('F j, Y') ?? 'a date to be confirmed';
+                $this->notifyUrgentService($inquiry, $date);
+            }
+        }
+    }
+
     private function notifyUrgentService(Inquiry $inquiry, string $date): void
     {
         $priority = strtoupper($inquiry->urgency);
