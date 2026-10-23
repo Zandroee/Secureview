@@ -260,20 +260,45 @@ class TechnicianWorkspaceController extends Controller
         }
 
         DB::transaction(function () use ($request, $inquiry, $oldStatus, $newStatus, $notifications) {
-            $inquiry->update(['status' => $newStatus]);
+            $lockedInquiry = Inquiry::query()
+                ->whereKey($inquiry->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (!$lockedInquiry->paymentAllowsTechnicianWork()) {
+                throw ValidationException::withMessages([
+                    'status' => 'Payment must be confirmed before a technician can update this service.',
+                ]);
+            }
+
+            if ($newStatus === 'completed' && !$lockedInquiry->serviceRecord()->exists()) {
+                throw ValidationException::withMessages([
+                    'status' => 'Submit a post-service record before completing this job.',
+                ]);
+            }
+
+            if ($newStatus === 'in_progress' && $lockedInquiry->status !== 'confirmed') {
+                throw ValidationException::withMessages(['status' => 'Only a confirmed job can be started.']);
+            }
+
+            if ($newStatus === 'completed' && $lockedInquiry->status !== 'in_progress') {
+                throw ValidationException::withMessages(['status' => 'Start the job before marking it completed.']);
+            }
+
+            $lockedInquiry->update(['status' => $newStatus]);
 
             CustomerNotification::create([
-                'user_id' => $inquiry->user_id,
+                'user_id' => $lockedInquiry->user_id,
                 'type' => 'inquiry_status',
                 'title' => 'Service status updated',
-                'message' => 'Your service ' . $inquiry->inquiry_number . ' is now ' . str_replace('_', ' ', $newStatus) . '.',
-                'action_url' => route('inquiries.show', $inquiry),
+                'message' => 'Your service ' . $lockedInquiry->inquiry_number . ' is now ' . str_replace('_', ' ', $newStatus) . '.',
+                'action_url' => route('inquiries.show', $lockedInquiry),
                 'related_type' => Inquiry::class,
-                'related_id' => $inquiry->id,
+                'related_id' => $lockedInquiry->id,
             ]);
 
-            $inquiry->load('technicians');
-            $notifications->notifyStatusChanged($inquiry, $oldStatus, $newStatus, $request->user());
+            $lockedInquiry->load('technicians');
+            $notifications->notifyStatusChanged($lockedInquiry, $oldStatus, $newStatus, $request->user());
         });
 
         return back()->with('success', $newStatus === 'completed'
