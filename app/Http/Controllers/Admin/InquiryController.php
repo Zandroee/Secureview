@@ -542,6 +542,10 @@ class InquiryController extends Controller
         $oldStatus = $inquiry->status;
         $newStatus = $validated['status'];
 
+        if (in_array($newStatus, ['in_progress', 'completed'], true) && !$inquiry->paymentAllowsTechnicianWork()) {
+            return back()->withErrors(['status' => 'Payment must be confirmed before this service can be started or completed.']);
+        }
+
         if ($newStatus === 'confirmed' && $oldStatus !== 'confirmed') {
             return back()->withErrors([
                 'status' => 'Use Confirm & Assign Technician to set the schedule before confirming this inquiry.',
