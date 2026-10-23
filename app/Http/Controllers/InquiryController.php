@@ -621,6 +621,12 @@ class InquiryController extends Controller
     {
         abort_unless($inquiry->user_id === $request->user()->id, 404);
 
+        if (!$inquiry->paymentAllowsTechnicianWork()) {
+            throw ValidationException::withMessages([
+                'reschedule' => 'Payment must be confirmed before this service can be rescheduled.',
+            ]);
+        }
+
         if ($inquiry->status !== 'confirmed') {
             throw ValidationException::withMessages([
                 'reschedule' => 'Only confirmed services can be rescheduled by customers.',
