@@ -128,7 +128,7 @@ class JobNotificationService
             if ($notification->wasRecentlyCreated && filled($recipient->email)) {
                 try {
                     Mail::raw($recipientMessage, fn ($mail) => $mail->to($recipient->email)->subject($subject));
-                } catch (\\Throwable $exception) {
+                } catch (\Throwable $exception) {
                     report($exception);
                 }
             }
@@ -161,7 +161,7 @@ class JobNotificationService
             if ($notification->wasRecentlyCreated && filled($customer->email)) {
                 try {
                     Mail::raw($customerMessage, fn ($mail) => $mail->to($customer->email)->subject($subject));
-                } catch (\\Throwable $exception) {
+                } catch (\Throwable $exception) {
                     report($exception);
                 }
             }
