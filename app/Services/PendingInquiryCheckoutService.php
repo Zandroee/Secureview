@@ -39,9 +39,15 @@ class PendingInquiryCheckoutService
             }
 
             if ($pending->inquiry_id) {
-                return Inquiry::query()
+                $inquiry = Inquiry::query()
                     ->where('user_id', $pending->user_id)
                     ->find($pending->inquiry_id);
+
+                if ($inquiry && $pending->status === 'pending_payment' && $order->payment_status === 'paid') {
+                    $pending->update(['status' => 'paid']);
+                }
+
+                return $inquiry;
             }
 
             if ($pending->status !== 'pending_payment' || $order->payment_status !== 'paid') {
