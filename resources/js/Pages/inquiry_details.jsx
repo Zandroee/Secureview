@@ -415,8 +415,19 @@ export default function ServiceDetails({ inquiry: service, success }) {
                                     </div>
                                 </div>
 
+                                {service.order_id && (
+                                    <Link
+                                        href={"/purchases/" + service.order_id}
+                                        className="btn btn-outline-primary fw-bold w-100 mt-3"
+                                    >
+                                        {service.payment_status === "pending" || service.payment_status === "failed"
+                                            ? "VIEW ORDER / COMPLETE PAYMENT"
+                                            : "VIEW RELATED ORDER"}
+                                    </Link>
+                                )}
+
                                 <Link
-                                    href="/service"
+                                    href="/inquiry"
                                     className="btn btn-outline-primary fw-bold w-100 mt-3"
                                 >
                                     REQUEST ANOTHER SERVICE
