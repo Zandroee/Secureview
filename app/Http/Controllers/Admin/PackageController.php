@@ -223,7 +223,7 @@ class PackageController extends Controller
 
         $componentsChanged = $oldComposition !== $newComposition;
 
-        if ($componentsChanged && $this->hasReferences($package)) {
+        if ($componentsChanged && ($package->orderItems()->exists() || $this->hasReferences($package))) {
             return back()->withErrors([
                 'items' => 'This package has existing purchase, cart, inquiry, or review history. Its bundle contents are locked. Create a new package to use different components.',
             ]);
