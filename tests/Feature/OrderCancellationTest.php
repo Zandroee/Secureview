@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Inquiry;
 use App\Models\Order;
+use App\Models\PendingInquiryCheckout;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
