@@ -77,8 +77,8 @@ export default function AdminCalendar({
             return (
                 <span
                     className="d-block mx-auto mt-1 rounded-circle"
-                    style={{ width: "5px", height: "5px", backgroundColor: "#b7791f" }}
-                    title="Some time slots are blocked or technician capacity is in use"
+                    style={{ width: "5px", height: "5px", backgroundColor: "#eab308" }}
+                    title="Some time slots are blocked or technician availability is limited"
                     aria-label="Some time slots are blocked or technician capacity is in use"
                 />
             );
@@ -212,8 +212,8 @@ export default function AdminCalendar({
                         Fully booked / blocked
                     </span>
                     <span className="d-inline-flex align-items-center gap-1">
-                        <span className="rounded-circle" style={{ width: 8, height: 8, background: "#b7791f" }} />
-                        Partial capacity
+                        <span className="rounded-circle" style={{ width: 8, height: 8, background: "#eab308" }} />
+                        Limited availability
                     </span>
                 </div>
 
