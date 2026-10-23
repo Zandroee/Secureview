@@ -1844,3 +1844,94 @@ html[data-bs-theme="dark"] .container-fluid > .row > main.col-md-9.col-lg-10 .ta
     }
 }
 
+/* About-page trust strip inserted above the FAQs. */
+.about-trust-section {
+    background: linear-gradient(135deg, #f4f8ff 0%, #edf4fd 100%);
+    color: #172033;
+}
+
+.about-trust-heading {
+    color: #172033;
+    font-family: "Outfit", sans-serif;
+    font-size: clamp(1.75rem, 2.2vw, 2.35rem);
+    line-height: 1.15;
+    letter-spacing: -.025em;
+}
+
+.about-trust-intro {
+    color: #536176;
+    line-height: 1.65;
+}
+
+.about-trust-card {
+    padding: 1.25rem 1.1rem;
+    border: 1px solid #dce6f2;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, .92);
+    box-shadow: 0 8px 24px rgba(30, 64, 110, .06);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.about-trust-card:hover {
+    transform: translateY(-3px);
+    border-color: #9fc4fb;
+    box-shadow: 0 14px 32px rgba(30, 64, 110, .11);
+}
+
+.about-trust-card p {
+    color: #5b687b;
+    font-size: .9rem;
+    line-height: 1.55;
+}
+
+.about-trust-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: #e1edff;
+    color: #1769d2;
+    font-size: 1.35rem;
+}
+
+html[data-bs-theme="dark"] .about-trust-section {
+    background: linear-gradient(135deg, #111827 0%, #152337 100%);
+    color: #e5e7eb;
+}
+
+html[data-bs-theme="dark"] .about-trust-heading {
+    color: #f3f6fb;
+}
+
+html[data-bs-theme="dark"] .about-trust-intro,
+html[data-bs-theme="dark"] .about-trust-card p {
+    color: #c1ccdb !important;
+}
+
+html[data-bs-theme="dark"] .about-trust-card {
+    background: #1f2937;
+    border-color: #3e5068;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+}
+
+html[data-bs-theme="dark"] .about-trust-card:hover {
+    border-color: #38bdf8;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, .26);
+}
+
+html[data-bs-theme="dark"] .about-trust-icon {
+    background: #12344b;
+    color: #67e8f9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .about-trust-card {
+        transition: none;
+    }
+    .about-trust-card:hover {
+        transform: none;
+    }
+}
+
