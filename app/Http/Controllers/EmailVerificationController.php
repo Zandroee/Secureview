@@ -68,6 +68,47 @@ class EmailVerificationController extends Controller
         );
     }
 
+    /**
+     * Gracefully redirect older signed verification emails to the code flow.
+     * The old link itself no longer verifies the account.
+     */
+    public function redirectLegacyLink(
+        Request $request,
+        string $id,
+        string $hash,
+        EmailVerificationCodeService $codes
+    ): RedirectResponse {
+        $user = User::findOrFail($id);
+
+        if (!hash_equals(sha1($user->getEmailForVerification()), $hash)) {
+            abort(403);
+        }
+
+        if ($user->hasVerifiedEmail()) {
+            return redirect()->route('login')->with(
+                'status',
+                'This email address is already verified. You can now log in.'
+            );
+        }
+
+        try {
+            $sent = $codes->send($user);
+        } catch (\\Throwable $exception) {
+            $sent = false;
+            Log::warning('SecureView could not replace an older verification link with a code.', [
+                'user_id' => $user->id,
+                'exception' => get_class($exception),
+            ]);
+        }
+
+        return redirect()->route('verification.notice')->with([
+            'verificationEmail' => $user->email,
+            'status' => $sent
+                ? 'Email verification now uses a six-digit code. We sent a fresh code to your inbox.'
+                : 'Email verification now uses a six-digit code. Check your inbox for the current code, or request a new one below.',
+        ]);
+    }
+
     public function resend(Request $request, EmailVerificationCodeService $codes): RedirectResponse
     {
         $validated = $request->validate([
