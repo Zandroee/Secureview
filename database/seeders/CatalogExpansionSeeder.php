@@ -9,7 +9,9 @@ class CatalogExpansionSeeder extends Seeder
 {
     public function run(): void
     {
-        $now = now();
+        // Keep the catalog expansion all-or-nothing if a row or relationship fails.
+        DB::transaction(function (): void {
+            $now = now();
 
         // These are additive catalog suggestions. Never alter existing admin-managed
         // product/package records or re-run the general demo seeders in production.
@@ -274,12 +276,15 @@ class CatalogExpansionSeeder extends Seeder
             $items = $package['items'];
             unset($package['items']);
 
+            // Never attach bundle contents to an existing same-named customer/admin package.
+            // Only create the relationships when this seeder creates the package itself.
             $exists = DB::table('packages')->where('name', $package['name'])->exists();
 
-            if (!$exists) {
-                DB::table('packages')->insert($package);
+            if ($exists) {
+                continue;
             }
 
+            DB::table('packages')->insert($package);
             $packageId = DB::table('packages')->where('name', $package['name'])->value('id');
 
             if (!$packageId) {
@@ -304,5 +309,6 @@ class CatalogExpansionSeeder extends Seeder
                 ]);
             }
         }
+        });
     }
 }
