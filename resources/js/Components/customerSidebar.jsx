@@ -15,7 +15,7 @@ const items = [
     },
     {
         key: "inquiries",
-        label: "INQUIRY HISTORY",
+        label: "SERVICE HISTORY",
         href: "/inquiries",
         icon: "bi bi-chat-left-text",
     },
