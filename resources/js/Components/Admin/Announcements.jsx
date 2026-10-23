@@ -59,6 +59,7 @@ export default function Announcements({
                 )}
 
                 {rows.length > 0 ? (
+                    <>
                     <div className="d-flex flex-column gap-2">
                         {pageRows.map((inquiry) => (
                             <Link
@@ -106,6 +107,7 @@ export default function Announcements({
                         pageSize={pageSize}
                         onPageChange={setPage}
                     />
+                    </>
                 ) : (
                     <div className="text-center border rounded-3 bg-light p-4">
                         <i className="bi bi-chat-square-text fs-4 text-muted d-block mb-2" />
