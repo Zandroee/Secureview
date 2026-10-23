@@ -536,7 +536,7 @@ class InquiryController extends Controller
             if (!$checkoutSessionId || !$checkoutUrl) {
                 $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
                 return back()->withErrors([
-                    'payment' => 'The payment gateway returned an invalid checkout session. No service request has been submitted.',
+                    'payment' => 'The payment gateway returned an invalid checkout session. Your service request is saved, but payment is not confirmed. Open Order History to retry payment.',
                 ])->withInput();
             }
 
@@ -546,7 +546,7 @@ class InquiryController extends Controller
             report($exception);
             $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
             return back()->withErrors([
-                'payment' => 'Unable to connect to the payment gateway. No service request has been submitted; please try again.',
+                'payment' => 'Unable to connect to the payment gateway. Your service request remains saved, but payment is not confirmed. Open Order History to retry payment.',
             ])->withInput();
         }
     }
@@ -588,7 +588,11 @@ class InquiryController extends Controller
                     'status' => $inquiry->status,
                     'payment_status' => $inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable',
                     'payment_method' => $inquiry->pendingCheckout?->order?->payment_method,
+                    'order_id' => $inquiry->pendingCheckout?->order?->id,
+                    'order_number' => $inquiry->pendingCheckout?->order?->order_number,
                     'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
+                'created_date' => $inquiry->created_at?->format('M d, Y'),
+                'created_time' => $inquiry->created_at?->format('h:i A'),
                     'created_date' => $inquiry->created_at?->format('M d, Y'),
                     'created_time' => $inquiry->created_at?->format('h:i A'),
                 ];
@@ -650,6 +654,8 @@ class InquiryController extends Controller
                 'status' => $inquiry->status,
                 'payment_status' => $inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable',
                 'payment_method' => $inquiry->pendingCheckout?->order?->payment_method,
+                'order_id' => $inquiry->pendingCheckout?->order?->id,
+                'order_number' => $inquiry->pendingCheckout?->order?->order_number,
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
             ],
             'success' => $request->session()->get('success'),
