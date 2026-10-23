@@ -51,6 +51,12 @@ const menuGroups = [
             icon: "bi-bag-check",
         },
         {
+            label: "Orders History",
+            href: "/admin/order-history",
+            key: "order-history",
+            icon: "bi-clock-history",
+        },
+        {
             label: "Packages",
             href: "/admin/packages",
             key: "packages",
