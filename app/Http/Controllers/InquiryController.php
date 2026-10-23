@@ -546,6 +546,8 @@ class InquiryController extends Controller
                     'street_address' => $inquiry->street_address,
                     'status' => $inquiry->status,
                     'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
+                    'created_date' => $inquiry->created_at?->format('M d, Y'),
+                    'created_time' => $inquiry->created_at?->format('h:i A'),
                 ];
             })->values();
 
