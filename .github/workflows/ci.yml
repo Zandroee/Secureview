@@ -76,6 +76,8 @@ jobs:
           cp app/Http/Controllers/Admin/ProductController.php hostinger-release/app/Http/Controllers/Admin/ProductController.php
           cp app/Http/Controllers/Admin/PackageController.php hostinger-release/app/Http/Controllers/Admin/PackageController.php
           cp app/Http/Controllers/Admin/DashboardController.php hostinger-release/app/Http/Controllers/Admin/DashboardController.php
+          cp app/Http/Controllers/Admin/UserController.php hostinger-release/app/Http/Controllers/Admin/UserController.php
+          cp app/Http/Controllers/Admin/InquiryController.php hostinger-release/app/Http/Controllers/Admin/InquiryController.php
           cp app/Http/Controllers/Admin/ActivityLogController.php hostinger-release/app/Http/Controllers/Admin/ActivityLogController.php
           cp app/Http/Controllers/CheckoutController.php hostinger-release/app/Http/Controllers/CheckoutController.php
           cp app/Http/Controllers/InquiryController.php hostinger-release/app/Http/Controllers/InquiryController.php
