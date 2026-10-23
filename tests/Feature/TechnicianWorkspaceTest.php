@@ -148,11 +148,26 @@ class TechnicianWorkspaceTest extends TestCase
             $technicianTwo->id => ['assigned_by' => $admin->id],
         ]);
 
-        // Any member of the assigned team can complete the job.
+        // A job cannot be marked completed without a Post-Service Record.
         $this->actingAs($technicianTwo)->patch(route('technician.jobs.status', $inquiry), [
             'status' => 'completed',
+        ])->assertRedirect()->assertSessionHasErrors('status');
+
+        $this->assertDatabaseHas('inquiries', ['id' => $inquiry->id, 'status' => 'in_progress']);
+
+        // Any member of the assigned team can submit the record and complete the job.
+        $this->actingAs($technicianTwo)->post(route('technician.jobs.post-service-record', $inquiry), [
+            'work_summary' => 'Repaired the camera connection and verified live recording.',
+            'labor_charge' => 1200,
+            'additional_charge' => 0,
+            'items' => [],
         ])->assertRedirect()->assertSessionHasNoErrors();
 
+        $this->assertDatabaseHas('service_records', [
+            'inquiry_id' => $inquiry->id,
+            'technician_id' => $technicianTwo->id,
+            'total_income' => 1200,
+        ]);
         $this->assertDatabaseHas('inquiries', ['id' => $inquiry->id, 'status' => 'completed']);
         $this->assertDatabaseHas('customer_notifications', [
             'user_id' => $admin->id,
