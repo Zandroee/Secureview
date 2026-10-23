@@ -135,9 +135,7 @@ export default function Inquiries({ inquiries = [] }) {
                                                         <div className="small text-muted mt-1">
                                                             DATE:{" "}
                                                             {
-                                                                service.created_at?.split(
-                                                                    " "
-                                                                )[0]
+                                                                service.created_date || service.created_at
                                                             }
                                                         </div>
 
