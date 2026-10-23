@@ -301,7 +301,7 @@ export default function Notifications({ notifications: paginator = {}, unreadCou
                                 </h5>
 
                                 <p className="small text-muted mb-0">
-                                    Important updates about your orders and inquiries will appear here.
+                                    Important updates about your orders and service requests will appear here.
                                 </p>
                             </div>
                         ) : (
