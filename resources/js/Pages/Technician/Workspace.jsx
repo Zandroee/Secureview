@@ -6,7 +6,6 @@ import { Link, router, usePage } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 import { googleMapsDirectionsUrl } from "../../Components/GoogleMaps/ServiceLocation";
 import TechnicianSidebar from "../../Components/Technician/Sidebar";
-import TechnicianSidebar from "../../Components/Technician/Sidebar";
 
 function statusClass(status) {
     if (status === "completed") return "bg-success-subtle text-success";
