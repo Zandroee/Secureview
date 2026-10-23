@@ -145,10 +145,15 @@ class TechnicianWorkspaceController extends Controller
             ]);
         }
 
-        $hasConflict = $technician->assignedInquiries()
+        $hasConflict = Inquiry::query()
+            ->where('id', '!=', $inquiry->id)
             ->whereDate('preferred_date', $inquiry->preferred_date)
             ->where('preferred_time', $inquiry->preferred_time)
             ->whereIn('status', ['confirmed', 'in_progress'])
+            ->where(function ($query) use ($technician) {
+                $query->where('technician_id', $technician->id)
+                    ->orWhereHas('technicians', fn ($team) => $team->where('users.id', $technician->id));
+            })
             ->exists();
 
         if ($hasConflict) {
@@ -186,11 +191,15 @@ class TechnicianWorkspaceController extends Controller
                 ]);
             }
 
-            $hasConflictAfterLock = $lockedTechnician->assignedInquiries()
+            $hasConflictAfterLock = Inquiry::query()
+                ->where('id', '!=', $lockedInquiry->getKey())
                 ->whereDate('preferred_date', $lockedInquiry->preferred_date)
                 ->where('preferred_time', $lockedInquiry->preferred_time)
                 ->whereIn('status', ['confirmed', 'in_progress'])
-                ->where('inquiries.id', '!=', $lockedInquiry->getKey())
+                ->where(function ($query) use ($lockedTechnician) {
+                    $query->where('technician_id', $lockedTechnician->id)
+                        ->orWhereHas('technicians', fn ($team) => $team->where('users.id', $lockedTechnician->id));
+                })
                 ->exists();
 
             if ($hasConflictAfterLock) {
