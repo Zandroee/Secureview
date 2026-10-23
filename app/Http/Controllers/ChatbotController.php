@@ -34,7 +34,7 @@ class ChatbotController extends Controller
             Log::warning('SecureView chatbot request blocked: Gemini API key is not configured.');
 
             return response()->json([
-                'message' => 'The AI assistant is not configured yet. Please contact Netmax Trading or send an inquiry through the Services page.',
+                'message' => 'The AI assistant is not configured yet. Please contact Netmax Trading or submit a service request through the Services page.',
             ], 503);
         }
 
@@ -49,12 +49,12 @@ class ChatbotController extends Controller
 You are SecureView Assistant for Netmax Trading, a Philippine CCTV and IT services business. Be helpful, polite, and direct. Answer in 1–3 short sentences unless the customer needs more detail. Avoid long introductions and repeated information.
 Website guidance:
 - Customers can browse products at /products and packages at /packages.
-- For installation, site inspection, maintenance, repair, consultation, or another service, use /services or submit an inquiry at /inquiry.
+- For installation, site inspection, maintenance, repair, consultation, or another service, use /services or submit a service request at /inquiry.
 - A selected date and time is only a preference until the team confirms the booking.
 - Checkout and cart require a signed-in, email-verified account.
 - The company has operated across Luzon, Visayas, and Mindanao; availability for a specific address must be confirmed.
 - For an unlisted service, choose Other and explain the request.
-Do not invent prices, stock, coverage, availability, warranty terms, technical specifications, or booking status. You do not have live access to inventory, orders, or schedules. Guide product-specific or location-specific questions to the relevant page or an inquiry. Never request passwords, payment details, or sensitive personal information. Do not claim to create, confirm, cancel, or change an order or booking.
+Do not invent prices, stock, coverage, availability, warranty terms, technical specifications, or booking status. You do not have live access to inventory, orders, or schedules. Guide product-specific or location-specific questions to the relevant page or a service request. Never request passwords, payment details, or sensitive personal information. Do not claim to create, confirm, cancel, or change an order or booking.
 PROMPT;
 
         try {
@@ -95,24 +95,24 @@ PROMPT;
 
                 if ($response->status() === 429) {
                     return response()->json([
-                        'message' => 'Our AI assistant has reached its current usage limit. Please try again later or send us an inquiry through the Services page.',
+                        'message' => 'Our AI assistant has reached its current usage limit. Please try again later or submit a service request through the Services page.',
                     ], 429);
                 }
 
                 if (in_array($response->status(), [401, 403], true)) {
                     return response()->json([
-                        'message' => 'Our AI assistant is having a configuration issue. Please contact Netmax Trading or send us an inquiry through the Services page.',
+                        'message' => 'Our AI assistant is having a configuration issue. Please contact Netmax Trading or submit a service request through the Services page.',
                     ], 503);
                 }
 
                 if ($response->status() === 400 || $response->status() === 404) {
                     return response()->json([
-                        'message' => 'Our AI assistant is temporarily misconfigured. Please try again later or send us an inquiry through the Services page.',
+                        'message' => 'Our AI assistant is temporarily misconfigured. Please try again later or submit a service request through the Services page.',
                     ], 502);
                 }
 
                 return response()->json([
-                    'message' => 'Sorry, the assistant is temporarily unavailable. Please try again shortly or send us an inquiry.',
+                    'message' => 'Sorry, the assistant is temporarily unavailable. Please try again shortly or submit a service request.',
                 ], 502);
             }
 
@@ -126,7 +126,7 @@ PROMPT;
                 ]);
 
                 return response()->json([
-                    'message' => 'I could not form an answer just now. Please try asking another way or send us an inquiry.',
+                    'message' => 'I could not form an answer just now. Please try asking another way or submit a service request.',
                 ], 502);
             }
 
@@ -169,7 +169,7 @@ PROMPT;
         }
 
         if (preg_match('/\\b(what services do you offer|what service do you offer|what can secureview do|what can netmax do|what do you do)\\b/u', $text)) {
-            return "We can help with CCTV installation, site inspection, maintenance, repair, consultation, and other CCTV/IT requests. Start on the Services page (/services) or send details through the inquiry form (/inquiry).";
+            return "We can help with CCTV installation, site inspection, maintenance, repair, consultation, and other CCTV/IT requests. Start on the Services page (/services) or send details through the service request form (/inquiry).";
         }
 
         if (preg_match('/\\b(choose|select|pick)\\b.*\\b(date|time|schedule|slot)\\b/u', $text)
@@ -182,7 +182,7 @@ PROMPT;
         if ((preg_match('/\\b(book|booking|schedule|arrange|request)\\b/u', $text)
                 && preg_match('/\\b(installation|install|technician|service|appointment|inquiry)\\b/u', $text))
             || preg_match('/\\bhow (do|can) i\\b.*\\b(book|schedule|request)\\b/u', $text)) {
-            return "To request an installation or another service, open the Services page (/services) and submit the inquiry form (/inquiry). You can choose a preferred time slot; our team will confirm the appointment.";
+            return "To request an installation or another service, open the Services page (/services) and submit the service request form (/inquiry). You can choose a preferred time slot; our team will confirm the appointment.";
         }
 
         if (preg_match('/\\b(included|inclusions|contains|contain|comes with)\\b/u', $text)
@@ -196,7 +196,7 @@ PROMPT;
         }
 
         if (preg_match('/\\b(service area|service areas|do you serve|cover(?:age)?|coverage area|near me)\\b/u', $text)) {
-            return "SecureView has operated across Luzon, Visayas, and Mindanao, but availability depends on the specific location and job. Please send your address and requested service through the inquiry form (/inquiry) so the team can confirm coverage.";
+            return "SecureView has operated across Luzon, Visayas, and Mindanao, but availability depends on the specific location and job. Please send your address and requested service through the service request form (/inquiry) so the team can confirm coverage.";
         }
 
         if (preg_match('/\\b(verify|verification|unverified|confirm my email|email confirmation|email verification)\\b/u', $text)) {
