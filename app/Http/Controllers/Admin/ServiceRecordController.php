@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\CustomerNotification;
 use App\Models\ServiceRecord;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ServiceRecordController extends Controller
@@ -77,32 +79,46 @@ class ServiceRecordController extends Controller
             return back()->withErrors(['payment' => 'A zero-charge service record has no service income to confirm.']);
         }
 
-        if ($record->payment_status === 'paid') {
-            return back()->with('success', 'Service payment was already confirmed.');
-        }
+        $alreadyPaid = DB::transaction(function () use ($record, $validated) {
+            $lockedRecord = ServiceRecord::query()
+                ->whereKey($record->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($record->payment_status !== 'pending') {
-            return back()->withErrors(['payment' => 'Only a pending service charge can be confirmed as paid.']);
-        }
+            if ($lockedRecord->payment_status === 'paid') {
+                return true;
+            }
 
-        $record->update([
-            'payment_status' => 'paid',
-            'payment_method' => $validated['payment_method'],
-            'paid_at' => now(),
-        ]);
+            if ($lockedRecord->payment_status !== 'pending') {
+                throw ValidationException::withMessages([
+                    'payment' => 'Only a pending service charge can be confirmed as paid.',
+                ]);
+            }
 
-        $record->load('inquiry');
-
-        if ($record->inquiry?->user_id) {
-            CustomerNotification::create([
-                'user_id' => $record->inquiry->user_id,
-                'type' => 'service_payment',
-                'title' => 'Service payment confirmed',
-                'message' => 'Payment of ₱' . number_format((float) $record->service_charge, 2) . ' for service ' . $record->inquiry->inquiry_number . ' has been recorded by SecureView.',
-                'action_url' => route('inquiries.show', $record->inquiry),
-                'related_type' => ServiceRecord::class,
-                'related_id' => $record->id,
+            $lockedRecord->update([
+                'payment_status' => 'paid',
+                'payment_method' => $validated['payment_method'],
+                'paid_at' => now(),
             ]);
+            $lockedRecord->load('inquiry');
+
+            if ($lockedRecord->inquiry?->user_id) {
+                CustomerNotification::create([
+                    'user_id' => $lockedRecord->inquiry->user_id,
+                    'type' => 'service_payment',
+                    'title' => 'Service payment confirmed',
+                    'message' => 'Payment of ₱' . number_format((float) $lockedRecord->service_charge, 2) . ' for service ' . $lockedRecord->inquiry->inquiry_number . ' has been recorded by SecureView.',
+                    'action_url' => route('inquiries.show', $lockedRecord->inquiry),
+                    'related_type' => ServiceRecord::class,
+                    'related_id' => $lockedRecord->id,
+                ]);
+            }
+
+            return false;
+        });
+
+        if ($alreadyPaid) {
+            return back()->with('success', 'Service payment was already confirmed.');
         }
 
         return back()->with('success', 'Service income payment confirmed.');
