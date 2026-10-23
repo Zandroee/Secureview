@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CustomerNotification;
 use App\Models\ServiceRecord;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -64,6 +65,47 @@ class ServiceRecordController extends Controller
                 'products_used' => (int) \App\Models\ServiceRecordItem::query()->sum('quantity'),
             ],
         ]);
+    }
+
+    public function confirmPayment(Request $request, ServiceRecord $record)
+    {
+        $validated = $request->validate([
+            'payment_method' => ['required', 'in:cash,gcash,card,maya'],
+        ]);
+
+        if ((float) $record->service_charge <= 0) {
+            return back()->withErrors(['payment' => 'A zero-charge service record has no service income to confirm.']);
+        }
+
+        if ($record->payment_status === 'paid') {
+            return back()->with('success', 'Service payment was already confirmed.');
+        }
+
+        if ($record->payment_status !== 'pending') {
+            return back()->withErrors(['payment' => 'Only a pending service charge can be confirmed as paid.']);
+        }
+
+        $record->update([
+            'payment_status' => 'paid',
+            'payment_method' => $validated['payment_method'],
+            'paid_at' => now(),
+        ]);
+
+        $record->load('inquiry');
+
+        if ($record->inquiry?->user_id) {
+            CustomerNotification::create([
+                'user_id' => $record->inquiry->user_id,
+                'type' => 'service_payment',
+                'title' => 'Service payment confirmed',
+                'message' => 'Payment of ₱' . number_format((float) $record->service_charge, 2) . ' for service ' . $record->inquiry->inquiry_number . ' has been recorded by SecureView.',
+                'action_url' => route('inquiries.show', $record->inquiry),
+                'related_type' => ServiceRecord::class,
+                'related_id' => $record->id,
+            ]);
+        }
+
+        return back()->with('success', 'Service income payment confirmed.');
     }
 
     private function formatRecord(ServiceRecord $record): array
