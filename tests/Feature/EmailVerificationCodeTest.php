@@ -141,4 +141,27 @@ class EmailVerificationCodeTest extends TestCase
 
         Mail::assertNothingSent();
     }
+    public function test_old_signed_verification_link_redirects_to_code_instead_of_verifying_directly(): void
+    {
+        Mail::fake();
+
+        $user = User::factory()->unverified()->create();
+        $url = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(10),
+            [
+                'id' => $user->id,
+                'hash' => sha1($user->getEmailForVerification()),
+            ]
+        );
+
+        $this->get($url)
+            ->assertRedirect(route('verification.notice'))
+            ->assertSessionHas('verificationEmail', $user->email)
+            ->assertSessionHas('status');
+
+        $this->assertNull($user->fresh()->email_verified_at);
+        Mail::assertSent(EmailVerificationCodeMail::class, fn (EmailVerificationCodeMail $mail) => $mail->user->is($user));
+    }
+
 }
