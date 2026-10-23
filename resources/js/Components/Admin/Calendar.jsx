@@ -79,7 +79,7 @@ export default function AdminCalendar({
                     className="d-block mx-auto mt-1 rounded-circle"
                     style={{ width: "5px", height: "5px", backgroundColor: "#eab308" }}
                     title="Some time slots are blocked or technician availability is limited"
-                    aria-label="Some time slots are blocked or technician capacity is in use"
+                    aria-label="Some time slots are blocked or technician availability is limited"
                 />
             );
         }
