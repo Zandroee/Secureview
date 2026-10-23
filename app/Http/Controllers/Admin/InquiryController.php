@@ -182,6 +182,9 @@ class InquiryController extends Controller
                 'service_longitude' => $inquiry->service_longitude,
                 'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
+                'other_service_type' => $inquiry->other_service_type,
+                'other_service_details' => $inquiry->other_service_details,
+                'payment_status' => $inquiry->payment_status ?? 'not_required',
                 'urgency' => $inquiry->urgency,
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                 'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
@@ -203,6 +206,10 @@ class InquiryController extends Controller
         AdminActivityLogger $activityLogger,
         JobNotificationService $jobNotifications
     ) {
+        if (!$inquiry->paymentAllowsTechnicianWork()) {
+            return back()->withErrors(['technician_ids' => 'Payment must be confirmed before a technician can be assigned to this service.']);
+        }
+
         $validated = $request->validate([
             'technician_ids' => ['sometimes', 'array', 'max:10'],
             'technician_ids.*' => ['required', 'integer', 'distinct', 'exists:users,id'],
@@ -352,6 +359,10 @@ class InquiryController extends Controller
         AdminActivityLogger $activityLogger,
         JobNotificationService $jobNotifications
     ) {
+        if (!$inquiry->paymentAllowsTechnicianWork()) {
+            return back()->withErrors(['status' => 'Payment must be confirmed before confirming or scheduling this service.']);
+        }
+
         if ($inquiry->status !== 'pending') {
             return back()->withErrors([
                 'status' => 'Only pending inquiries can use the confirmation workflow.',
