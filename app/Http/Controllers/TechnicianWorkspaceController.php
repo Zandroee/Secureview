@@ -170,6 +170,12 @@ class TechnicianWorkspaceController extends Controller
                 ]);
             }
 
+            if ($this->hasPendingServicePayment($lockedInquiry)) {
+                throw ValidationException::withMessages([
+                    'job' => 'This service cannot be joined until its required payment is confirmed.',
+                ]);
+            }
+
             $hasConflictAfterLock = $lockedTechnician->assignedInquiries()
                 ->whereDate('preferred_date', $lockedInquiry->preferred_date)
                 ->where('preferred_time', $lockedInquiry->preferred_time)
@@ -587,6 +593,10 @@ class TechnicianWorkspaceController extends Controller
     public function reviewReschedule(Request $request, Inquiry $inquiry, string $decision)
     {
         abort_unless($inquiry->technicians()->where('users.id', $request->user()->id)->exists(), 404);
+
+        if ($this->hasPendingServicePayment($inquiry)) {
+            return back()->withErrors(['reschedule' => 'This service cannot be rescheduled until its required payment is confirmed.']);
+        }
 
         if (($inquiry->reschedule_request_status ?? 'none') !== 'pending' || $inquiry->status !== 'confirmed') {
             return back()->withErrors(['reschedule' => 'There is no pending reschedule request to review.']);
