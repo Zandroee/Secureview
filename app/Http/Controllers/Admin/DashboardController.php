@@ -203,7 +203,7 @@ class DashboardController extends Controller
             ->orderBy('preferred_date')
             ->orderBy('preferred_time')
             ->orderByRaw("CASE urgency WHEN 'emergency' THEN 1 WHEN 'urgent' THEN 2 ELSE 3 END")
-            ->limit(5)
+            ->limit(50)
             ->get([
                 'id',
                 'inquiry_number',
@@ -228,12 +228,12 @@ class DashboardController extends Controller
             ])
             ->values();
 
-        // Only show inquiries that still need admin attention. Confirmed and
-        // in-progress inquiries belong in Upcoming Schedule, not Recent Inquiries.
+        // Only show service requests that still need admin attention. Confirmed and
+        // in-progress services belong in Upcoming Schedule, not Recent Services.
         $recentInquiries = Inquiry::query()
             ->where('status', 'pending')
             ->latest()
-            ->limit(4)
+            ->limit(50)
             ->get([
                 'id',
                 'inquiry_number',
@@ -261,7 +261,7 @@ class DashboardController extends Controller
 
         $recentOrders = Order::query()
             ->latest()
-            ->limit(5)
+            ->limit(50)
             ->get([
                 'id',
                 'order_number',
@@ -288,7 +288,7 @@ class DashboardController extends Controller
         $recentAnnouncements = CustomerNotification::query()
             ->where('type', 'announcement')
             ->latest()
-            ->limit(100)
+            ->limit(1000)
             ->get([
                 'id',
                 'type',
@@ -300,7 +300,7 @@ class DashboardController extends Controller
             ->unique(fn (CustomerNotification $notification) => sha1(
                 $notification->title . '|' . $notification->message
             ))
-            ->take(5)
+            ->take(50)
             ->map(fn (CustomerNotification $notification) => [
                 'id' => $notification->id,
                 'type' => $notification->type,
