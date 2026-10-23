@@ -657,11 +657,15 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         </div>
                     )}
 
+                    <div className="d-xl-none mb-3">
+                        <TechnicianSidebar mobileOnly />
+                    </div>
+
                     <div className="row g-4">
-                        <aside className="col-xl-2">
-                            <TechnicianSidebar />
+                        <aside className="col-xl-2 d-none d-xl-block">
+                            <TechnicianSidebar desktopOnly />
                         </aside>
-                        <div className="col-xl-7 col-lg-8">
+                        <div className="col-lg-8 col-xl-7">
                     <div className="row g-3 mb-4">
                         <div className="col-6 col-xl-3">
                             <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
