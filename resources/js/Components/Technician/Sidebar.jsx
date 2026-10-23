@@ -8,7 +8,7 @@ const groups = [
     [
         { label: "My Services", href: "#my-jobs", icon: "bi-clipboard-check" },
         { label: "Available Team Jobs", href: "#available-jobs", icon: "bi-people" },
-        { label: "Service Records", href: "#my-jobs", icon: "bi-journal-check" },
+        { label: "Service Records", href: "#service-records", icon: "bi-journal-check" },
     ],
     [
         { label: "Products & Inventory", href: "#inventory", icon: "bi-camera-video" },
