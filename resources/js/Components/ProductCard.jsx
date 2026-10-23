@@ -119,7 +119,7 @@ export default function ProductCard({
                 )}
 
                 <h5
-                    className="card-title fw-bold mb-2"
+                    className="card-title fw-bold mb-2 secureview-catalog-card-title"
                     style={{
                         fontSize: isPackage ? "1.12rem" : "1.04rem",
                         lineHeight: "1.35",
@@ -136,7 +136,7 @@ export default function ProductCard({
                 </h5>
 
                 {visibleSpecifications.length > 0 && (
-                    <ul className="ps-3 mb-3" style={{ fontSize: "0.86rem", lineHeight: "1.48", color: "#46566c", overflowWrap: "anywhere" }}>
+                    <ul className="ps-3 mb-3 secureview-catalog-card-specifications" style={{ fontSize: "0.86rem", lineHeight: "1.48", color: "#46566c", overflowWrap: "anywhere" }}>
                         {visibleSpecifications.map((specification, index) => (
                             <li key={index} className="mb-1">{specification}</li>
                         ))}
@@ -151,7 +151,7 @@ export default function ProductCard({
                         <div className="fw-bold text-uppercase mb-2" style={{ fontSize: "0.72rem", letterSpacing: "0.08em", color: "#64758b" }}>
                             <i className="bi bi-box-seam me-1" /> Includes
                         </div>
-                        <ul className="ps-3 mb-0" style={{ fontSize: "0.82rem", lineHeight: "1.45", color: "#3e4e63", overflowWrap: "anywhere" }}>
+                        <ul className="ps-3 mb-0 secureview-catalog-card-copy" style={{ fontSize: "0.82rem", lineHeight: "1.45", color: "#3e4e63", overflowWrap: "anywhere" }}>
                             {visibleInclusions.map((item, index) => (
                                 <li key={item.id ?? (item.name + "-" + index)} className="mb-1">
                                     {item.name}{Number(item.quantity) > 1 ? " × " + Number(item.quantity) : ""}
