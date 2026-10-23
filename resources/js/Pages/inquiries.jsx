@@ -84,7 +84,7 @@ export default function Inquiries({ inquiries = [] }) {
                                     </div>
 
                                     <Link
-                                        href="/service"
+                                        href="/inquiry"
                                         className="btn btn-primary btn-sm fw-bold"
                                     >
                                         NEW SERVICE REQUEST
@@ -153,7 +153,7 @@ export default function Inquiries({ inquiries = [] }) {
                                         </p>
 
                                         <Link
-                                            href="/service"
+                                            href="/inquiry"
                                             className="btn btn-primary btn-sm fw-bold px-4"
                                         >
                                             REQUEST A SERVICE
