@@ -337,7 +337,9 @@ class TechnicianWorkspaceController extends Controller
                     // Technician-submitted charges remain pending until an administrator confirms receipt.
                     // Zero-charge records do not count as income or outstanding payment.
                     'payment_status' => (float) $validated['service_charge'] > 0 ? 'pending' : 'not_required',
-                    'payment_method' => $validated['payment_method'] ?? null,
+                    'payment_method' => (float) $validated['service_charge'] > 0
+                        ? ($validated['payment_method'] ?? null)
+                        : null,
                     'paid_at' => null,
                 ]);
 
