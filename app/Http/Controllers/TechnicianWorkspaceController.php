@@ -149,7 +149,7 @@ class TechnicianWorkspaceController extends Controller
             ->where('id', '!=', $inquiry->id)
             ->whereDate('preferred_date', $inquiry->preferred_date)
             ->where('preferred_time', $inquiry->preferred_time)
-            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
             ->where(function ($query) use ($technician) {
                 $query->where('technician_id', $technician->id)
                     ->orWhereHas('technicians', fn ($team) => $team->where('users.id', $technician->id));
@@ -195,7 +195,7 @@ class TechnicianWorkspaceController extends Controller
                 ->where('id', '!=', $lockedInquiry->getKey())
                 ->whereDate('preferred_date', $lockedInquiry->preferred_date)
                 ->where('preferred_time', $lockedInquiry->preferred_time)
-                ->whereIn('status', ['confirmed', 'in_progress'])
+                ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
                 ->where(function ($query) use ($lockedTechnician) {
                     $query->where('technician_id', $lockedTechnician->id)
                         ->orWhereHas('technicians', fn ($team) => $team->where('users.id', $lockedTechnician->id));
@@ -571,7 +571,7 @@ class TechnicianWorkspaceController extends Controller
             ->where('id', '!=', $inquiry->id)
             ->whereDate('preferred_date', $validated['preferred_date'])
             ->where('preferred_time', $validated['preferred_time'])
-            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
             ->whereHas('technicians', fn ($query) => $query->whereIn('users.id', $teamIds))
             ->with('technicians:id,name')
             ->get()
@@ -665,7 +665,7 @@ class TechnicianWorkspaceController extends Controller
             ->where('id', '!=', $inquiry->id)
             ->whereDate('preferred_date', $date)
             ->where('preferred_time', $time)
-            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
             ->whereHas('technicians', fn ($query) => $query->whereIn('users.id', $teamIds))
             ->exists();
 
@@ -710,7 +710,7 @@ class TechnicianWorkspaceController extends Controller
             ->where(function ($technicianQuery) use ($date, $exceptInquiryId) {
                 $activeOnDate = function ($query) use ($date, $exceptInquiryId) {
                     $query->whereDate('preferred_date', $date)
-                        ->whereIn('status', ['confirmed', 'in_progress']);
+                        ->whereIn('status', ['pending', 'confirmed', 'in_progress']);
                     if ($exceptInquiryId !== null) {
                         $query->where('inquiries.id', '!=', $exceptInquiryId);
                     }
