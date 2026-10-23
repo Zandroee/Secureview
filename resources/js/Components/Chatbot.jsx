@@ -4,7 +4,7 @@ import "../../css/chatbot.css";
 
 const welcomeMessage = {
     role: "assistant",
-    content: "Hi! I’m SecureView Assistant. Ask me about our CCTV products, services, or how to make an inquiry.",
+    content: "Hi! I’m SecureView Assistant. Ask me about our CCTV products, services, or how to request a service.",
 };
 
 const suggestedQuestions = [
@@ -39,7 +39,7 @@ function renderAssistantContent(content) {
                 {tokens.map((token, tokenIndex) => {
                     const routeLabels = {
                         "/services": "Services page",
-                        "/inquiry": "inquiry form",
+                        "/inquiry": "service request form",
                         "/products": "Products page",
                         "/packages": "Packages page",
                         "/about": "About page",

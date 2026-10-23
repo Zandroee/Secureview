@@ -237,7 +237,7 @@ export default function WorkspaceSidebar({ jobs = [], notifications = [], notifi
                                         {job.urgency || "normal"}
                                     </span>
                                 </div>
-                                <div className="small text-primary mt-1">{job.inquiry_number}</div>
+                                <div className="small text-primary mt-1">Service # {job.inquiry_number}</div>
                                 <div className="small text-secondary mt-2">
                                     <i className="bi bi-calendar3 me-1" />{formatDate(job.preferred_date_value)}
                                 </div>

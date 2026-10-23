@@ -30,9 +30,9 @@ class JobNotificationService
                     [
                         'user_id' => $recipient->id,
                         'type' => 'new_inquiry',
-                        'title' => $isAdmin ? 'New service inquiry received' : 'New service request received',
+                        'title' => $isAdmin ? 'New service request received' : 'New service request received',
                         'message' => $isAdmin
-                            ? "Inquiry {$inquiry->inquiry_number} from {$inquiry->customer_name} ({$inquiry->service_type}) is waiting for review. Requested: {$date}, {$inquiry->preferred_time}. Priority: " . ucfirst($inquiry->urgency) . '.'
+                            ? "Service request {$inquiry->inquiry_number} from {$inquiry->customer_name} ({$inquiry->service_type}) is waiting for review. Requested: {$date}, {$inquiry->preferred_time}. Priority: " . ucfirst($inquiry->urgency) . '.'
                             : "A new {$inquiry->service_type} request ({$inquiry->inquiry_number}) was submitted for {$date}, {$inquiry->preferred_time}. It is awaiting admin review; customer details become available if you are assigned to the service.",
                         'action_url' => $isAdmin
                             ? route('admin.inquiries.show', $inquiry)

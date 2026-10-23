@@ -1,4 +1,6 @@
 import { Link } from "@inertiajs/react";
+import { useState } from "react";
+import PanelPagination from "./PanelPagination";
 
 function urgencyClass(urgency) {
     if (urgency === "emergency") return "bg-danger-subtle text-danger";
@@ -16,11 +18,16 @@ function statusClass(status) {
 }
 
 export default function Announcements({
-    title = "Recent Inquiries",
+    title = "Recent Services",
     announcements = [],
     unreadNotificationCount = 0,
 }) {
     const rows = announcements ?? [];
+    const [page, setPage] = useState(1);
+    const pageSize = 3;
+    const totalPages = Math.ceil(rows.length / pageSize);
+    const safePage = Math.min(page, Math.max(1, totalPages));
+    const pageRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
     return (
         <div className="card border rounded-3">
@@ -28,10 +35,10 @@ export default function Announcements({
                 <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
                     <div>
                         <h5 className="fw-bold mb-1">{title}</h5>
-                        <div className="small text-muted">Latest customer requests and their current status.</div>
+                        <div className="small text-muted">Latest service requests and their current status.</div>
                     </div>
                     <Link href="/admin/inquiries" className="btn btn-sm btn-outline-primary text-nowrap">
-                        View all
+                        View all services
                     </Link>
                 </div>
 
@@ -39,11 +46,11 @@ export default function Announcements({
                     <Link
                         href="/notifications"
                         className="d-flex align-items-center justify-content-between gap-2 rounded-3 bg-warning-subtle text-warning-emphasis px-3 py-2 mb-3 text-decoration-none"
-                        title="Open unread inquiry notifications"
+                        title="Open unread service notifications"
                     >
                         <span className="small fw-semibold">
                             <i className="bi bi-bell me-2" />
-                            Unread inquiry alerts
+                            Unread service alerts
                         </span>
                         <span className="badge bg-warning text-dark rounded-pill">
                             {unreadNotificationCount}
@@ -52,8 +59,9 @@ export default function Announcements({
                 )}
 
                 {rows.length > 0 ? (
+                    <>
                     <div className="d-flex flex-column gap-2">
-                        {rows.map((inquiry) => (
+                        {pageRows.map((inquiry) => (
                             <Link
                                 key={inquiry.id}
                                 href={"/admin/inquiries/" + inquiry.id}
@@ -87,17 +95,25 @@ export default function Announcements({
                                     </div>
                                 )}
                                 <div className="small text-primary fw-semibold mt-2">
-                                    Review inquiry <i className="bi bi-arrow-up-right ms-1" />
+                                    Review service <i className="bi bi-arrow-up-right ms-1" />
                                 </div>
                             </Link>
                         ))}
                     </div>
+                    <PanelPagination
+                        page={safePage}
+                        totalPages={totalPages}
+                        totalItems={rows.length}
+                        pageSize={pageSize}
+                        onPageChange={setPage}
+                    />
+                    </>
                 ) : (
                     <div className="text-center border rounded-3 bg-light p-4">
                         <i className="bi bi-chat-square-text fs-4 text-muted d-block mb-2" />
-                        <p className="small text-muted mb-2">No pending inquiries need attention right now.</p>
+                        <p className="small text-muted mb-2">No pending service requests need attention right now.</p>
                         <Link href="/admin/inquiries" className="small fw-semibold text-decoration-none">
-                            Open inquiries
+                            Open services
                         </Link>
                     </div>
                 )}

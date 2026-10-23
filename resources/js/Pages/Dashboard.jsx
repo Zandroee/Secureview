@@ -175,7 +175,7 @@ export default function Dashboard({
 
                                 <div className="mt-4">
                                     <Announcements
-                                        title="Recent Inquiries"
+                                        title="Recent Services"
                                         announcements={recentInquiries}
                                         unreadNotificationCount={unreadInquiryNotificationCount}
                                     />

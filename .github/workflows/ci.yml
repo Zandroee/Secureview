@@ -75,13 +75,17 @@ jobs:
           cp app/Http/Controllers/Admin/WarrantyController.php hostinger-release/app/Http/Controllers/Admin/WarrantyController.php
           cp app/Http/Controllers/Admin/ProductController.php hostinger-release/app/Http/Controllers/Admin/ProductController.php
           cp app/Http/Controllers/Admin/PackageController.php hostinger-release/app/Http/Controllers/Admin/PackageController.php
+          cp app/Http/Controllers/Admin/DashboardController.php hostinger-release/app/Http/Controllers/Admin/DashboardController.php
+          cp app/Http/Controllers/Admin/ActivityLogController.php hostinger-release/app/Http/Controllers/Admin/ActivityLogController.php
           cp app/Http/Controllers/CheckoutController.php hostinger-release/app/Http/Controllers/CheckoutController.php
+          cp app/Http/Controllers/InquiryController.php hostinger-release/app/Http/Controllers/InquiryController.php
           cp app/Http/Controllers/AuthController.php hostinger-release/app/Http/Controllers/AuthController.php
           cp app/Http/Controllers/EmailVerificationController.php hostinger-release/app/Http/Controllers/EmailVerificationController.php
           cp app/Http/Controllers/NotificationController.php hostinger-release/app/Http/Controllers/NotificationController.php
           cp app/Http/Controllers/LandingController.php hostinger-release/app/Http/Controllers/LandingController.php
           cp app/Http/Controllers/ProductController.php hostinger-release/app/Http/Controllers/ProductController.php
           cp app/Http/Controllers/PackageController.php hostinger-release/app/Http/Controllers/PackageController.php
+          cp app/Http/Controllers/TechnicianWorkspaceController.php hostinger-release/app/Http/Controllers/TechnicianWorkspaceController.php
           cp app/Http/Controllers/PurchaseController.php hostinger-release/app/Http/Controllers/PurchaseController.php
           cp app/Http/Controllers/ReviewController.php hostinger-release/app/Http/Controllers/ReviewController.php
           cp app/Console/Commands/ClearProductPackageReferences.php hostinger-release/app/Console/Commands/ClearProductPackageReferences.php
@@ -94,6 +98,8 @@ jobs:
           cp app/Http/Middleware/HandleInertiaRequests.php hostinger-release/app/Http/Middleware/HandleInertiaRequests.php
           cp app/Services/SingleLoginSessionService.php hostinger-release/app/Services/SingleLoginSessionService.php
           cp app/Services/InventoryService.php hostinger-release/app/Services/InventoryService.php
+          cp app/Services/JobNotificationService.php hostinger-release/app/Services/JobNotificationService.php
+          cp app/Services/PendingInquiryCheckoutService.php hostinger-release/app/Services/PendingInquiryCheckoutService.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php
           cp routes/web.php hostinger-release/routes/web.php
 

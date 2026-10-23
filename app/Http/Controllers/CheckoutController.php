@@ -688,7 +688,7 @@ class CheckoutController extends Controller
             if ($inquiry) {
                 return redirect()->route('inquiries.show', $inquiry)->with(
                     'success',
-                    'Payment confirmed. Your installation inquiry ' . $inquiry->inquiry_number . ' has been submitted.'
+                    'Payment confirmed. Your installation service request ' . $inquiry->inquiry_number . ' has been submitted.'
                 );
             }
         }

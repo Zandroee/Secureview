@@ -11,19 +11,19 @@ const faqItems = [
     },
     {
         question: "What services can I request?",
-        answer: "You can send an inquiry for Installation, Site Inspection, Maintenance, Repair, Consultation, or Other. Choose the service that best matches what you need.",
+        answer: "You can request Installation, Site Inspection, Maintenance, Repair, Consultation, or Other services. Choose the option that best matches what you need.",
     },
     {
         question: "How do I request a service?",
-        answer: "Open the Services page and choose Book Service, or use Make an Inquiry. Complete the inquiry form with your contact details, address, service type, and useful notes.",
+        answer: "Open the Services page and choose Book Service. Complete the service request form with your contact details, address, service type, and useful notes.",
     },
     {
         question: "Can I choose my preferred date and time?",
-        answer: "Yes. The inquiry form lets you choose an available date and time slot. Your selection is submitted as a scheduling preference, so wait for confirmation before treating the appointment as final.",
+        answer: "Yes. The service request form lets you choose an available date and time slot. Your selection is submitted as a scheduling preference, so wait for confirmation before treating the appointment as final.",
     },
     {
         question: "Can you help me choose the right CCTV product or package?",
-        answer: "Choose Consultation in the service inquiry form and describe your location, coverage needs, or questions in the notes. You can also review product and package details before contacting the team.",
+        answer: "Choose Consultation in the service request form and describe your location, coverage needs, or questions in the notes. You can also review product and package details before contacting the team.",
     },
     {
         question: "Can I purchase products and packages through the website?",
@@ -31,11 +31,11 @@ const faqItems = [
     },
     {
         question: "Where does Netmax Trading operate?",
-        answer: "The About page notes that the company has operated across Luzon, Visayas, and Mindanao. Availability for a specific installation or site visit can depend on location and service, so submit an inquiry to confirm.",
+        answer: "The About page notes that the company has operated across Luzon, Visayas, and Mindanao. Availability for a specific installation or site visit can depend on location and service, so submit a service request to confirm.",
     },
     {
         question: "What if I need a service that is not listed?",
-        answer: "Select Other in the service inquiry form and explain what you need in the notes. The team can review the request and advise on the next step.",
+        answer: "Select Other in the service request form and explain what you need in the notes. The team can review the request and advise on the next step.",
     },
 ];
 
@@ -187,14 +187,14 @@ export default function About() {
                             <div className="about-faq-cta text-center mt-4 p-4 rounded-3">
                                 <h3 className="fw-bold mb-2">Still have questions?</h3>
                                 <p className="text-muted mb-3">
-                                    Send us an inquiry and tell us what kind of CCTV help you need.
+                                    Send us a service request and tell us what kind of CCTV help you need.
                                 </p>
                                 <div className="d-flex flex-wrap justify-content-center gap-2">
                                     <Link href="/services" className="btn btn-outline-primary fw-bold px-4">
                                         VIEW SERVICES
                                     </Link>
                                     <Link href="/inquiry" className="btn btn-primary fw-bold px-4">
-                                        MAKE AN INQUIRY
+                                        REQUEST A SERVICE
                                     </Link>
                                 </div>
                             </div>

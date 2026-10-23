@@ -355,7 +355,7 @@ class InquiryController extends Controller
             'user_id' => $request->user()->id,
             'type' => 'inquiry',
             'title' => 'Inquiry received',
-            'message' => 'Your inquiry ' . $inquiry->inquiry_number . ' has been received.',
+            'message' => 'Your service request ' . $inquiry->inquiry_number . ' has been received.',
             'action_url' => route('inquiries.show', $inquiry),
             'related_type' => Inquiry::class,
             'related_id' => $inquiry->id,
@@ -365,7 +365,7 @@ class InquiryController extends Controller
 
         return redirect()->route('inquiries.show', $inquiry)->with(
             'success',
-            'Your inquiry has been submitted successfully.'
+            'Your service request has been submitted successfully.'
         );
     }
 
@@ -502,7 +502,7 @@ class InquiryController extends Controller
             if (!$checkoutSessionId || !$checkoutUrl) {
                 $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
                 return back()->withErrors([
-                    'payment' => 'The payment gateway returned an invalid checkout session. No inquiry has been submitted.',
+                    'payment' => 'The payment gateway returned an invalid checkout session. No service request has been submitted.',
                 ])->withInput();
             }
 
@@ -512,7 +512,7 @@ class InquiryController extends Controller
             report($exception);
             $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
             return back()->withErrors([
-                'payment' => 'Unable to connect to the payment gateway. No inquiry has been submitted; please try again.',
+                'payment' => 'Unable to connect to the payment gateway. No service request has been submitted; please try again.',
             ])->withInput();
         }
     }
