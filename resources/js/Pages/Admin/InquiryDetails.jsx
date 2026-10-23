@@ -82,12 +82,12 @@ export default function AdminInquiryDetails({
         ? "BACK TO SERVICE HISTORY"
         : fromSchedule
             ? "BACK TO SCHEDULES"
-            : "BACK TO INQUIRIES";
+            : "BACK TO SERVICES";
     const pageTitle = fromHistory
         ? "SERVICE HISTORY DETAILS"
         : fromSchedule
             ? "SERVICE SCHEDULE DETAILS"
-            : "INQUIRY DETAILS";
+            : "SERVICE DETAILS";
     const activeSection = fromHistory
         ? "service-history"
         : fromSchedule
@@ -158,7 +158,7 @@ export default function AdminInquiryDetails({
 
                                             <div className="small text-muted mt-1">
                                                 {inquiry.item_name ||
-                                                    "General Service Inquiry"}
+                                                    "General Service"}
                                             </div>
                                         </div>
 
@@ -336,7 +336,7 @@ export default function AdminInquiryDetails({
                                     </div>
 
                                     <h2 className="h5 fw-bold mb-3">
-                                        Update inquiry status
+                                        Update service status
                                     </h2>
 
                                     <select
