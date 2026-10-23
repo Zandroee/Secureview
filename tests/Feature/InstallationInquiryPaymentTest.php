@@ -115,6 +115,32 @@ class InstallationInquiryPaymentTest extends TestCase
         ]);
 
         $order = Order::query()->where('order_number', 'like', 'SV-%')->firstOrFail();
+        $inquiry = Inquiry::query()->firstOrFail();
+
+        // A service record may be visible in history before payment, but it must
+        // not be claimable by a technician until the linked order is paid.
+        $technician = User::factory()->create(['role' => 'technician']);
+        $this->actingAs($technician)
+            ->post(route('technician.jobs.claim', $inquiry))
+            ->assertRedirect()
+            ->assertSessionHasErrors('job');
+
+        $this->assertDatabaseMissing('inquiry_technician', [
+            'inquiry_id' => $inquiry->id,
+            'technician_id' => $technician->id,
+        ]);
+
+        $this->actingAs($customer)
+            ->get(route('inquiries.show', $inquiry))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('inquiry_details')
+                ->where('inquiry.order_id', $order->id)
+                ->where('inquiry.order_number', $order->order_number)
+                ->where('inquiry.payment_status', 'pending')
+                ->where('inquiry.created_date', $inquiry->created_at->format('M d, Y'))
+                ->where('inquiry.created_time', $inquiry->created_at->format('h:i A')));
+
         $this->actingAs($customer)
             ->get(route('inquiries.index'))
             ->assertOk()

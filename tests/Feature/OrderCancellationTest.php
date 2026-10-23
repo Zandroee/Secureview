@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Inquiry;
 use App\Models\Order;
+use App\Models\PendingInquiryCheckout;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
@@ -41,6 +43,63 @@ class OrderCancellationTest extends TestCase
         $this->assertDatabaseHas('products', [
             'id' => $product->id,
             'stock_quantity' => 5,
+        ]);
+    }
+
+    public function test_cancelling_an_installation_order_cancels_its_linked_service_and_checkout(): void
+    {
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(5);
+        $order = $this->createOrder($customer, $product, [
+            'payment_method' => 'cash',
+            'payment_status' => 'pending',
+            'order_status' => 'pending',
+        ]);
+
+        $inquiry = Inquiry::create([
+            'user_id' => $customer->id,
+            'inquirable_type' => Product::class,
+            'inquirable_id' => $product->id,
+            'inquiry_number' => 'INQ-CANCEL-LINKED-TEST',
+            'item_name' => $product->name,
+            'customer_name' => $customer->name,
+            'customer_phone' => '09123456789',
+            'customer_email' => $customer->email,
+            'street_address' => '31 Molave Street',
+            'city' => 'Taguig',
+            'service_type' => 'Installation',
+            'urgency' => 'normal',
+            'preferred_date' => today()->addDays(5)->toDateString(),
+            'preferred_time' => '08:00 AM - 11:00 AM',
+            'status' => 'pending',
+        ]);
+
+        PendingInquiryCheckout::create([
+            'user_id' => $customer->id,
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'payload' => [],
+            'status' => 'pending_payment',
+        ]);
+
+        $this->actingAs($customer)
+            ->patch(route('purchases.cancel', $order))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'payment_status' => 'cancelled',
+            'order_status' => 'cancelled',
+        ]);
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'status' => 'cancelled',
+        ]);
+        $this->assertDatabaseHas('inquiries', [
+            'id' => $inquiry->id,
+            'status' => 'cancelled',
         ]);
     }
 
@@ -168,6 +227,53 @@ class OrderCancellationTest extends TestCase
             'order_status' => 'awaiting_payment',
             'payment_status' => 'pending',
         ]);
+    }
+
+    public function test_order_is_not_cancelled_when_paymongo_reports_payment_succeeded_during_cancellation(): void
+    {
+        config([
+            'services.paymongo.secret_key' => 'sk_test_secureview',
+            'services.paymongo.base_url' => 'https://api.paymongo.com',
+        ]);
+
+        Http::fake([
+            'https://api.paymongo.com/v1/checkout_sessions/cs_paid_race_test/expire' => Http::response([
+                'errors' => [['detail' => 'The checkout session cannot be expired.']],
+            ], 400),
+            'https://api.paymongo.com/v1/checkout_sessions/cs_paid_race_test' => Http::response([
+                'data' => [
+                    'id' => 'cs_paid_race_test',
+                    'attributes' => [
+                        'status' => 'active',
+                        'payments' => [[
+                            'id' => 'pay_paid_race_test',
+                            'attributes' => ['status' => 'paid'],
+                        ]],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(5);
+        $order = $this->createOrder($customer, $product, [
+            'payment_method' => 'gcash',
+            'payment_status' => 'pending',
+            'order_status' => 'awaiting_payment',
+            'paymongo_checkout_session_id' => 'cs_paid_race_test',
+        ]);
+
+        $this->actingAs($customer)
+            ->from(route('purchases.show', $order))
+            ->patch(route('purchases.cancel', $order))
+            ->assertRedirect(route('purchases.show', $order))
+            ->assertSessionHasErrors('order');
+
+        $freshOrder = $order->fresh();
+        $this->assertSame('paid', $freshOrder->payment_status);
+        $this->assertSame('processing', $freshOrder->order_status);
+        $this->assertNotNull($freshOrder->paid_at);
+        $this->assertSame('pay_paid_race_test', $freshOrder->paymongo_payment_id);
     }
 
     public function test_admin_can_cancel_an_unpaid_order_and_action_is_logged(): void

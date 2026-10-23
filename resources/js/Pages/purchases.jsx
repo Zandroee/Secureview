@@ -504,6 +504,10 @@ export default function Purchases({ orders = [] }) {
                                                     item.price
                                                 ).toLocaleString()}
                                             </div>
+
+                                            <div className="small text-muted mt-1">
+                                                Warranty: {item.warranty_period || "Not specified"}
+                                            </div>
                                         </div>
 
                                         <Link
