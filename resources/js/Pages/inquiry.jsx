@@ -13,6 +13,16 @@ const serviceTypes = [
     "Other",
 ];
 
+const otherServiceExamples = [
+    "Camera relocation or added cabling",
+    "Network or remote-view setup",
+    "DVR/NVR configuration",
+    "Power supply or UPS issue",
+    "Access control or intercom",
+    "CCTV troubleshooting",
+    "Other (describe below)",
+];
+
 const timeSlots = [
     { label: "08:00 AM - 11:00 AM", available: true },
     { label: "11:00 AM - 02:00 PM", available: true },
@@ -83,6 +93,8 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
         service_longitude: "",
         google_place_id: "",
         service_type: initialServiceType,
+        other_service_type: "",
+        other_service_details: "",
         payment_method: "gcash",
         urgency: "normal",
         preferred_date: "",
@@ -515,7 +527,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                 <select
                                                     className={
                                                         "form-select " +
-                                                        (errors.inquiry_type
+                                                        (errors.service_type
                                                             ? "is-invalid"
                                                             : "")
                                                     }
@@ -540,12 +552,52 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                     )}
                                                 </select>
 
-                                                {errors.inquiry_type && (
+                                                {errors.service_type && (
                                                     <div className="invalid-feedback">
-                                                        {errors.inquiry_type}
+                                                        {errors.service_type}
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {data.service_type === "Other" && (
+                                                <div className="col-12 rounded-3 border p-3" style={{ background: "#f8fafc" }}>
+                                                    <div className="fw-bold mb-1">What do you need help with? *</div>
+                                                    <div className="small text-muted mb-3">
+                                                        Choose the closest category and describe the problem. This helps us assign the right technician and prepare any required parts.
+                                                    </div>
+                                                    <div className="row g-2">
+                                                        <div className="col-12">
+                                                            <label className="form-label small fw-semibold mb-1">Service category *</label>
+                                                            <select
+                                                                className={"form-select " + (errors.other_service_type ? "is-invalid" : "")}
+                                                                style={fieldStyle}
+                                                                value={data.other_service_type}
+                                                                onChange={(event) => setData("other_service_type", event.target.value)}
+                                                            >
+                                                                <option value="">Choose a service category</option>
+                                                                {otherServiceExamples.map((example) => (
+                                                                    <option key={example} value={example}>{example}</option>
+                                                                ))}
+                                                            </select>
+                                                            {errors.other_service_type && <div className="invalid-feedback">{errors.other_service_type}</div>}
+                                                        </div>
+                                                        <div className="col-12">
+                                                            <label className="form-label small fw-semibold mb-1">Describe the issue or request *</label>
+                                                            <textarea
+                                                                rows={3}
+                                                                maxLength={1000}
+                                                                className={"form-control " + (errors.other_service_details ? "is-invalid" : "")}
+                                                                style={fieldStyle}
+                                                                placeholder="Example: Move two cameras to the new gate and extend their cables by about 10 metres."
+                                                                value={data.other_service_details}
+                                                                onChange={(event) => setData("other_service_details", event.target.value)}
+                                                            />
+                                                            {errors.other_service_details && <div className="invalid-feedback">{errors.other_service_details}</div>}
+                                                            <div className="form-text small">Include the affected equipment, symptoms, location, and any changes you need.</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             <div className="col-md-4">
                                                 <label className="form-label small fw-semibold mb-1">
