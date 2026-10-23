@@ -59,6 +59,40 @@ class InquiryNotificationsAndUrgencyTest extends TestCase
         ]);
     }
 
+    public function test_urgent_service_sends_email_and_in_app_notifications_to_admin_technicians_and_customer(): void
+    {
+        Mail::shouldReceive('raw')->times(3);
+
+        $customer = User::factory()->create(['role' => 'user']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technician = User::factory()->create(['role' => 'technician']);
+
+        $this->actingAs($customer)
+            ->post(route('inquiries.store'), [
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'street_address' => '123 Test Street',
+                'city' => 'Taguig',
+                'service_type' => 'Repair',
+                'urgency' => 'emergency',
+                'preferred_date' => today()->addDays(2)->toDateString(),
+                'preferred_time' => '11:00 AM - 02:00 PM',
+            ])
+            ->assertRedirect();
+
+        $inquiry = Inquiry::query()->where('customer_email', $customer->email)->firstOrFail();
+
+        foreach ([$admin, $technician, $customer] as $recipient) {
+            $this->assertDatabaseHas('customer_notifications', [
+                'user_id' => $recipient->id,
+                'type' => 'urgent_service',
+                'related_type' => Inquiry::class,
+                'related_id' => $inquiry->id,
+            ]);
+        }
+    }
+
     public function test_overdue_open_inquiries_become_urgent_but_completed_or_emergency_inquiries_keep_their_status(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
