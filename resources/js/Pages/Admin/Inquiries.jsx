@@ -111,7 +111,7 @@ export default function AdminInquiries({
                                 </div>
 
                                 <h1 className="fw-bold mb-0">
-                                    SERVICE INQUIRIES
+                                    SERVICE REQUESTS
                                 </h1>
 
                                 <div className="small text-muted mt-1">
@@ -122,7 +122,7 @@ export default function AdminInquiries({
 
                             <div className="bg-white border rounded-3 px-3 py-2">
                                 <span className="small text-muted">
-                                    TOTAL INQUIRIES
+                                    TOTAL SERVICES
                                 </span>
 
                                 <div className="fw-bold text-primary">
@@ -150,7 +150,7 @@ export default function AdminInquiries({
                                     <input
                                         type="text"
                                         className="form-control"
-                                        placeholder="Inquiry ID, customer, email, or service"
+                                        placeholder="Service ID, customer, email, or service"
                                         value={search}
                                         onChange={(event) =>
                                             setSearch(event.target.value)
@@ -170,7 +170,7 @@ export default function AdminInquiries({
                                             setStatus(event.target.value)
                                         }
                                     >
-                                        <option value="">All inquiry statuses</option>
+                                        <option value="">All service statuses</option>
                                         <option value="pending">Pending</option>
                                         <option value="cancelled">Cancelled</option>
                                     </select>
@@ -234,7 +234,7 @@ export default function AdminInquiries({
                                     <thead className="table-light">
                                         <tr>
                                             <th className="ps-3">PRIORITY</th>
-                                            <th>INQUIRY</th>
+                                            <th>SERVICE</th>
                                             <th>CUSTOMER</th>
                                             <th>SERVICE</th>
                                             <th>TECHNICIAN</th>
@@ -253,7 +253,7 @@ export default function AdminInquiries({
                                                     colSpan="8"
                                                     className="text-center text-muted py-5"
                                                 >
-                                                    No inquiries found.
+                                                    No service requests found.
                                                 </td>
                                             </tr>
                                         ) : (
@@ -391,7 +391,7 @@ export default function AdminInquiries({
                                     </tbody>
                                 </table>
                             </div>
-                            <AdminPagination pagination={inquiries} label="inquiries" insideCard />
+                            <AdminPagination pagination={inquiries} label="services" insideCard />
                         </div>
 
 
