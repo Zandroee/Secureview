@@ -531,6 +531,9 @@ class InquiryController extends Controller
                     'inquiry_number' => $inquiry->inquiry_number,
                     'item_name' => $inquiry->item_name,
                     'service_type' => $inquiry->service_type,
+                    'other_service_type' => $inquiry->other_service_type,
+                    'other_service_details' => $inquiry->other_service_details,
+                    'payment_status' => $inquiry->payment_status ?? 'not_required',
                     'urgency' => $inquiry->urgency,
                     'technician' => $inquiry->technician
                         ? [
