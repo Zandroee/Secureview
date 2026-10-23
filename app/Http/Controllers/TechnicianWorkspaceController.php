@@ -288,8 +288,7 @@ class TechnicianWorkspaceController extends Controller
             'work_summary' => ['required', 'string', 'min:5', 'max:3000'],
             'recommendations' => ['nullable', 'string', 'max:2000'],
             'service_charge' => ['required', 'numeric', 'min:0', 'max:10000000'],
-            'payment_status' => ['required', 'in:pending,paid'],
-            'payment_method' => ['nullable', 'required_if:payment_status,paid', 'in:cash,gcash,card,maya'],
+            'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
             'items' => ['nullable', 'array', 'max:30'],
             'items.*.product_id' => ['required', 'integer', 'distinct', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:999'],
@@ -333,12 +332,24 @@ class TechnicianWorkspaceController extends Controller
                         ? trim($validated['recommendations'])
                         : null,
                     'service_charge' => round((float) $validated['service_charge'], 2),
-                    'payment_status' => $validated['payment_status'],
-                    'payment_method' => $validated['payment_status'] === 'paid'
-                        ? ($validated['payment_method'] ?? null)
-                        : null,
-                    'paid_at' => $validated['payment_status'] === 'paid' ? now() : null,
+                    // Technician-submitted charges remain pending until an administrator confirms receipt.
+                    // Zero-charge records do not count as income or outstanding payment.
+                    'payment_status' => (float) $validated['service_charge'] > 0 ? 'pending' : 'not_required',
+                    'payment_method' => $validated['payment_method'] ?? null,
+                    'paid_at' => null,
                 ]);
+
+                if ($lockedInquiry->user_id) {
+                    CustomerNotification::create([
+                        'user_id' => $lockedInquiry->user_id,
+                        'type' => 'service_record',
+                        'title' => 'Post-service report ready',
+                        'message' => $lockedInquiry->inquiry_number . ' now has a technician report. Recorded service charge: ₱' . number_format((float) $record->service_charge, 2) . ($record->payment_status === 'pending' ? ' (awaiting payment confirmation).' : '.'),
+                        'action_url' => route('inquiries.show', $lockedInquiry),
+                        'related_type' => Inquiry::class,
+                        'related_id' => $lockedInquiry->id,
+                    ]);
+                }
 
                 foreach (($validated['items'] ?? []) as $index => $line) {
                     $product = Product::query()->whereKey($line['product_id'])->lockForUpdate()->firstOrFail();
