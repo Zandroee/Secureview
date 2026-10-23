@@ -23,6 +23,7 @@ export default function AnnouncementFeed({ announcements = [] }) {
                 </div>
 
                 {announcements.length ? (
+                    <>
                     <div className="d-flex flex-column gap-2">
                         {pageAnnouncements.map((announcement) => (
                             <article key={announcement.id} className="border rounded-3 p-3">
@@ -48,6 +49,7 @@ export default function AnnouncementFeed({ announcements = [] }) {
                         pageSize={pageSize}
                         onPageChange={setPage}
                     />
+                    </>
                 ) : (
                     <div className="text-center border rounded-3 bg-light p-4">
                         <i className="bi bi-megaphone fs-4 text-muted d-block mb-2" />
