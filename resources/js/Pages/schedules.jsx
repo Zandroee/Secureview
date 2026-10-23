@@ -48,7 +48,7 @@ export default function Schedules({ schedules = [] }) {
                                         href="/inquiry"
                                         className="btn btn-primary btn-sm fw-bold"
                                     >
-                                        NEW INQUIRY
+                                        NEW SERVICE REQUEST
                                     </Link>
                                 </div>
 
@@ -178,7 +178,7 @@ export default function Schedules({ schedules = [] }) {
                                                                 }
                                                                 className="btn btn-outline-primary btn-sm fw-bold"
                                                             >
-                                                                VIEW INQUIRY
+                                                                VIEW SERVICE
                                                             </Link>
 
                                                             <button
