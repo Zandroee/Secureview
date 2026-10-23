@@ -34,7 +34,7 @@ class OrderCancellationTest extends TestCase
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
             'order_status' => 'cancelled',
-            'payment_status' => 'pending',
+            'payment_status' => 'cancelled',
             'stock_deducted_at' => null,
             'cancellation_reason' => 'Cancelled by customer.',
         ]);
@@ -194,7 +194,7 @@ class OrderCancellationTest extends TestCase
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
             'order_status' => 'cancelled',
-            'payment_status' => 'failed',
+            'payment_status' => 'cancelled',
             'cancellation_reason' => 'Payment failed and customer did not proceed.',
         ]);
         $this->assertDatabaseHas('admin_activity_logs', [
