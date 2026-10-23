@@ -19,7 +19,7 @@ class InquiryNotificationsAndUrgencyTest extends TestCase
         $technician = User::factory()->create(['role' => 'technician']);
         $date = today()->addDays(3)->toDateString();
 
-        $this->actingAs($customer)
+        $response = $this->actingAs($customer)
             ->post(route('inquiries.store'), [
                 'customer_name' => $customer->name,
                 'customer_phone' => '09171234567',
@@ -49,8 +49,8 @@ class InquiryNotificationsAndUrgencyTest extends TestCase
             'related_id' => $inquiry->id,
         ]);
 
-        $this->assertSessionHas('serviceNotification.title', 'Service request submitted');
-        $this->assertSessionHas('serviceNotification.action_url', route('inquiries.show', $inquiry));
+        $response->assertSessionHas('serviceNotification.title', 'Service request submitted');
+        $response->assertSessionHas('serviceNotification.action_url', route('inquiries.show', $inquiry));
 
         $this->assertDatabaseMissing('customer_notifications', [
             'user_id' => $customer->id,
