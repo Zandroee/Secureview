@@ -67,11 +67,13 @@ class TechnicianWorkspaceController extends Controller
 
         $inventory = Product::query()
             ->orderBy('name')
-            ->get(['id', 'name', 'category', 'stock_quantity', 'image', 'images'])
+            ->get(['id', 'name', 'brand', 'category', 'price', 'stock_quantity', 'image', 'images'])
             ->map(fn (Product $product) => [
                 'id' => $product->id,
                 'name' => $product->name,
+                'brand' => $product->brand,
                 'category' => $product->category,
+                'price' => (float) $product->price,
                 'stock_quantity' => $product->stock_quantity,
                 'image' => $product->image,
                 'images' => $product->images,
