@@ -8,6 +8,7 @@ use App\Http\Controllers\LandingController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\InvoiceController;
@@ -37,10 +38,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Str;
-use App\Models\User;
 
 Route::get('/', [LandingController::class, 'index']);
 
@@ -70,54 +69,24 @@ Route::get('/login', function () {
     return Inertia::render('login');
 })->name('login');
 
-Route::get('/signup', function (Request $request) {
-    return Inertia::render('signup', [
-        'verificationSent' => $request->session()->get('verificationSent', false),
-        'verificationEmail' => $request->session()->get('verificationEmail', ''),
-    ]);
+Route::get('/signup', function () {
+    return Inertia::render('signup');
 })->name('signup');
 
 Route::post('/login', [AuthController::class, 'authenticate'])->middleware('throttle:login')->name('login.authenticate');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register')->name('register');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-Route::get('/email/verify', function () {
-    return redirect()->route('signup');
-})->name('verification.notice');
+Route::get('/email/verify', [EmailVerificationController::class, 'show'])
+    ->name('verification.notice');
 
-Route::get('/email/verify/{id}/{hash}', function (Request $request, $id, $hash) {
-    $user = User::findOrFail($id);
+Route::post('/email/verify', [EmailVerificationController::class, 'verify'])
+    ->middleware('throttle:10,1')
+    ->name('verification.code.verify');
 
-    if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
-        abort(403);
-    }
-
-    if (!$user->hasVerifiedEmail()) {
-        $user->markEmailAsVerified();
-    }
-
-    return redirect()->route('login')->with([
-        'status' => 'Your email has been verified successfully. You can now log in.',
-    ]);
-})->middleware('signed')->name('verification.verify');
-
-Route::post('/email/verification-notification', function (Request $request) {
-    $validated = $request->validate([
-        'email' => ['required', 'email'],
-    ]);
-
-    $user = User::where('email', $validated['email'])->first();
-
-    if ($user && !$user->hasVerifiedEmail()) {
-        $cooldownKey = 'verification-email-cooldown:' . $user->id;
-
-        if (Cache::add($cooldownKey, true, now()->addSeconds(60))) {
-            $user->sendEmailVerificationNotification();
-        }
-    }
-
-    return back()->with('message', 'Verification link sent!');
-})->middleware('throttle:1,1')->name('verification.send');
+Route::post('/email/verification-code/resend', [EmailVerificationController::class, 'resend'])
+    ->middleware('throttle:5,1')
+    ->name('verification.code.resend');
 
 Route::get('/auth/google', [AuthController::class, 'redirectGoogle'])
     ->name('auth.google');
