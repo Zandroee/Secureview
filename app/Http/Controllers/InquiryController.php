@@ -354,7 +354,7 @@ class InquiryController extends Controller
         CustomerNotification::create([
             'user_id' => $request->user()->id,
             'type' => 'inquiry',
-            'title' => 'Inquiry received',
+            'title' => 'Service request received',
             'message' => 'Your service request ' . $inquiry->inquiry_number . ' has been received.',
             'action_url' => route('inquiries.show', $inquiry),
             'related_type' => Inquiry::class,
@@ -696,7 +696,7 @@ class InquiryController extends Controller
             'user_id' => $inquiry->user_id,
             'type' => 'reschedule_request',
             'title' => 'Reschedule request submitted',
-            'message' => 'Your requested change for ' . $inquiry->inquiry_number . ' is awaiting technician/admin approval. Your current appointment remains unchanged until approval.',
+            'message' => 'Your requested change for service ' . $inquiry->inquiry_number . ' is awaiting technician/admin approval. Your current appointment remains unchanged until approval.',
             'action_url' => route('inquiries.show', $inquiry),
             'related_type' => Inquiry::class,
             'related_id' => $inquiry->id,
