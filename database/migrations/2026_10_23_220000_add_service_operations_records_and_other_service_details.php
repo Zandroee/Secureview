@@ -17,7 +17,7 @@ return new class extends Migration
 
         Schema::create('service_records', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('inquiry_id')->unique()->constrained('inquiries')->cascadeOnDelete();
+            $table->foreignId('inquiry_id')->unique()->constrained('inquiries')->restrictOnDelete();
             $table->foreignId('technician_id')->constrained('users')->restrictOnDelete();
             $table->string('service_outcome', 40);
             $table->text('work_summary');
