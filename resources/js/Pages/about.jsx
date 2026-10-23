@@ -127,6 +127,51 @@ export default function About() {
                 </div>
             </section>
 
+            {/* SERVICE EXPERIENCE STRIP — placed immediately before the FAQs */}
+            <section className="about-trust-section py-5">
+                <div className="container">
+                    <div className="row g-4 align-items-center">
+                        <div className="col-lg-4">
+                            <p className="small text-primary fw-bold text-uppercase mb-2">Your security, our focus</p>
+                            <h2 className="fw-bold mb-3 about-trust-heading">Practical CCTV solutions, with support at every step.</h2>
+                            <p className="mb-4 about-trust-intro">
+                                From choosing the right equipment to arranging a service visit, SecureView helps you make a more informed decision for your home or business.
+                            </p>
+                            <div className="d-flex flex-wrap gap-2">
+                                <Link href="/products" className="btn btn-primary fw-bold px-4">EXPLORE PRODUCTS</Link>
+                                <Link href="/services" className="btn btn-outline-primary fw-bold px-4">OUR SERVICES</Link>
+                            </div>
+                        </div>
+
+                        <div className="col-lg-8">
+                            <div className="row g-3">
+                                <div className="col-md-4">
+                                    <article className="about-trust-card h-100">
+                                        <div className="about-trust-icon"><i className="bi bi-shield-check" aria-hidden="true" /></div>
+                                        <h3 className="h5 fw-bold mt-3 mb-2">Guidance you can use</h3>
+                                        <p className="mb-0">Understand the options, features, and coverage that suit your space before choosing a system.</p>
+                                    </article>
+                                </div>
+                                <div className="col-md-4">
+                                    <article className="about-trust-card h-100">
+                                        <div className="about-trust-icon"><i className="bi bi-camera-video" aria-hidden="true" /></div>
+                                        <h3 className="h5 fw-bold mt-3 mb-2">Solutions for your needs</h3>
+                                        <p className="mb-0">Explore cameras, recording equipment, packages, and auxiliary products in one place.</p>
+                                    </article>
+                                </div>
+                                <div className="col-md-4">
+                                    <article className="about-trust-card h-100">
+                                        <div className="about-trust-icon"><i className="bi bi-calendar2-check" aria-hidden="true" /></div>
+                                        <h3 className="h5 fw-bold mt-3 mb-2">A clearer service process</h3>
+                                        <p className="mb-0">Submit your request, share the details, and keep track of your service through SecureView.</p>
+                                    </article>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             {/* FREQUENTLY ASKED QUESTIONS */}
             <section className="about-faq-section py-5">
                 <div className="container">

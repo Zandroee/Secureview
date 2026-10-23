@@ -41,6 +41,11 @@ export default function Invoice({ invoice }) {
         business.bir_atp_number &&
         business.serial_number_range
     );
+    const invoiceItemCount = Array.isArray(invoice.items) ? invoice.items.length : 0;
+    const printZoom = Math.max(
+        0.58,
+        Math.min(0.88, 0.88 - Math.max(0, invoiceItemCount - 3) * 0.025)
+    );
 
     return (
         <div className="invoice-page bg-light min-vh-100">
@@ -86,27 +91,123 @@ export default function Invoice({ invoice }) {
                     padding-top: 16px;
                     color: #64748b;
                     font-size: 12px;
+                    line-height: 1.4;
                 }
                 @media print {
-                    @page { size: A4; margin: 12mm; }
+                    @page { size: A4 portrait; margin: 5mm; }
                     html, body, #app, .invoice-page {
+                        width: 100% !important;
+                        height: auto !important;
+                        min-height: 0 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        overflow: visible !important;
                         background: #fff !important;
+                        color: #20252b !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    .no-print, .site-footer, .secureview-chatbot { display: none !important; }
+                    .invoice-page > main.container {
+                        width: 100% !important;
+                        max-width: none !important;
                         margin: 0 !important;
                         padding: 0 !important;
                     }
-                    .no-print { display: none !important; }
                     .invoice-sheet {
+                        zoom: var(--invoice-print-zoom, .82);
+                        width: calc(100% / var(--invoice-print-zoom, .82)) !important;
                         max-width: none !important;
-                        width: 100% !important;
+                        margin: 0 !important;
                         padding: 0 !important;
                         border: 0 !important;
                         border-radius: 0 !important;
                         box-shadow: none !important;
+                        background: #fff !important;
+                        color: #20252b !important;
+                        font-size: 8.5pt !important;
+                        line-height: 1.15 !important;
                     }
-                    .invoice-table { page-break-inside: auto; }
-                    .invoice-table tr { page-break-inside: avoid; page-break-after: auto; }
+                    .invoice-sheet * {
+                        line-height: 1.18 !important;
+                        overflow-wrap: anywhere;
+                    }
+                    .invoice-masthead {
+                        gap: 10px !important;
+                        padding-bottom: 7px !important;
+                        border-bottom-width: 1px !important;
+                    }
+                    .invoice-masthead .display-6 { font-size: 1.55rem !important; }
+                    .invoice-masthead .h4 { font-size: 12pt !important; }
+                    .invoice-sheet .row {
+                        --bs-gutter-x: .55rem;
+                        --bs-gutter-y: .3rem;
+                    }
+                    .invoice-sheet .my-4 {
+                        margin-top: .45rem !important;
+                        margin-bottom: .45rem !important;
+                    }
+                    .invoice-sheet .mt-4 { margin-top: .4rem !important; }
+                    .invoice-sheet .mb-3 { margin-bottom: .35rem !important; }
+                    .invoice-sheet .mt-3 { margin-top: .35rem !important; }
+                    .invoice-sheet .mt-2 { margin-top: .2rem !important; }
+                    .invoice-sheet .py-2 {
+                        padding-top: 2px !important;
+                        padding-bottom: 2px !important;
+                    }
+                    .invoice-sheet .py-3 {
+                        padding-top: 4px !important;
+                        padding-bottom: 4px !important;
+                    }
+                    .invoice-meta {
+                        padding: 6px !important;
+                        border-radius: 5px !important;
+                    }
+                    .invoice-meta .mb-3 { margin-bottom: .3rem !important; }
+                    .invoice-table {
+                        width: 100% !important;
+                        margin-bottom: 4px !important;
+                        font-size: 7.5pt !important;
+                        page-break-inside: auto;
+                    }
+                    .invoice-table th {
+                        font-size: 7pt !important;
+                        padding: 3px 5px !important;
+                        white-space: nowrap;
+                    }
+                    .invoice-table td {
+                        font-size: 7.5pt !important;
+                        padding: 3px 5px !important;
+                    }
+                    .invoice-table tr {
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                        page-break-after: auto;
+                    }
+                    .invoice-sheet .table-responsive { overflow: visible !important; }
+                    .invoice-total-row {
+                        font-size: 9.5pt !important;
+                        border-top-width: 1px !important;
+                    }
+                    .invoice-disclaimer {
+                        margin-top: 5px !important;
+                        padding-top: 5px !important;
+                        font-size: 6.2pt !important;
+                        line-height: 1.12 !important;
+                    }
+                    .invoice-sheet .small,
+                    .invoice-sheet small { font-size: 7.2pt !important; }
+                    .invoice-sheet .badge {
+                        margin-top: 3px !important;
+                        padding: 2px 5px !important;
+                        font-size: 7pt !important;
+                    }
+                    .invoice-print-note {
+                        display: block !important;
+                        margin-top: 4px !important;
+                        font-size: 6.5pt !important;
+                    }
                     a { color: inherit !important; text-decoration: none !important; }
-                    .invoice-print-note { display: block !important; }
                 }
             `}</style>
 
@@ -161,7 +262,7 @@ export default function Invoice({ invoice }) {
                     )
                 )}
 
-                <article className="invoice-sheet">
+                <article className="invoice-sheet" style={{ "--invoice-print-zoom": printZoom }}>
                     <div className="invoice-masthead d-flex flex-column flex-md-row justify-content-between gap-4">
                         <div>
                             <div className="d-flex align-items-center gap-2 mb-3">
