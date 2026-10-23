@@ -2,6 +2,7 @@ import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import { router, usePage } from "@inertiajs/react";
 import { useState } from "react";
+import catalogImageUrl from "../Components/catalogImageUrl";
 
 function Stars({ rating }) {
     return (
@@ -71,10 +72,16 @@ export default function PackageDetails({ package: packageData, reviews = [], can
     const [amount, setAmount] = useState(1);
     const [cartMessage, setCartMessage] = useState("");
     const [cartError, setCartError] = useState("");
-    const galleryImages = Array.isArray(packageData.images) && packageData.images.length
+    const rawGalleryImages = Array.isArray(packageData.images) && packageData.images.length
         ? packageData.images
         : (packageData.image ? [packageData.image] : []);
+    const galleryImages = rawGalleryImages.map(catalogImageUrl).filter(Boolean);
     const [selectedImage, setSelectedImage] = useState(galleryImages[0] ?? "");
+    const [failedImageUrls, setFailedImageUrls] = useState([]);
+    const isImageFailed = (url) => failedImageUrls.includes(url);
+    const markImageFailed = (url) => setFailedImageUrls((current) =>
+        current.includes(url) ? current : [...current, url]
+    );
     const displayedImage = galleryImages.includes(selectedImage) ? selectedImage : (galleryImages[0] ?? "");
 
     const availableStock = Math.max(0, Number(packageData.available_stock ?? 0));
@@ -184,8 +191,14 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                     <div className="row g-3">
 
                         <div className="col-lg-6">
-                            {displayedImage ? (
-                                <img src={displayedImage} alt={packageData.name} className="img-fluid w-100 rounded-2" style={{ height: "330px", objectFit: "contain", backgroundColor: "#f8f9fa" }} />
+                            {displayedImage && !isImageFailed(displayedImage) ? (
+                                <img
+                                    src={displayedImage}
+                                    alt={packageData.name}
+                                    className="img-fluid w-100 rounded-2"
+                                    onError={() => markImageFailed(displayedImage)}
+                                    style={{ height: "330px", objectFit: "contain", backgroundColor: "#f8f9fa" }}
+                                />
                             ) : (
                                 <div className="bg-secondary-subtle d-flex align-items-center justify-content-center" style={{ height: "330px" }}>
                                     <i className="bi bi-box-seam text-secondary" style={{ fontSize: "5rem" }}></i>
@@ -202,7 +215,18 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                             aria-label={"View package image " + (index + 1)}
                                             onClick={() => setSelectedImage(image)}
                                         >
-                                            <img src={image} alt={packageData.name + " view " + (index + 1)} style={{ width: "68px", height: "68px", objectFit: "cover" }} />
+                                            {isImageFailed(image) ? (
+                                                <div className="bg-secondary-subtle d-flex align-items-center justify-content-center rounded" style={{ width: "68px", height: "68px" }}>
+                                                    <i className="bi-box-seam text-secondary" />
+                                                </div>
+                                            ) : (
+                                                <img
+                                                    src={image}
+                                                    alt={packageData.name + " view " + (index + 1)}
+                                                    onError={() => markImageFailed(image)}
+                                                    style={{ width: "68px", height: "68px", objectFit: "cover" }}
+                                                />
+                                            )}
                                         </button>
                                     ))}
                                 </div>
@@ -221,7 +245,7 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                 {packageData.name}
                             </h2>
 
-                            <ul className="ps-3 mb-3" style={{ fontSize: "0.8rem" }}>
+                            <ul className="ps-3 mb-3" style={{ fontSize: "1.05rem", lineHeight: "1.65", overflowWrap: "anywhere" }}>
                                 {specifications.map((specification, index) => (
                                     <li key={index} className="mb-1">
                                         {specification}
@@ -229,7 +253,7 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                 ))}
                             </ul>
 
-                            <div className="d-flex flex-wrap align-items-center justify-content-start gap-2 gap-md-3 mb-2" style={{ fontSize: "0.8rem" }}>
+                            <div className="d-flex flex-wrap align-items-center justify-content-start gap-2 gap-md-3 mb-3" style={{ fontSize: "0.95rem", lineHeight: "1.5" }}>
                                 <strong>Category: {packageData.category}</strong>
                                 <span className="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2 py-2">
                                     Installation: {Number(packageData.installation_fee ?? 0) > 0
@@ -335,8 +359,14 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                     <div className="row align-items-center g-2">
 
                                         <div className="col-md-2">
-                                            {item.product?.image ? (
-                                                <img src={item.product.image} alt={item.product.name} className="img-fluid rounded" style={{ height: "70px", width: "100%", objectFit: "cover" }} />
+                                            {item.product?.image && !isImageFailed(catalogImageUrl(item.product.image)) ? (
+                                                <img
+                                                    src={catalogImageUrl(item.product.image)}
+                                                    alt={item.product.name}
+                                                    className="img-fluid rounded"
+                                                    onError={() => markImageFailed(catalogImageUrl(item.product.image))}
+                                                    style={{ height: "70px", width: "100%", objectFit: "cover" }}
+                                                />
                                             ) : (
                                                 <div className="bg-secondary-subtle rounded d-flex align-items-center justify-content-center" style={{ height: "70px" }}>
                                                     <i className="bi bi-camera-video text-secondary"></i>
@@ -350,9 +380,9 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                                 {item.product?.name}
                                             </strong>
 
-                                            <small className="text-muted">
-                                                Amount: {item.quantity}
-                                            </small>
+                                            <div className="text-muted mt-1" style={{ fontSize: "0.95rem" }}>
+                                                Quantity included: {item.quantity}
+                                            </div>
 
                                         </div>
 

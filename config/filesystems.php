@@ -43,7 +43,11 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => env('PUBLIC_STORAGE_PATH', storage_path('app/public')),
+            'root' => env('PUBLIC_STORAGE_PATH') ?: (
+                is_dir(dirname(base_path()) . DIRECTORY_SEPARATOR . 'public_html')
+                    ? dirname(base_path()) . DIRECTORY_SEPARATOR . 'public_html' . DIRECTORY_SEPARATOR . 'storage'
+                    : storage_path('app/public')
+            ),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,

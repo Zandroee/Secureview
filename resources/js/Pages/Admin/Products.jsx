@@ -2,6 +2,7 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import AdminPagination from "../../Components/Admin/AdminPagination";
+import catalogImageUrl from "../../Components/catalogImageUrl";
 import { router, useForm } from "@inertiajs/react";
 import { useEffect, useState } from "react";
 
@@ -159,9 +160,7 @@ function CatalogOptionSelect({
 
 
 function imageSource(image) {
-    if (!image) return "";
-    if (/^https?:\/\//i.test(image) || String(image).startsWith("/")) return image;
-    return "/storage/" + String(image).replace(/^\/+/, "");
+    return catalogImageUrl(image);
 }
 
 function ImagePicker({
@@ -210,7 +209,19 @@ function ImagePicker({
                                     alt={label + " " + (index + 1)}
                                     className="rounded border"
                                     style={{ width: "92px", height: "92px", objectFit: "cover" }}
+                                    onError={(event) => {
+                                        event.currentTarget.classList.add("d-none");
+                                        event.currentTarget.parentElement?.querySelector("[data-image-fallback]")?.classList.remove("d-none");
+                                    }}
                                 />
+                                <div
+                                    data-image-fallback
+                                    className="bg-secondary-subtle rounded border d-none d-flex align-items-center justify-content-center"
+                                    style={{ width: "92px", height: "92px" }}
+                                    aria-label="Image unavailable"
+                                >
+                                    <i className="bi bi-image text-secondary fs-4" />
+                                </div>
                                 <button
                                     type="button"
                                     className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle d-flex align-items-center justify-content-center"
@@ -233,7 +244,19 @@ function ImagePicker({
                                     alt={"Selected upload " + (index + 1)}
                                     className="rounded border"
                                     style={{ width: "92px", height: "92px", objectFit: "cover" }}
+                                    onError={(event) => {
+                                        event.currentTarget.classList.add("d-none");
+                                        event.currentTarget.parentElement?.querySelector("[data-image-fallback]")?.classList.remove("d-none");
+                                    }}
                                 />
+                                <div
+                                    data-image-fallback
+                                    className="bg-secondary-subtle rounded border d-none d-flex align-items-center justify-content-center"
+                                    style={{ width: "92px", height: "92px" }}
+                                    aria-label="Image unavailable"
+                                >
+                                    <i className="bi bi-image text-secondary fs-4" />
+                                </div>
                                 <button
                                     type="button"
                                     className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle d-flex align-items-center justify-content-center"
