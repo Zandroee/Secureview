@@ -14,10 +14,6 @@ const groups = [
         { label: "Products & Inventory", href: "#inventory", icon: "bi-camera-video" },
         { label: "Schedule", href: "#technician-calendar", icon: "bi-calendar3" },
     ],
-    [
-        { label: "Notifications", href: "/notifications", icon: "bi-bell", route: true },
-        { label: "Account", href: "/settings", icon: "bi-person-gear", route: true },
-    ],
 ];
 
 function Navigation({ mobile = false, close = () => {} }) {
