@@ -201,7 +201,7 @@ export default function Purchases({ orders = [] }) {
                                                     "Outfit, sans-serif",
                                             }}
                                         >
-                                            {orders.length === 0 ? "NO PURCHASES YET" : "NO MATCHING ORDERS"}
+                                            {orders.length === 0 ? "NO ORDERS YET" : "NO MATCHING ORDERS"}
                                         </h5>
 
                                         <p className="small text-muted mb-3">
