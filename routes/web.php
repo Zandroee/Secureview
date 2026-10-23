@@ -84,9 +84,18 @@ Route::post('/email/verify', [EmailVerificationController::class, 'verify'])
     ->middleware('throttle:10,1')
     ->name('verification.code.verify');
 
+Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'redirectLegacyLink'])
+    ->middleware('signed')
+    ->name('verification.verify');
+
 Route::post('/email/verification-code/resend', [EmailVerificationController::class, 'resend'])
     ->middleware('throttle:5,1')
     ->name('verification.code.resend');
+
+// Keep the previous resend URL working for customers with a cached older page.
+Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
+    ->middleware('throttle:5,1')
+    ->name('verification.send');
 
 Route::get('/auth/google', [AuthController::class, 'redirectGoogle'])
     ->name('auth.google');
