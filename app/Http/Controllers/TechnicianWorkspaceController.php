@@ -107,6 +107,10 @@ class TechnicianWorkspaceController extends Controller
     {
         $technician = $request->user();
 
+        if ($this->hasPendingServicePayment($inquiry)) {
+            return back()->withErrors(['job' => 'This service cannot be joined until its required payment is confirmed.']);
+        }
+
         $appointmentStart = $this->appointmentDateTime($inquiry);
 
         if (
@@ -476,6 +480,22 @@ class TechnicianWorkspaceController extends Controller
             'service_longitude' => $includeCustomerDetails ? $inquiry->service_longitude : null,
             'google_place_id' => $includeCustomerDetails ? $inquiry->google_place_id : null,
             'status' => $inquiry->status,
+            'service_record' => $inquiry->serviceRecord ? [
+                'id' => $inquiry->serviceRecord->id,
+                'work_summary' => $inquiry->serviceRecord->work_summary,
+                'customer_notes' => $inquiry->serviceRecord->customer_notes,
+                'technician_name' => $inquiry->serviceRecord->technician?->name,
+                'labor_charge' => (float) $inquiry->serviceRecord->labor_charge,
+                'additional_charge' => (float) $inquiry->serviceRecord->additional_charge,
+                'total_income' => (float) $inquiry->serviceRecord->total_income,
+                'items' => $inquiry->serviceRecord->items->map(fn ($item) => [
+                    'product_name' => $item->product_name,
+                    'action' => $item->action,
+                    'quantity' => $item->quantity,
+                    'unit_price' => (float) $item->unit_price,
+                    'notes' => $item->notes,
+                ])->values(),
+            ] : null,
             'technicians' => $inquiry->technicians->map(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -494,6 +514,10 @@ class TechnicianWorkspaceController extends Controller
     {
         $technician = $request->user();
         abort_unless($inquiry->technicians()->where('users.id', $technician->id)->exists(), 404);
+
+        if ($this->hasPendingServicePayment($inquiry)) {
+            return back()->withErrors(['schedule' => 'This service cannot be rescheduled until its required payment is confirmed.']);
+        }
 
         if ($inquiry->status !== 'confirmed') {
             return back()->withErrors(['schedule' => 'Only confirmed jobs can be rescheduled by a technician.']);
