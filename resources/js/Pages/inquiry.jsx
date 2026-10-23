@@ -56,7 +56,7 @@ const formatDateLabel = (value) => {
     });
 };
 
-export default function Inquiry({ customer, item, catalogItems = [], cartItems = [], initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
+export default function Service({ customer, item, catalogItems = [], cartItems = [], initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
     const today = new Date();
     const [showDateModal, setShowDateModal] = useState(false);
 
@@ -515,7 +515,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                 <select
                                                     className={
                                                         "form-select " +
-                                                        (errors.service_type
+                                                        (errors.inquiry_type
                                                             ? "is-invalid"
                                                             : "")
                                                     }
@@ -540,9 +540,9 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                     )}
                                                 </select>
 
-                                                {errors.service_type && (
+                                                {errors.inquiry_type && (
                                                     <div className="invalid-feedback">
-                                                        {errors.service_type}
+                                                        {errors.inquiry_type}
                                                     </div>
                                                 )}
                                             </div>
