@@ -77,7 +77,7 @@ export default function InquiryDetails({ inquiry, success }) {
                                     fontFamily: "Outfit, sans-serif",
                                 }}
                             >
-                                INQUIRY DETAILS
+                                SERVICE DETAILS
                             </h1>
 
                             <div className="text-muted">
@@ -89,7 +89,7 @@ export default function InquiryDetails({ inquiry, success }) {
                             href="/inquiries"
                             className="btn btn-outline-primary fw-bold"
                         >
-                            BACK TO INQUIRIES
+                            BACK TO SERVICES
                         </Link>
                     </div>
 
@@ -140,7 +140,7 @@ export default function InquiryDetails({ inquiry, success }) {
 
                                     <div className="fw-bold fs-5">
                                         {inquiry.item_name ||
-                                            "General Service Inquiry"}
+                                            "General Service"}
                                     </div>
 
                                     <div className="small text-muted mt-3">
@@ -342,12 +342,12 @@ export default function InquiryDetails({ inquiry, success }) {
                                         fontFamily: "Outfit, sans-serif",
                                     }}
                                 >
-                                    INQUIRY SUMMARY
+                                    SERVICE SUMMARY
                                 </h4>
 
                                 <div className="d-flex justify-content-between mb-2">
                                     <span className="text-muted">
-                                        Inquiry Number
+                                        Service Number
                                     </span>
 
                                     <span className="fw-semibold text-end">
@@ -399,7 +399,7 @@ export default function InquiryDetails({ inquiry, success }) {
                                     </div>
 
                                     <div className="small text-muted">
-                                        Our team can review your inquiry and
+                                        Our team can review your service request and
                                         contact you regarding availability,
                                         scheduling, and the next steps.
                                     </div>
@@ -409,7 +409,7 @@ export default function InquiryDetails({ inquiry, success }) {
                                     href="/inquiry"
                                     className="btn btn-outline-primary fw-bold w-100 mt-3"
                                 >
-                                    NEW INQUIRY
+                                    REQUEST ANOTHER SERVICE
                                 </Link>
                             </div>
                         </div>
@@ -463,11 +463,11 @@ export default function InquiryDetails({ inquiry, success }) {
                             className="fw-bold mb-2"
                             style={{ fontFamily: "Outfit, sans-serif" }}
                         >
-                            Inquiry Sent!
+                            Service Request Sent!
                         </h4>
 
                         <p className="small text-muted mb-3">
-                            Your inquiry has been submitted. We will review
+                            Your service request has been submitted. We will review
                             your request and contact you regarding the next
                             steps.
                         </p>
