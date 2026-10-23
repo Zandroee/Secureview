@@ -110,8 +110,7 @@ export default function Schedules({ schedules = [] }) {
                                         </h5>
 
                                         <p className="small text-muted mb-3">
-                                            Confirmed service schedules will
-                                            appear here.
+                                            {schedules.length === 0 ? "Confirmed service schedules will appear here." : "Try changing or clearing your filters."}
                                         </p>
 
                                         <Link
