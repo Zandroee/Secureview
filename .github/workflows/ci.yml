@@ -95,7 +95,9 @@ jobs:
           cp app/Models/User.php hostinger-release/app/Models/User.php
           cp app/Models/Product.php hostinger-release/app/Models/Product.php
           cp app/Models/Package.php hostinger-release/app/Models/Package.php
+          cp app/Http/Controllers/Admin/CatalogOptionController.php hostinger-release/app/Http/Controllers/Admin/CatalogOptionController.php
           cp database/migrations/2026_10_23_200000_add_brand_to_products_and_packages_table.php hostinger-release/database/migrations/2026_10_23_200000_add_brand_to_products_and_packages_table.php
+          cp database/migrations/2026_10_23_210000_add_more_catalog_products_and_packages.php hostinger-release/database/migrations/2026_10_23_210000_add_more_catalog_products_and_packages.php
           cp resources/views/emails/email-verification-code.blade.php hostinger-release/resources/views/emails/email-verification-code.blade.php
           cp app/Http/Middleware/EnforceSingleLoginSession.php hostinger-release/app/Http/Middleware/EnforceSingleLoginSession.php
           cp app/Http/Middleware/HandleInertiaRequests.php hostinger-release/app/Http/Middleware/HandleInertiaRequests.php
