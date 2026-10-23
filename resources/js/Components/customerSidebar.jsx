@@ -14,7 +14,7 @@ const items = [
         icon: "bi bi-calendar3",
     },
     {
-        key: "inquiries",
+        key: "services",
         label: "SERVICE HISTORY",
         href: "/inquiries",
         icon: "bi bi-chat-left-text",

@@ -69,7 +69,7 @@ export default function Inquiries({ inquiries = [] }) {
                                     </div>
 
                                     <Link
-                                        href="/inquiry"
+                                        href="/service"
                                         className="btn btn-primary btn-sm fw-bold"
                                     >
                                         NEW SERVICE REQUEST
@@ -104,7 +104,7 @@ export default function Inquiries({ inquiries = [] }) {
                                         </p>
 
                                         <Link
-                                            href="/inquiry"
+                                            href="/service"
                                             className="btn btn-primary btn-sm fw-bold px-4"
                                         >
                                             REQUEST A SERVICE
@@ -112,9 +112,9 @@ export default function Inquiries({ inquiries = [] }) {
                                     </div>
                                 ) : (
                                     <div className="d-flex flex-column gap-2">
-                                        {inquiries.map((inquiry) => (
+                                        {inquiries.map((service) => (
                                             <div
-                                                key={inquiry.id}
+                                                key={service.id}
                                                 className="border rounded-3 p-2"
                                                 style={{
                                                     boxShadow:
@@ -128,14 +128,14 @@ export default function Inquiries({ inquiries = [] }) {
                                                                 Service ID:
                                                             </strong>{" "}
                                                             {
-                                                                inquiry.inquiry_number
+                                                                service.inquiry_number
                                                             }
                                                         </div>
 
                                                         <div className="small text-muted mt-1">
                                                             DATE:{" "}
                                                             {
-                                                                inquiry.created_at?.split(
+                                                                service.created_at?.split(
                                                                     " "
                                                                 )[0]
                                                             }
@@ -144,12 +144,12 @@ export default function Inquiries({ inquiries = [] }) {
                                                         <div className="small text-muted">
                                                             TIME:{" "}
                                                             {
-                                                                inquiry.created_at?.split(
+                                                                service.created_at?.split(
                                                                     " "
                                                                 )[1]
                                                             }{" "}
                                                             {
-                                                                inquiry.created_at?.split(
+                                                                service.created_at?.split(
                                                                     " "
                                                                 )[2]
                                                             }
@@ -163,7 +163,7 @@ export default function Inquiries({ inquiries = [] }) {
 
                                                         <div className="fw-semibold small">
                                                             {
-                                                                inquiry.service_type
+                                                                service.service_type
                                                             }
                                                         </div>
 
@@ -175,11 +175,11 @@ export default function Inquiries({ inquiries = [] }) {
                                                             className={
                                                                 "badge rounded-pill text-capitalize " +
                                                                 urgencyClass(
-                                                                    inquiry.urgency
+                                                                    service.urgency
                                                                 )
                                                             }
                                                         >
-                                                            {inquiry.urgency}
+                                                            {service.urgency}
                                                         </span>
 
                                                         <div className="small text-muted mt-1">
@@ -187,8 +187,8 @@ export default function Inquiries({ inquiries = [] }) {
                                                         </div>
 
                                                         <div className="fw-semibold small">
-                                                            {(inquiry.technicians ?? []).length
-                                                                ? inquiry.technicians.map((technician) => technician.name).join(", ")
+                                                            {(service.technicians ?? []).length
+                                                                ? service.technicians.map((technician) => technician.name).join(", ")
                                                                 : "Not assigned yet"}
                                                         </div>
 
@@ -197,25 +197,25 @@ export default function Inquiries({ inquiries = [] }) {
                                                         </div>
 
                                                         <div className="fw-semibold small text-truncate">
-                                                            {inquiry.item_name ||
+                                                            {service.item_name ||
                                                                 "General Service"}
                                                         </div>
 
-                                                        {(inquiry.street_address || inquiry.city) && (
+                                                        {(service.street_address || service.city) && (
                                                             <div className="small text-muted mt-2 text-truncate">
-                                                                {inquiry.street_address || inquiry.city}
+                                                                {service.street_address || service.city}
                                                             </div>
                                                         )}
 
-                                                        {(inquiry.google_place_id || inquiry.service_latitude !== null && inquiry.service_latitude !== undefined || inquiry.street_address || inquiry.city) && (
+                                                        {(service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined || service.street_address || service.city) && (
                                                             <a
                                                                 href={googleMapsSearchUrl({
-                                                                    latitude: inquiry.service_latitude,
-                                                                    longitude: inquiry.service_longitude,
-                                                                    placeId: inquiry.google_place_id,
-                                                                    streetAddress: inquiry.street_address,
-                                                                    city: inquiry.city,
-                                                                    addressDetails: inquiry.address_details,
+                                                                    latitude: service.service_latitude,
+                                                                    longitude: service.service_longitude,
+                                                                    placeId: service.google_place_id,
+                                                                    streetAddress: service.street_address,
+                                                                    city: service.city,
+                                                                    addressDetails: service.address_details,
                                                                 })}
                                                                 target="_blank"
                                                                 rel="noreferrer"
@@ -233,13 +233,13 @@ export default function Inquiries({ inquiries = [] }) {
 
                                                         <div className="fw-semibold small">
                                                             {
-                                                                inquiry.preferred_date
+                                                                service.preferred_date
                                                             }
                                                         </div>
 
                                                         <div className="small text-muted">
                                                             {
-                                                                inquiry.preferred_time
+                                                                service.preferred_time
                                                             }
                                                         </div>
                                                     </div>
@@ -250,12 +250,12 @@ export default function Inquiries({ inquiries = [] }) {
                                                                 className={
                                                                     "badge rounded-pill px-2 py-2 " +
                                                                     statusClass(
-                                                                        inquiry.status
+                                                                        service.status
                                                                     )
                                                                 }
                                                             >
                                                                 Status:{" "}
-                                                                {inquiry.status.replace(
+                                                                {service.status.replace(
                                                                     /_/g,
                                                                     " "
                                                                 )}
@@ -263,8 +263,8 @@ export default function Inquiries({ inquiries = [] }) {
 
                                                             <Link
                                                                 href={
-                                                                    "/inquiries/" +
-                                                                    inquiry.id
+                                                                    "/services/" +
+                                                                    service.id
                                                                 }
                                                                 className="btn btn-outline-primary btn-sm fw-bold"
                                                             >

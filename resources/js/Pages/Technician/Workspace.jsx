@@ -561,7 +561,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                     <i className="bi bi-people fs-4" />
                                 </div>
                                 <h3 className="h5 fw-bold mb-2">{openJobs.length ? "No jobs match your search" : "No available jobs right now"}</h3>
-                                <p className="text-secondary mb-0">{openJobs.length ? "Try another service name, location, or inquiry number." : "New confirmed services with open team spots will appear here automatically."}</p>
+                                <p className="text-secondary mb-0">{openJobs.length ? "Try another service name, location, or service number." : "New confirmed services with open team spots will appear here automatically."}</p>
                             </div>
                         )}
                     </section>

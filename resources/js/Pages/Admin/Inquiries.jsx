@@ -42,11 +42,11 @@ function formatStatus(status) {
     return status.replace("_", " ");
 }
 
-export default function AdminInquiries({
+export default function AdminServices({
     inquiries = [],
     filters = {},
 }) {
-    const inquiryRows = inquiries.data ?? [];
+    const serviceRows = inquiries.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
     const [urgency, setUrgency] = useState(filters.urgency ?? "");
@@ -93,7 +93,7 @@ export default function AdminInquiries({
             <div className="container-fluid">
                 <div className="row">
                     <aside className="col-md-3 col-lg-2 px-0">
-                        <Sidebar active="inquiries" />
+                        <Sidebar active="services" />
                     </aside>
 
                     <main
@@ -126,7 +126,7 @@ export default function AdminInquiries({
                                 </span>
 
                                 <div className="fw-bold text-primary">
-                                    {inquiries.total ?? inquiryRows.length}
+                                    {inquiries.total ?? serviceRows.length}
                                 </div>
                             </div>
                         </div>
@@ -150,7 +150,7 @@ export default function AdminInquiries({
                                     <input
                                         type="text"
                                         className="form-control"
-                                        placeholder="Service ID, customer, email, or service"
+                                        placeholder="Service number, customer, email, or service"
                                         value={search}
                                         onChange={(event) =>
                                             setSearch(event.target.value)
@@ -247,7 +247,7 @@ export default function AdminInquiries({
                                     </thead>
 
                                     <tbody>
-                                        {inquiryRows.length === 0 ? (
+                                        {serviceRows.length === 0 ? (
                                             <tr>
                                                 <td
                                                     colSpan="8"
@@ -257,19 +257,19 @@ export default function AdminInquiries({
                                                 </td>
                                             </tr>
                                         ) : (
-                                            inquiryRows.map((inquiry) => (
-                                                <tr key={inquiry.id}>
+                                            serviceRows.map((service) => (
+                                                <tr key={service.id}>
                                                     <td className="ps-3">
                                                         <span
                                                             className={
                                                                 "badge rounded-pill text-capitalize px-3 py-2 " +
                                                                 urgencyClass(
-                                                                    inquiry.urgency
+                                                                    service.urgency
                                                                 )
                                                             }
                                                         >
                                                             {
-                                                                inquiry.urgency
+                                                                service.urgency
                                                             }
                                                         </span>
                                                     </td>
@@ -277,39 +277,39 @@ export default function AdminInquiries({
                                                     <td>
                                                         <div className="fw-bold small">
                                                             {
-                                                                inquiry.inquiry_number
+                                                                service.inquiry_number
                                                             }
                                                         </div>
 
                                                         <div className="small text-muted">
-                                                            {inquiry.created_at}
+                                                            {service.created_at}
                                                         </div>
                                                     </td>
 
                                                     <td>
                                                         <div className="fw-semibold small">
                                                             {
-                                                                inquiry.customer_name
+                                                                service.customer_name
                                                             }
                                                         </div>
 
                                                         <div className="small text-muted">
                                                             {
-                                                                inquiry.customer_email
+                                                                service.customer_email
                                                             }
                                                         </div>
-                                                        <div className="small text-muted mt-1 text-truncate" title={inquiry.street_address}>
-                                                            {inquiry.street_address || inquiry.city || "Location not provided"}
+                                                        <div className="small text-muted mt-1 text-truncate" title={service.street_address}>
+                                                            {service.street_address || service.city || "Location not provided"}
                                                         </div>
-                                                        {(inquiry.google_place_id || inquiry.service_latitude !== null && inquiry.service_latitude !== undefined || inquiry.street_address || inquiry.city) && (
+                                                        {(service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined || service.street_address || service.city) && (
                                                             <a
                                                                 href={googleMapsSearchUrl({
-                                                                    latitude: inquiry.service_latitude,
-                                                                    longitude: inquiry.service_longitude,
-                                                                    placeId: inquiry.google_place_id,
-                                                                    streetAddress: inquiry.street_address,
-                                                                    city: inquiry.city,
-                                                                    addressDetails: inquiry.address_details,
+                                                                    latitude: service.service_latitude,
+                                                                    longitude: service.service_longitude,
+                                                                    placeId: service.google_place_id,
+                                                                    streetAddress: service.street_address,
+                                                                    city: service.city,
+                                                                    addressDetails: service.address_details,
                                                                 })}
                                                                 target="_blank"
                                                                 rel="noreferrer"
@@ -323,28 +323,28 @@ export default function AdminInquiries({
                                                     <td>
                                                         <div className="fw-semibold small">
                                                             {
-                                                                inquiry.service_type
+                                                                service.service_type
                                                             }
                                                         </div>
 
                                                         <div className="small text-muted text-truncate">
-                                                            {inquiry.item_name ||
+                                                            {service.item_name ||
                                                                 "General service"}
                                                         </div>
                                                     </td>
 
                                                     <td>
                                                         <div className="d-flex flex-column gap-1">
-                                                            {(inquiry.technicians ?? []).length ? inquiry.technicians.map((technician) => (
+                                                            {(service.technicians ?? []).length ? service.technicians.map((technician) => (
                                                                 <div key={technician.id} className="small">
                                                                     {technician.name}
                                                                 </div>
                                                             )) : <span className="small text-muted">Unassigned</span>}
                                                         </div>
 
-                                                        {inquiry.technician?.email && (
+                                                        {service.technician?.email && (
                                                             <div className="small text-muted mt-1">
-                                                                {inquiry.technician.email}
+                                                                {service.technician.email}
                                                             </div>
                                                         )}
                                                     </td>
@@ -352,13 +352,13 @@ export default function AdminInquiries({
                                                     <td>
                                                         <div className="small fw-semibold">
                                                             {
-                                                                inquiry.preferred_date
+                                                                service.preferred_date
                                                             }
                                                         </div>
 
                                                         <div className="small text-muted">
                                                             {
-                                                                inquiry.preferred_time
+                                                                service.preferred_time
                                                             }
                                                         </div>
                                                     </td>
@@ -367,10 +367,10 @@ export default function AdminInquiries({
                                                         <span
                                                             className={
                                                                 "badge rounded-pill text-capitalize px-3 py-2 " +
-                                                                statusClass(inquiry.status)
+                                                                statusClass(service.status)
                                                             }
                                                         >
-                                                            {formatStatus(inquiry.status)}
+                                                            {formatStatus(service.status)}
                                                         </span>
                                                     </td>
 
@@ -378,7 +378,7 @@ export default function AdminInquiries({
                                                         <Link
                                                             href={
                                                                 "/admin/inquiries/" +
-                                                                inquiry.id
+                                                                service.id
                                                             }
                                                             className="btn btn-outline-primary btn-sm fw-bold"
                                                         >
