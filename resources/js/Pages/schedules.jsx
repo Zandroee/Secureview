@@ -13,6 +13,17 @@ function statusClass(status) {
 
 export default function Schedules({ schedules = [] }) {
     const [viewing, setViewing] = useState(null);
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [serviceTypeFilter, setServiceTypeFilter] = useState("");
+    const filteredSchedules = schedules.filter((schedule) => {
+        const query = search.trim().toLowerCase();
+        const searchable = [schedule.receipt_id, schedule.service_type, schedule.item_name, schedule.status]
+            .filter(Boolean).join(" ").toLowerCase();
+        return (!query || searchable.includes(query))
+            && (!statusFilter || schedule.status.toLowerCase().replaceAll(" ", "_") === statusFilter)
+            && (!serviceTypeFilter || schedule.service_type === serviceTypeFilter);
+    });
 
     return (
         <div>
@@ -52,7 +63,29 @@ export default function Schedules({ schedules = [] }) {
                                     </Link>
                                 </div>
 
-                                {schedules.length === 0 ? (
+                                <div className="row g-2 mb-3">
+                                    <div className="col-md-6">
+                                        <label className="form-label small fw-semibold" htmlFor="schedule-search">Search schedules</label>
+                                        <input id="schedule-search" type="search" className="form-control form-control-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Service ID, type, item, or status" />
+                                    </div>
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-semibold" htmlFor="schedule-status">Status</label>
+                                        <select id="schedule-status" className="form-select form-select-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                                            <option value="">All statuses</option>
+                                            <option value="confirmed">Confirmed</option>
+                                            <option value="in_progress">In progress</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-semibold" htmlFor="schedule-service-type">Service type</label>
+                                        <select id="schedule-service-type" className="form-select form-select-sm" value={serviceTypeFilter} onChange={(event) => setServiceTypeFilter(event.target.value)}>
+                                            <option value="">All service types</option>
+                                            {Array.from(new Set(schedules.map((schedule) => schedule.service_type).filter(Boolean))).sort().map((type) => <option key={type} value={type}>{type}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {filteredSchedules.length === 0 ? (
                                     <div
                                         className="border rounded-3 p-5 text-center"
                                         style={{
@@ -73,7 +106,7 @@ export default function Schedules({ schedules = [] }) {
                                                     "Outfit, sans-serif",
                                             }}
                                         >
-                                            NO ACTIVE SCHEDULES
+                                            {schedules.length === 0 ? "NO ACTIVE SCHEDULES" : "NO MATCHING SCHEDULES"}
                                         </h5>
 
                                         <p className="small text-muted mb-3">
@@ -90,7 +123,7 @@ export default function Schedules({ schedules = [] }) {
                                     </div>
                                 ) : (
                                     <div className="d-flex flex-column gap-2">
-                                        {schedules.map((schedule) => (
+                                        {filteredSchedules.map((schedule) => (
                                             <div
                                                 key={schedule.id}
                                                 className="border rounded-3 p-2"
