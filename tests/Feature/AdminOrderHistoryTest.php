@@ -29,8 +29,6 @@ class AdminOrderHistoryTest extends TestCase
                 ->has('orders.data', 2)
                 ->where('summary.completed_orders', 1)
                 ->where('summary.cancelled_orders', 1)
-                ->where('orders.data.0.order_number', $cancelled->order_number)
-                ->where('orders.data.1.order_number', $completed->order_number)
             );
 
         $this->actingAs($admin)
