@@ -12,7 +12,7 @@ class PackageController extends Controller
 {
     public function index(InventoryService $inventory)
     {
-        $packages = Package::with('packageItems.product')
+        $packages = Package::withCount('reviews')->with('packageItems.product')
             ->get()
             ->map(function (Package $package) use ($inventory) {
                 $package->setAttribute(
