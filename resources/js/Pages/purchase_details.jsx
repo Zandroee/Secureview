@@ -38,7 +38,8 @@ export default function PurchaseDetails({ order }) {
     const canPay =
         ["gcash", "card", "maya"].includes(order.payment_method) &&
         ["pending", "failed"].includes(order.payment_status) &&
-        ["awaiting_payment", "payment_failed"].includes(order.order_status);
+        ["awaiting_payment", "payment_failed"].includes(order.order_status) &&
+        !order.payment_deadline_passed;
 
     const cancelOrder = () => {
         const enteredReason = window.prompt(
@@ -130,6 +131,18 @@ export default function PurchaseDetails({ order }) {
 
                     {props.errors?.order && (
                         <div className="alert alert-danger mb-4">{props.errors.order}</div>
+                    )}
+
+                    {order.payment_deadline_at && order.payment_status !== "paid" && (
+                        <div className={"alert d-flex align-items-start gap-3 mb-4 " + (order.payment_deadline_passed ? "alert-danger" : "alert-warning")}>
+                            <i className={"bi " + (order.payment_deadline_passed ? "bi-exclamation-octagon-fill" : "bi-clock-history") + " fs-5"} aria-hidden="true" />
+                            <div>
+                                <div className="fw-bold">{order.payment_deadline_passed ? "Payment deadline passed" : "Payment deadline"}</div>
+                                {order.payment_deadline_passed
+                                    ? "This order is no longer eligible for payment because its 14-day payment window has expired. SecureView will cancel it automatically after verifying the checkout status."
+                                    : "Complete payment by " + order.payment_deadline_at + (order.payment_days_remaining === null ? "" : " (" + order.payment_days_remaining + " day(s) remaining). Unpaid orders are automatically cancelled after 14 days.") }
+                            </div>
+                        </div>
                     )}
 
                     <div className="row g-4">
