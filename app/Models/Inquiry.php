@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Inquiry extends Model
 {
@@ -70,6 +71,11 @@ class Inquiry extends Model
             ->withPivot('assigned_by')
             ->withTimestamps()
             ->orderBy('users.name');
+    }
+
+    public function serviceRecord(): HasOne
+    {
+        return $this->hasOne(ServiceRecord::class);
     }
 
     public function inquirable(): MorphTo
