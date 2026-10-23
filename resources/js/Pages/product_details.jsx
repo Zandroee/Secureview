@@ -2,6 +2,7 @@ import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import { usePage, router } from "@inertiajs/react";
 import { useState } from "react";
+import catalogImageUrl from "../Components/catalogImageUrl";
 
 function Stars({ rating }) {
     return (
@@ -71,10 +72,16 @@ export default function ProductDetails({ product, reviews = [], canReview = fals
     const [amount, setAmount] = useState(1);
     const [cartMessage, setCartMessage] = useState("");
     const [cartError, setCartError] = useState("");
-    const galleryImages = Array.isArray(product.images) && product.images.length
+    const rawGalleryImages = Array.isArray(product.images) && product.images.length
         ? product.images
         : (product.image ? [product.image] : []);
+    const galleryImages = rawGalleryImages.map(catalogImageUrl).filter(Boolean);
     const [selectedImage, setSelectedImage] = useState(galleryImages[0] ?? "");
+    const [failedImageUrls, setFailedImageUrls] = useState([]);
+    const isImageFailed = (url) => failedImageUrls.includes(url);
+    const markImageFailed = (url) => setFailedImageUrls((current) =>
+        current.includes(url) ? current : [...current, url]
+    );
     const displayedImage = galleryImages.includes(selectedImage) ? selectedImage : (galleryImages[0] ?? "");
 
     const availableStock = Math.max(0, Number(product.stock_quantity ?? 0));
@@ -184,8 +191,14 @@ export default function ProductDetails({ product, reviews = [], canReview = fals
                     <div className="row g-3">
 
                         <div className="col-lg-6">
-                            {displayedImage ? (
-                                <img src={displayedImage} alt={product.name} className="img-fluid w-100 rounded-2" style={{ height: "330px", objectFit: "contain", backgroundColor: "#f8f9fa" }} />
+                            {displayedImage && !isImageFailed(displayedImage) ? (
+                                <img
+                                    src={displayedImage}
+                                    alt={product.name}
+                                    className="img-fluid w-100 rounded-2"
+                                    onError={() => markImageFailed(displayedImage)}
+                                    style={{ height: "330px", objectFit: "contain", backgroundColor: "#f8f9fa" }}
+                                />
                             ) : (
                                 <div className="bg-secondary-subtle d-flex align-items-center justify-content-center" style={{ height: "330px" }}>
                                     <i className="bi bi-camera-video text-secondary" style={{ fontSize: "5rem" }}></i>
@@ -202,7 +215,18 @@ export default function ProductDetails({ product, reviews = [], canReview = fals
                                             aria-label={"View product image " + (index + 1)}
                                             onClick={() => setSelectedImage(image)}
                                         >
-                                            <img src={image} alt={product.name + " view " + (index + 1)} style={{ width: "68px", height: "68px", objectFit: "cover" }} />
+                                            {isImageFailed(image) ? (
+                                                <div className="bg-secondary-subtle d-flex align-items-center justify-content-center rounded" style={{ width: "68px", height: "68px" }}>
+                                                    <i className="bi-camera-video text-secondary" />
+                                                </div>
+                                            ) : (
+                                                <img
+                                                    src={image}
+                                                    alt={product.name + " view " + (index + 1)}
+                                                    onError={() => markImageFailed(image)}
+                                                    style={{ width: "68px", height: "68px", objectFit: "cover" }}
+                                                />
+                                            )}
                                         </button>
                                     ))}
                                 </div>
@@ -221,7 +245,7 @@ export default function ProductDetails({ product, reviews = [], canReview = fals
                                 {product.name}
                             </h2>
 
-                            <ul className="ps-3 mb-3" style={{ fontSize: "0.8rem" }}>
+                            <ul className="ps-3 mb-3" style={{ fontSize: "1.05rem", lineHeight: "1.65", overflowWrap: "anywhere" }}>
                                 {specifications.map((specification, index) => (
                                     <li key={index} className="mb-1">
                                         {specification}
@@ -229,7 +253,7 @@ export default function ProductDetails({ product, reviews = [], canReview = fals
                                 ))}
                             </ul>
 
-                            <div className="d-flex flex-wrap align-items-center justify-content-start gap-2 gap-md-3 mb-2" style={{ fontSize: "0.8rem" }}>
+                            <div className="d-flex flex-wrap align-items-center justify-content-start gap-2 gap-md-3 mb-3" style={{ fontSize: "0.95rem", lineHeight: "1.5" }}>
                                 <strong>Category: {product.category}</strong>
                                 <span className="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2 py-2">
                                     Installation: {Number(product.installation_fee ?? 0) > 0
