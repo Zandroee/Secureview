@@ -9,6 +9,7 @@ use App\Services\AdminActivityLogger;
 use App\Services\InventoryService;
 use App\Services\InvoiceDocumentService;
 use App\Services\OrderCancellationService;
+use App\Services\PendingInquiryCheckoutService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
