@@ -190,16 +190,7 @@ export default function Inquiries({ inquiries = [] }) {
 
                                                         <div className="small text-muted">
                                                             TIME:{" "}
-                                                            {
-                                                                service.created_at?.split(
-                                                                    " "
-                                                                )[1]
-                                                            }{" "}
-                                                            {
-                                                                service.created_at?.split(
-                                                                    " "
-                                                                )[2]
-                                                            }
+                                                            {service.created_time || "—"}
                                                         </div>
                                                     </div>
 
@@ -213,6 +204,15 @@ export default function Inquiries({ inquiries = [] }) {
                                                                 service.service_type
                                                             }
                                                         </div>
+
+                                                        {service.payment_status && service.payment_status !== "not_applicable" && (
+                                                            <div className="small text-muted mt-1">
+                                                                PAYMENT
+                                                                <span className={"badge rounded-pill ms-2 text-capitalize " + (service.payment_status === "paid" ? "bg-success-subtle text-success" : service.payment_status === "cancelled" || service.payment_status === "failed" ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning-emphasis")}>
+                                                                    {service.payment_status.replaceAll("_", " ")}
+                                                                </span>
+                                                            </div>
+                                                        )}
 
                                                         <div className="small text-muted mt-1">
                                                             URGENCY
