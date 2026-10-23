@@ -21,7 +21,7 @@ export default function ProductCard({
     const safeSpecifications = Array.isArray(specifications) ? specifications.filter(Boolean) : [];
     const safeInclusions = Array.isArray(inclusions) ? inclusions.filter((item) => item && item.name) : [];
     const isPackage = variant === "package";
-    const imageHeight = isPackage ? "214px" : "188px";
+    const imageHeight = isPackage ? "264px" : "236px";
     const imageUrl = catalogImageUrl(image);
     const showImage = Boolean(imageUrl) && failedImageUrl !== imageUrl;
     const ratingValue = Number.isFinite(Number(rating)) ? Math.max(0, Math.min(5, Number(rating))) : 0;
@@ -73,7 +73,7 @@ export default function ProductCard({
                             style={{
                                 objectFit: "contain",
                                 objectPosition: "center",
-                                padding: "15px",
+                                padding: "2px",
                                 backgroundColor: "transparent",
                             }}
                         />
