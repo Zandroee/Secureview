@@ -71,6 +71,7 @@ jobs:
           mkdir -p hostinger-release/build hostinger-release/config hostinger-release/app/Console/Commands hostinger-release/app/Http/Controllers/Admin hostinger-release/app/Http/Controllers hostinger-release/app/Http/Middleware hostinger-release/app/Services hostinger-release/app/Mail hostinger-release/app/Models hostinger-release/resources/views/emails hostinger-release/bootstrap hostinger-release/routes
           cp -a public/build/. hostinger-release/build/
           cp config/services.php hostinger-release/config/services.php
+          cp config/filesystems.php hostinger-release/config/filesystems.php
           cp app/Http/Controllers/Admin/WarrantyController.php hostinger-release/app/Http/Controllers/Admin/WarrantyController.php
           cp app/Http/Controllers/Admin/ProductController.php hostinger-release/app/Http/Controllers/Admin/ProductController.php
           cp app/Http/Controllers/Admin/PackageController.php hostinger-release/app/Http/Controllers/Admin/PackageController.php
