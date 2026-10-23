@@ -14,15 +14,16 @@ class EmailVerificationController extends Controller
 {
     public function show(Request $request, EmailVerificationCodeService $codes): Response
     {
-        $email = (string) $request->query(
-            'email',
-            $request->session()->get('verificationEmail', '')
-        );
+        $sessionEmail = (string) $request->session()->get('verificationEmail', '');
+        $email = (string) $request->query('email', $sessionEmail);
         $user = $email !== '' ? User::where('email', $email)->first() : null;
+        $emailMatchesFlashSession = $sessionEmail !== ''
+            && strcasecmp($sessionEmail, $email) === 0;
 
         return Inertia::render('verify-email', [
             'email' => $email,
-            'resendCooldownSeconds' => $user && !$user->hasVerifiedEmail()
+            // Do not reveal another address's verification state through a public query parameter.
+            'resendCooldownSeconds' => $emailMatchesFlashSession && $user && !$user->hasVerifiedEmail()
                 ? $codes->resendCooldownRemaining($user)
                 : 0,
         ]);
