@@ -170,6 +170,53 @@ class OrderCancellationTest extends TestCase
         ]);
     }
 
+    public function test_order_is_not_cancelled_when_paymongo_reports_payment_succeeded_during_cancellation(): void
+    {
+        config([
+            'services.paymongo.secret_key' => 'sk_test_secureview',
+            'services.paymongo.base_url' => 'https://api.paymongo.com',
+        ]);
+
+        Http::fake([
+            'https://api.paymongo.com/v1/checkout_sessions/cs_paid_race_test/expire' => Http::response([
+                'errors' => [['detail' => 'The checkout session cannot be expired.']],
+            ], 400),
+            'https://api.paymongo.com/v1/checkout_sessions/cs_paid_race_test' => Http::response([
+                'data' => [
+                    'id' => 'cs_paid_race_test',
+                    'attributes' => [
+                        'status' => 'active',
+                        'payments' => [[
+                            'id' => 'pay_paid_race_test',
+                            'attributes' => ['status' => 'paid'],
+                        ]],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(5);
+        $order = $this->createOrder($customer, $product, [
+            'payment_method' => 'gcash',
+            'payment_status' => 'pending',
+            'order_status' => 'awaiting_payment',
+            'paymongo_checkout_session_id' => 'cs_paid_race_test',
+        ]);
+
+        $this->actingAs($customer)
+            ->from(route('purchases.show', $order))
+            ->patch(route('purchases.cancel', $order))
+            ->assertRedirect(route('purchases.show', $order))
+            ->assertSessionHasErrors('order');
+
+        $freshOrder = $order->fresh();
+        $this->assertSame('paid', $freshOrder->payment_status);
+        $this->assertSame('processing', $freshOrder->order_status);
+        $this->assertNotNull($freshOrder->paid_at);
+        $this->assertSame('pay_paid_race_test', $freshOrder->paymongo_payment_id);
+    }
+
     public function test_admin_can_cancel_an_unpaid_order_and_action_is_logged(): void
     {
         $admin = User::factory()->create([
