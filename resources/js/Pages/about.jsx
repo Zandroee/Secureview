@@ -46,127 +46,92 @@ export default function About() {
         <>
         {/* HEADER SECTION */}
             <Navbar />
-            <header className="d-flex align-items-center text-white">
-                <div className="container-fluid" style={{ paddingLeft: 0, paddingRight: 0 }}>
-                    <div className="row">
-
-                        <div className="col-12 position-relative text-center">
-                            <img src="/images/AboutHeader.jpg" className="img-fluid" style={{ width: "100%", height: "400px", objectFit: "cover" }} alt="AboutHeader"></img>
-                        
-                        <div
-                        className="position-absolute top-50 start-50 translate-middle text-center" style ={{marginTop: "50px"}}>
-                            <h1 className="display-4 fw-bold">ABOUT US</h1> 
-
-                            <p className="lead" style={{ color: "white", fontSize: "1.25rem", marginTop: "-10px" }}>who are we?</p>
-                        </div>
+            <header className="about-hero text-white">
+                <div className="container-fluid p-0">
+                    <div className="row g-0">
+                        <div className="col-12 position-relative text-center about-hero-media">
+                            <img
+                                src="/images/AboutHeader.jpg"
+                                className="about-hero-image"
+                                alt="CCTV security camera installation"
+                            />
+                            <div className="about-hero-copy position-absolute top-50 start-50 translate-middle text-center">
+                                <p className="about-hero-eyebrow text-uppercase fw-bold mb-2">Netmax Trading · SecureView</p>
+                                <h1 className="display-3 fw-bold mb-2">ABOUT US</h1>
+                                <p className="about-hero-subtitle mb-0">Who are we?</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </header>
+            </header>   </header>
 
             {/* NETMAX Section */}
-            <section className="py-5">
+            <section className="about-story-section about-company-section">
                 <div className="container">
-                    <div className="row align-items-center">
-                        <div className="col-md-6 mb-4 mb-md-0">
-                            <img src="/images/NETMAX.jpg" className="img-fluid rounded" alt="AboutUs"></img>
+                    <div className="row g-4 g-lg-5 align-items-center">
+                        <div className="col-md-6 mb-2 mb-md-0 about-story-media">
+                            <img src="/images/NETMAX.jpg" className="img-fluid rounded-4 about-story-image" alt="Netmax Trading CCTV and computer services"></img>
                         </div>
-                        <div className="col-md-6">
-                            <h2 className="fw-bold mb-4 text-primary" style={{ fontFamily: "Outfit, sans-serif" }}>NETMAX TRADING</h2>
-                            <p className="lead mb-4" style = {{ fontFamily: "Outfit, sans-serif," }}>Our company, Netmax Trading, are experts in IT industries with over 10+ years of experiences in this field. We specialize in CCTV operations as well as different Auxilliaries with several brand partnerships.</p>
+                        <div className="col-md-6 about-story-copy">
+                            <p className="about-section-kicker mb-2">Who we are</p>
+                            <h2 className="fw-bold mb-3 text-primary about-section-heading">NETMAX TRADING</h2>
+                            <p className="about-section-lead mb-0">Netmax Trading brings over 10 years of experience in IT-related industries, with a focus on CCTV systems, surveillance equipment, auxiliary solutions, and established brand partnerships.</p>
                         </div>
                     </div>
                 </div>
             </section>
-            <section className="py-5">  
+            <section className="about-story-section about-mission-section">
                 <div className="container">
-                    <div className="row align-items-center">
-                        <div className="col-md-6 mb-4 mb-md-0">
-                            <h2 className="fw-bold mb-4 text-primary" style={{ fontFamily: "Outfit, sans-serif" }}>OUR MISSION</h2>
-                            <p className="lead mb-4" style = {{ fontFamily: "Outfit, sans-serif," }}>Our mission is to provide our customers with the best products and services in the industry. We strive to exceed our customers' expectations and to be a trusted partner in their success.</p>
+                    <div className="row g-4 g-lg-5 align-items-center">
+                        <div className="col-md-6 about-story-copy">
+                            <p className="about-section-kicker mb-2">What guides us</p>
+                            <h2 className="fw-bold mb-3 text-primary about-section-heading">OUR MISSION</h2>
+                            <p className="about-section-lead mb-0">Our mission is to provide dependable products and services, exceed customer expectations, and build lasting relationships through trusted support and practical security solutions.</p>
                         </div>
-                        <div className="col-md-6">
-                            <img src="/images/OurMission.jpg" className="img-fluid rounded" alt="Mission"></img>
+                        <div className="col-md-6 about-story-media">
+                            <img src="/images/OurMission.jpg" className="img-fluid rounded-4 about-story-image" alt="CCTV product solutions for customers"></img>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* NETMAX Section */}
-            <section className="py-5">
-                <div className="container-fluid">
-
+            {/* WHY CHOOSE US — refine the existing four points without adding another section */}
+            <section className="about-benefits-section py-5">
+                <div className="container">
                     <div className="why-line"></div>
-                    <h3 className="fw-bold mb-4 text-center text-primary" style={{ fontFamily: "Outfit, sans-serif" }}>WHY CHOOSE US?</h3>
+                    <div className="text-center mb-4 mb-lg-5">
+                        <p className="about-section-kicker text-uppercase fw-bold mb-2">The SecureView difference</p>
+                        <h2 className="fw-bold text-primary mb-0 about-benefits-heading">WHY CHOOSE US?</h2>
+                    </div>
 
-                <div className="row text-center justify-content-center">
-                    <div className="col-md-3">
-                        <img src="/images/Check.jpg" className="check icon" alt="Check"></img>
-                        <h3>Certified Technicians</h3>
-                        <p>With 11 years of IT Experience from <br/>Computers to different Auxilliaries.</p>
-   
-                </div>
-                    <div className="col-md-3">
-                        <img src="/images/Check.jpg" className="check icon" alt="Check"></img>
-                        <h3> Philgreps Certification</h3>
-                        <p>Centralized Electronic portal that <br/> Serves Source of Information on<br/> Government procurement.</p>
-                        
-                </div>
-                <div className="col-md-3">
-                        <img src="/images/Check.jpg" className="check icon" alt="Check"></img>
-                        <h3>Brand Partnership</h3>
-                        <p>Well-known CCTV brands like<br/> Hikvision, Duhua and UIV are <br/>partners with us.</p>
-                </div>
-                <div className="col-md-3">
-                        <img src="/images/Check.jpg" className="check icon" alt="Check"></img>
-                        <h3>Operated Nationwide</h3>
-                        <p>Througout the years, this company<br/>have operated from Luzon,<br/> Visayas and Mindanao.</p>
+                    <div className="row g-3 g-lg-4 text-center justify-content-center about-benefits-grid">
+                        <div className="col-12 col-sm-6 col-xl-3">
+                            <article className="about-benefit-card h-100">
+                                <div className="about-benefit-icon"><i className="bi bi-tools" aria-hidden="true"></i></div>
+                                <h3 className="h5 fw-bold">Certified Technicians</h3>
+                                <p className="mb-0">11 years of IT experience across computers and auxiliary systems.</p>
+                            </article>
                         </div>
-                </div>
-
-                </div>
-            </section>
-
-            {/* SERVICE EXPERIENCE STRIP — placed immediately before the FAQs */}
-            <section className="about-trust-section py-5">
-                <div className="container">
-                    <div className="row g-4 align-items-center">
-                        <div className="col-lg-4">
-                            <p className="small text-primary fw-bold text-uppercase mb-2">Your security, our focus</p>
-                            <h2 className="fw-bold mb-3 about-trust-heading">Practical CCTV solutions, with support at every step.</h2>
-                            <p className="mb-4 about-trust-intro">
-                                From choosing the right equipment to arranging a service visit, SecureView helps you make a more informed decision for your home or business.
-                            </p>
-                            <div className="d-flex flex-wrap gap-2">
-                                <Link href="/products" className="btn btn-primary fw-bold px-4">EXPLORE PRODUCTS</Link>
-                                <Link href="/services" className="btn btn-outline-primary fw-bold px-4">OUR SERVICES</Link>
-                            </div>
+                        <div className="col-12 col-sm-6 col-xl-3">
+                            <article className="about-benefit-card h-100">
+                                <div className="about-benefit-icon"><i className="bi bi-patch-check" aria-hidden="true"></i></div>
+                                <h3 className="h5 fw-bold">PhilGEPS Certification</h3>
+                                <p className="mb-0">PhilGEPS is the centralized electronic portal for government procurement information.</p>
+                            </article>
                         </div>
-
-                        <div className="col-lg-8">
-                            <div className="row g-3">
-                                <div className="col-md-4">
-                                    <article className="about-trust-card h-100">
-                                        <div className="about-trust-icon"><i className="bi bi-shield-check" aria-hidden="true" /></div>
-                                        <h3 className="h5 fw-bold mt-3 mb-2">Guidance you can use</h3>
-                                        <p className="mb-0">Understand the options, features, and coverage that suit your space before choosing a system.</p>
-                                    </article>
-                                </div>
-                                <div className="col-md-4">
-                                    <article className="about-trust-card h-100">
-                                        <div className="about-trust-icon"><i className="bi bi-camera-video" aria-hidden="true" /></div>
-                                        <h3 className="h5 fw-bold mt-3 mb-2">Solutions for your needs</h3>
-                                        <p className="mb-0">Explore cameras, recording equipment, packages, and auxiliary products in one place.</p>
-                                    </article>
-                                </div>
-                                <div className="col-md-4">
-                                    <article className="about-trust-card h-100">
-                                        <div className="about-trust-icon"><i className="bi bi-calendar2-check" aria-hidden="true" /></div>
-                                        <h3 className="h5 fw-bold mt-3 mb-2">A clearer service process</h3>
-                                        <p className="mb-0">Submit your request, share the details, and keep track of your service through SecureView.</p>
-                                    </article>
-                                </div>
-                            </div>
+                        <div className="col-12 col-sm-6 col-xl-3">
+                            <article className="about-benefit-card h-100">
+                                <div className="about-benefit-icon"><i className="bi bi-camera-video" aria-hidden="true"></i></div>
+                                <h3 className="h5 fw-bold">Brand Partnership</h3>
+                                <p className="mb-0">Brand partnerships include CCTV names such as Hikvision, Dahua, and Uniview.</p>
+                            </article>
+                        </div>
+                        <div className="col-12 col-sm-6 col-xl-3">
+                            <article className="about-benefit-card h-100">
+                                <div className="about-benefit-icon"><i className="bi bi-geo-alt" aria-hidden="true"></i></div>
+                                <h3 className="h5 fw-bold">Operated Nationwide</h3>
+                                <p className="mb-0">Experience operating across Luzon, Visayas, and Mindanao.</p>
+                            </article>
                         </div>
                     </div>
                 </div>
