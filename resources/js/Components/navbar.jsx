@@ -1279,7 +1279,7 @@ export default function Navbar() {
                                             </Link>
                                             <Link href="/purchases" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
                                                 <i className="bi bi-bag-check" aria-hidden="true"></i>
-                                                <span>Purchases</span>
+                                                <span>Orders History</span>
                                             </Link>
                                             <Link href="/inquiries" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
                                                 <i className="bi bi-chat-left-text" aria-hidden="true"></i>
