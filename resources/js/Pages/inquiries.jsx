@@ -2,6 +2,7 @@ import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import { googleMapsSearchUrl } from "../Components/GoogleMaps/ServiceLocation";
 import { Link } from "@inertiajs/react";
+import { useState } from "react";
 
 function statusClass(status) {
     if (status === "confirmed" || status === "completed") {
@@ -32,6 +33,20 @@ function urgencyClass(urgency) {
 }
 
 export default function Inquiries({ inquiries = [] }) {
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [serviceTypeFilter, setServiceTypeFilter] = useState("");
+    const [urgencyFilter, setUrgencyFilter] = useState("");
+    const filteredInquiries = inquiries.filter((service) => {
+        const query = search.trim().toLowerCase();
+        const searchable = [service.inquiry_number, service.item_name, service.service_type, service.status]
+            .filter(Boolean).join(" ").toLowerCase();
+        return (!query || searchable.includes(query))
+            && (!statusFilter || service.status === statusFilter)
+            && (!serviceTypeFilter || service.service_type === serviceTypeFilter)
+            && (!urgencyFilter || service.urgency === urgencyFilter);
+    });
+
     return (
         <div>
             <Navbar />
@@ -76,7 +91,41 @@ export default function Inquiries({ inquiries = [] }) {
                                     </Link>
                                 </div>
 
-                                {inquiries.length === 0 ? (
+                                <div className="row g-2 mb-3">
+                                    <div className="col-md-4">
+                                        <label className="form-label small fw-semibold" htmlFor="service-history-search">Search services</label>
+                                        <input id="service-history-search" type="search" className="form-control form-control-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Service ID, type, item, or status" />
+                                    </div>
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-semibold" htmlFor="service-history-status">Status</label>
+                                        <select id="service-history-status" className="form-select form-select-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                                            <option value="">All statuses</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="confirmed">Confirmed</option>
+                                            <option value="in_progress">In progress</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-semibold" htmlFor="service-history-type">Service type</label>
+                                        <select id="service-history-type" className="form-select form-select-sm" value={serviceTypeFilter} onChange={(event) => setServiceTypeFilter(event.target.value)}>
+                                            <option value="">All service types</option>
+                                            {Array.from(new Set(inquiries.map((service) => service.service_type).filter(Boolean))).sort().map((type) => <option key={type} value={type}>{type}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="col-md-2">
+                                        <label className="form-label small fw-semibold" htmlFor="service-history-urgency">Urgency</label>
+                                        <select id="service-history-urgency" className="form-select form-select-sm" value={urgencyFilter} onChange={(event) => setUrgencyFilter(event.target.value)}>
+                                            <option value="">All</option>
+                                            <option value="normal">Normal</option>
+                                            <option value="urgent">Urgent</option>
+                                            <option value="emergency">Emergency</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {filteredInquiries.length === 0 ? (
                                     <div
                                         className="border rounded-3 p-5 text-center"
                                         style={{
@@ -95,7 +144,7 @@ export default function Inquiries({ inquiries = [] }) {
                                                     "Outfit, sans-serif",
                                             }}
                                         >
-                                            NO SERVICE REQUESTS YET
+                                            {inquiries.length === 0 ? "NO SERVICE REQUESTS YET" : "NO MATCHING SERVICES"}
                                         </h5>
 
                                         <p className="small text-muted mb-3">
@@ -112,7 +161,7 @@ export default function Inquiries({ inquiries = [] }) {
                                     </div>
                                 ) : (
                                     <div className="d-flex flex-column gap-2">
-                                        {inquiries.map((service) => (
+                                        {filteredInquiries.map((service) => (
                                             <div
                                                 key={service.id}
                                                 className="border rounded-3 p-2"
