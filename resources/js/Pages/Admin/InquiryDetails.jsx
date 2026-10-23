@@ -160,6 +160,17 @@ export default function AdminInquiryDetails({
                                                 {service.item_name ||
                                                     "General Service"}
                                             </div>
+                                            {service.other_service_type && (
+                                                <div className="small text-primary fw-semibold mt-2">Other service category: {service.other_service_type}</div>
+                                            )}
+                                            {service.other_service_details && (
+                                                <div className="small mt-1" style={{ maxWidth: 650, whiteSpace: "pre-wrap" }}>
+                                                    <span className="fw-semibold">Customer description:</span> {service.other_service_details}
+                                                </div>
+                                            )}
+                                            {service.payment_status === "pending" && (
+                                                <div className="mt-2"><span className="badge rounded-pill bg-warning-subtle text-warning-emphasis">Payment pending — service actions blocked</span></div>
+                                            )}
                                         </div>
 
                                         <div className="text-end">
