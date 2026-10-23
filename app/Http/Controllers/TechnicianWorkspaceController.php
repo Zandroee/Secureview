@@ -42,7 +42,7 @@ class TechnicianWorkspaceController extends Controller
 
         // Include both current team assignments and legacy technician_id assignments.
         $busySlots = Inquiry::query()
-            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
             ->whereDate('preferred_date', '>=', today())
             ->where(function ($query) use ($technician) {
                 $query->where('technician_id', $technician->id)
