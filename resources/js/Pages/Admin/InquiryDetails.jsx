@@ -40,7 +40,7 @@ function statusClass(status) {
 }
 
 export default function AdminInquiryDetails({
-    service,
+    inquiry: service,
     technicians = [],
     bookingTimeSlots = [],
     todayDate = "",
