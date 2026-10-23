@@ -1,4 +1,5 @@
 import { Link, usePage } from "@inertiajs/react";
+import { Offcanvas } from "bootstrap";
 
 const groups = [
     [
@@ -68,7 +69,7 @@ export default function TechnicianSidebar() {
     const close = () => {
         const menu = document.getElementById("technicianSidebarOffcanvas");
         if (menu?.classList.contains("show")) {
-            window.bootstrap?.Offcanvas?.getOrCreateInstance(menu)?.hide();
+            Offcanvas.getOrCreateInstance(menu)?.hide();
         }
     };
 
