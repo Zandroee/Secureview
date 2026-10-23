@@ -263,7 +263,7 @@ export default function Inquiries({ inquiries = [] }) {
 
                                                             <Link
                                                                 href={
-                                                                    "/services/" +
+                                                                    "/inquiries/" +
                                                                     service.id
                                                                 }
                                                                 className="btn btn-outline-primary btn-sm fw-bold"
