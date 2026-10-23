@@ -29,7 +29,7 @@ class TechnicianWorkspaceController extends Controller
         $technician = $request->user();
 
         $jobs = $technician->assignedInquiries()
-            ->with(['technicians:id,name,email', 'serviceRecord.items'])
+            ->with(['technicians:id,name,email', 'serviceRecord.items', 'pendingCheckout.order'])
             ->whereIn('status', ['confirmed', 'in_progress', 'completed'])
             ->orderByRaw("CASE WHEN status = 'completed' THEN 4 WHEN urgency = 'emergency' THEN 1 WHEN urgency = 'urgent' THEN 2 ELSE 3 END")
             ->orderByRaw("CASE status WHEN 'in_progress' THEN 1 WHEN 'confirmed' THEN 2 ELSE 3 END")
@@ -53,7 +53,7 @@ class TechnicianWorkspaceController extends Controller
             ->all();
 
         $openJobs = Inquiry::query()
-            ->with('technicians:id,name,email')
+            ->with(['technicians:id,name,email', 'pendingCheckout.order'])
             ->whereIn('status', ['pending', 'confirmed'])
             ->whereDate('preferred_date', '>=', today())
             ->where(function ($query) use ($technician) {
@@ -505,6 +505,8 @@ class TechnicianWorkspaceController extends Controller
             'service_longitude' => $includeCustomerDetails ? $inquiry->service_longitude : null,
             'google_place_id' => $includeCustomerDetails ? $inquiry->google_place_id : null,
             'status' => $inquiry->status,
+            'payment_status' => $inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable',
+            'payment_method' => $inquiry->pendingCheckout?->order?->payment_method,
             'service_record' => $inquiry->serviceRecord ? [
                 'id' => $inquiry->serviceRecord->id,
                 'work_summary' => $inquiry->serviceRecord->work_summary,
