@@ -68,7 +68,7 @@ jobs:
       - name: Assemble Hostinger release bundle
         if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
         run: |
-          mkdir -p hostinger-release/build hostinger-release/config hostinger-release/app/Console/Commands hostinger-release/app/Http/Controllers/Admin hostinger-release/app/Http/Controllers hostinger-release/app/Http/Middleware hostinger-release/app/Services hostinger-release/app/Mail hostinger-release/app/Models hostinger-release/database/migrations hostinger-release/resources/views/emails hostinger-release/bootstrap hostinger-release/routes
+          mkdir -p hostinger-release/build hostinger-release/config hostinger-release/app/Console/Commands hostinger-release/app/Http/Controllers/Admin hostinger-release/app/Http/Controllers hostinger-release/app/Http/Middleware hostinger-release/app/Services hostinger-release/app/Mail hostinger-release/app/Models hostinger-release/database/migrations hostinger-release/database/seeders hostinger-release/resources/views/emails hostinger-release/bootstrap hostinger-release/routes
           cp -a public/build/. hostinger-release/build/
           cp config/services.php hostinger-release/config/services.php
           cp config/filesystems.php hostinger-release/config/filesystems.php
@@ -97,7 +97,8 @@ jobs:
           cp app/Models/Package.php hostinger-release/app/Models/Package.php
           cp app/Http/Controllers/Admin/CatalogOptionController.php hostinger-release/app/Http/Controllers/Admin/CatalogOptionController.php
           cp database/migrations/2026_10_23_200000_add_brand_to_products_and_packages_table.php hostinger-release/database/migrations/2026_10_23_200000_add_brand_to_products_and_packages_table.php
-          cp database/migrations/2026_10_23_210000_add_more_catalog_products_and_packages.php hostinger-release/database/migrations/2026_10_23_210000_add_more_catalog_products_and_packages.php
+          cp database/migrations/2026_10_23_210000_backfill_explicit_catalog_brands.php hostinger-release/database/migrations/2026_10_23_210000_backfill_explicit_catalog_brands.php
+          cp database/seeders/CatalogExpansionSeeder.php hostinger-release/database/seeders/CatalogExpansionSeeder.php
           cp resources/views/emails/email-verification-code.blade.php hostinger-release/resources/views/emails/email-verification-code.blade.php
           cp app/Http/Middleware/EnforceSingleLoginSession.php hostinger-release/app/Http/Middleware/EnforceSingleLoginSession.php
           cp app/Http/Middleware/HandleInertiaRequests.php hostinger-release/app/Http/Middleware/HandleInertiaRequests.php
