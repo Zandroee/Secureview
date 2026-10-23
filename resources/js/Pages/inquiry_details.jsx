@@ -165,6 +165,19 @@ export default function ServiceDetails({ inquiry: service, success }) {
                                         {service.item_name ||
                                             "General Service"}
                                     </div>
+                                    {service.other_service_type && (
+                                        <div className="small text-primary fw-semibold mt-2">Requested category: {service.other_service_type}</div>
+                                    )}
+                                    {service.other_service_details && (
+                                        <div className="small text-muted mt-2" style={{ whiteSpace: "pre-wrap" }}>
+                                            <span className="fw-semibold">Your description:</span> {service.other_service_details}
+                                        </div>
+                                    )}
+                                    {service.payment_status === "pending" && (
+                                        <div className="alert alert-warning py-2 small mt-3 mb-0">
+                                            Payment is still pending. Technicians cannot start or update this service until the payment is confirmed.
+                                        </div>
+                                    )}
 
                                     <div className="small text-muted mt-3">
                                         Urgency
