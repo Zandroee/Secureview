@@ -44,6 +44,63 @@ class OrderCancellationTest extends TestCase
         ]);
     }
 
+    public function test_cancelling_an_installation_order_cancels_its_linked_service_and_checkout(): void
+    {
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(5);
+        $order = $this->createOrder($customer, $product, [
+            'payment_method' => 'cash',
+            'payment_status' => 'pending',
+            'order_status' => 'pending',
+        ]);
+
+        $inquiry = Inquiry::create([
+            'user_id' => $customer->id,
+            'inquirable_type' => Product::class,
+            'inquirable_id' => $product->id,
+            'inquiry_number' => 'INQ-CANCEL-LINKED-TEST',
+            'item_name' => $product->name,
+            'customer_name' => $customer->name,
+            'customer_phone' => '09123456789',
+            'customer_email' => $customer->email,
+            'street_address' => '31 Molave Street',
+            'city' => 'Taguig',
+            'service_type' => 'Installation',
+            'urgency' => 'normal',
+            'preferred_date' => today()->addDays(5)->toDateString(),
+            'preferred_time' => '08:00 AM - 11:00 AM',
+            'status' => 'pending',
+        ]);
+
+        PendingInquiryCheckout::create([
+            'user_id' => $customer->id,
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'payload' => [],
+            'status' => 'pending_payment',
+        ]);
+
+        $this->actingAs($customer)
+            ->patch(route('purchases.cancel', $order))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'payment_status' => 'cancelled',
+            'order_status' => 'cancelled',
+        ]);
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'status' => 'cancelled',
+        ]);
+        $this->assertDatabaseHas('inquiries', [
+            'id' => $inquiry->id,
+            'status' => 'cancelled',
+        ]);
+    }
+
     public function test_customer_cannot_cancel_another_customers_order(): void
     {
         $owner = $this->createCustomer();
