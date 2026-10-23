@@ -33,6 +33,7 @@ class ProductController extends Controller
             $query->where(function ($builder) use ($search) {
                 $builder
                     ->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('brand', 'like', '%' . $search . '%')
                     ->orWhere('category', 'like', '%' . $search . '%');
             });
         }
@@ -342,6 +343,7 @@ class ProductController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'brand' => ['nullable', 'string', 'max:120'],
             'category' => ['required', 'string', 'max:120'],
             'warranty' => ['required', 'string', 'max:120'],
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
@@ -372,6 +374,7 @@ class ProductController extends Controller
 
         return [
             'name' => trim($validated['name']),
+            'brand' => filled($validated['brand'] ?? null) ? trim($validated['brand']) : null,
             'category' => trim($validated['category']),
             'warranty' => trim($validated['warranty']),
             'price' => $validated['price'],
@@ -474,6 +477,7 @@ class ProductController extends Controller
     {
         return [
             'name' => $product->name,
+            'brand' => $product->brand,
             'category' => $product->category,
             'warranty' => $product->warranty,
             'price' => (float) $product->price,
