@@ -37,6 +37,7 @@ export default function ProductCard({
         borderRadius: "18px",
         overflow: "hidden",
         background: "var(--sv-catalog-card-bg)",
+        color: "var(--sv-catalog-card-text)",
         transform: isHovered ? "translateY(-4px)" : "translateY(0)",
         boxShadow: isHovered ? "0 16px 34px rgba(19, 43, 79, 0.13)" : "0 4px 14px rgba(19, 43, 79, 0.045)",
         opacity: available ? 1 : 0.74,
