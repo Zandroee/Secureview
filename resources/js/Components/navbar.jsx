@@ -52,7 +52,6 @@ export default function Navbar() {
 
     if (isAuthenticated) {
         navigationItems.push(
-            { label: "Account Settings", href: "/settings", icon: "bi-gear", keywords: "profile preferences password appearance theme dark mode notifications security" },
             { label: "Notifications", href: "/notifications", icon: "bi-bell", keywords: "alerts messages updates unread" }
         );
     }
@@ -1258,10 +1257,6 @@ export default function Navbar() {
                                                     <i className="bi bi-arrow-up-right ms-auto" aria-hidden="true"></i>
                                                 </Link>
                                             )}
-                                            <Link href="/settings" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
-                                                <i className="bi bi-gear" aria-hidden="true"></i>
-                                                <span>Account settings</span>
-                                            </Link>
                                             <Link href="/schedules" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
                                                 <i className="bi bi-calendar3" aria-hidden="true"></i>
                                                 <span>Schedules</span>
@@ -1280,12 +1275,6 @@ export default function Navbar() {
                                                     <span>Warranty claims</span>
                                                 </Link>
                                             )}
-                                        </div>
-                                        <div className="navbar-account-menu-footer">
-                                            <Link href="/settings" className="navbar-account-settings-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
-                                                <i className="bi bi-sliders" aria-hidden="true"></i>
-                                                Manage account
-                                            </Link>
                                         </div>
                                     </div>
                                 )}
