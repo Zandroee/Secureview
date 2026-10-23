@@ -167,17 +167,23 @@ class InventoryService
 
             foreach ($lockedOrder->items as $orderItem) {
                 if ($orderItem->purchasable_type === Package::class) {
-                    $package = Package::with('packageItems')->findOrFail($orderItem->purchasable_id);
+                    // Catalog records may have been intentionally removed while old orders
+                    // are retained as snapshots. Do not fail cancellation when an item is gone.
+                    $package = Package::with('packageItems')->find($orderItem->purchasable_id);
 
-                    foreach ($package->packageItems as $packageItem) {
-                        $product = Product::query()
-                            ->lockForUpdate()
-                            ->findOrFail($packageItem->product_id);
+                    if ($package) {
+                        foreach ($package->packageItems as $packageItem) {
+                            $product = Product::query()
+                                ->lockForUpdate()
+                                ->find($packageItem->product_id);
 
-                        $product->increment(
-                            'stock_quantity',
-                            (int) $packageItem->quantity * (int) $orderItem->quantity
-                        );
+                            if ($product) {
+                                $product->increment(
+                                    'stock_quantity',
+                                    (int) $packageItem->quantity * (int) $orderItem->quantity
+                                );
+                            }
+                        }
                     }
 
                     continue;
@@ -185,9 +191,11 @@ class InventoryService
 
                 $product = Product::query()
                     ->lockForUpdate()
-                    ->findOrFail($orderItem->purchasable_id);
+                    ->find($orderItem->purchasable_id);
 
-                $product->increment('stock_quantity', (int) $orderItem->quantity);
+                if ($product) {
+                    $product->increment('stock_quantity', (int) $orderItem->quantity);
+                }
             }
 
             $lockedOrder->update([
