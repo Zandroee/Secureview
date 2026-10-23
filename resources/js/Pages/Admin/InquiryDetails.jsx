@@ -40,7 +40,7 @@ function statusClass(status) {
 }
 
 export default function AdminInquiryDetails({
-    inquiry,
+    service,
     technicians = [],
     bookingTimeSlots = [],
     todayDate = "",
@@ -52,13 +52,13 @@ export default function AdminInquiryDetails({
 
     const updateStatus = (event) => {
         const nextStatus = event.target.value;
-        if (nextStatus === "confirmed" && inquiry.status !== "confirmed") {
+        if (nextStatus === "confirmed" && service.status !== "confirmed") {
             setConfirming(true);
             return;
         }
 
         router.patch(
-            "/admin/inquiries/" + inquiry.id + "/status",
+            "/admin/inquiries/" + service.id + "/status",
             {
                 status: nextStatus,
             },
@@ -92,7 +92,7 @@ export default function AdminInquiryDetails({
         ? "service-history"
         : fromSchedule
             ? "schedules"
-            : "inquiries";
+            : "services";
 
 
     return (
@@ -124,8 +124,8 @@ export default function AdminInquiryDetails({
                                 </h1>
 
                                 <div className="text-muted small">
-                                    {inquiry.inquiry_number} ·{" "}
-                                    {inquiry.created_at}
+                                    {service.inquiry_number} ·{" "}
+                                    {service.created_at}
                                 </div>
                             </div>
 
@@ -153,11 +153,11 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-bold fs-5">
-                                                {inquiry.service_type}
+                                                {service.service_type}
                                             </div>
 
                                             <div className="small text-muted mt-1">
-                                                {inquiry.item_name ||
+                                                {service.item_name ||
                                                     "General Service"}
                                             </div>
                                         </div>
@@ -171,11 +171,11 @@ export default function AdminInquiryDetails({
                                                 className={
                                                     "badge rounded-pill text-capitalize px-3 py-2 " +
                                                     urgencyClass(
-                                                        inquiry.urgency
+                                                        service.urgency
                                                     )
                                                 }
                                             >
-                                                {inquiry.urgency}
+                                                {service.urgency}
                                             </span>
                                         </div>
                                     </div>
@@ -187,7 +187,7 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.preferred_date}
+                                                {service.preferred_date}
                                             </div>
                                         </div>
 
@@ -197,7 +197,7 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.preferred_time}
+                                                {service.preferred_time}
                                             </div>
                                         </div>
 
@@ -207,37 +207,37 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.street_address}, {inquiry.city}
+                                                {service.street_address}, {service.city}
                                             </div>
-                                            {inquiry.address_details && (
+                                            {service.address_details && (
                                                 <div className="small text-muted mt-1">
-                                                    <span className="fw-semibold">House / Unit / Landmark:</span> {inquiry.address_details}
+                                                    <span className="fw-semibold">House / Unit / Landmark:</span> {service.address_details}
                                                 </div>
                                             )}
                                         </div>
 
-                                        {(inquiry.street_address || inquiry.city || inquiry.google_place_id || inquiry.service_latitude !== null && inquiry.service_latitude !== undefined) && (
+                                        {(service.street_address || service.city || service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined) && (
                                             <div className="col-12">
                                                 <ServiceLocationMap
-                                                    latitude={inquiry.service_latitude}
-                                                    longitude={inquiry.service_longitude}
-                                                    placeId={inquiry.google_place_id}
-                                                    streetAddress={inquiry.street_address}
-                                                    city={inquiry.city}
-                                                    addressDetails={inquiry.address_details}
+                                                    latitude={service.service_latitude}
+                                                    longitude={service.service_longitude}
+                                                    placeId={service.google_place_id}
+                                                    streetAddress={service.street_address}
+                                                    city={service.city}
+                                                    addressDetails={service.address_details}
                                                 />
                                             </div>
                                         )}
                                     </div>
 
-                                    {inquiry.notes && (
+                                    {service.notes && (
                                         <div className="mt-4">
                                             <div className="small text-muted">
                                                 CUSTOMER NOTES
                                             </div>
 
                                             <div className="border rounded-3 p-3 mt-1 bg-light">
-                                                {inquiry.notes}
+                                                {service.notes}
                                             </div>
                                         </div>
                                     )}
@@ -265,7 +265,7 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.customer_name}
+                                                {service.customer_name}
                                             </div>
                                         </div>
 
@@ -275,7 +275,7 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.customer_phone}
+                                                {service.customer_phone}
                                             </div>
                                         </div>
 
@@ -285,7 +285,7 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-semibold text-break">
-                                                {inquiry.customer_email}
+                                                {service.customer_email}
                                             </div>
                                         </div>
                                     </div>
@@ -309,7 +309,7 @@ export default function AdminInquiryDetails({
                                     </h2>
 
                                     <div className="d-flex flex-column gap-2 mb-3">
-                                        {(inquiry.technicians ?? []).length > 0 ? inquiry.technicians.map((technician) => (
+                                        {(service.technicians ?? []).length > 0 ? service.technicians.map((technician) => (
                                             <div key={technician.id} className="d-flex align-items-center justify-content-between gap-2 border rounded-3 p-2">
                                                 <div>
                                                     <div className="fw-semibold">{technician.name}</div>
@@ -341,26 +341,26 @@ export default function AdminInquiryDetails({
 
                                     <select
                                         className="form-select mb-3 text-capitalize"
-                                        value={inquiry.status}
+                                        value={service.status}
                                         onChange={updateStatus}
                                     >
-                                        <option value="pending" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
+                                        <option value="pending" disabled={service.status === "confirmed" || service.status === "in_progress"}>
                                             Pending
                                         </option>
 
-                                        <option value="confirmed" disabled={inquiry.status !== "pending" && inquiry.status !== "confirmed"}>
+                                        <option value="confirmed" disabled={service.status !== "pending" && service.status !== "confirmed"}>
                                             Confirmed
                                         </option>
 
-                                        <option value="in_progress" disabled={inquiry.status === "pending"}>
+                                        <option value="in_progress" disabled={service.status === "pending"}>
                                             In Progress
                                         </option>
 
-                                        <option value="completed" disabled={inquiry.status !== "in_progress" && inquiry.status !== "completed"}>
+                                        <option value="completed" disabled={service.status !== "in_progress" && service.status !== "completed"}>
                                             Completed
                                         </option>
 
-                                        <option value="cancelled" disabled={inquiry.status === "completed" || inquiry.status === "cancelled"}>
+                                        <option value="cancelled" disabled={service.status === "completed" || service.status === "cancelled"}>
                                             Cancelled
                                         </option>
                                     </select>
@@ -368,16 +368,16 @@ export default function AdminInquiryDetails({
                                     <span
                                         className={
                                             "badge rounded-pill text-capitalize px-3 py-2 " +
-                                            statusClass(inquiry.status)
+                                            statusClass(service.status)
                                         }
                                     >
-                                        {inquiry.status.replace("_", " ")}
+                                        {service.status.replace("_", " ")}
                                     </span>
 
-                                    {inquiry.item_image && (
+                                    {service.item_image && (
                                         <img
-                                            src={inquiry.item_image}
-                                            alt={inquiry.item_name}
+                                            src={service.item_image}
+                                            alt={service.item_name}
                                             className="img-fluid rounded-3 mt-4"
                                             style={{
                                                 width: "100%",
@@ -402,7 +402,7 @@ export default function AdminInquiryDetails({
 
             {confirming && (
                 <ConfirmInquiryModal
-                    inquiry={inquiry}
+                    service={service}
                     technicians={technicians}
                     bookingTimeSlots={bookingTimeSlots}
                     todayDate={todayDate}
@@ -412,7 +412,7 @@ export default function AdminInquiryDetails({
 
             {managingTeam && (
                 <ManageTechnicianTeamModal
-                    inquiry={inquiry}
+                    service={service}
                     technicians={technicians}
                     onClose={() => setManagingTeam(false)}
                 />
