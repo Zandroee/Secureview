@@ -42,7 +42,7 @@ class EmailVerificationCodeService
 
         if (!Cache::add(
             $this->cooldownKey($user),
-            true,
+            now()->timestamp + self::RESEND_COOLDOWN_SECONDS,
             now()->addSeconds(self::RESEND_COOLDOWN_SECONDS)
         )) {
             return false;
@@ -77,6 +77,17 @@ class EmailVerificationCodeService
         }
 
         return true;
+    }
+
+    public function resendCooldownRemaining(User $user): int
+    {
+        $expiresAt = Cache::get($this->cooldownKey($user));
+
+        if (!is_numeric($expiresAt)) {
+            return 0;
+        }
+
+        return max(0, (int) $expiresAt - now()->timestamp);
     }
 
     /**
