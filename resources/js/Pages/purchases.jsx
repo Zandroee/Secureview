@@ -134,7 +134,7 @@ export default function Purchases({ orders = [] }) {
                                                 fontSize: "1.05rem",
                                             }}
                                         >
-                                            PURCHASES
+                                            ORDER HISTORY
                                         </h2>
                                     </div>
                                 </div>
