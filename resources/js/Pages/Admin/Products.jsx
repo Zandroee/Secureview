@@ -334,10 +334,13 @@ export default function AdminProducts({
 
     const deleteProduct = (product) => {
         if (!product.can_delete) return;
-        if (!window.confirm("Delete “" + product.name + "”? This cannot be undone.")) return;
+        if (!window.confirm("Delete “" + product.name + "”? This removes it from the live catalog. Existing order and invoice line-item snapshots will be retained.")) return;
 
         router.delete("/admin/products/" + product.id, {
             preserveScroll: true,
+            onError: (serverErrors) => {
+                window.alert(serverErrors.product || "The product could not be deleted. Clear catalog references first, then try again.");
+            },
         });
     };
 
@@ -592,103 +595,122 @@ export default function AdminProducts({
                                 <table className="table table-hover align-middle mb-0">
                                     <thead className="table-light">
                                         <tr>
-                                            <th className="ps-3">
-                                                PRODUCT
-                                            </th>
-                                            <th>CATEGORY</th>
-                                            <th>STOCK</th>
-                                            <th>STATUS</th>
-                                            <th className="text-end pe-3">
-                                                ACTION
-                                            </th>
+                                            <th className="ps-3">PRODUCT</th>
+                                            <th>PRICE</th>
+                                            <th>SPECIFICATIONS</th>
+                                            <th>AVAILABLE STOCK</th>
+                                            <th>VISIBILITY</th>
+                                            <th className="text-end pe-3">ACTIONS</th>
                                         </tr>
                                     </thead>
 
                                     <tbody>
                                         {(products.data ?? []).length === 0 ? (
                                             <tr>
-                                                <td
-                                                    colSpan="5"
-                                                    className="text-center text-muted py-5"
-                                                >
-                                                    No products found.
+                                                <td colSpan="6" className="text-center text-muted py-5">
+                                                    <i className="bi bi-camera-video fs-2 d-block mb-2" />
+                                                    No products found. Add a product to get started.
                                                 </td>
                                             </tr>
                                         ) : (
                                             (products.data ?? []).map((product) => {
-                                                const value =
-                                                    stockValues[product.id] ??
-                                                    0;
+                                                const value = Number(stockValues[product.id] ?? 0);
+                                                const primaryImage = product.image || product.images?.[0] || null;
+                                                const specifications = Array.isArray(product.specifications)
+                                                    ? product.specifications.filter(Boolean)
+                                                    : [];
 
                                                 return (
                                                     <tr key={product.id}>
-                                                        <td className="ps-3">
-                                                            <div className="fw-semibold">
-                                                                {product.name}
-                                                            </div>
-
-                                                            <div className="small text-muted">
-                                                                Product #{product.id}
-                                                            </div>
-                                                            <div className="small mt-1">
-                                                                Installation: {Number(product.installation_fee ?? 0) > 0
-                                                                    ? money(product.installation_fee)
-                                                                    : "Free"}
+                                                        <td className="ps-3" style={{ minWidth: "230px" }}>
+                                                            <div className="d-flex align-items-center gap-3">
+                                                                {primaryImage ? (
+                                                                    <img
+                                                                        src={imageSource(primaryImage)}
+                                                                        alt=""
+                                                                        className="rounded border"
+                                                                        style={{ width: "58px", height: "58px", objectFit: "cover", flexShrink: 0 }}
+                                                                    />
+                                                                ) : (
+                                                                    <div
+                                                                        className="rounded border bg-light d-flex align-items-center justify-content-center"
+                                                                        style={{ width: "58px", height: "58px", flexShrink: 0 }}
+                                                                    >
+                                                                        <i className="bi bi-camera-video fs-4 text-secondary" />
+                                                                    </div>
+                                                                )}
+                                                                <div>
+                                                                    <div className="fw-semibold">{product.name}</div>
+                                                                    <div className="small text-muted">Product #{product.id} · {product.category}</div>
+                                                                    {product.badge && (
+                                                                        <span className="badge bg-primary-subtle text-primary mt-1">{product.badge}</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </td>
 
-                                                        <td className="text-capitalize">
-                                                            {product.category}
+                                                        <td className="fw-semibold text-nowrap">
+                                                            {money(product.price)}
+                                                            <div className="small text-muted fw-normal mt-1">
+                                                                Installation: {Number(product.installation_fee ?? 0) > 0 ? money(product.installation_fee) : "Free"}
+                                                            </div>
                                                         </td>
 
-                                                        <td
-                                                            style={{ minWidth: "150px" }}
-                                                            data-sort-value={Number(value || 0)}
-                                                        >
+                                                        <td style={{ minWidth: "210px" }}>
+                                                            {specifications.length > 0 ? (
+                                                                <div className="d-flex flex-column gap-1">
+                                                                    {specifications.slice(0, 3).map((specification, index) => (
+                                                                        <div key={index} className="small">{specification}</div>
+                                                                    ))}
+                                                                    {specifications.length > 3 && (
+                                                                        <div className="small text-muted">+{specifications.length - 3} more specification(s)</div>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <span className="small text-muted">No specifications listed</span>
+                                                            )}
+                                                        </td>
+
+                                                        <td style={{ minWidth: "160px" }} data-sort-value={value}>
                                                             <input
                                                                 type="number"
                                                                 min="0"
                                                                 step="1"
-                                                                className="form-control form-control-sm"
-                                                                value={value}
-                                                                onChange={(event) =>
-                                                                    updateValue(
-                                                                        product.id,
-                                                                        event
-                                                                            .target
-                                                                            .value
-                                                                    )
-                                                                }
+                                                                className="form-control form-control-sm mb-2"
+                                                                aria-label={"Stock quantity for " + product.name}
+                                                                value={stockValues[product.id] ?? 0}
+                                                                onChange={(event) => updateValue(product.id, event.target.value)}
                                                             />
+                                                            <span className={"badge rounded-pill px-3 py-2 " + stockClass(value)}>
+                                                                {value.toLocaleString()}
+                                                            </span>
+                                                            <div className="small text-muted mt-1">{stockLabel(value)}</div>
                                                         </td>
 
                                                         <td>
-                                                            <span
-                                                                className={
-                                                                    "badge rounded-pill px-3 py-2 " +
-                                                                    stockClass(
-                                                                        Number(
-                                                                            value || 0
-                                                                        )
-                                                                    )
-                                                                }
-                                                            >
-                                                                {stockLabel(
-                                                                    Number(
-                                                                        value || 0
-                                                                    )
-                                                                )}
-                                                            </span>
+                                                            {product.is_featured ? (
+                                                                <span className="badge bg-primary-subtle text-primary">
+                                                                    <i className="bi bi-star-fill me-1" /> Featured
+                                                                </span>
+                                                            ) : (
+                                                                <span className="small text-muted">Standard</span>
+                                                            )}
+                                                            <div className="small text-muted mt-1">{product.reviews_count ?? 0} review(s)</div>
+                                                            {!product.can_delete && (
+                                                                <div className="small text-warning-emphasis mt-1">
+                                                                    <i className="bi bi-lock-fill me-1" /> Catalog references
+                                                                </div>
+                                                            )}
                                                         </td>
 
-                                                        <td className="text-end pe-3">
+                                                        <td className="text-end pe-3 text-nowrap">
                                                             <div className="d-flex justify-content-end flex-wrap gap-2">
                                                                 <button
                                                                     type="button"
                                                                     className="btn btn-outline-primary btn-sm fw-bold"
                                                                     onClick={() => openEditProduct(product)}
                                                                 >
-                                                                    EDIT
+                                                                    <i className="bi bi-pencil-square me-1" /> EDIT
                                                                 </button>
                                                                 <button
                                                                     type="button"
@@ -696,6 +718,7 @@ export default function AdminProducts({
                                                                     onClick={() => updateStock(product)}
                                                                     disabled={savingId === product.id}
                                                                 >
+                                                                    <i className="bi bi-save me-1" />
                                                                     {savingId === product.id ? "SAVING..." : "SAVE STOCK"}
                                                                 </button>
                                                                 <button
@@ -703,9 +726,11 @@ export default function AdminProducts({
                                                                     className="btn btn-outline-danger btn-sm fw-bold"
                                                                     onClick={() => deleteProduct(product)}
                                                                     disabled={!product.can_delete}
-                                                                    title={product.can_delete ? "Delete this product" : "Products referenced by packages, carts, orders, or reviews cannot be deleted"}
+                                                                    title={product.can_delete
+                                                                        ? "Delete this product; historical order snapshots are retained"
+                                                                        : "Clear package components, carts and reviews before deleting catalog items"}
                                                                 >
-                                                                    DELETE
+                                                                    <i className="bi bi-trash3 me-1" /> DELETE
                                                                 </button>
                                                             </div>
                                                         </td>

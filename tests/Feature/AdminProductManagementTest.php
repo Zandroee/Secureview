@@ -194,6 +194,8 @@ class AdminProductManagementTest extends TestCase
         ]);
     }
 
+    
+
     public function test_product_form_rejects_invalid_price_and_stock(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -232,7 +234,7 @@ class AdminProductManagementTest extends TestCase
         $this->assertDatabaseHas('products', ['id' => $product->id]);
     }
 
-    public function test_admin_cannot_delete_a_product_referenced_by_an_order(): void
+        public function test_admin_can_delete_a_product_referenced_by_an_order_and_preserve_snapshot(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = User::factory()->create(['role' => 'user']);
@@ -253,7 +255,7 @@ class AdminProductManagementTest extends TestCase
             'delivery_address' => '123 Test Street, Taguig',
         ]);
 
-        $order->items()->create([
+        $orderItem = $order->items()->create([
             'purchasable_type' => Product::class,
             'purchasable_id' => $product->id,
             'name' => $product->name,
@@ -266,9 +268,18 @@ class AdminProductManagementTest extends TestCase
             ->from(route('admin.products.index'))
             ->delete(route('admin.products.destroy', $product))
             ->assertRedirect(route('admin.products.index'))
-            ->assertSessionHasErrors('product');
+            ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseHas('products', ['id' => $product->id]);
+        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+        $this->assertDatabaseHas('order_items', [
+            'id' => $orderItem->id,
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'name' => 'Purchased Camera',
+            'price' => $product->price,
+            'quantity' => 1,
+            'subtotal' => $product->price,
+        ]);
     }
 
     public function test_admin_cannot_delete_a_product_with_reviews(): void

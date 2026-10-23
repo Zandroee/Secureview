@@ -223,7 +223,7 @@ class PackageController extends Controller
 
         $componentsChanged = $oldComposition !== $newComposition;
 
-        if ($componentsChanged && $this->hasReferences($package)) {
+        if ($componentsChanged && ($package->orderItems()->exists() || $this->hasReferences($package))) {
             return back()->withErrors([
                 'items' => 'This package has existing purchase, cart, inquiry, or review history. Its bundle contents are locked. Create a new package to use different components.',
             ]);
@@ -293,7 +293,7 @@ class PackageController extends Controller
     {
         if ($this->hasReferences($package)) {
             return back()->withErrors([
-                'package' => 'This package has purchase, cart, inquiry, or review history and cannot be deleted. Edit the package instead.',
+                'package' => 'This package is still referenced by a cart, inquiry, or review. Run the catalog reference cleanup before removing the old catalog.',
             ]);
         }
 
@@ -305,7 +305,7 @@ class PackageController extends Controller
             $activityLogger->record(
                 $request,
                 'package_deleted',
-                "Deleted package {$package->name} and its components [{$oldComponents}].",
+                "Deleted package {$package->name} and its live components [{$oldComponents}]; historical order line items were retained.",
                 $package,
                 $oldSnapshot,
                 []
@@ -400,8 +400,9 @@ class PackageController extends Controller
 
     private function hasReferences(Package $package): bool
     {
-        return $package->orderItems()->exists()
-            || $package->cartItems()->exists()
+        // Historical order-item rows contain their own name, price, quantity and subtotal.
+        // Keep these snapshots for invoices and transactions without blocking catalog removal.
+        return $package->cartItems()->exists()
             || $package->inquiryReferences()->exists()
             || $package->reviews()->exists();
     }

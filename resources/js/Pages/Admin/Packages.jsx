@@ -429,7 +429,7 @@ export default function AdminPackages({
 
     const deletePackage = (item) => {
         const confirmed = window.confirm(
-            "Delete the package “" + item.name + "”? Packages with purchase, cart, inquiry, or review history cannot be deleted."
+            "Remove the package “" + item.name + "” from the live catalog? Existing order and invoice line-item snapshots will be retained. Clear carts, linked inquiries and reviews first."
         );
 
         if (!confirmed) return;

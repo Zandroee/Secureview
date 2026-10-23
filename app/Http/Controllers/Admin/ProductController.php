@@ -50,7 +50,6 @@ class ProductController extends Controller
                     'can_delete',
                     (int) $product->package_items_count === 0
                         && (int) $product->reviews_count === 0
-                        && (int) $product->order_items_count === 0
                         && (int) $product->cart_items_count === 0
                 );
 
@@ -239,7 +238,7 @@ class ProductController extends Controller
     ) {
         if ($this->hasReferences($product)) {
             return back()->withErrors([
-                'product' => 'This product is used by a package, cart, order, or review and cannot be deleted. Remove or resolve those references first.',
+                'product' => 'This product is still used by a package, cart, or review. Run the catalog reference cleanup before removing the old catalog.',
             ]);
         }
 
@@ -257,10 +256,16 @@ class ProductController extends Controller
 
             $oldSnapshot = $this->snapshot($lockedProduct);
 
+            // Stock adjustments are catalog maintenance records; purchase line items remain as
+            // historical snapshots so invoices and transaction records keep their descriptions.
+            InventoryAdjustment::query()
+                ->where('product_id', $lockedProduct->id)
+                ->delete();
+
             $activityLogger->record(
                 $request,
                 'product_deleted',
-                "Deleted product {$lockedProduct->name}.",
+                "Deleted product {$lockedProduct->name}; historical order line items were retained.",
                 $lockedProduct,
                 $oldSnapshot,
                 []
@@ -462,7 +467,6 @@ class ProductController extends Controller
     {
         return $product->packageItems()->exists()
             || $product->reviews()->exists()
-            || $product->orderItems()->exists()
             || $product->cartItems()->exists();
     }
 
