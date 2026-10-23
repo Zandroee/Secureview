@@ -178,3 +178,132 @@
         max-height: calc(100dvh - 80px);
     }
 }
+
+/* Make the floating help widget stand out from the site footer. */
+.sv-chat-launcher {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, .7);
+    box-shadow: 0 10px 28px rgba(234, 88, 12, .34);
+}
+
+.sv-chat-launcher:hover {
+    box-shadow: 0 14px 32px rgba(234, 88, 12, .44);
+}
+
+.sv-chat-header {
+    background: linear-gradient(120deg, #f97316 0%, #c2410c 100%);
+}
+
+.sv-chat-form button {
+    background: #ea580c;
+}
+
+.sv-chat-form button:hover:not(:disabled) {
+    background: #c2410c;
+}
+
+.sv-chat-form input {
+    min-width: 0;
+    background: #fff;
+    color: #172033;
+}
+
+html[data-bs-theme="dark"] .sv-chat-launcher {
+    background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+    color: #082f49;
+    border-color: rgba(165, 243, 252, .8);
+    box-shadow: 0 10px 32px rgba(6, 182, 212, .32);
+}
+
+html[data-bs-theme="dark"] .sv-chat-launcher:hover {
+    box-shadow: 0 14px 36px rgba(6, 182, 212, .45);
+}
+
+html[data-bs-theme="dark"] .sv-chat-panel {
+    background: #111827;
+    border-color: #334155;
+    color: #e5e7eb;
+    box-shadow: 0 22px 70px rgba(0, 0, 0, .48);
+}
+
+html[data-bs-theme="dark"] .sv-chat-header {
+    background: linear-gradient(120deg, #0e7490 0%, #075985 100%);
+    color: #f0f9ff;
+}
+
+html[data-bs-theme="dark"] .sv-chat-messages {
+    background: #111827;
+}
+
+html[data-bs-theme="dark"] .sv-chat-bubble {
+    background: #1f2937;
+    color: #e5e7eb;
+    border-color: #3b4a5f;
+}
+
+html[data-bs-theme="dark"] .sv-chat-bubble-user {
+    background: #075985;
+    color: #f0f9ff;
+    border-color: #0891b2;
+}
+
+html[data-bs-theme="dark"] .sv-chat-typing,
+html[data-bs-theme="dark"] .sv-chat-suggestions > span {
+    color: #b7c5d8;
+}
+
+html[data-bs-theme="dark"] .sv-chat-suggestions button {
+    background: #1e293b;
+    color: #bae6fd;
+    border-color: #155e75;
+}
+
+html[data-bs-theme="dark"] .sv-chat-suggestions button:hover:not(:disabled) {
+    background: #164e63;
+    color: #f0f9ff;
+}
+
+html[data-bs-theme="dark"] .sv-chat-form,
+html[data-bs-theme="dark"] .sv-chat-privacy {
+    background: #18212f;
+    border-color: #334155;
+    color: #b7c5d8;
+}
+
+html[data-bs-theme="dark"] .sv-chat-form input {
+    background: #0b1220;
+    color: #f3f6fb;
+    border-color: #475569;
+}
+
+html[data-bs-theme="dark"] .sv-chat-form input::placeholder {
+    color: #94a3b8;
+}
+
+html[data-bs-theme="dark"] .sv-chat-form input:focus {
+    border-color: #22d3ee;
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .16);
+}
+
+html[data-bs-theme="dark"] .sv-chat-form button {
+    background: #06b6d4;
+    color: #082f49;
+}
+
+html[data-bs-theme="dark"] .sv-chat-form button:hover:not(:disabled) {
+    background: #22d3ee;
+}
+
+html[data-bs-theme="dark"] .sv-chat-error {
+    background: #451a1a;
+    border: 1px solid #7f1d1d;
+    color: #fecaca;
+}
+
+@media (max-width: 575.98px) {
+    .secureview-chatbot {
+        z-index: 2050;
+    }
+}
+
