@@ -109,6 +109,35 @@ class TechnicianWorkspaceTest extends TestCase
         ]);
     }
 
+    public function test_pending_unassigned_service_is_visible_and_can_be_claimed_when_the_technician_is_free(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $inquiry = $this->makeInquiry($customer, today()->addDays(4)->toDateString(), 'pending');
+
+        $this->actingAs($technician)
+            ->get(route('technician.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('openJobs.0.id', $inquiry->id)
+                ->where('openJobs.0.status', 'pending'));
+
+        $this->actingAs($technician)
+            ->post(route('technician.jobs.claim', $inquiry))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('inquiry_technician', [
+            'inquiry_id' => $inquiry->id,
+            'technician_id' => $technician->id,
+        ]);
+        $this->assertDatabaseHas('inquiries', [
+            'id' => $inquiry->id,
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_technician_cannot_join_a_job_when_they_have_a_time_conflict(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
