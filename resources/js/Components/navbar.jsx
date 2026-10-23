@@ -60,7 +60,7 @@ export default function Navbar() {
     if (isLoggedIn && isAdmin) {
         navigationItems.push(
             { label: "Admin Dashboard", href: "/dashboard", icon: "bi-speedometer2", keywords: "overview analytics metrics revenue orders stock" },
-            { label: "Manage Inquiries", href: "/admin/inquiries", icon: "bi-chat-left-text", keywords: "customer questions requests pending inquiry" },
+            { label: "Manage Services", href: "/admin/inquiries", icon: "bi-chat-left-text", keywords: "customer service requests pending services" },
             { label: "Manage Schedules", href: "/admin/schedules", icon: "bi-calendar3", keywords: "appointments calendar technician bookings availability" },
             { label: "Service History", href: "/admin/service-history", icon: "bi-clock-history", keywords: "completed jobs archived services" },
             { label: "Manage Products", href: "/admin/products", icon: "bi-camera-video", keywords: "inventory stock cameras catalogue" },
@@ -85,7 +85,7 @@ export default function Navbar() {
     } else if (isLoggedIn) {
         navigationItems.push(
             { label: "My Schedules", href: "/schedules", icon: "bi-calendar3", keywords: "appointments bookings upcoming service" },
-            { label: "Inquiry History", href: "/inquiries", icon: "bi-chat-left-text", keywords: "requests status service inquiry" },
+            { label: "Service History", href: "/inquiries", icon: "bi-chat-left-text", keywords: "service requests status" },
             { label: "Purchase History", href: "/purchases", icon: "bi-bag-check", keywords: "orders payments receipts" },
             { label: "Warranty Claims", href: "/warranty-claims", icon: "bi-shield-check", keywords: "coverage repair defective warranty" },
             { label: "Shopping Cart", href: "/cart", icon: "bi-cart3", keywords: "basket checkout buy" }
@@ -1020,7 +1020,7 @@ export default function Navbar() {
                                         }}
                                         onClick={handleMobileOffcanvasLinkClick}
                                     >
-                                        INQUIRIES
+                                        SERVICES
                                     </Link>
 
 
@@ -1272,7 +1272,7 @@ export default function Navbar() {
                                             </Link>
                                             <Link href="/inquiries" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
                                                 <i className="bi bi-chat-left-text" aria-hidden="true"></i>
-                                                <span>Inquiries</span>
+                                                <span>Services</span>
                                             </Link>
                                             {!isAdmin && !isTechnician && (
                                                 <Link href="/warranty-claims" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
