@@ -31,7 +31,7 @@ function urgencyClass(urgency) {
     return "bg-success-subtle text-success";
 }
 
-export default function Inquiries({ services = [] }) {
+export default function Inquiries({ inquiries = [] }) {
     return (
         <div>
             <Navbar />
@@ -76,7 +76,7 @@ export default function Inquiries({ services = [] }) {
                                     </Link>
                                 </div>
 
-                                {services.length === 0 ? (
+                                {inquiries.length === 0 ? (
                                     <div
                                         className="border rounded-3 p-5 text-center"
                                         style={{
@@ -112,7 +112,7 @@ export default function Inquiries({ services = [] }) {
                                     </div>
                                 ) : (
                                     <div className="d-flex flex-column gap-2">
-                                        {services.map((service) => (
+                                        {inquiries.map((service) => (
                                             <div
                                                 key={service.id}
                                                 className="border rounded-3 p-2"
