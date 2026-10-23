@@ -1,4 +1,6 @@
 import { Link } from "@inertiajs/react";
+import { useState } from "react";
+import PanelPagination from "./PanelPagination";
 
 function badgeClass(status) {
     if (["paid", "completed", "delivered"].includes(status)) return "bg-success-subtle text-success";
@@ -12,6 +14,12 @@ function label(status) {
 }
 
 export default function RecentOrders({ orders = [] }) {
+    const [page, setPage] = useState(1);
+    const pageSize = 3;
+    const totalPages = Math.ceil(orders.length / pageSize);
+    const safePage = Math.min(page, Math.max(1, totalPages));
+    const pageOrders = orders.slice((safePage - 1) * pageSize, safePage * pageSize);
+
     return (
         <section className="card border rounded-3">
             <div className="card-body p-3 p-lg-4">
@@ -27,7 +35,7 @@ export default function RecentOrders({ orders = [] }) {
 
                 {orders.length ? (
                     <div className="d-flex flex-column gap-2">
-                        {orders.map((order) => (
+                        {pageOrders.map((order) => (
                             <Link
                                 key={order.id}
                                 href={"/admin/purchases?search=" + encodeURIComponent(order.order_number || "")}
@@ -52,6 +60,13 @@ export default function RecentOrders({ orders = [] }) {
                             </Link>
                         ))}
                     </div>
+                    <PanelPagination
+                        page={safePage}
+                        totalPages={totalPages}
+                        totalItems={orders.length}
+                        pageSize={pageSize}
+                        onPageChange={setPage}
+                    />
                 ) : (
                     <div className="text-center border rounded-3 bg-light p-4">
                         <i className="bi bi-bag fs-4 text-muted d-block mb-2" />
