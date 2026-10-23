@@ -30,6 +30,7 @@ export default function Navbar() {
 
     const userMenuRef = useRef(null);
     const lastNotificationId = useRef(latestNotification?.id ?? null);
+    const lastServiceFlashKey = useRef(null);
 
     const isActive = (path) => {
         return path === "/" ? url === "/" : url.startsWith(path);
@@ -639,9 +640,17 @@ export default function Navbar() {
 
     useEffect(() => {
         const serviceNotification = props.flash?.serviceNotification;
-        if (notificationPopupsEnabled && serviceNotification?.title && serviceNotification?.message) {
-            setLiveNotification({ ...serviceNotification, isFlash: true });
+        if (!notificationPopupsEnabled || !serviceNotification?.title || !serviceNotification?.message) {
+            return;
         }
+
+        const key = String(serviceNotification.action_url ?? "") + "|" + String(serviceNotification.title);
+        if (lastServiceFlashKey.current === key) {
+            return;
+        }
+
+        lastServiceFlashKey.current = key;
+        setLiveNotification({ ...serviceNotification, isFlash: true });
     }, [props.flash?.serviceNotification, notificationPopupsEnabled]);
 
     useEffect(() => {
