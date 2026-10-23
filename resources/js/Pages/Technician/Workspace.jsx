@@ -706,6 +706,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                         <Link href="/notifications" className="btn btn-sm btn-outline-primary text-nowrap">View all</Link>
                                     </div>
                                     {recentNotifications.length ? (
+                                        <>
                                         <div className="d-flex flex-column gap-2">
                                             {pageNotifications.map((notification) => (
                                                 <article key={notification.id} className="border rounded-3 p-3">
@@ -729,6 +730,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                             pageSize={notificationPageSize}
                                             onPageChange={setNotificationPage}
                                         />
+                                        </>
                                     ) : (
                                         <div className="text-center rounded-3 bg-light p-4">
                                             <i className="bi bi-bell fs-4 text-muted d-block mb-2" />
