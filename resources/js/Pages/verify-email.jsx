@@ -121,6 +121,7 @@ export default function VerifyEmail({ email = "", resendCooldownSeconds = 0 }) {
                                         setData("email", event.target.value);
                                         clearErrors("email");
                                     }}
+                                    onBlur={(event) => setData("email", event.target.value.trim())}
                                     required
                                 />
                                 {errors.email && <div className="invalid-feedback">{errors.email}</div>}
