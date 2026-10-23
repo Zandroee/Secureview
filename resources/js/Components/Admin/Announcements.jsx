@@ -38,7 +38,7 @@ export default function Announcements({
                         <div className="small text-muted">Latest service requests and their current status.</div>
                     </div>
                     <Link href="/admin/inquiries" className="btn btn-sm btn-outline-primary text-nowrap">
-                        View all
+                        View all services
                     </Link>
                 </div>
 
@@ -113,7 +113,7 @@ export default function Announcements({
                         <i className="bi bi-chat-square-text fs-4 text-muted d-block mb-2" />
                         <p className="small text-muted mb-2">No pending service requests need attention right now.</p>
                         <Link href="/admin/inquiries" className="small fw-semibold text-decoration-none">
-                            Open inquiries
+                            Open services
                         </Link>
                     </div>
                 )}
