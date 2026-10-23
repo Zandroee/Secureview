@@ -29,7 +29,7 @@ class PurchaseController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'payment_status' => ['nullable', 'in:pending,paid,failed'],
+            'payment_status' => ['nullable', 'in:pending,paid,failed,cancelled'],
             'order_status' => ['nullable', 'in:' . implode(',', self::ORDER_STATUSES)],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
             'attention' => ['nullable', 'in:stale'],
