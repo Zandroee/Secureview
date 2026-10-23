@@ -8,6 +8,7 @@ use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\InventoryAdjustment;
 use App\Models\Product;
+use App\Models\ServiceRecord;
 use App\Models\User;
 use App\Services\JobNotificationService;
 use Illuminate\Http\Request;
@@ -27,7 +28,7 @@ class TechnicianWorkspaceController extends Controller
         $technician = $request->user();
 
         $jobs = $technician->assignedInquiries()
-            ->with('technicians:id,name,email')
+            ->with(['technicians:id,name,email', 'serviceRecord.items'])
             ->whereIn('status', ['confirmed', 'in_progress', 'completed'])
             ->orderByRaw("CASE WHEN status = 'completed' THEN 4 WHEN urgency = 'emergency' THEN 1 WHEN urgency = 'urgent' THEN 2 ELSE 3 END")
             ->orderByRaw("CASE status WHEN 'in_progress' THEN 1 WHEN 'confirmed' THEN 2 ELSE 3 END")
@@ -102,6 +103,10 @@ class TechnicianWorkspaceController extends Controller
     public function claimJob(Request $request, Inquiry $inquiry, JobNotificationService $notifications)
     {
         $technician = $request->user();
+
+        if (!$inquiry->paymentAllowsTechnicianWork()) {
+            return back()->withErrors(['job' => 'Payment must be confirmed before a technician can join this service.']);
+        }
 
         $appointmentStart = $this->appointmentDateTime($inquiry);
 
@@ -230,6 +235,14 @@ class TechnicianWorkspaceController extends Controller
         $oldStatus = $inquiry->status;
         $newStatus = $validated['status'];
 
+        if (!$inquiry->paymentAllowsTechnicianWork()) {
+            return back()->withErrors(['status' => 'Payment must be confirmed before a technician can update this service.']);
+        }
+
+        if ($newStatus === 'completed' && !$inquiry->serviceRecord()->exists()) {
+            return back()->withErrors(['status' => 'Submit a post-service record, including work performed and any products used, before completing this job.']);
+        }
+
         if ($newStatus === 'in_progress' && $oldStatus !== 'confirmed') {
             return back()->withErrors(['status' => 'Only a confirmed job can be started.']);
         }
@@ -258,6 +271,120 @@ class TechnicianWorkspaceController extends Controller
         return back()->with('success', $newStatus === 'completed'
             ? 'Job marked as completed.'
             : 'Job marked as in progress.');
+    }
+
+    public function storePostServiceRecord(Request $request, Inquiry $inquiry)
+    {
+        abort_unless($inquiry->technicians()->where('users.id', $request->user()->id)->exists(), 404);
+
+        $validated = $request->validate([
+            'service_outcome' => ['required', 'in:completed_as_requested,repaired_with_replacement,follow_up_required,inspection_only,no_fault_found'],
+            'work_summary' => ['required', 'string', 'min:5', 'max:3000'],
+            'recommendations' => ['nullable', 'string', 'max:2000'],
+            'service_charge' => ['required', 'numeric', 'min:0', 'max:10000000'],
+            'payment_status' => ['required', 'in:pending,paid'],
+            'payment_method' => ['nullable', 'required_if:payment_status,paid', 'in:cash,gcash,card,maya'],
+            'items' => ['nullable', 'array', 'max:30'],
+            'items.*.product_id' => ['required', 'integer', 'distinct', 'exists:products,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:999'],
+            'items.*.notes' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if (!$inquiry->paymentAllowsTechnicianWork()) {
+            return back()->withErrors(['payment' => 'Payment must be confirmed before adding a post-service record.']);
+        }
+
+        if ($inquiry->status !== 'in_progress') {
+            return back()->withErrors(['record' => 'Post-service records can only be submitted while a job is in progress.']);
+        }
+
+        if ($inquiry->serviceRecord()->exists()) {
+            return back()->withErrors(['record' => 'A post-service record has already been submitted for this job. Contact an administrator if it needs correction.']);
+        }
+
+        try {
+            DB::transaction(function () use ($request, $inquiry, $validated) {
+                $lockedInquiry = Inquiry::query()->whereKey($inquiry->id)->lockForUpdate()->firstOrFail();
+
+                if (!$lockedInquiry->paymentAllowsTechnicianWork()) {
+                    throw ValidationException::withMessages(['payment' => 'Payment must be confirmed before adding a post-service record.']);
+                }
+
+                if ($lockedInquiry->status !== 'in_progress') {
+                    throw ValidationException::withMessages(['record' => 'This service is no longer in progress. Refresh and review its current status.']);
+                }
+
+                if ($lockedInquiry->serviceRecord()->exists()) {
+                    throw ValidationException::withMessages(['record' => 'A post-service record has already been submitted for this job.']);
+                }
+
+                $record = ServiceRecord::create([
+                    'inquiry_id' => $lockedInquiry->id,
+                    'technician_id' => $request->user()->id,
+                    'service_outcome' => $validated['service_outcome'],
+                    'work_summary' => trim($validated['work_summary']),
+                    'recommendations' => filled($validated['recommendations'] ?? null)
+                        ? trim($validated['recommendations'])
+                        : null,
+                    'service_charge' => round((float) $validated['service_charge'], 2),
+                    'payment_status' => $validated['payment_status'],
+                    'payment_method' => $validated['payment_status'] === 'paid'
+                        ? ($validated['payment_method'] ?? null)
+                        : null,
+                    'paid_at' => $validated['payment_status'] === 'paid' ? now() : null,
+                ]);
+
+                foreach (($validated['items'] ?? []) as $index => $line) {
+                    $product = Product::query()->whereKey($line['product_id'])->lockForUpdate()->firstOrFail();
+                    $quantity = (int) $line['quantity'];
+                    $previous = (int) $product->stock_quantity;
+
+                    if ($previous < $quantity) {
+                        throw ValidationException::withMessages([
+                            'items.' . $index . '.quantity' => 'Only ' . $previous . ' unit(s) of ' . $product->name . ' remain in stock.',
+                        ]);
+                    }
+
+                    $next = $previous - $quantity;
+                    $product->update(['stock_quantity' => $next]);
+
+                    $record->items()->create([
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                        'quantity' => $quantity,
+                        'unit_price' => (float) $product->price,
+                        'notes' => filled($line['notes'] ?? null) ? trim($line['notes']) : null,
+                    ]);
+
+                    InventoryAdjustment::create([
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                        'user_id' => $request->user()->id,
+                        'previous_quantity' => $previous,
+                        'new_quantity' => $next,
+                        'quantity_change' => -$quantity,
+                        'reason' => 'Used for service ' . $lockedInquiry->inquiry_number . ' (post-service record #' . $record->id . ')',
+                    ]);
+
+                    if (($previous > 5 && $next <= 5) || ($previous > 0 && $next === 0)) {
+                        User::query()->where('role', 'admin')->get()->each(function (User $admin) use ($product, $next, $record) {
+                            $admin->customerNotifications()->create([
+                                'type' => 'inventory_low_stock',
+                                'title' => $next === 0 ? 'Product out of stock' : 'Low stock warning',
+                                'message' => $product->name . ' now has ' . $next . ' unit(s) remaining after post-service record #' . $record->id . '.',
+                                'action_url' => route('admin.products.index'),
+                                'related_type' => Product::class,
+                                'related_id' => $product->id,
+                            ]);
+                        });
+                    }
+                }
+            });
+        } catch (ValidationException $exception) {
+            throw $exception;
+        }
+
+        return back()->with('success', 'Post-service record saved, and all used products were recorded against inventory.');
     }
 
     public function adjustStock(Request $request, Product $product)
@@ -343,6 +470,26 @@ class TechnicianWorkspaceController extends Controller
             'service_longitude' => $includeCustomerDetails ? $inquiry->service_longitude : null,
             'google_place_id' => $includeCustomerDetails ? $inquiry->google_place_id : null,
             'status' => $inquiry->status,
+            'other_service_type' => $inquiry->other_service_type,
+            'other_service_details' => $inquiry->other_service_details,
+            'payment_status' => $inquiry->payment_status ?? 'not_required',
+            'service_record' => $inquiry->serviceRecord ? [
+                'id' => $inquiry->serviceRecord->id,
+                'service_outcome' => $inquiry->serviceRecord->service_outcome,
+                'work_summary' => $inquiry->serviceRecord->work_summary,
+                'recommendations' => $inquiry->serviceRecord->recommendations,
+                'service_charge' => (float) $inquiry->serviceRecord->service_charge,
+                'payment_status' => $inquiry->serviceRecord->payment_status,
+                'payment_method' => $inquiry->serviceRecord->payment_method,
+                'paid_at' => $inquiry->serviceRecord->paid_at?->format('M d, Y h:i A'),
+                'technician_name' => $inquiry->serviceRecord->technician?->name,
+                'items' => $inquiry->serviceRecord->items->map(fn ($item) => [
+                    'product_name' => $item->product_name,
+                    'quantity' => (int) $item->quantity,
+                    'unit_price' => (float) $item->unit_price,
+                    'notes' => $item->notes,
+                ])->values(),
+            ] : null,
             'technicians' => $inquiry->technicians->map(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -361,6 +508,10 @@ class TechnicianWorkspaceController extends Controller
     {
         $technician = $request->user();
         abort_unless($inquiry->technicians()->where('users.id', $technician->id)->exists(), 404);
+
+        if (!$inquiry->paymentAllowsTechnicianWork()) {
+            return back()->withErrors(['schedule' => 'Payment must be confirmed before rescheduling this service.']);
+        }
 
         if ($inquiry->status !== 'confirmed') {
             return back()->withErrors(['schedule' => 'Only confirmed jobs can be rescheduled by a technician.']);
@@ -430,6 +581,10 @@ class TechnicianWorkspaceController extends Controller
     public function reviewReschedule(Request $request, Inquiry $inquiry, string $decision)
     {
         abort_unless($inquiry->technicians()->where('users.id', $request->user()->id)->exists(), 404);
+
+        if (!$inquiry->paymentAllowsTechnicianWork()) {
+            return back()->withErrors(['reschedule' => 'Payment must be confirmed before reviewing a reschedule request.']);
+        }
 
         if (($inquiry->reschedule_request_status ?? 'none') !== 'pending' || $inquiry->status !== 'confirmed') {
             return back()->withErrors(['reschedule' => 'There is no pending reschedule request to review.']);
