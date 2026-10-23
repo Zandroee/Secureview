@@ -289,6 +289,7 @@ export default function AdminPackages({
     products = [],
     categories = [],
     categoryOptions = [],
+    brandOptions = [],
     warrantyOptions = [],
     badgeOptions = [],
     filters = {},
@@ -297,6 +298,7 @@ export default function AdminPackages({
 }) {
     const [search, setSearch] = useState(filters.search ?? "");
     const [category, setCategory] = useState(filters.category ?? "");
+    const [brand, setBrand] = useState(filters.brand ?? "");
     const [featured, setFeatured] = useState(filters.featured ?? "");
     const [showForm, setShowForm] = useState(false);
     const [editingPackage, setEditingPackage] = useState(null);
@@ -313,7 +315,7 @@ export default function AdminPackages({
 
         router.get(
             "/admin/packages",
-            { search, category, featured },
+            { search, category, brand, featured },
             {
                 preserveState: true,
                 preserveScroll: true,
@@ -325,6 +327,7 @@ export default function AdminPackages({
     const clearFilters = () => {
         setSearch("");
         setCategory("");
+        setBrand("");
         setFeatured("");
 
         router.get(
@@ -578,7 +581,7 @@ export default function AdminPackages({
                         <div className="bg-white border rounded-3 p-3 p-md-4 mb-4">
                             <form onSubmit={applyFilters}>
                                 <div className="row g-3 align-items-end">
-                                    <div className="col-12 col-lg-5">
+                                    <div className="col-12 col-lg-4">
                                         <label className="form-label small fw-semibold">SEARCH</label>
                                         <input
                                             className="form-control"
@@ -589,7 +592,7 @@ export default function AdminPackages({
                                         />
                                     </div>
 
-                                    <div className="col-6 col-lg-3">
+                                    <div className="col-6 col-lg-2">
                                         <label className="form-label small fw-semibold">CATEGORY</label>
                                         <select
                                             className="form-select"
@@ -600,6 +603,14 @@ export default function AdminPackages({
                                             {categories.map((item) => (
                                                 <option key={item} value={item}>{item}</option>
                                             ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="col-6 col-lg-2">
+                                        <label className="form-label small fw-semibold">BRAND</label>
+                                        <select className="form-select" value={brand} onChange={(event) => setBrand(event.target.value)}>
+                                            <option value="">All brands</option>
+                                            {brandOptions.map((item) => <option key={item} value={item}>{item}</option>)}
                                         </select>
                                     </div>
 
@@ -825,13 +836,13 @@ export default function AdminPackages({
 
                                         <div className="col-md-6">
                                             <label className="form-label fw-semibold">BRAND <span className="text-muted fw-normal">(OPTIONAL)</span></label>
-                                            <input
-                                                type="text"
-                                                className={"form-control " + (errors.brand ? "is-invalid" : "")}
+                                            <CatalogOptionSelect
+                                                label="Brand"
                                                 value={data.brand ?? ""}
-                                                onChange={(event) => setData("brand", event.target.value)}
-                                                maxLength={120}
-                                                placeholder="e.g. Dahua, Hikvision, or mixed-brand package"
+                                                options={brandOptions}
+                                                allowBlank
+                                                error={errors.brand}
+                                                onChange={(value) => setData("brand", value)}
                                             />
                                             <ErrorText message={errors.brand} />
                                         </div>
