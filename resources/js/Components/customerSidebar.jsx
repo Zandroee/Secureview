@@ -21,7 +21,7 @@ const items = [
     },
     {
         key: "purchases",
-        label: "PURCHASE HISTORY",
+        label: "ORDERS HISTORY",
         href: "/purchases",
         icon: "bi bi-clock-history",
     },
