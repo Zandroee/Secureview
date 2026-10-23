@@ -155,6 +155,12 @@ class TechnicianWorkspaceController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            if (!$lockedInquiry->paymentAllowsTechnicianWork()) {
+                throw ValidationException::withMessages([
+                    'job' => 'Payment must be confirmed before a technician can join this service.',
+                ]);
+            }
+
             $lockedAppointmentStart = $this->appointmentDateTime($lockedInquiry);
 
             if (
