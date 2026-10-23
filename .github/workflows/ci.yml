@@ -108,6 +108,17 @@ jobs:
           cp app/Services/PendingInquiryCheckoutService.php hostinger-release/app/Services/PendingInquiryCheckoutService.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php
           cp routes/web.php hostinger-release/routes/web.php
+          cp routes/console.php hostinger-release/routes/console.php
+          cp app/Http/Controllers/PurchaseController.php hostinger-release/app/Http/Controllers/PurchaseController.php
+          cp app/Http/Controllers/Admin/InquiryController.php hostinger-release/app/Http/Controllers/Admin/InquiryController.php
+          cp app/Http/Controllers/Admin/ScheduleController.php hostinger-release/app/Http/Controllers/Admin/ScheduleController.php
+          cp app/Http/Controllers/Admin/PurchaseController.php hostinger-release/app/Http/Controllers/Admin/PurchaseController.php
+          cp app/Http/Controllers/Admin/ServiceRecordController.php hostinger-release/app/Http/Controllers/Admin/ServiceRecordController.php
+          cp app/Models/Inquiry.php hostinger-release/app/Models/Inquiry.php
+          cp app/Models/ServiceRecord.php hostinger-release/app/Models/ServiceRecord.php
+          cp app/Models/ServiceRecordItem.php hostinger-release/app/Models/ServiceRecordItem.php
+          cp app/Console/Commands/CancelExpiredUnpaidOrders.php hostinger-release/app/Console/Commands/CancelExpiredUnpaidOrders.php
+          cp database/migrations/2026_10_23_220000_add_service_operations_records_and_other_service_details.php hostinger-release/database/migrations/2026_10_23_220000_add_service_operations_records_and_other_service_details.php
 
       - name: Upload complete Hostinger release bundle
         if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
