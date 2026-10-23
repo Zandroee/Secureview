@@ -39,6 +39,12 @@ class PurchaseController extends Controller
         $query = Order::with(['user', 'items', 'events.actor', 'invoiceRecord'])
             ->latest();
 
+        // Keep the active Orders workspace focused on actionable orders by default.
+        // Completed and cancelled orders live on the dedicated Orders History page.
+        if (empty($filters['order_status'])) {
+            $query->whereNotIn('order_status', ['completed', 'cancelled']);
+        }
+
         if (!empty($filters['search'])) {
             $search = $filters['search'];
 
@@ -120,6 +126,49 @@ class PurchaseController extends Controller
                     ->where('updated_at', '<=', now()->subHours(24))
                     ->count(),
                 'revenue' => (float) Order::where('payment_status', 'paid')->sum('total'),
+            ],
+        ]);
+    }
+
+    public function history(Request $request)
+    {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+            'order_status' => ['nullable', 'in:completed,cancelled'],
+        ]);
+
+        $invoiceProfileReady = app(InvoiceDocumentService::class)->profileReady();
+        $query = Order::with(['user', 'items', 'events.actor', 'invoiceRecord'])
+            ->whereIn('order_status', ['completed', 'cancelled'])
+            ->latest();
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($builder) use ($search) {
+                $builder->where('order_number', 'like', '%' . $search . '%')
+                    ->orWhere('customer_name', 'like', '%' . $search . '%')
+                    ->orWhere('customer_email', 'like', '%' . $search . '%')
+                    ->orWhere('customer_phone', 'like', '%' . $search . '%');
+            });
+        }
+
+        if (!empty($filters['order_status'])) {
+            $query->where('order_status', $filters['order_status']);
+        }
+
+        $orders = $query->paginate(12)->withQueryString()
+            ->through(fn (Order $order) => $this->formatOrder($order, $invoiceProfileReady));
+
+        return Inertia::render('Admin/OrderHistory', [
+            'orders' => $orders,
+            'filters' => [
+                'search' => $filters['search'] ?? '',
+                'order_status' => $filters['order_status'] ?? '',
+            ],
+            'summary' => [
+                'completed_orders' => Order::query()->where('order_status', 'completed')->count(),
+                'cancelled_orders' => Order::query()->where('order_status', 'cancelled')->count(),
+                'completed_paid_revenue' => (float) Order::query()->where('order_status', 'completed')->where('payment_status', 'paid')->sum('total'),
             ],
         ]);
     }

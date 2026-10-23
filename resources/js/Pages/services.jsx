@@ -36,7 +36,7 @@ const services = [
     {
         title: "Other",
         description:
-            "Have a service request that does not fit the options above? Let us know.",
+            "Examples include relocating existing cameras, troubleshooting DVR/NVR or network connections, replacing damaged cables or power adapters, adjusting camera angles, restoring remote viewing, or adding a camera to an existing system. Describe the exact issue when booking so we can prepare the right tools and parts.",
         icon: "bi-three-dots",
     },
 ];

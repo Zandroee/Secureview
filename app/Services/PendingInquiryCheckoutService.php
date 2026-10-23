@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Order;
 use App\Models\Package;
@@ -102,16 +101,6 @@ class PendingInquiryCheckoutService
             $pending->update([
                 'status' => 'paid',
                 'inquiry_id' => $inquiry->id,
-            ]);
-
-            CustomerNotification::create([
-                'user_id' => $pending->user_id,
-                'type' => 'inquiry',
-                'title' => 'Installation service request received',
-                'message' => 'Your payment is confirmed and installation service request ' . $inquiry->inquiry_number . ' has been received.',
-                'action_url' => route('inquiries.show', $inquiry),
-                'related_type' => Inquiry::class,
-                'related_id' => $inquiry->id,
             ]);
 
             app(JobNotificationService::class)->notifyNewInquirySubmitted($inquiry);

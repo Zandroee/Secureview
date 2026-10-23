@@ -8,6 +8,7 @@ use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Order;
+use App\Models\ServiceRecord;
 use App\Models\Product;
 use App\Models\User;
 use Carbon\Carbon;
@@ -84,12 +85,16 @@ class DashboardController extends Controller
         $currentSales = (float) $this->paidOrdersBetween(
             $salesWindow['start'],
             $salesWindow['end']
-        )->sum('total');
+        )->sum('total') + (float) ServiceRecord::query()
+            ->whereBetween('completed_at', [$salesWindow['start'], $salesWindow['end']])
+            ->sum('total_income');
         $previousSales = $salesWindow['previous_start']
             ? (float) $this->paidOrdersBetween(
                 $salesWindow['previous_start'],
                 $salesWindow['previous_end']
-            )->sum('total')
+            )->sum('total') + (float) ServiceRecord::query()
+                ->whereBetween('completed_at', [$salesWindow['previous_start'], $salesWindow['previous_end']])
+                ->sum('total_income')
             : null;
 
         $ordersWindow = $this->periodWindow($metricPeriods['orders']);
@@ -407,6 +412,9 @@ class DashboardController extends Controller
         $chartStart = $chartConfiguration['start'];
         $paidOrdersForChart = $this->paidOrdersBetween($chartStart, now()->copy())
             ->get(['total', 'paid_at', 'created_at']);
+        $serviceIncomeForChart = ServiceRecord::query()
+            ->whereBetween('completed_at', [$chartStart, now()->copy()])
+            ->get(['total_income', 'completed_at']);
 
         $revenueByBucket = [];
         foreach ($chartConfiguration['bins'] as $bin) {
@@ -430,6 +438,25 @@ class DashboardController extends Controller
 
             if (array_key_exists($bucketKey, $revenueByBucket)) {
                 $revenueByBucket[$bucketKey] += (float) $order->total;
+            }
+        }
+
+        foreach ($serviceIncomeForChart as $serviceRecord) {
+            $recognizedAt = $serviceRecord->completed_at;
+            if (!$recognizedAt) {
+                continue;
+            }
+
+            $bucketKey = match ($chartConfiguration['unit']) {
+                'hour' => $recognizedAt->format('Y-m-d H'),
+                'day' => $recognizedAt->format('Y-m-d'),
+                'week' => $recognizedAt->format('o-W'),
+                'month' => $recognizedAt->format('Y-m'),
+                default => $recognizedAt->format('Y'),
+            };
+
+            if (array_key_exists($bucketKey, $revenueByBucket)) {
+                $revenueByBucket[$bucketKey] += (float) $serviceRecord->total_income;
             }
         }
 

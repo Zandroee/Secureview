@@ -46,4 +46,10 @@ return [
         'base_url' => env('PAYMONGO_BASE_URL', 'https://api.paymongo.com'),
     ],
 
+    'secureview' => [
+        // Set SECUREVIEW_UNPAID_ORDER_EXPIRY_DAYS in the hosting environment to
+        // change the business deadline without modifying application code.
+        'unpaid_order_expiry_days' => max(1, (int) env('SECUREVIEW_UNPAID_ORDER_EXPIRY_DAYS', 14)),
+    ],
+
 ];

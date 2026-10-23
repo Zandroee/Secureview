@@ -13,6 +13,17 @@ const serviceTypes = [
     "Other",
 ];
 
+const otherServiceExamples = [
+    "Relocation or repositioning of existing cameras",
+    "DVR/NVR troubleshooting or recording playback issues",
+    "Camera offline, network, router, or remote-viewing setup",
+    "Damaged cable, connector, power adapter, or power-supply replacement",
+    "Camera angle adjustment or coverage improvement",
+    "Adding or replacing a camera in an existing system",
+    "Storage/HDD checking or recording configuration",
+    "Other CCTV-related work (please describe the exact issue)",
+];
+
 const timeSlots = [
     { label: "08:00 AM - 11:00 AM", available: true },
     { label: "11:00 AM - 02:00 PM", available: true },
@@ -539,6 +550,15 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                         )
                                                     )}
                                                 </select>
+                                                {data.service_type === "Other" && (
+                                                    <div className="rounded-3 border bg-body-tertiary p-3 mt-2">
+                                                        <div className="small fw-bold mb-2">EXAMPLES OF OTHER SERVICE REQUESTS</div>
+                                                        <ul className="small text-secondary mb-2 ps-3">
+                                                            {otherServiceExamples.map((example) => <li key={example} className="mb-1">{example}</li>)}
+                                                        </ul>
+                                                        <div className="small text-secondary">Please include the equipment type, symptoms, and any work already attempted in the service notes.</div>
+                                                    </div>
+                                                )}
 
                                                 {errors.inquiry_type && (
                                                     <div className="invalid-feedback">

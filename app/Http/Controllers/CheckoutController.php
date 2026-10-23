@@ -686,10 +686,13 @@ class CheckoutController extends Controller
             $inquiry = $this->completePaidInstallationInquiry($request, $order);
 
             if ($inquiry) {
-                return redirect()->route('inquiries.show', $inquiry)->with(
-                    'success',
-                    'Payment confirmed. Your installation service request ' . $inquiry->inquiry_number . ' has been submitted.'
-                );
+                return redirect()->route('inquiries.show', $inquiry)
+                    ->with('success', 'Payment confirmed. Your installation service request ' . $inquiry->inquiry_number . ' has been submitted.')
+                    ->with('serviceNotification', [
+                        'title' => 'Installation service booked',
+                        'message' => 'Payment is confirmed and installation service request ' . $inquiry->inquiry_number . ' has been submitted for review.',
+                        'action_url' => route('inquiries.show', $inquiry),
+                    ]);
             }
         }
 

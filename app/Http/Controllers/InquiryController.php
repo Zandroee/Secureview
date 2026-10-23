@@ -351,22 +351,15 @@ class InquiryController extends Controller
             'status' => 'pending',
         ]);
 
-        CustomerNotification::create([
-            'user_id' => $request->user()->id,
-            'type' => 'inquiry',
-            'title' => 'Inquiry received',
-            'message' => 'Your service request ' . $inquiry->inquiry_number . ' has been received.',
-            'action_url' => route('inquiries.show', $inquiry),
-            'related_type' => Inquiry::class,
-            'related_id' => $inquiry->id,
-        ]);
-
         $jobNotifications->notifyNewInquirySubmitted($inquiry);
 
-        return redirect()->route('inquiries.show', $inquiry)->with(
-            'success',
-            'Your service request has been submitted successfully.'
-        );
+        return redirect()->route('inquiries.show', $inquiry)
+            ->with('success', 'Your service request has been submitted successfully.')
+            ->with('serviceNotification', [
+                'title' => 'Service request submitted',
+                'message' => 'Your service request ' . $inquiry->inquiry_number . ' has been submitted and is awaiting review.',
+                'action_url' => route('inquiries.show', $inquiry),
+            ]);
     }
 
     private function startInstallationPayment(

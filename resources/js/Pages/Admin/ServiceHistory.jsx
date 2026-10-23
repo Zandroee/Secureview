@@ -11,7 +11,7 @@ function urgencyClass(urgency) {
     return "bg-success-subtle text-success";
 }
 
-export default function ServiceHistory({ services = [], filters = {} }) {
+export default function ServiceHistory({ services = [], filters = {}, serviceIncomeSummary = {} }) {
     const serviceRows = services.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
 
@@ -63,6 +63,33 @@ export default function ServiceHistory({ services = [], filters = {} }) {
                             </Link>
                         </div>
 
+                        <div className="row g-3 mb-3">
+                            <div className="col-sm-6 col-xl-3">
+                                <div className="bg-white border rounded-4 p-3 h-100">
+                                    <div className="small text-secondary fw-semibold">RECORDED SERVICE INCOME</div>
+                                    <div className="fs-4 fw-bold text-primary">₱{Number(serviceIncomeSummary.recorded_service_income ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                </div>
+                            </div>
+                            <div className="col-sm-6 col-xl-3">
+                                <div className="bg-white border rounded-4 p-3 h-100">
+                                    <div className="small text-secondary fw-semibold">POST-SERVICE RECORDS</div>
+                                    <div className="fs-4 fw-bold">{serviceIncomeSummary.service_records ?? 0}</div>
+                                </div>
+                            </div>
+                            <div className="col-sm-6 col-xl-3">
+                                <div className="bg-white border rounded-4 p-3 h-100">
+                                    <div className="small text-secondary fw-semibold">PARTS REVENUE</div>
+                                    <div className="fs-4 fw-bold text-success">₱{Number(serviceIncomeSummary.parts_revenue ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                </div>
+                            </div>
+                            <div className="col-sm-6 col-xl-3">
+                                <div className="bg-white border rounded-4 p-3 h-100">
+                                    <div className="small text-secondary fw-semibold">COMPLETED WITHOUT RECORD</div>
+                                    <div className="fs-4 fw-bold text-warning-emphasis">{serviceIncomeSummary.completed_without_record ?? 0}</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="bg-white border rounded-3 p-3 mb-3">
                             <form className="row g-2 align-items-end" onSubmit={applySearch}>
                                 <div className="col-md-9">
@@ -105,6 +132,7 @@ export default function ServiceHistory({ services = [], filters = {} }) {
                                             <th>SCHEDULED FOR</th>
                                             <th>TECHNICIAN TEAM</th>
                                             <th>PRIORITY</th>
+                                            <th>POST-SERVICE / INCOME</th>
                                             <th>COMPLETED / UPDATED</th>
                                             <th className="text-end pe-3">ACTION</th>
                                         </tr>
@@ -112,7 +140,7 @@ export default function ServiceHistory({ services = [], filters = {} }) {
                                     <tbody>
                                         {serviceRows.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className="text-center p-5">
+                                                <td colSpan={8} className="text-center p-5">
                                                     <i className="bi bi-archive text-muted fs-3" />
                                                     <div className="fw-semibold mt-2">No completed services found</div>
                                                     <div className="small text-muted">
@@ -148,6 +176,17 @@ export default function ServiceHistory({ services = [], filters = {} }) {
                                                     <span className={"badge rounded-pill text-capitalize px-3 py-2 " + urgencyClass(service.urgency)}>
                                                         {service.urgency || "normal"}
                                                     </span>
+                                                </td>
+                                                <td>
+                                                    {service.service_record ? (
+                                                        <div>
+                                                            <div className="fw-bold text-success">₱{Number(service.service_record.total_income ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                            <div className="small text-muted">{service.service_record.items?.length ?? 0} part line(s)</div>
+                                                            <div className="small text-break" title={service.service_record.work_summary}>{service.service_record.work_summary}</div>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="badge rounded-pill bg-warning-subtle text-warning-emphasis">Legacy · no record</span>
+                                                    )}
                                                 </td>
                                                 <td className="small text-muted">{service.completed_at || "—"}</td>
                                                 <td className="text-end pe-3">

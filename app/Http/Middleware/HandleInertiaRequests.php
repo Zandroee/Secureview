@@ -63,6 +63,7 @@ class HandleInertiaRequests extends Middleware
             'latestNotification' => $latestNotification,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                'serviceNotification' => fn () => $request->session()->get('serviceNotification'),
                 'status' => fn () => $request->session()->get('status'),
                 'message' => fn () => $request->session()->get('message'),
                 'verificationRequired' => fn () => $request->session()->get('verificationRequired', false),

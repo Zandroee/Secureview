@@ -219,6 +219,7 @@ Route::middleware(['auth', 'verified', 'technician'])->prefix('technician')->nam
     Route::get('/dashboard', [TechnicianWorkspaceController::class, 'index'])->name('dashboard');
     Route::post('/jobs/{inquiry}/claim', [TechnicianWorkspaceController::class, 'claimJob'])->name('jobs.claim');
     Route::patch('/jobs/{inquiry}/status', [TechnicianWorkspaceController::class, 'updateJobStatus'])->name('jobs.status');
+    Route::post('/jobs/{inquiry}/post-service-record', [TechnicianWorkspaceController::class, 'storePostServiceRecord'])->name('jobs.post-service-record');
     Route::patch('/jobs/{inquiry}/schedule', [TechnicianWorkspaceController::class, 'updateJobSchedule'])->name('jobs.schedule');
     Route::patch('/jobs/{inquiry}/reschedule/{decision}', [TechnicianWorkspaceController::class, 'reviewReschedule'])->whereIn('decision', ['approve', 'decline'])->name('jobs.reschedule.review');
     Route::patch('/inventory/{product}', [TechnicianWorkspaceController::class, 'adjustStock'])->name('inventory.adjust');
@@ -319,6 +320,8 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/purchases', [AdminPurchaseController::class, 'index'])
         ->name('admin.purchases.index');
+    Route::get('/admin/order-history', [AdminPurchaseController::class, 'history'])
+        ->name('admin.order-history.index');
     Route::get('/admin/purchases/{order}/invoice', [InvoiceController::class, 'admin'])
         ->name('admin.purchases.invoice');
     Route::post('/admin/purchases/{order}/invoice-record', [AdminInvoiceIssuanceController::class, 'store'])

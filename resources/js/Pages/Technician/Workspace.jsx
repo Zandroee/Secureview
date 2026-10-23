@@ -5,6 +5,7 @@ import PanelPagination from "../../Components/Admin/PanelPagination";
 import { Link, router, usePage } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 import { googleMapsDirectionsUrl } from "../../Components/GoogleMaps/ServiceLocation";
+import TechnicianSidebar from "../../Components/Technician/Sidebar";
 
 function statusClass(status) {
     if (status === "completed") return "bg-success-subtle text-success";
@@ -35,13 +36,22 @@ function productImageSource(product) {
     return "/storage/" + String(image).replace(/^\/+/, "");
 }
 
-function JobCard({ job, open = false }) {
+function JobCard({ job, open = false, products = [] }) {
     const [working, setWorking] = useState(false);
     const [error, setError] = useState("");
     const [editingSchedule, setEditingSchedule] = useState(false);
     const [scheduleDate, setScheduleDate] = useState(job.preferred_date_value || "");
     const [scheduleTime, setScheduleTime] = useState(job.preferred_time || "08:00 AM - 11:00 AM");
     const [scheduleError, setScheduleError] = useState("");
+    const [showServiceReport, setShowServiceReport] = useState(false);
+    const [serviceReportErrors, setServiceReportErrors] = useState({});
+    const [serviceReport, setServiceReport] = useState({
+        work_summary: "",
+        customer_notes: "",
+        labor_charge: "0",
+        additional_charge: "0",
+        items: [],
+    });
     const timeSlots = ["08:00 AM - 11:00 AM", "11:00 AM - 02:00 PM", "02:00 PM - 05:00 PM"];
 
     const claim = () => {
@@ -55,11 +65,69 @@ function JobCard({ job, open = false }) {
     };
 
     const updateStatus = (status) => {
+        if (status === "completed") {
+            setServiceReportErrors({});
+            setShowServiceReport(true);
+            return;
+        }
+
         setWorking(true);
         setError("");
         router.patch("/technician/jobs/" + job.id + "/status", { status }, {
             preserveScroll: true,
             onError: (errors) => setError(errors.status ?? "Unable to update job status."),
+            onFinish: () => setWorking(false),
+        });
+    };
+
+    const updateReportField = (field, value) => {
+        setServiceReport((current) => ({ ...current, [field]: value }));
+    };
+
+    const addReportItem = () => {
+        setServiceReport((current) => ({
+            ...current,
+            items: [...current.items, {
+                action: "used",
+                product_id: "",
+                product_name: "",
+                quantity: "1",
+                unit_price: "0",
+                notes: "",
+            }],
+        }));
+    };
+
+    const updateReportItem = (index, field, value) => {
+        setServiceReport((current) => {
+            const items = current.items.map((item, itemIndex) => {
+                if (itemIndex !== index) return item;
+                if (field === "action") {
+                    return { ...item, action: value, product_id: "", product_name: "", unit_price: "0" };
+                }
+                if (field === "product_id") {
+                    const selected = products.find((product) => String(product.id) === String(value));
+                    return {
+                        ...item,
+                        product_id: value,
+                        product_name: selected?.name ?? "",
+                        unit_price: selected ? String(selected.price ?? 0) : "0",
+                    };
+                }
+                return { ...item, [field]: value };
+            });
+            return { ...current, items };
+        });
+    };
+
+    const submitServiceReport = (event) => {
+        event.preventDefault();
+        setWorking(true);
+        setServiceReportErrors({});
+        router.post("/technician/jobs/" + job.id + "/post-service-record", serviceReport, {
+            preserveScroll: true,
+            onError: (errors) => setServiceReportErrors(errors ?? {}),
+            onSuccess: () => setShowServiceReport(false),
             onFinish: () => setWorking(false),
         });
     };
@@ -173,10 +241,136 @@ function JobCard({ job, open = false }) {
                 </button>
             ) : job.status === "in_progress" ? (
                 <button className="btn btn-success w-100 fw-bold" disabled={working} onClick={() => updateStatus("completed")}>
-                    {working ? "UPDATING..." : "MARK JOB COMPLETED"}
+                    <i className="bi bi-journal-check me-2" />POST SERVICE RECORD
                 </button>
             ) : (
-                <div className="small text-success fw-semibold">This job is completed.</div>
+                <div className="small text-success fw-semibold"><i className="bi bi-check-circle-fill me-1" />This job is completed.</div>
+            )}
+
+            {!open && job.status === "in_progress" && showServiceReport && (
+                <form onSubmit={submitServiceReport} className="mt-3 border rounded-4 bg-body-tertiary p-3 p-lg-4">
+                    <div className="d-flex align-items-start gap-2 mb-3">
+                        <span className="d-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary" style={{ width: 40, height: 40 }}>
+                            <i className="bi bi-journal-medical fs-5" />
+                        </span>
+                        <div>
+                            <h4 className="h5 fw-bold mb-1">Post-Service Record</h4>
+                            <p className="small text-secondary mb-0">Record the work performed and every shop product taken for the job before completing it.</p>
+                        </div>
+                    </div>
+
+                    {Object.entries(serviceReportErrors).map(([field, messages]) => (
+                        <div className="small text-danger mb-1" key={field}>{Array.isArray(messages) ? messages[0] : messages}</div>
+                    ))}
+
+                    <label className="form-label fw-semibold">Work performed <span className="text-danger">*</span></label>
+                    <textarea
+                        className={"form-control mb-3 " + (serviceReportErrors.work_summary ? "is-invalid" : "")}
+                        rows={3}
+                        minLength={10}
+                        maxLength={5000}
+                        required
+                        value={serviceReport.work_summary}
+                        onChange={(event) => updateReportField("work_summary", event.target.value)}
+                        placeholder="Describe diagnostics, repairs, configuration, tests, and result."
+                    />
+
+                    <div className="row g-2 mb-3">
+                        <div className="col-sm-6">
+                            <label className="form-label fw-semibold">Labor / service income (₱)</label>
+                            <input type="number" min="0" step="0.01" max="10000000" className="form-control" value={serviceReport.labor_charge} onChange={(event) => updateReportField("labor_charge", event.target.value)} required />
+                        </div>
+                        <div className="col-sm-6">
+                            <label className="form-label fw-semibold">Other service charge (₱)</label>
+                            <input type="number" min="0" step="0.01" max="10000000" className="form-control" value={serviceReport.additional_charge} onChange={(event) => updateReportField("additional_charge", event.target.value)} />
+                        </div>
+                    </div>
+
+                    <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+                        <h5 className="h6 fw-bold mb-0">Parts used or removed</h5>
+                        <button type="button" className="btn btn-sm btn-outline-primary fw-semibold" onClick={addReportItem} disabled={working || serviceReport.items.length >= 20}>
+                            <i className="bi bi-plus-lg me-1" />ADD PART
+                        </button>
+                    </div>
+                    <p className="small text-secondary mb-3">“Used from shop stock” deducts the quantity and creates an inventory audit. “Removed from customer site” records the old part without changing shop stock.</p>
+
+                    {serviceReport.items.map((item, index) => (
+                        <div className="border rounded-3 bg-body p-3 mb-2" key={index}>
+                            <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <strong className="small">Part {index + 1}</strong>
+                                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setServiceReport((current) => ({ ...current, items: current.items.filter((_, itemIndex) => itemIndex !== index) }))} aria-label={"Remove part " + (index + 1)}>
+                                    <i className="bi bi-trash" />
+                                </button>
+                            </div>
+                            <div className="row g-2">
+                                <div className="col-12 col-md-4">
+                                    <label className="form-label small fw-semibold">Record type</label>
+                                    <select className="form-select form-select-sm" value={item.action} onChange={(event) => updateReportItem(index, "action", event.target.value)}>
+                                        <option value="used">Used from shop stock</option>
+                                        <option value="removed">Removed from customer site</option>
+                                    </select>
+                                </div>
+                                <div className="col-12 col-md-8">
+                                    <label className="form-label small fw-semibold">{item.action === "used" ? "Shop product" : "Removed product / component"}</label>
+                                    {item.action === "used" ? (
+                                        <select className="form-select form-select-sm" required value={item.product_id} onChange={(event) => updateReportItem(index, "product_id", event.target.value)}>
+                                            <option value="">Select product from inventory</option>
+                                            {products.map((product) => (
+                                                <option key={product.id} value={product.id}>{product.name} · {product.stock_quantity} in stock</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input className="form-control form-control-sm" required maxLength={180} value={item.product_name} onChange={(event) => updateReportItem(index, "product_name", event.target.value)} placeholder="e.g. damaged camera, old HDD, cable section" />
+                                    )}
+                                </div>
+                                <div className="col-6 col-md-3">
+                                    <label className="form-label small fw-semibold">Quantity</label>
+                                    <input className="form-control form-control-sm" type="number" min="1" max="10000" step="1" required value={item.quantity} onChange={(event) => updateReportItem(index, "quantity", event.target.value)} />
+                                </div>
+                                {item.action === "used" && (
+                                    <div className="col-6 col-md-3">
+                                        <label className="form-label small fw-semibold">Charge per unit (₱)</label>
+                                        <input className="form-control form-control-sm" type="number" min="0" max="10000000" step="0.01" value={item.unit_price} onChange={(event) => updateReportItem(index, "unit_price", event.target.value)} />
+                                    </div>
+                                )}
+                                <div className="col-12 col-md">
+                                    <label className="form-label small fw-semibold">Part notes (optional)</label>
+                                    <input className="form-control form-control-sm" maxLength={1000} value={item.notes} onChange={(event) => updateReportItem(index, "notes", event.target.value)} placeholder="Condition / reason / serial details" />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+
+                    <label className="form-label fw-semibold mt-2">Customer-facing notes (optional)</label>
+                    <textarea className="form-control mb-3" rows={2} maxLength={3000} value={serviceReport.customer_notes} onChange={(event) => updateReportField("customer_notes", event.target.value)} placeholder="Recommendations, replaced parts, and follow-up advice." />
+
+                    <div className="d-flex flex-column flex-sm-row gap-2">
+                        <button type="submit" className="btn btn-success fw-bold flex-grow-1" disabled={working}>
+                            {working ? <><span className="spinner-border spinner-border-sm me-2" />SAVING RECORD...</> : <><i className="bi bi-check2-circle me-2" />SAVE RECORD & COMPLETE JOB</>}
+                        </button>
+                        <button type="button" className="btn btn-outline-secondary fw-semibold" disabled={working} onClick={() => setShowServiceReport(false)}>CANCEL</button>
+                    </div>
+                </form>
+            )}
+
+            {!open && job.status === "completed" && job.service_record && (
+                <div className="mt-3 border rounded-3 bg-body-tertiary p-3">
+                    <div className="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <div className="fw-bold"><i className="bi bi-journal-check me-2 text-success" />Post-Service Record</div>
+                            <div className="small text-secondary mt-1">{job.service_record.work_summary}</div>
+                        </div>
+                        <span className="badge rounded-pill bg-success-subtle text-success">Saved</span>
+                    </div>
+                    <div className="fw-bold text-success mt-2">Recorded income: ₱{Number(job.service_record.total_income ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    {(job.service_record.items ?? []).length > 0 && (
+                        <ul className="small mt-2 mb-0 ps-3">
+                            {job.service_record.items.map((item, index) => (
+                                <li key={index}>{item.action === "used" ? "Used" : "Removed"}: {item.product_name} × {item.quantity}</li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
             )}
 
             {!open && job.status === "confirmed" && job.reschedule_request_status === "pending" && (
@@ -366,6 +560,70 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                 .technician-workspace .workspace-table tbody td { padding-top: .75rem; padding-bottom: .75rem; }
                 .technician-workspace .workspace-filter.active { background: #1769ed; color: #fff; border-color: #1769ed; }
                 .technician-workspace .workspace-filter:not(.active) { background: #fff; color: #526174; border-color: #d8e0eb; }
+
+                html[data-bs-theme="dark"] .technician-workspace {
+                    background: var(--bs-body-bg);
+                    color: var(--bs-body-color);
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-hero,
+                html[data-bs-theme="dark"] .technician-workspace .workspace-section,
+                html[data-bs-theme="dark"] .technician-workspace .workspace-stat,
+                html[data-bs-theme="dark"] .technician-workspace .technician-job-card,
+                html[data-bs-theme="dark"] .technician-workspace .card {
+                    background: #1f2937 !important;
+                    color: #e5e7eb;
+                    border-color: #405169 !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-hero {
+                    background: linear-gradient(125deg, #1f2937 0%, #19273a 100%) !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-stat .display-6,
+                html[data-bs-theme="dark"] .technician-workspace .technician-job-card h3,
+                html[data-bs-theme="dark"] .technician-workspace .card h5,
+                html[data-bs-theme="dark"] .technician-workspace .card h2 {
+                    color: #f3f6fb !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .text-dark {
+                    color: #f3f6fb !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .text-secondary,
+                html[data-bs-theme="dark"] .technician-workspace .text-muted {
+                    color: #bfcbd9 !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .bg-light,
+                html[data-bs-theme="dark"] .technician-workspace .bg-body-tertiary {
+                    background: #18212f !important;
+                    color: #e5e7eb;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-table {
+                    --bs-table-color: #e5e7eb;
+                    --bs-table-bg: #1f2937;
+                    --bs-table-border-color: #405169;
+                    --bs-table-striped-bg: #243244;
+                    --bs-table-hover-bg: #2b3b50;
+                    --bs-table-hover-color: #fff;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-table thead th {
+                    color: #d6e0eb;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .form-control,
+                html[data-bs-theme="dark"] .technician-workspace .form-select,
+                html[data-bs-theme="dark"] .technician-workspace .input-group-text {
+                    background-color: #111827;
+                    border-color: #475569;
+                    color: #f3f6fb;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .form-control::placeholder {
+                    color: #94a3b8;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-filter:not(.active) {
+                    background: #263449;
+                    border-color: #475569;
+                    color: #dce5f0;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .border {
+                    border-color: #405169 !important;
+                }
                 @media (prefers-reduced-motion: reduce) {
                     .technician-workspace .workspace-stat, .technician-workspace .technician-job-card { transition: none; }
                 }
@@ -380,9 +638,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                     <i className="bi bi-tools fs-3" />
                                 </div>
                                 <div>
-                                    <div className="small text-primary fw-bold text-uppercase mb-1" style={{ letterSpacing: ".09em" }}>
-                                        SecureView · Field Operations
-                                    </div>
                                     <h1 className="fw-bold mb-2" style={{ fontSize: "clamp(1.65rem, 2.4vw, 2.35rem)", letterSpacing: "-.035em" }}>
                                         Technician Workspace
                                     </h1>
@@ -390,19 +645,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                         Manage your assigned services, join available team jobs, and keep product inventory accurate.
                                     </p>
                                 </div>
-                            </div>
-                            <div className="d-flex flex-wrap align-items-center gap-2">
-                                <span className="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2">
-                                    <i className="bi bi-circle-fill me-2" style={{ fontSize: ".45rem" }} />
-                                    Field operations
-                                </span>
-                                <Link href="/notifications" className="btn btn-primary fw-semibold px-3 py-2">
-                                    <i className="bi bi-bell me-2" />
-                                    Notifications
-                                    {Number(props.notificationCount ?? 0) > 0 && (
-                                        <span className="badge text-bg-light text-primary ms-2">{props.notificationCount > 99 ? "99+" : props.notificationCount}</span>
-                                    )}
-                                </Link>
                             </div>
                         </div>
                     </section>
@@ -414,8 +656,15 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         </div>
                     )}
 
-                    <div className="row g-4 align-items-start">
-                        <div className="col-lg-9">
+                    <div className="d-xl-none mb-3">
+                        <TechnicianSidebar mobileOnly />
+                    </div>
+
+                    <div className="row g-4">
+                        <aside className="col-xl-2 d-none d-xl-block">
+                            <TechnicianSidebar desktopOnly />
+                        </aside>
+                        <div className="col-lg-8 col-xl-7">
                     <div className="row g-3 mb-4">
                         <div className="col-6 col-xl-3">
                             <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
@@ -498,7 +747,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                             <div className="row g-3">
                                 {filteredJobs.map((job) => (
                                     <div className="col-md-6 col-xxl-4" key={job.id}>
-                                        <JobCard job={job} />
+                                        <JobCard job={job} products={inventory} />
                                     </div>
                                 ))}
                             </div>
@@ -551,7 +800,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                             <div className="row g-3">
                                 {filteredOpenJobs.map((job) => (
                                     <div className="col-md-6 col-xxl-4" key={job.id}>
-                                        <JobCard job={job} open />
+                                        <JobCard job={job} open products={inventory} />
                                     </div>
                                 ))}
                             </div>
@@ -562,6 +811,34 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                 </div>
                                 <h3 className="h5 fw-bold mb-2">{openJobs.length ? "No jobs match your search" : "No available jobs right now"}</h3>
                                 <p className="text-secondary mb-0">{openJobs.length ? "Try another service name, location, or service number." : "New confirmed services with open team spots will appear here automatically."}</p>
+                            </div>
+                        )}
+                    </section>
+
+                    <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="service-records">
+                        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                            <div>
+                                <div className="small text-primary fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Work history</div>
+                                <h2 className="h3 fw-bold mb-1">Post-Service Records</h2>
+                                <p className="text-secondary mb-0">Review completed work, parts pulled from stock, parts removed from the customer site, and recorded service income.</p>
+                            </div>
+                            <span className="badge rounded-pill bg-success-subtle text-success px-3 py-2">{completedJobs.filter((job) => job.service_record).length} saved records</span>
+                        </div>
+                        {completedJobs.some((job) => job.service_record) ? (
+                            <div className="row g-3">
+                                {completedJobs.filter((job) => job.service_record).map((job) => (
+                                    <div className="col-md-6 col-xxl-4" key={job.id}>
+                                        <JobCard job={job} products={inventory} />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center bg-light border rounded-4 p-4 p-lg-5">
+                                <div className="mx-auto d-flex align-items-center justify-content-center rounded-circle bg-white border text-primary mb-3" style={{ width: 58, height: 58 }}>
+                                    <i className="bi bi-journal-check fs-4" />
+                                </div>
+                                <h3 className="h5 fw-bold mb-2">No Post-Service Records yet</h3>
+                                <p className="text-secondary mb-0">When you complete a job, submit its Post-Service Record to save the work summary, parts, and service income here. Older completed jobs may not have a record.</p>
                             </div>
                         )}
                     </section>
@@ -606,7 +883,9 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                     <thead className="table-light">
                                         <tr>
                                             <th className="ps-3">Product</th>
+                                            <th>Brand</th>
                                             <th>Category</th>
+                                            <th>Price</th>
                                             <th>Current stock</th>
                                             <th style={{ minWidth: 150 }}>Adjustment (+ / −)</th>
                                             <th style={{ minWidth: 230 }}>Reason for change</th>
@@ -621,9 +900,9 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                     <td className="ps-3" style={{ minWidth: 260 }}>
                                                         <div className="d-flex align-items-center gap-3">
                                                             {image ? (
-                                                                <img src={image} alt="" loading="lazy" className="rounded-3 border bg-white flex-shrink-0" style={{ width: 46, height: 46, objectFit: "cover" }} />
+                                                                <img src={image} alt="" loading="lazy" className="rounded-3 border bg-white flex-shrink-0" style={{ width: 56, height: 56, objectFit: "contain", padding: 3 }} />
                                                             ) : (
-                                                                <span className="d-flex align-items-center justify-content-center rounded-3 border bg-light text-secondary flex-shrink-0" style={{ width: 46, height: 46 }}>
+                                                                <span className="d-flex align-items-center justify-content-center rounded-3 border bg-light text-secondary flex-shrink-0" style={{ width: 56, height: 56 }}>
                                                                     <i className="bi bi-box-seam fs-5" />
                                                                 </span>
                                                             )}
@@ -633,7 +912,9 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                             </div>
                                                         </div>
                                                     </td>
+                                                    <td><span className="badge bg-light text-secondary border">{product.brand || "—"}</span></td>
                                                     <td><span className="badge bg-light text-secondary border">{product.category || "Uncategorized"}</span></td>
+                                                    <td className="text-nowrap">₱{Number(product.price ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                                     <td>
                                                         <span className={"badge rounded-pill px-3 py-2 " + stockClass(product.stock_quantity)}>{product.stock_quantity} units</span>
                                                     </td>
@@ -668,7 +949,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                             );
                                         })}
                                         {!filteredInventory.length && (
-                                            <tr><td colSpan="6" className="text-center text-secondary py-5">
+                                            <tr><td colSpan="8" className="text-center text-secondary py-5">
                                                 <i className="bi bi-search fs-4 d-block mb-2" />
                                                 {inventory.length ? "No products match these filters." : "No products in inventory."}
                                             </td></tr>
@@ -684,8 +965,8 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                     </section>
                         </div>
 
-                        <aside className="col-lg-3">
-                            <div className="mb-4">
+                        <aside className="col-xl-3 col-lg-4">
+                            <div className="mb-4" id="technician-calendar">
                                 <Calendar
                                     title="My Schedule"
                                     subtitle="Your assigned appointments and service dates."
@@ -748,7 +1029,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                         <a href="#my-jobs" className="btn btn-outline-primary text-start"><i className="bi bi-clipboard2-check me-2" />My Service Jobs</a>
                                         <a href="#available-jobs" className="btn btn-outline-primary text-start"><i className="bi bi-people me-2" />Available Jobs</a>
                                         <a href="#inventory" className="btn btn-outline-primary text-start"><i className="bi bi-box-seam me-2" />Inventory</a>
-                                        <Link href="/notifications" className="btn btn-outline-primary text-start"><i className="bi bi-bell me-2" />Notifications</Link>
                                     </div>
                                 </div>
                             </section>
