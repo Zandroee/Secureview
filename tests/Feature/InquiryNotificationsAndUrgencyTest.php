@@ -49,9 +49,14 @@ class InquiryNotificationsAndUrgencyTest extends TestCase
             'related_id' => $inquiry->id,
         ]);
 
-        $this->assertDatabaseHas('customer_notifications', [
+        $this->assertSessionHas('serviceNotification', [
+            'title' => 'Service request submitted',
+            'action_url' => route('inquiries.show', $inquiry),
+        ]);
+
+        $this->assertDatabaseMissing('customer_notifications', [
             'user_id' => $customer->id,
-            'type' => 'inquiry',
+            'title' => 'Inquiry received',
             'related_id' => $inquiry->id,
         ]);
     }
