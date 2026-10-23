@@ -162,10 +162,14 @@ export default function Inquiries({ inquiries = [] }) {
                                                         </div>
 
                                                         <div className="fw-semibold small">
-                                                            {
-                                                                service.service_type
-                                                            }
+                                                            {service.service_type}
                                                         </div>
+                                                        {service.other_service_type && (
+                                                            <div className="small text-primary fw-semibold">{service.other_service_type}</div>
+                                                        )}
+                                                        {service.other_service_details && (
+                                                            <div className="small text-muted mt-1">{service.other_service_details}</div>
+                                                        )}
 
                                                         <div className="small text-muted mt-1">
                                                             URGENCY
