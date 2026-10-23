@@ -561,6 +561,70 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                 .technician-workspace .workspace-table tbody td { padding-top: .75rem; padding-bottom: .75rem; }
                 .technician-workspace .workspace-filter.active { background: #1769ed; color: #fff; border-color: #1769ed; }
                 .technician-workspace .workspace-filter:not(.active) { background: #fff; color: #526174; border-color: #d8e0eb; }
+
+                html[data-bs-theme="dark"] .technician-workspace {
+                    background: var(--bs-body-bg);
+                    color: var(--bs-body-color);
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-hero,
+                html[data-bs-theme="dark"] .technician-workspace .workspace-section,
+                html[data-bs-theme="dark"] .technician-workspace .workspace-stat,
+                html[data-bs-theme="dark"] .technician-workspace .technician-job-card,
+                html[data-bs-theme="dark"] .technician-workspace .card {
+                    background: #1f2937 !important;
+                    color: #e5e7eb;
+                    border-color: #405169 !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-hero {
+                    background: linear-gradient(125deg, #1f2937 0%, #19273a 100%) !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-stat .display-6,
+                html[data-bs-theme="dark"] .technician-workspace .technician-job-card h3,
+                html[data-bs-theme="dark"] .technician-workspace .card h5,
+                html[data-bs-theme="dark"] .technician-workspace .card h2 {
+                    color: #f3f6fb !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .text-dark {
+                    color: #f3f6fb !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .text-secondary,
+                html[data-bs-theme="dark"] .technician-workspace .text-muted {
+                    color: #bfcbd9 !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .bg-light,
+                html[data-bs-theme="dark"] .technician-workspace .bg-body-tertiary {
+                    background: #18212f !important;
+                    color: #e5e7eb;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-table {
+                    --bs-table-color: #e5e7eb;
+                    --bs-table-bg: #1f2937;
+                    --bs-table-border-color: #405169;
+                    --bs-table-striped-bg: #243244;
+                    --bs-table-hover-bg: #2b3b50;
+                    --bs-table-hover-color: #fff;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-table thead th {
+                    color: #d6e0eb;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .form-control,
+                html[data-bs-theme="dark"] .technician-workspace .form-select,
+                html[data-bs-theme="dark"] .technician-workspace .input-group-text {
+                    background-color: #111827;
+                    border-color: #475569;
+                    color: #f3f6fb;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .form-control::placeholder {
+                    color: #94a3b8;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .workspace-filter:not(.active) {
+                    background: #263449;
+                    border-color: #475569;
+                    color: #dce5f0;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .border {
+                    border-color: #405169 !important;
+                }
                 @media (prefers-reduced-motion: reduce) {
                     .technician-workspace .workspace-stat, .technician-workspace .technician-job-card { transition: none; }
                 }
@@ -593,7 +657,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         </div>
                     )}
 
-                    <div className="row g-4 align-items-start">
+                    <div className="row g-4">
                         <aside className="col-xl-2">
                             <TechnicianSidebar />
                         </aside>
@@ -805,9 +869,9 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                     <td className="ps-3" style={{ minWidth: 260 }}>
                                                         <div className="d-flex align-items-center gap-3">
                                                             {image ? (
-                                                                <img src={image} alt="" loading="lazy" className="rounded-3 border bg-white flex-shrink-0" style={{ width: 46, height: 46, objectFit: "cover" }} />
+                                                                <img src={image} alt="" loading="lazy" className="rounded-3 border bg-white flex-shrink-0" style={{ width: 56, height: 56, objectFit: "contain", padding: 3 }} />
                                                             ) : (
-                                                                <span className="d-flex align-items-center justify-content-center rounded-3 border bg-light text-secondary flex-shrink-0" style={{ width: 46, height: 46 }}>
+                                                                <span className="d-flex align-items-center justify-content-center rounded-3 border bg-light text-secondary flex-shrink-0" style={{ width: 56, height: 56 }}>
                                                                     <i className="bi bi-box-seam fs-5" />
                                                                 </span>
                                                             )}
