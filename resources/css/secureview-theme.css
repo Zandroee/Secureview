@@ -2114,3 +2114,30 @@ html[data-bs-theme="dark"] .about-benefit-card p {
     }
 }
 
+/* Keep desktop navigation visible while long admin/technician pages scroll. */
+@media (min-width: 1200px) {
+    .admin-sidebar-desktop,
+    .technician-sidebar-desktop {
+        position: sticky;
+        top: 76px;
+        align-self: flex-start;
+        height: calc(100vh - 76px);
+        height: calc(100dvh - 76px);
+        min-height: 0 !important;
+        overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        z-index: 5;
+    }
+
+    .admin-sidebar-desktop {
+        padding-bottom: 1.5rem !important;
+    }
+
+    .admin-sidebar-desktop nav,
+    .technician-sidebar-desktop nav {
+        padding-bottom: 1rem;
+    }
+}
+
