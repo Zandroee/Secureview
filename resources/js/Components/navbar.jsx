@@ -80,13 +80,13 @@ export default function Navbar() {
             { label: "Available Team Jobs", href: "/technician/dashboard#available-jobs", icon: "bi-people", keywords: "join team jobs available services" },
             { label: "Inventory", href: "/technician/dashboard#inventory", icon: "bi-boxes", keywords: "stock products quantity adjustment" },
             { label: "My Schedules", href: "/schedules", icon: "bi-calendar3", keywords: "appointments" },
-            { label: "Purchase History", href: "/purchases", icon: "bi-bag-check", keywords: "orders" }
+            { label: "Order History", href: "/purchases", icon: "bi-bag-check", keywords: "orders" }
         );
     } else if (isLoggedIn) {
         navigationItems.push(
             { label: "My Schedules", href: "/schedules", icon: "bi-calendar3", keywords: "appointments bookings upcoming service" },
             { label: "Service History", href: "/inquiries", icon: "bi-chat-left-text", keywords: "service requests status" },
-            { label: "Purchase History", href: "/purchases", icon: "bi-bag-check", keywords: "orders payments receipts" },
+            { label: "Order History", href: "/purchases", icon: "bi-bag-check", keywords: "orders payments receipts" },
             { label: "Warranty Claims", href: "/warranty-claims", icon: "bi-shield-check", keywords: "coverage repair defective warranty" },
             { label: "Shopping Cart", href: "/cart", icon: "bi-cart3", keywords: "basket checkout buy" }
         );
