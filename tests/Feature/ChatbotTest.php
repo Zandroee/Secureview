@@ -55,7 +55,7 @@ class ChatbotTest extends TestCase
             ],
         ])
             ->assertStatus(503)
-            ->assertJsonPath('message', 'The AI assistant is not configured yet. Please contact Netmax Trading or send an inquiry through the Services page.');
+            ->assertJsonPath('message', 'The AI assistant is not configured yet. Please contact Netmax Trading or submit a service request through the Services page.');
 
         Http::assertNothingSent();
     }
@@ -70,7 +70,7 @@ class ChatbotTest extends TestCase
             ],
         ])
             ->assertOk()
-            ->assertJsonPath('message', "To request an installation or another service, open the Services page (/services) and submit the inquiry form (/inquiry). You can choose a preferred time slot; our team will confirm the appointment.");
+            ->assertJsonPath('message', "To request an installation or another service, open the Services page (/services) and submit the service request form (/inquiry). You can choose a preferred time slot; our team will confirm the appointment.");
 
         Http::assertNothingSent();
     }
