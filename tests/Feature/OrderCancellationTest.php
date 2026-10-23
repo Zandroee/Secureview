@@ -119,7 +119,7 @@ class OrderCancellationTest extends TestCase
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
             'order_status' => 'cancelled',
-            'payment_status' => 'pending',
+            'payment_status' => 'cancelled',
         ]);
     }
 
