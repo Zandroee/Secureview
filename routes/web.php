@@ -325,6 +325,8 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
         ->name('admin.order-history.index');
     Route::get('/admin/service-records', [AdminServiceRecordController::class, 'index'])
         ->name('admin.service-records.index');
+    Route::patch('/admin/service-records/{record}/confirm-payment', [AdminServiceRecordController::class, 'confirmPayment'])
+        ->name('admin.service-records.confirm-payment');
     Route::get('/admin/purchases/{order}/invoice', [InvoiceController::class, 'admin'])
         ->name('admin.purchases.invoice');
     Route::post('/admin/purchases/{order}/invoice-record', [AdminInvoiceIssuanceController::class, 'store'])
