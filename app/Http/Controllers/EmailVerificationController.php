@@ -93,7 +93,7 @@ class EmailVerificationController extends Controller
 
         try {
             $sent = $codes->send($user);
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             $sent = false;
             Log::warning('SecureView could not replace an older verification link with a code.', [
                 'user_id' => $user->id,
