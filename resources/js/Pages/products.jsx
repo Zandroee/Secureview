@@ -152,7 +152,7 @@ export default function Products({ products = [] }) {
         <div>
             <Navbar />
 
-            <main className="container-fluid mt-4 mt-lg-5 px-3 px-xl-5" style={{ fontFamily: "Outfit, sans-serif" }}>
+            <main className="container-fluid mt-4 mt-lg-5 px-3 px-xl-5 catalog-listing-main" style={{ fontFamily: "Outfit, sans-serif" }}>
                 <div className="position-relative w-100 mx-auto mb-4 mb-lg-5" style={{ maxWidth: "820px" }}>
                     <label htmlFor="product-search" className="visually-hidden">Search products</label>
                     <input

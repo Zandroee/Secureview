@@ -33,10 +33,11 @@ export default function ProductCard({
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        border: "1px solid #e3e9f2",
+        border: "1px solid var(--sv-catalog-card-border)",
         borderRadius: "18px",
         overflow: "hidden",
-        background: "#ffffff",
+        background: "var(--sv-catalog-card-bg)",
+        color: "var(--sv-catalog-card-text)",
         transform: isHovered ? "translateY(-4px)" : "translateY(0)",
         boxShadow: isHovered ? "0 16px 34px rgba(19, 43, 79, 0.13)" : "0 4px 14px rgba(19, 43, 79, 0.045)",
         opacity: available ? 1 : 0.74,
@@ -45,10 +46,10 @@ export default function ProductCard({
 
     const imageFallback = (
         <div
-            className="d-flex flex-column align-items-center justify-content-center gap-2 text-secondary"
+            className="secureview-catalog-card-image-fallback d-flex flex-column align-items-center justify-content-center gap-2"
             role="img"
             aria-label={name + " image unavailable"}
-            style={{ height: "100%", width: "100%", color: "#8a97a8", background: "#f3f6fa" }}
+            style={{ height: "100%", width: "100%" }}
         >
             <i className={isPackage ? "bi bi-box-seam" : "bi bi-camera-video"} style={{ fontSize: "2.6rem" }} />
             <span className="small">Image unavailable</span>
@@ -56,21 +57,17 @@ export default function ProductCard({
     );
 
     return (
-        <div className="card" style={cardStyle} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+        <div className="card secureview-catalog-card" style={cardStyle} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
             <div className="position-relative" style={{ padding: "12px 12px 0" }}>
                 <div
-                    className="position-relative overflow-hidden rounded-3"
-                    style={{
-                        height: imageHeight,
-                        background: "linear-gradient(145deg, #f7f9fc 0%, #eef2f7 100%)",
-                        border: "1px solid #edf1f7",
-                    }}
+                    className="position-relative overflow-hidden rounded-3 secureview-catalog-card-image-frame"
+                    style={{ height: imageHeight }}
                 >
                     {showImage ? (
                         <img
                             src={imageUrl}
                             alt={name}
-                            className="w-100 h-100"
+                            className="w-100 h-100 secureview-catalog-card-image"
                             loading="lazy"
                             onError={() => setFailedImageUrl(imageUrl)}
                             style={{
@@ -107,19 +104,19 @@ export default function ProductCard({
                     <div className="d-flex align-items-center gap-2 mb-2">
                         <span
                             className="d-inline-flex align-items-center justify-content-center"
-                            style={{ width: "23px", height: "23px", borderRadius: "7px", background: "#eaf2ff", color: "#1769d2", fontSize: "0.8rem" }}
+                            style={{ width: "23px", height: "23px", borderRadius: "7px", background: "var(--sv-catalog-brand-icon-bg)", color: "var(--sv-catalog-brand-icon-color)", fontSize: "0.8rem" }}
                             aria-hidden="true"
                         >
                             <i className="bi bi-patch-check-fill" />
                         </span>
-                        <span className="text-uppercase fw-bold" style={{ color: "#47617f", fontSize: "0.73rem", letterSpacing: "0.09em" }}>
+                        <span className="text-uppercase fw-bold secureview-catalog-card-brand" style={{ color: "var(--sv-catalog-card-muted)", fontSize: "0.73rem", letterSpacing: "0.09em" }}>
                             {String(brand).trim()}
                         </span>
                     </div>
                 )}
 
                 <h5
-                    className="card-title fw-bold mb-2"
+                    className="card-title fw-bold mb-2 secureview-catalog-card-title"
                     style={{
                         fontSize: isPackage ? "1.12rem" : "1.04rem",
                         lineHeight: "1.35",
@@ -129,29 +126,29 @@ export default function ProductCard({
                         WebkitLineClamp: 2,
                         overflow: "hidden",
                         overflowWrap: "anywhere",
-                        color: "#14243b",
+                        color: "var(--sv-catalog-card-text)",
                     }}
                 >
                     {name}
                 </h5>
 
                 {visibleSpecifications.length > 0 && (
-                    <ul className="ps-3 mb-3" style={{ fontSize: "0.86rem", lineHeight: "1.48", color: "#46566c", overflowWrap: "anywhere" }}>
+                    <ul className="ps-3 mb-3 secureview-catalog-card-specifications" style={{ fontSize: "0.86rem", lineHeight: "1.48", color: "var(--sv-catalog-card-copy)", overflowWrap: "anywhere" }}>
                         {visibleSpecifications.map((specification, index) => (
                             <li key={index} className="mb-1">{specification}</li>
                         ))}
                     </ul>
                 )}
                 {safeSpecifications.length > visibleSpecifications.length && (
-                    <div className="small text-muted mb-3">+{safeSpecifications.length - visibleSpecifications.length} more details</div>
+                    <div className="small mb-3" style={{ color: "var(--sv-catalog-card-muted)" }}>+{safeSpecifications.length - visibleSpecifications.length} more details</div>
                 )}
 
                 {isPackage && safeInclusions.length > 0 && (
-                    <div className="mb-3 p-3 rounded-3" style={{ background: "#f7f9fc", border: "1px solid #edf1f7" }}>
-                        <div className="fw-bold text-uppercase mb-2" style={{ fontSize: "0.72rem", letterSpacing: "0.08em", color: "#64758b" }}>
+                    <div className="mb-3 p-3 rounded-3" style={{ background: "var(--sv-catalog-card-subtle)", border: "1px solid var(--sv-catalog-card-border)" }}>
+                        <div className="fw-bold text-uppercase mb-2" style={{ fontSize: "0.72rem", letterSpacing: "0.08em", color: "var(--sv-catalog-card-muted)" }}>
                             <i className="bi bi-box-seam me-1" /> Includes
                         </div>
-                        <ul className="ps-3 mb-0" style={{ fontSize: "0.82rem", lineHeight: "1.45", color: "#3e4e63", overflowWrap: "anywhere" }}>
+                        <ul className="ps-3 mb-0 secureview-catalog-card-copy" style={{ fontSize: "0.82rem", lineHeight: "1.45", color: "var(--sv-catalog-card-copy)", overflowWrap: "anywhere" }}>
                             {visibleInclusions.map((item, index) => (
                                 <li key={item.id ?? (item.name + "-" + index)} className="mb-1">
                                     {item.name}{Number(item.quantity) > 1 ? " × " + Number(item.quantity) : ""}
@@ -159,7 +156,7 @@ export default function ProductCard({
                             ))}
                         </ul>
                         {safeInclusions.length > visibleInclusions.length && (
-                            <div className="small text-muted mt-1">+{safeInclusions.length - visibleInclusions.length} more included item(s)</div>
+                            <div className="small mt-1" style={{ color: "var(--sv-catalog-card-muted)" }}>+{safeInclusions.length - visibleInclusions.length} more included item(s)</div>
                         )}
                     </div>
                 )}
