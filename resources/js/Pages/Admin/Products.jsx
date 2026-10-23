@@ -309,6 +309,7 @@ export default function AdminProducts({
 
     const openCreateProduct = () => {
         setEditingProductId(null);
+        productForm.transform((data) => data);
         productForm.clearErrors();
         productForm.setData(emptyProduct());
         setProductModalOpen(true);
@@ -346,12 +347,22 @@ export default function AdminProducts({
                 setEditingProductId(null);
                 productForm.reset();
             },
+            onFinish: () => {
+                // Restore the default payload transform after the request completes.
+                productForm.transform((data) => data);
+            },
         };
 
         if (editingProductId) {
-            productForm.patch("/admin/products/" + editingProductId, options);
+            // PHP 8.2 does not reliably populate multipart fields on a direct PATCH.
+            // Send multipart data as POST and let Laravel's _method field spoof PATCH.
+            productForm
+                .transform((data) => ({ ...data, _method: "patch" }))
+                .post("/admin/products/" + editingProductId, options);
         } else {
-            productForm.post("/admin/products", options);
+            productForm
+                .transform((data) => data)
+                .post("/admin/products", options);
         }
     };
 
