@@ -9,6 +9,7 @@ use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ServiceRecord;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -84,12 +85,18 @@ class DashboardController extends Controller
         $currentSales = (float) $this->paidOrdersBetween(
             $salesWindow['start'],
             $salesWindow['end']
-        )->sum('total');
+        )->sum('total') + (float) $this->paidServiceRecordsBetween(
+            $salesWindow['start'],
+            $salesWindow['end']
+        )->sum('service_charge');
         $previousSales = $salesWindow['previous_start']
             ? (float) $this->paidOrdersBetween(
                 $salesWindow['previous_start'],
                 $salesWindow['previous_end']
-            )->sum('total')
+            )->sum('total') + (float) $this->paidServiceRecordsBetween(
+                $salesWindow['previous_start'],
+                $salesWindow['previous_end']
+            )->sum('service_charge')
             : null;
 
         $ordersWindow = $this->periodWindow($metricPeriods['orders']);
@@ -405,15 +412,18 @@ class DashboardController extends Controller
         $chartPeriod = $filters['chart_period'] ?? 'year';
         $chartConfiguration = $this->revenueChartConfiguration($chartPeriod);
         $chartStart = $chartConfiguration['start'];
-        $paidOrdersForChart = $this->paidOrdersBetween($chartStart, now()->copy())
+        $chartEnd = now()->copy();
+        $paidOrdersForChart = $this->paidOrdersBetween($chartStart, $chartEnd)
             ->get(['total', 'paid_at', 'created_at']);
+        $paidServiceRecordsForChart = $this->paidServiceRecordsBetween($chartStart, $chartEnd)
+            ->get(['service_charge as total', 'paid_at', 'created_at']);
 
         $revenueByBucket = [];
         foreach ($chartConfiguration['bins'] as $bin) {
             $revenueByBucket[$bin['key']] = 0.0;
         }
 
-        foreach ($paidOrdersForChart as $order) {
+        foreach ($paidOrdersForChart->concat($paidServiceRecordsForChart) as $order) {
             $recognizedAt = $order->paid_at ?? $order->created_at;
 
             if (!$recognizedAt) {
@@ -797,6 +807,16 @@ class DashboardController extends Controller
     private function paidOrdersBetween(Carbon $start, Carbon $end): Builder
     {
         return Order::query()
+            ->where('payment_status', 'paid')
+            ->whereRaw('DATE(COALESCE(paid_at, created_at)) BETWEEN ? AND ?', [
+                $start->toDateString(),
+                $end->toDateString(),
+            ]);
+    }
+
+    private function paidServiceRecordsBetween(Carbon $start, Carbon $end): Builder
+    {
+        return ServiceRecord::query()
             ->where('payment_status', 'paid')
             ->whereRaw('DATE(COALESCE(paid_at, created_at)) BETWEEN ? AND ?', [
                 $start->toDateString(),
