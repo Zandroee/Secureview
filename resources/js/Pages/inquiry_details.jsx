@@ -2,7 +2,7 @@ import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import { ServiceLocationMap } from "../Components/GoogleMaps/ServiceLocation";
 import { Link, router } from "@inertiajs/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function statusClass(status) {
     if (status === "confirmed" || status === "completed") {
@@ -38,6 +38,13 @@ export default function ServiceDetails({ inquiry: service, success }) {
     const [rescheduleNote, setRescheduleNote] = useState("");
     const [rescheduleErrors, setRescheduleErrors] = useState({});
     const [rescheduleBusy, setRescheduleBusy] = useState(false);
+    const [showBookingPopup, setShowBookingPopup] = useState(Boolean(success));
+    useEffect(() => {
+        setShowBookingPopup(Boolean(success));
+        if (!success) return undefined;
+        const timer = window.setTimeout(() => setShowBookingPopup(false), 7000);
+        return () => window.clearTimeout(timer);
+    }, [success]);
     const timeSlots = ["08:00 AM - 11:00 AM", "11:00 AM - 02:00 PM", "02:00 PM - 05:00 PM"];
     const submitReschedule = (event) => {
         event.preventDefault();
@@ -93,9 +100,25 @@ export default function ServiceDetails({ inquiry: service, success }) {
                         </Link>
                     </div>
 
-                    {success && (
-                        <div className="alert alert-success">
-                            {success}
+                    {success && showBookingPopup && (
+                        <div
+                            className="position-fixed top-0 end-0 p-3"
+                            style={{ zIndex: 2055, width: "min(94vw, 440px)", marginTop: "72px" }}
+                            role="status"
+                            aria-live="polite"
+                        >
+                            <div className="toast show border-0 shadow-lg w-100" style={{ borderRadius: "14px", overflow: "hidden" }}>
+                                <div className="d-flex align-items-start gap-3 p-3 text-white" style={{ background: "linear-gradient(120deg, #0f766e 0%, #059669 100%)" }}>
+                                    <span className="d-inline-flex align-items-center justify-content-center rounded-circle bg-white text-success flex-shrink-0" style={{ width: 38, height: 38 }}>
+                                        <i className="bi bi-check2-circle fs-5" aria-hidden="true" />
+                                    </span>
+                                    <div className="flex-grow-1">
+                                        <div className="fw-bold mb-1">Service booking update</div>
+                                        <div className="small">{success}</div>
+                                    </div>
+                                    <button type="button" className="btn-close btn-close-white" aria-label="Dismiss booking message" onClick={() => setShowBookingPopup(false)} />
+                                </div>
+                            </div>
                         </div>
                     )}
 
