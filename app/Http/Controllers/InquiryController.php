@@ -250,6 +250,12 @@ class InquiryController extends Controller
             'service_longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'google_place_id' => ['nullable', 'string', 'max:255'],
             'service_type' => ['required', 'string', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'other_service_type' => [
+                'nullable',
+                'required_if:service_type,Other',
+                Rule::in(['Camera relocation or added cabling', 'Network or remote-view setup', 'DVR/NVR configuration', 'Power supply or UPS issue', 'Access control or intercom', 'CCTV troubleshooting', 'Other (describe below)']),
+            ],
+            'other_service_details' => ['nullable', 'required_if:service_type,Other', 'string', 'min:5', 'max:1000'],
             'urgency' => ['required', 'in:normal,urgent,emergency'],
             'preferred_date' => ['required', 'date', 'after_or_equal:today'],
             'preferred_time' => ['required', 'string', Rule::in(self::BOOKING_TIME_SLOTS)],
@@ -344,21 +350,14 @@ class InquiryController extends Controller
             'service_longitude' => $validated['service_longitude'] ?? null,
             'google_place_id' => $validated['google_place_id'] ?? null,
             'service_type' => $validated['service_type'],
+            'other_service_type' => $validated['service_type'] === 'Other' ? ($validated['other_service_type'] ?? null) : null,
+            'other_service_details' => $validated['service_type'] === 'Other' ? trim((string) ($validated['other_service_details'] ?? '')) : null,
+            'payment_status' => 'not_required',
             'urgency' => $validated['urgency'],
             'preferred_date' => $validated['preferred_date'],
             'preferred_time' => $validated['preferred_time'],
             'notes' => $validated['notes'] ?? null,
             'status' => 'pending',
-        ]);
-
-        CustomerNotification::create([
-            'user_id' => $request->user()->id,
-            'type' => 'inquiry',
-            'title' => 'Inquiry received',
-            'message' => 'Your service request ' . $inquiry->inquiry_number . ' has been received.',
-            'action_url' => route('inquiries.show', $inquiry),
-            'related_type' => Inquiry::class,
-            'related_id' => $inquiry->id,
         ]);
 
         $jobNotifications->notifyNewInquirySubmitted($inquiry);
@@ -590,6 +589,9 @@ class InquiryController extends Controller
                 'service_longitude' => $inquiry->service_longitude,
                 'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
+                'other_service_type' => $inquiry->other_service_type,
+                'other_service_details' => $inquiry->other_service_details,
+                'payment_status' => $inquiry->payment_status ?? 'not_required',
                 'urgency' => $inquiry->urgency,
                 'technician' => $inquiry->technician
                     ? [
