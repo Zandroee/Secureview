@@ -61,7 +61,7 @@ function Identity() {
     );
 }
 
-export default function TechnicianSidebar() {
+export default function TechnicianSidebar({ mobileOnly = false, desktopOnly = false } = {}) {
     const close = () => {
         const menu = document.getElementById("technicianSidebarOffcanvas");
         if (menu?.classList.contains("show")) {
@@ -71,7 +71,7 @@ export default function TechnicianSidebar() {
 
     return (
         <>
-            <div className="technician-mobile-sidebar-toggle d-xl-none mb-3">
+            {!desktopOnly && <div className="technician-mobile-sidebar-toggle d-xl-none mb-3">
                 <button
                     type="button"
                     className="btn btn-outline-primary fw-semibold"
@@ -81,15 +81,15 @@ export default function TechnicianSidebar() {
                 >
                     <i className="bi bi-list me-2" aria-hidden="true" />Technician menu
                 </button>
-            </div>
+            </div>}
 
-            <aside className="technician-sidebar-desktop d-none d-xl-block border rounded-3 p-3">
+            {!mobileOnly && <aside className="technician-sidebar-desktop d-none d-xl-block border rounded-3 p-3">
                 <Identity />
                 <hr />
                 <Navigation />
-            </aside>
+            </aside>}
 
-            <div className="offcanvas offcanvas-start d-xl-none" tabIndex="-1" id="technicianSidebarOffcanvas" aria-labelledby="technicianSidebarOffcanvasLabel">
+            {!desktopOnly && <div className="offcanvas offcanvas-start d-xl-none" tabIndex="-1" id="technicianSidebarOffcanvas" aria-labelledby="technicianSidebarOffcanvasLabel">
                 <div className="offcanvas-header border-bottom">
                     <h2 className="offcanvas-title h5 fw-bold mb-0" id="technicianSidebarOffcanvasLabel">Technician menu</h2>
                     <button type="button" className="btn-close" data-bs-dismiss="offcanvas" aria-label="Close technician menu" />
@@ -98,7 +98,7 @@ export default function TechnicianSidebar() {
                     <Identity />
                     <Navigation mobile close={close} />
                 </div>
-            </div>
+            </div>}
         </>
     );
 }
