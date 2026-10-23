@@ -248,7 +248,7 @@ class DashboardController extends Controller
             ->map(fn (Inquiry $inquiry) => [
                 'id' => $inquiry->id,
                 'inquiry_number' => $inquiry->inquiry_number,
-                'title' => $inquiry->service_type ?: ('Inquiry ' . $inquiry->inquiry_number),
+                'title' => $inquiry->service_type ?: ('Service ' . $inquiry->inquiry_number),
                 'customer_name' => $inquiry->customer_name,
                 'message' => $inquiry->customer_name . ' · ' . str_replace('_', ' ', $inquiry->status),
                 'date' => $inquiry->created_at?->diffForHumans() ?? '',
