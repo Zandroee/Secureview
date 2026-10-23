@@ -1,6 +1,7 @@
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Calendar from "../../Components/Admin/Calendar";
+import PanelPagination from "../../Components/Admin/PanelPagination";
 import { Link, router, usePage } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 import { googleMapsDirectionsUrl } from "../../Components/GoogleMaps/ServiceLocation";
@@ -92,7 +93,7 @@ function JobCard({ job, open = false }) {
         <article className="technician-job-card bg-white border rounded-4 p-3 p-lg-4 h-100" style={{ boxShadow: "0 4px 18px rgba(15,23,42,0.045)" }}>
             <div className="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-3">
                 <div>
-                    <div className="small text-primary fw-bold">{job.inquiry_number}</div>
+                    <div className="small text-primary fw-bold">Service # {job.inquiry_number}</div>
                     <h3 className="h5 fw-bold mb-1">{job.service_type}</h3>
                     <div className="small text-muted">{job.item_name || "General service"}</div>
                 </div>
@@ -223,11 +224,19 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
     const [availableJobSearch, setAvailableJobSearch] = useState("");
     const [inventorySearch, setInventorySearch] = useState("");
     const [inventoryFilter, setInventoryFilter] = useState("all");
+    const [notificationPage, setNotificationPage] = useState(1);
+    const notificationPageSize = 3;
+    const notificationTotalPages = Math.ceil(recentNotifications.length / notificationPageSize);
+    const safeNotificationPage = Math.min(notificationPage, Math.max(1, notificationTotalPages));
+    const pageNotifications = recentNotifications.slice(
+        (safeNotificationPage - 1) * notificationPageSize,
+        safeNotificationPage * notificationPageSize
+    );
 
     const upcomingTechnicianJobs = useMemo(() => jobs
         .filter((job) => ["confirmed", "in_progress"].includes(job.status) && job.preferred_date_value)
         .sort((a, b) => String(a.preferred_date_value).localeCompare(String(b.preferred_date_value)))
-        .slice(0, 5)
+        .slice(0, 50)
         .map((job) => ({
             id: job.id,
             title: job.service_type,
@@ -698,7 +707,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                     </div>
                                     {recentNotifications.length ? (
                                         <div className="d-flex flex-column gap-2">
-                                            {recentNotifications.map((notification) => (
+                                            {pageNotifications.map((notification) => (
                                                 <article key={notification.id} className="border rounded-3 p-3">
                                                     <div className="d-flex align-items-start gap-2">
                                                         <span className={"d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 " + (notification.read ? "bg-light text-secondary" : "bg-primary-subtle text-primary")} style={{ width: 34, height: 34 }}>
@@ -713,6 +722,13 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                 </article>
                                             ))}
                                         </div>
+                                        <PanelPagination
+                                            page={safeNotificationPage}
+                                            totalPages={notificationTotalPages}
+                                            totalItems={recentNotifications.length}
+                                            pageSize={notificationPageSize}
+                                            onPageChange={setNotificationPage}
+                                        />
                                     ) : (
                                         <div className="text-center rounded-3 bg-light p-4">
                                             <i className="bi bi-bell fs-4 text-muted d-block mb-2" />
