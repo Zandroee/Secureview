@@ -95,7 +95,7 @@ class UserController extends Controller
 
             if ($activeAssignments > 0) {
                 return back()->withErrors([
-                    'role' => 'This technician still has active inquiries assigned. Reassign those inquiries before changing their role.',
+                    'role' => 'This technician still has active service jobs assigned. Reassign those services before changing their role.',
                 ]);
             }
         }
