@@ -63,7 +63,7 @@ class InstallationInquiryPaymentTest extends TestCase
         $this->assertDatabaseCount('pending_inquiry_checkouts', 0);
     }
 
-    public function test_installation_inquiry_is_created_only_after_paymongo_confirms_payment_and_fee_is_charged(): void
+    public function test_installation_inquiry_is_saved_before_paymongo_confirms_payment_and_fee_is_charged(): void
     {
         $customer = User::factory()->create([
             'role' => 'user',
@@ -106,11 +106,22 @@ class InstallationInquiryPaymentTest extends TestCase
                 'item_id' => $product->id,
             ]));
 
-        // Checkout preparation is not a submitted inquiry yet.
-        $this->assertDatabaseCount('inquiries', 0);
+        // The service must be visible in Service History while payment is pending.
+        $this->assertDatabaseCount('inquiries', 1);
         $this->assertDatabaseCount('pending_inquiry_checkouts', 1);
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'status' => 'pending_payment',
+            'inquiry_id' => Inquiry::query()->value('id'),
+        ]);
 
         $order = Order::query()->where('order_number', 'like', 'SV-%')->firstOrFail();
+        $this->actingAs($customer)
+            ->get(route('inquiries.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('inquiries')
+                ->has('inquiries', 1)
+                ->where('inquiries.0.payment_status', 'pending'));
         $this->assertEquals(1000.00, (float) $order->subtotal);
         $this->assertEquals(250.00, (float) $order->installation_fee);
         $this->assertEquals(1250.00, (float) $order->total);
@@ -143,7 +154,7 @@ class InstallationInquiryPaymentTest extends TestCase
         $this->assertSame('paid', $order->fresh()->payment_status);
     }
 
-    public function test_an_unpaid_paymongo_return_does_not_create_an_installation_inquiry(): void
+    public function test_an_unpaid_paymongo_return_keeps_the_installation_inquiry_visible(): void
     {
         $customer = User::factory()->create([
             'role' => 'user',
@@ -200,17 +211,17 @@ class InstallationInquiryPaymentTest extends TestCase
                 && (int) $lineItems[0]['amount'] === 250000;
         });
 
-        $this->assertDatabaseCount('inquiries', 0);
+        $this->assertDatabaseCount('inquiries', 1);
         $this->assertSame('pending', $order->fresh()->payment_status);
         $this->assertDatabaseHas('pending_inquiry_checkouts', [
             'order_id' => $order->id,
             'status' => 'pending_payment',
-            'inquiry_id' => null,
+            'inquiry_id' => Inquiry::query()->value('id'),
         ]);
         $this->assertEquals(2500.00, (float) $order->fresh()->total);
     }
 
-    public function test_paid_installation_webhook_creates_inquiry_without_customer_returning_and_keeps_cart_items(): void
+    public function test_paid_installation_webhook_finalizes_existing_inquiry_without_customer_returning_and_keeps_cart_items(): void
     {
         $customer = User::factory()->create([
             'role' => 'user',
@@ -250,7 +261,7 @@ class InstallationInquiryPaymentTest extends TestCase
         ]));
 
         $order = Order::query()->where('order_number', 'like', 'SV-%')->firstOrFail();
-        $this->assertDatabaseCount('inquiries', 0);
+        $this->assertDatabaseCount('inquiries', 1);
         $this->assertSame('pending', $order->fresh()->payment_status);
 
         $webhookSecret = 'whsec_secureview_installation_test';
@@ -308,6 +319,47 @@ class InstallationInquiryPaymentTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseCount('inquiries', 1);
+    }
+
+    public function test_cash_installation_creates_a_pending_service_without_redirecting_to_paymongo(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+        $product = Product::create([
+            'name' => 'Cash Installation Camera',
+            'category' => 'CCTV',
+            'warranty' => '1 year',
+            'price' => 1500,
+            'installation_fee' => 200,
+            'stock_quantity' => 3,
+            'is_featured' => false,
+        ]);
+
+        Http::fake();
+
+        $this->actingAs($customer)
+            ->post('/inquiries', $this->inquiryPayload([
+                'item_type' => 'product',
+                'item_id' => $product->id,
+                'payment_method' => 'cash',
+                'urgency' => 'normal',
+            ]))
+            ->assertRedirect();
+
+        $order = Order::query()->where('payment_method', 'cash')->firstOrFail();
+        $inquiry = Inquiry::query()->firstOrFail();
+
+        $this->assertSame('pending', $order->payment_status);
+        $this->assertSame('pending', $order->order_status);
+        $this->assertSame('Installation', $inquiry->service_type);
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'status' => 'pending_payment',
+        ]);
+        Http::assertNothingSent();
     }
 
     private function inquiryPayload(array $overrides = []): array

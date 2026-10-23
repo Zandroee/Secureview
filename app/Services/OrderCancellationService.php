@@ -34,6 +34,7 @@ class OrderCancellationService
 
             $lockedOrder->update([
                 'order_status' => 'cancelled',
+                'payment_status' => 'cancelled',
                 'cancellation_reason' => $reason,
             ]);
 
@@ -41,6 +42,15 @@ class OrderCancellationService
                 ->where('order_id', $lockedOrder->id)
                 ->where('status', 'pending_payment')
                 ->update(['status' => 'cancelled']);
+
+            $pendingCheckout = PendingInquiryCheckout::query()
+                ->with('inquiry')
+                ->where('order_id', $lockedOrder->id)
+                ->first();
+
+            if ($pendingCheckout?->inquiry) {
+                $pendingCheckout->inquiry->update(['status' => 'cancelled']);
+            }
 
             if ($lockedOrder->stock_deducted_at) {
                 $inventory->restoreForCancelledOrder($lockedOrder);

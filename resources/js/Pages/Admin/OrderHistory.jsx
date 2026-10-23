@@ -130,7 +130,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                                     <div className="small text-secondary text-break">{order.customer_email}</div>
                                                 </td>
                                                 <td className="small text-secondary">{order.updated_at || order.created_at || "—"}</td>
-                                                <td><span className={"badge rounded-pill " + (order.payment_status === "paid" ? "bg-success-subtle text-success" : "bg-warning-subtle text-warning-emphasis")}>{order.payment_status}</span></td>
+                                                <td><span className={"badge rounded-pill " + (order.payment_status === "paid" ? "bg-success-subtle text-success" : order.payment_status === "cancelled" || order.payment_status === "failed" ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning-emphasis")}>{String(order.payment_status).replaceAll("_", " ").replace(/^\w/, (letter) => letter.toUpperCase())}</span></td>
                                                 <td><span className={"badge rounded-pill text-capitalize " + statusClass(order.order_status)}>{String(order.order_status).replaceAll("_", " ")}</span></td>
                                                 <td className="text-end fw-bold text-nowrap">{peso(order.total)}</td>
                                                 <td className="text-end pe-3">

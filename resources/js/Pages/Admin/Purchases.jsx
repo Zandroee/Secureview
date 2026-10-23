@@ -428,6 +428,7 @@ export default function AdminPurchases({
                                         <option value="pending">Pending</option>
                                         <option value="paid">Paid</option>
                                         <option value="failed">Failed</option>
+                                            <option value="cancelled">Cancelled</option>
                                     </select>
                                 </div>
 

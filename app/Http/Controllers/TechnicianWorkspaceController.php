@@ -29,7 +29,7 @@ class TechnicianWorkspaceController extends Controller
         $technician = $request->user();
 
         $jobs = $technician->assignedInquiries()
-            ->with(['technicians:id,name,email', 'serviceRecord.items'])
+            ->with(['technicians:id,name,email', 'serviceRecord.items', 'pendingCheckout.order'])
             ->whereIn('status', ['confirmed', 'in_progress', 'completed'])
             ->orderByRaw("CASE WHEN status = 'completed' THEN 4 WHEN urgency = 'emergency' THEN 1 WHEN urgency = 'urgent' THEN 2 ELSE 3 END")
             ->orderByRaw("CASE status WHEN 'in_progress' THEN 1 WHEN 'confirmed' THEN 2 ELSE 3 END")
@@ -40,16 +40,26 @@ class TechnicianWorkspaceController extends Controller
             ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, true))
             ->values();
 
-        $busySlots = $technician->assignedInquiries()
-            ->whereIn('status', ['confirmed', 'in_progress'])
+        // Include both current team assignments and legacy technician_id assignments.
+        $busySlots = Inquiry::query()
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->where(function ($query) use ($technician) {
+                $query->where('technician_id', $technician->id)
+                    ->orWhereHas('technicians', fn ($team) => $team->where('users.id', $technician->id));
+            })
             ->get(['preferred_date', 'preferred_time'])
             ->map(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d') . '|' . $job->preferred_time)
             ->all();
 
         $openJobs = Inquiry::query()
-            ->with('technicians:id,name,email')
-            ->where('status', 'confirmed')
+            ->with(['technicians:id,name,email', 'pendingCheckout.order'])
+            ->whereIn('status', ['pending', 'confirmed'])
             ->whereDate('preferred_date', '>=', today())
+            ->where(function ($query) use ($technician) {
+                $query->whereNull('technician_id')
+                    ->orWhere('technician_id', '!=', $technician->id);
+            })
             ->whereDoesntHave('technicians', fn ($query) => $query->where('users.id', $technician->id))
             ->orderBy('preferred_date')
             ->orderBy('preferred_time')
@@ -114,7 +124,7 @@ class TechnicianWorkspaceController extends Controller
         $appointmentStart = $this->appointmentDateTime($inquiry);
 
         if (
-            $inquiry->status !== 'confirmed'
+            !in_array($inquiry->status, ['pending', 'confirmed'], true)
             || !$appointmentStart
             || !$appointmentStart->isFuture()
         ) {
@@ -135,10 +145,15 @@ class TechnicianWorkspaceController extends Controller
             ]);
         }
 
-        $hasConflict = $technician->assignedInquiries()
+        $hasConflict = Inquiry::query()
+            ->where('id', '!=', $inquiry->id)
             ->whereDate('preferred_date', $inquiry->preferred_date)
             ->where('preferred_time', $inquiry->preferred_time)
-            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+            ->where(function ($query) use ($technician) {
+                $query->where('technician_id', $technician->id)
+                    ->orWhereHas('technicians', fn ($team) => $team->where('users.id', $technician->id));
+            })
             ->exists();
 
         if ($hasConflict) {
@@ -161,7 +176,7 @@ class TechnicianWorkspaceController extends Controller
             $lockedAppointmentStart = $this->appointmentDateTime($lockedInquiry);
 
             if (
-                $lockedInquiry->status !== 'confirmed'
+                !in_array($lockedInquiry->status, ['pending', 'confirmed'], true)
                 || !$lockedAppointmentStart
                 || !$lockedAppointmentStart->isFuture()
             ) {
@@ -176,11 +191,15 @@ class TechnicianWorkspaceController extends Controller
                 ]);
             }
 
-            $hasConflictAfterLock = $lockedTechnician->assignedInquiries()
+            $hasConflictAfterLock = Inquiry::query()
+                ->where('id', '!=', $lockedInquiry->getKey())
                 ->whereDate('preferred_date', $lockedInquiry->preferred_date)
                 ->where('preferred_time', $lockedInquiry->preferred_time)
-                ->whereIn('status', ['confirmed', 'in_progress'])
-                ->where('inquiries.id', '!=', $lockedInquiry->getKey())
+                ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+                ->where(function ($query) use ($lockedTechnician) {
+                    $query->where('technician_id', $lockedTechnician->id)
+                        ->orWhereHas('technicians', fn ($team) => $team->where('users.id', $lockedTechnician->id));
+                })
                 ->exists();
 
             if ($hasConflictAfterLock) {
@@ -486,6 +505,8 @@ class TechnicianWorkspaceController extends Controller
             'service_longitude' => $includeCustomerDetails ? $inquiry->service_longitude : null,
             'google_place_id' => $includeCustomerDetails ? $inquiry->google_place_id : null,
             'status' => $inquiry->status,
+            'payment_status' => $inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable',
+            'payment_method' => $inquiry->pendingCheckout?->order?->payment_method,
             'service_record' => $inquiry->serviceRecord ? [
                 'id' => $inquiry->serviceRecord->id,
                 'work_summary' => $inquiry->serviceRecord->work_summary,
@@ -550,7 +571,7 @@ class TechnicianWorkspaceController extends Controller
             ->where('id', '!=', $inquiry->id)
             ->whereDate('preferred_date', $validated['preferred_date'])
             ->where('preferred_time', $validated['preferred_time'])
-            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
             ->whereHas('technicians', fn ($query) => $query->whereIn('users.id', $teamIds))
             ->with('technicians:id,name')
             ->get()
@@ -644,7 +665,7 @@ class TechnicianWorkspaceController extends Controller
             ->where('id', '!=', $inquiry->id)
             ->whereDate('preferred_date', $date)
             ->where('preferred_time', $time)
-            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
             ->whereHas('technicians', fn ($query) => $query->whereIn('users.id', $teamIds))
             ->exists();
 
@@ -689,7 +710,7 @@ class TechnicianWorkspaceController extends Controller
             ->where(function ($technicianQuery) use ($date, $exceptInquiryId) {
                 $activeOnDate = function ($query) use ($date, $exceptInquiryId) {
                     $query->whereDate('preferred_date', $date)
-                        ->whereIn('status', ['confirmed', 'in_progress']);
+                        ->whereIn('status', ['pending', 'confirmed', 'in_progress']);
                     if ($exceptInquiryId !== null) {
                         $query->where('inquiries.id', '!=', $exceptInquiryId);
                     }

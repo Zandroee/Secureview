@@ -721,13 +721,16 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                         value={data.payment_method}
                                                         onChange={(event) => setData("payment_method", event.target.value)}
                                                     >
+                                                        <option value="cash">Cash</option>
                                                         <option value="gcash">GCash</option>
                                                         <option value="card">Credit / Debit Card</option>
                                                         <option value="maya">Maya</option>
                                                     </select>
                                                     {errors.payment_method && <div className="invalid-feedback">{errors.payment_method}</div>}
                                                     <div className="form-text">
-                                                        You will be redirected to PayMongo. SecureView creates the installation service request only after payment is confirmed.
+                                                        {data.payment_method === "cash"
+                                                            ? "Your service request will be saved immediately. Payment remains pending until SecureView confirms receipt of cash."
+                                                            : "You will be redirected to PayMongo. Your service request is saved immediately and remains visible in Service History while payment is pending."}
                                                     </div>
                                                 </div>
                                             )}

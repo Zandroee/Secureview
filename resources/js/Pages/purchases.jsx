@@ -39,6 +39,19 @@ export default function Purchases({ orders = [] }) {
     const [payingOrderId, setPayingOrderId] = useState(null);
     const [cancellingOrderId, setCancellingOrderId] = useState(null);
     const [viewingOrder, setViewingOrder] = useState(null);
+    const [search, setSearch] = useState("");
+    const [orderStatusFilter, setOrderStatusFilter] = useState("");
+    const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
+    const [paymentMethodFilter, setPaymentMethodFilter] = useState("");
+    const filteredOrders = orders.filter((order) => {
+        const query = search.trim().toLowerCase();
+        const searchable = [order.order_number, ...(order.items ?? []).map((item) => item.name), order.order_status, order.payment_status]
+            .filter(Boolean).join(" ").toLowerCase();
+        return (!query || searchable.includes(query))
+            && (!orderStatusFilter || order.order_status === orderStatusFilter)
+            && (!paymentStatusFilter || order.payment_status === paymentStatusFilter)
+            && (!paymentMethodFilter || order.payment_method === paymentMethodFilter);
+    });
 
     const payNow = (order) => {
         setPayingOrderId(order.id);
@@ -121,7 +134,7 @@ export default function Purchases({ orders = [] }) {
                                                 fontSize: "1.05rem",
                                             }}
                                         >
-                                            PURCHASES
+                                            ORDER HISTORY
                                         </h2>
                                     </div>
                                 </div>
@@ -138,7 +151,38 @@ export default function Purchases({ orders = [] }) {
                                     <div className="alert alert-danger small">{props.errors.order}</div>
                                 )}
 
-                                {orders.length === 0 ? (
+                                <div className="row g-2 mb-3">
+                                    <div className="col-md-4">
+                                        <label className="form-label small fw-semibold" htmlFor="orders-search">Search order history</label>
+                                        <input id="orders-search" type="search" className="form-control form-control-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Order number, item, or status" />
+                                    </div>
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-semibold" htmlFor="orders-status">Order status</label>
+                                        <select id="orders-status" className="form-select form-select-sm" value={orderStatusFilter} onChange={(event) => setOrderStatusFilter(event.target.value)}>
+                                            <option value="">All statuses</option>
+                                            {Array.from(new Set(orders.map((order) => order.order_status).filter(Boolean))).sort().map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-semibold" htmlFor="orders-payment-status">Payment status</label>
+                                        <select id="orders-payment-status" className="form-select form-select-sm" value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)}>
+                                            <option value="">All payment statuses</option>
+                                            {Array.from(new Set(orders.map((order) => order.payment_status).filter(Boolean))).sort().map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="col-md-2">
+                                        <label className="form-label small fw-semibold" htmlFor="orders-payment-method">Payment method</label>
+                                        <select id="orders-payment-method" className="form-select form-select-sm" value={paymentMethodFilter} onChange={(event) => setPaymentMethodFilter(event.target.value)}>
+                                            <option value="">All methods</option>
+                                            <option value="cash">Cash</option>
+                                            <option value="gcash">GCash</option>
+                                            <option value="card">Card</option>
+                                            <option value="maya">Maya</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {filteredOrders.length === 0 ? (
                                     <div
                                         className="border rounded-3 p-5 text-center"
                                         style={{
@@ -157,11 +201,11 @@ export default function Purchases({ orders = [] }) {
                                                     "Outfit, sans-serif",
                                             }}
                                         >
-                                            NO PURCHASES YET
+                                            {orders.length === 0 ? "NO ORDERS YET" : "NO MATCHING ORDERS"}
                                         </h5>
 
                                         <p className="small text-muted mb-3">
-                                            Your order history will appear here.
+                                            {orders.length === 0 ? "Your order history will appear here." : "Try changing or clearing your filters."}
                                         </p>
 
                                         <Link
@@ -173,7 +217,7 @@ export default function Purchases({ orders = [] }) {
                                     </div>
                                 ) : (
                                     <div className="d-flex flex-column gap-2">
-                                        {orders.map((order) => (
+                                        {filteredOrders.map((order) => (
                                             <div
                                                 key={order.id}
                                                 className="border rounded-3 p-2"

@@ -6,6 +6,7 @@ use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
 
 class JobNotificationService
 {
@@ -47,7 +48,87 @@ class JobNotificationService
                 }
             });
 
+        if (in_array($inquiry->urgency, ['urgent', 'emergency'], true)) {
+            $this->notifyUrgentService($inquiry, $date);
+        }
+
         return $sent;
+    }
+
+    public function notifyUrgencyEscalations($inquiries): void
+    {
+        foreach ($inquiries as $inquiry) {
+            if ($inquiry instanceof Inquiry && in_array($inquiry->urgency, ['urgent', 'emergency'], true)) {
+                $date = $inquiry->preferred_date?->format('F j, Y') ?? 'a date to be confirmed';
+                $this->notifyUrgentService($inquiry, $date);
+            }
+        }
+    }
+
+    private function notifyUrgentService(Inquiry $inquiry, string $date): void
+    {
+        $priority = strtoupper($inquiry->urgency);
+        $subject = "[{$priority}] SecureView service {$inquiry->inquiry_number}";
+        $message = "{$priority} SERVICE REQUEST\n\n"
+            . "Service ID: {$inquiry->inquiry_number}\n"
+            . "Service: {$inquiry->service_type}\n"
+            . "Customer: {$inquiry->customer_name}\n"
+            . "Requested schedule: {$date}, {$inquiry->preferred_time}\n"
+            . "Location: " . trim(implode(', ', array_filter([$inquiry->street_address, $inquiry->address_details, $inquiry->city]))) . "\n"
+            . "Notes: " . ($inquiry->notes ?: 'None provided') . "\n\n"
+            . "Please review the service request in SecureView.";
+
+        $recipients = User::query()->whereIn('role', ['admin', 'technician'])->get();
+        foreach ($recipients as $recipient) {
+            $dedupeKey = 'urgent-service-email:' . $inquiry->id . ':' . $recipient->id;
+            $notification = CustomerNotification::firstOrCreate(
+                ['dedupe_key' => $dedupeKey],
+                [
+                    'user_id' => $recipient->id,
+                    'type' => 'urgent_service',
+                    'title' => $priority . ' service requires attention',
+                    'message' => "{$priority} {$inquiry->service_type} service {$inquiry->inquiry_number} is scheduled for {$date}, {$inquiry->preferred_time}.",
+                    'action_url' => $recipient->role === 'admin'
+                        ? route('admin.inquiries.show', $inquiry)
+                        : route('technician.dashboard'),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $inquiry->id,
+                ]
+            );
+
+            if ($notification->wasRecentlyCreated && filled($recipient->email)) {
+                try {
+                    Mail::raw($message, fn ($mail) => $mail->to($recipient->email)->subject($subject));
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            }
+        }
+
+        $customer = $inquiry->user;
+        if ($customer) {
+            $dedupeKey = 'urgent-service-customer:' . $inquiry->id . ':' . $customer->id;
+            $notification = CustomerNotification::firstOrCreate(
+                ['dedupe_key' => $dedupeKey],
+                [
+                    'user_id' => $customer->id,
+                    'type' => 'urgent_service',
+                    'title' => $priority . ' service request received',
+                    'message' => "Your {$inquiry->service_type} service {$inquiry->inquiry_number} is marked {$inquiry->urgency} and has been flagged to the SecureView team.",
+                    'action_url' => route('inquiries.show', $inquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $inquiry->id,
+                ]
+            );
+
+            if ($notification->wasRecentlyCreated && filled($customer->email)) {
+                try {
+                    Mail::raw($message, fn ($mail) => $mail->to($customer->email)->subject($subject));
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            }
+        }
     }
 
     public function notifyConfirmation(Inquiry $inquiry): void

@@ -48,11 +48,27 @@ class Inquiry extends Model
      */
     public static function escalateOverdueUrgency(): int
     {
-        return static::query()
+        $ids = static::query()
             ->whereDate('preferred_date', '<', today())
             ->whereNotIn('status', ['completed', 'cancelled'])
             ->where('urgency', 'normal')
+            ->pluck('id');
+
+        if ($ids->isEmpty()) {
+            return 0;
+        }
+
+        $updated = static::query()
+            ->whereIn('id', $ids)
+            ->where('urgency', 'normal')
             ->update(['urgency' => 'urgent']);
+
+        if ($updated > 0) {
+            app(\App\Services\JobNotificationService::class)
+                ->notifyUrgencyEscalations(static::query()->whereIn('id', $ids)->where('urgency', 'urgent')->get());
+        }
+
+        return $updated;
     }
 
     public function user(): BelongsTo
@@ -76,6 +92,11 @@ class Inquiry extends Model
     public function serviceRecord(): HasOne
     {
         return $this->hasOne(ServiceRecord::class);
+    }
+
+    public function pendingCheckout(): HasOne
+    {
+        return $this->hasOne(PendingInquiryCheckout::class, 'inquiry_id');
     }
 
     public function inquirable(): MorphTo

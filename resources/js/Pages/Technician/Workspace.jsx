@@ -43,6 +43,7 @@ function JobCard({ job, open = false, products = [] }) {
     const [scheduleDate, setScheduleDate] = useState(job.preferred_date_value || "");
     const [scheduleTime, setScheduleTime] = useState(job.preferred_time || "08:00 AM - 11:00 AM");
     const [scheduleError, setScheduleError] = useState("");
+    const paymentBlocked = Boolean(job.payment_status && !["paid", "not_applicable"].includes(job.payment_status));
     const [showServiceReport, setShowServiceReport] = useState(false);
     const [serviceReportErrors, setServiceReportErrors] = useState({});
     const [serviceReport, setServiceReport] = useState({
@@ -166,7 +167,7 @@ function JobCard({ job, open = false, products = [] }) {
                     <div className="small text-muted">{job.item_name || "General service"}</div>
                 </div>
                 {!open && <span className={"badge rounded-pill text-capitalize px-3 py-2 " + statusClass(job.status)}>{formatStatus(job.status)}</span>}
-                {open && <span className="badge rounded-pill text-bg-success">Available to join</span>}
+                {open && <span className={"badge rounded-pill " + (paymentBlocked ? "text-bg-warning" : job.status === "pending" ? "text-bg-secondary" : "text-bg-success")}>{paymentBlocked ? "Payment pending" : job.status === "pending" ? "Awaiting review" : "Available to join"}</span>}
             </div>
 
             <div className="row g-2 small mb-3">
@@ -186,6 +187,12 @@ function JobCard({ job, open = false, products = [] }) {
                     <div className="text-muted">PRIORITY</div>
                     <div><span className={"badge rounded-pill text-capitalize " + priorityClass(job.urgency)}>{job.urgency || "Normal"}</span></div>
                 </div>
+                {job.payment_status && job.payment_status !== "not_applicable" && (
+                    <div className="col-12">
+                        <div className="text-muted">PAYMENT STATUS</div>
+                        <span className={"badge rounded-pill text-capitalize " + (job.payment_status === "paid" ? "bg-success-subtle text-success" : "bg-warning-subtle text-warning-emphasis")}>{job.payment_status.replaceAll("_", " ")}</span>
+                    </div>
+                )}
             </div>
 
             {job.technicians?.length > 0 && (
@@ -231,8 +238,14 @@ function JobCard({ job, open = false, products = [] }) {
 
             {error && <div className="alert alert-danger py-2 small" role="alert">{error}</div>}
 
+            {paymentBlocked && open && (
+                <div className="alert alert-warning py-2 small" role="status">
+                    Payment must be confirmed before a technician can join or start this service.
+                </div>
+            )}
+
             {open ? (
-                <button className="btn btn-primary w-100 fw-bold" disabled={working} onClick={claim}>
+                <button className="btn btn-primary w-100 fw-bold" disabled={working || paymentBlocked} onClick={claim}>
                     {working ? "JOINING..." : "JOIN THIS SERVICE"}
                 </button>
             ) : job.status === "confirmed" ? (

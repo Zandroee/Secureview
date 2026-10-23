@@ -37,6 +37,7 @@ class PurchaseController extends Controller
                         return [
                             'id' => $item->id,
                             'name' => $item->name,
+                            'warranty_period' => $item->warranty_period,
                             'price' => (float) $item->price,
                             'quantity' => (int) $item->quantity,
                             'subtotal' => (float) $item->subtotal,
@@ -44,7 +45,7 @@ class PurchaseController extends Controller
                                 ? 'package'
                                 : 'product',
                             'purchasable_id' => (int) $item->purchasable_id,
-                        'image' => $item->purchasable?->image,
+                            'image' => $item->purchasable?->image,
                         ];
                     })->values(),
                 ];
@@ -104,6 +105,7 @@ class PurchaseController extends Controller
                     return [
                         'id' => $item->id,
                         'name' => $item->name,
+                        'warranty_period' => $item->warranty_period,
                         'price' => (float) $item->price,
                         'quantity' => (int) $item->quantity,
                         'subtotal' => (float) $item->subtotal,
