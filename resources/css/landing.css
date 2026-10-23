@@ -1,0 +1,24 @@
+
+/* Soft image transition for product and package detail galleries. */
+.catalog-detail-main-image {
+    animation: catalog-image-fade 700ms ease both;
+    will-change: opacity, transform;
+}
+
+@keyframes catalog-image-fade {
+    from {
+        opacity: 0.2;
+        transform: scale(1.012);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .catalog-detail-main-image {
+        animation: none;
+        will-change: auto;
+    }
+}
