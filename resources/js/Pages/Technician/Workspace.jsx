@@ -6,6 +6,7 @@ import { Link, router, usePage } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 import { googleMapsDirectionsUrl } from "../../Components/GoogleMaps/ServiceLocation";
 import TechnicianSidebar from "../../Components/Technician/Sidebar";
+import TechnicianSidebar from "../../Components/Technician/Sidebar";
 
 function statusClass(status) {
     if (status === "completed") return "bg-success-subtle text-success";
@@ -574,9 +575,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                     <i className="bi bi-tools fs-3" />
                                 </div>
                                 <div>
-                                    <div className="small text-primary fw-bold text-uppercase mb-1" style={{ letterSpacing: ".09em" }}>
-                                        SecureView · Field Operations
-                                    </div>
                                     <h1 className="fw-bold mb-2" style={{ fontSize: "clamp(1.65rem, 2.4vw, 2.35rem)", letterSpacing: "-.035em" }}>
                                         Technician Workspace
                                     </h1>
@@ -584,19 +582,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                         Manage your assigned services, join available team jobs, and keep product inventory accurate.
                                     </p>
                                 </div>
-                            </div>
-                            <div className="d-flex flex-wrap align-items-center gap-2">
-                                <span className="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2">
-                                    <i className="bi bi-circle-fill me-2" style={{ fontSize: ".45rem" }} />
-                                    Field operations
-                                </span>
-                                <Link href="/notifications" className="btn btn-primary fw-semibold px-3 py-2">
-                                    <i className="bi bi-bell me-2" />
-                                    Notifications
-                                    {Number(props.notificationCount ?? 0) > 0 && (
-                                        <span className="badge text-bg-light text-primary ms-2">{props.notificationCount > 99 ? "99+" : props.notificationCount}</span>
-                                    )}
-                                </Link>
                             </div>
                         </div>
                     </section>
@@ -609,7 +594,10 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                     )}
 
                     <div className="row g-4 align-items-start">
-                        <div className="col-lg-9">
+                        <aside className="col-xl-2">
+                            <TechnicianSidebar />
+                        </aside>
+                        <div className="col-xl-7 col-lg-8">
                     <div className="row g-3 mb-4">
                         <div className="col-6 col-xl-3">
                             <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
@@ -692,7 +680,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                             <div className="row g-3">
                                 {filteredJobs.map((job) => (
                                     <div className="col-md-6 col-xxl-4" key={job.id}>
-                                        <JobCard job={job} />
+                                        <JobCard job={job} products={inventory} />
                                     </div>
                                 ))}
                             </div>
@@ -745,7 +733,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                             <div className="row g-3">
                                 {filteredOpenJobs.map((job) => (
                                     <div className="col-md-6 col-xxl-4" key={job.id}>
-                                        <JobCard job={job} open />
+                                        <JobCard job={job} open products={inventory} />
                                     </div>
                                 ))}
                             </div>
@@ -800,7 +788,9 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                     <thead className="table-light">
                                         <tr>
                                             <th className="ps-3">Product</th>
+                                            <th>Brand</th>
                                             <th>Category</th>
+                                            <th>Price</th>
                                             <th>Current stock</th>
                                             <th style={{ minWidth: 150 }}>Adjustment (+ / −)</th>
                                             <th style={{ minWidth: 230 }}>Reason for change</th>
@@ -827,7 +817,9 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                             </div>
                                                         </div>
                                                     </td>
+                                                    <td><span className="badge bg-light text-secondary border">{product.brand || "—"}</span></td>
                                                     <td><span className="badge bg-light text-secondary border">{product.category || "Uncategorized"}</span></td>
+                                                    <td className="text-nowrap">₱{Number(product.price ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                                     <td>
                                                         <span className={"badge rounded-pill px-3 py-2 " + stockClass(product.stock_quantity)}>{product.stock_quantity} units</span>
                                                     </td>
@@ -862,7 +854,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                             );
                                         })}
                                         {!filteredInventory.length && (
-                                            <tr><td colSpan="6" className="text-center text-secondary py-5">
+                                            <tr><td colSpan="8" className="text-center text-secondary py-5">
                                                 <i className="bi bi-search fs-4 d-block mb-2" />
                                                 {inventory.length ? "No products match these filters." : "No products in inventory."}
                                             </td></tr>
@@ -878,8 +870,8 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                     </section>
                         </div>
 
-                        <aside className="col-lg-3">
-                            <div className="mb-4">
+                        <aside className="col-xl-3 col-lg-4">
+                            <div className="mb-4" id="technician-calendar">
                                 <Calendar
                                     title="My Schedule"
                                     subtitle="Your assigned appointments and service dates."
@@ -942,7 +934,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                         <a href="#my-jobs" className="btn btn-outline-primary text-start"><i className="bi bi-clipboard2-check me-2" />My Service Jobs</a>
                                         <a href="#available-jobs" className="btn btn-outline-primary text-start"><i className="bi bi-people me-2" />Available Jobs</a>
                                         <a href="#inventory" className="btn btn-outline-primary text-start"><i className="bi bi-box-seam me-2" />Inventory</a>
-                                        <Link href="/notifications" className="btn btn-outline-primary text-start"><i className="bi bi-bell me-2" />Notifications</Link>
                                     </div>
                                 </div>
                             </section>
