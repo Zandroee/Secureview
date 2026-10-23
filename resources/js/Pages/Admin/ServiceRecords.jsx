@@ -41,6 +41,25 @@ export default function ServiceRecords({ records = [], filters = {}, summary = {
         router.get("/admin/service-records", {}, { preserveState: true, preserveScroll: true, replace: true });
     };
 
+    const confirmPayment = (record) => {
+        let method = record.payment_method;
+        if (!method) {
+            method = window.prompt("Enter the payment method confirmed received: cash, gcash, card, or maya", "cash");
+            if (method === null) return;
+            method = method.trim().toLowerCase();
+        }
+        if (!["cash", "gcash", "card", "maya"].includes(method)) {
+            window.alert("Enter cash, gcash, card, or maya.");
+            return;
+        }
+        if (!window.confirm("Confirm that ₱" + Number(record.service_charge).toFixed(2) + " has actually been received for " + record.inquiry_number + "? This will add it to paid service income.")) return;
+
+        router.patch("/admin/service-records/" + record.id + "/confirm-payment", { payment_method: method }, {
+            preserveScroll: true,
+        });
+    };
+
+
     return (
         <div>
             <Navbar />
@@ -111,7 +130,14 @@ export default function ServiceRecords({ records = [], filters = {}, summary = {
                                                     <td><span className="badge bg-light text-dark border">{record.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} unit(s)</span></td>
                                                     <td className="fw-bold">{money(record.service_charge)}</td>
                                                     <td><span className={"badge rounded-pill text-capitalize px-3 py-2 " + paymentBadge(record.payment_status)}>{record.payment_status}</span><div className="small text-muted mt-1">{record.payment_method || "No payment recorded"}</div></td>
-                                                    <td className="text-end pe-3"><button type="button" className="btn btn-sm btn-outline-primary fw-bold" onClick={() => setExpanded(expanded === record.id ? null : record.id)}>{expanded === record.id ? "HIDE" : "VIEW"}</button></td>
+                                                    <td className="text-end pe-3">
+                                                        <div className="d-flex flex-column flex-xl-row justify-content-end gap-1">
+                                                            {record.payment_status === "pending" && Number(record.service_charge) > 0 && (
+                                                                <button type="button" className="btn btn-sm btn-success fw-bold text-nowrap" onClick={() => confirmPayment(record)}>CONFIRM PAYMENT</button>
+                                                            )}
+                                                            <button type="button" className="btn btn-sm btn-outline-primary fw-bold" onClick={() => setExpanded(expanded === record.id ? null : record.id)}>{expanded === record.id ? "HIDE" : "VIEW"}</button>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                                 {expanded === record.id && (
                                                     <tr key={record.id + "-details"}><td colSpan="7" className="bg-body-tertiary p-3 p-lg-4">
