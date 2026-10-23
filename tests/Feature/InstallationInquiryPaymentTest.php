@@ -131,6 +131,17 @@ class InstallationInquiryPaymentTest extends TestCase
         ]);
 
         $this->actingAs($customer)
+            ->get(route('inquiries.show', $inquiry))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('inquiry_details')
+                ->where('inquiry.order_id', $order->id)
+                ->where('inquiry.order_number', $order->order_number)
+                ->where('inquiry.payment_status', 'pending')
+                ->where('inquiry.created_date', $inquiry->created_at->format('M d, Y'))
+                ->where('inquiry.created_time', $inquiry->created_at->format('h:i A')));
+
+        $this->actingAs($customer)
             ->get(route('inquiries.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
