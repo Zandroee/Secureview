@@ -54,6 +54,7 @@ export default function Products({ products = [] }) {
         const result = products.filter((product) => {
             const text = [
                 product.name,
+                product.brand,
                 product.category,
                 product.badge,
                 product.warranty,
@@ -282,6 +283,8 @@ export default function Products({ products = [] }) {
                                     <div className="col-12 col-sm-6 col-xl-4 col-xxl-3" key={product.id}>
                                         <ProductCard
                                             name={product.name}
+                                            brand={product.brand}
+                                            reviewsCount={product.reviews_count}
                                             image={product.image}
                                             price={product.price}
                                             badge={product.badge}
