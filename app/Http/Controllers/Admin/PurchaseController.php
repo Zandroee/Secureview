@@ -124,6 +124,51 @@ class PurchaseController extends Controller
         ]);
     }
 
+    public function history(Request $request)
+    {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+            'order_status' => ['nullable', 'in:delivered,completed,cancelled'],
+        ]);
+
+        $invoiceProfileReady = app(InvoiceDocumentService::class)->profileReady();
+        $query = Order::query()
+            ->with(['user', 'items', 'events.actor', 'invoiceRecord'])
+            ->whereIn('order_status', ['delivered', 'completed', 'cancelled']);
+
+        if (filled($filters['search'] ?? null)) {
+            $search = trim($filters['search']);
+            $query->where(function ($builder) use ($search) {
+                $builder->where('order_number', 'like', '%' . $search . '%')
+                    ->orWhere('customer_name', 'like', '%' . $search . '%')
+                    ->orWhere('customer_email', 'like', '%' . $search . '%')
+                    ->orWhereHas('items', fn ($items) => $items->where('name', 'like', '%' . $search . '%'));
+            });
+        }
+
+        if (filled($filters['order_status'] ?? null)) {
+            $query->where('order_status', $filters['order_status']);
+        }
+
+        $orders = $query->latest()->paginate(12)->withQueryString()
+            ->through(fn (Order $order) => $this->formatOrder($order, $invoiceProfileReady));
+
+        return Inertia::render('Admin/OrderHistory', [
+            'orders' => $orders,
+            'filters' => [
+                'search' => $filters['search'] ?? '',
+                'order_status' => $filters['order_status'] ?? '',
+            ],
+            'summary' => [
+                'total' => Order::query()->whereIn('order_status', ['delivered', 'completed', 'cancelled'])->count(),
+                'completed' => Order::query()->whereIn('order_status', ['delivered', 'completed'])->count(),
+                'cancelled' => Order::query()->where('order_status', 'cancelled')->count(),
+                'paid_revenue' => (float) Order::query()->whereIn('order_status', ['delivered', 'completed'])
+                    ->where('payment_status', 'paid')->sum('total'),
+            ],
+        ]);
+    }
+
     public function cancel(
         Request $request,
         Order $order,
