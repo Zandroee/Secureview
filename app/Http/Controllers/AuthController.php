@@ -168,7 +168,42 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect($this->safePublicLogoutDestination($request));
+    }
+
+    /**
+     * Keep guests on the public page they were viewing before sign-out.
+     * Authenticated-only, unknown, malformed, and off-site referrers fall back
+     * to the homepage so logout cannot become an open redirect.
+     */
+    private function safePublicLogoutDestination(Request $request): string
+    {
+        $referer = trim((string) $request->headers->get('referer'));
+
+        if ($referer === '') {
+            return '/';
+        }
+
+        $parts = parse_url($referer);
+
+        if (!is_array($parts) || empty($parts['host']) || strcasecmp($parts['host'], $request->getHost()) !== 0) {
+            return '/';
+        }
+
+        $path = (string) ($parts['path'] ?? '/');
+        $path = '/' . ltrim(preg_replace('#/+#', '/', $path) ?: '/', '/');
+        $path = rtrim($path, '/') ?: '/';
+
+        // These routes are intentionally guest-accessible. Keep their query string
+        // (e.g. catalog search/filter state), but never redirect back into admin,
+        // account, checkout, purchase, schedule, or inquiry pages after logout.
+        if (!preg_match('#^/(?:products(?:/[^/]+)?|packages(?:/[^/]+)?|about|services)?$#D', $path)) {
+            return '/';
+        }
+
+        $query = (string) ($parts['query'] ?? '');
+
+        return $path . ($query !== '' && strlen($query) <= 2000 ? '?' . $query : '');
     }
 
     public function redirectGoogle()
