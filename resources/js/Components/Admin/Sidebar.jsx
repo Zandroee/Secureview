@@ -13,7 +13,7 @@ const menuGroups = [
     ],
     [
         {
-            label: "Inquiries",
+            label: "Services",
             href: "/admin/inquiries",
             key: "inquiries",
             icon: "bi-chat-left-text",
