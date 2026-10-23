@@ -32,7 +32,7 @@ function urgencyClass(urgency) {
     return "bg-success-subtle text-success";
 }
 
-export default function ServiceDetails({ service, success }) {
+export default function ServiceDetails({ inquiry: service, success }) {
     const [rescheduleDate, setRescheduleDate] = useState(service.reschedule_requested_date || "");
     const [rescheduleTime, setRescheduleTime] = useState(service.reschedule_requested_time || "08:00 AM - 11:00 AM");
     const [rescheduleNote, setRescheduleNote] = useState("");
