@@ -115,6 +115,13 @@ class InstallationInquiryPaymentTest extends TestCase
         ]);
 
         $order = Order::query()->where('order_number', 'like', 'SV-%')->firstOrFail();
+        $this->actingAs($customer)
+            ->get(route('inquiries.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('inquiries')
+                ->has('inquiries', 1)
+                ->where('inquiries.0.payment_status', 'pending'));
         $this->assertEquals(1000.00, (float) $order->subtotal);
         $this->assertEquals(250.00, (float) $order->installation_fee);
         $this->assertEquals(1250.00, (float) $order->total);
