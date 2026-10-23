@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PanelPagination from "./PanelPagination";
 import { Link } from "@inertiajs/react";
 import Calendar from "react-calendar";
 
@@ -35,9 +36,17 @@ export default function AdminCalendar({
     itemHrefPrefix = "/admin/schedules/",
 }) {
     const [date, setDate] = useState(new Date());
+    const [schedulePage, setSchedulePage] = useState(1);
     const fullyBookedSet = new Set(fullyBookedDates ?? []);
     const partiallyBlockedSet = new Set(partiallyBlockedDates ?? []);
-    const displayedSchedules = schedules ?? [];
+    const allSchedules = schedules ?? [];
+    const schedulePageSize = 3;
+    const scheduleTotalPages = Math.ceil(allSchedules.length / schedulePageSize);
+    const safeSchedulePage = Math.min(schedulePage, Math.max(1, scheduleTotalPages));
+    const displayedSchedules = allSchedules.slice(
+        (safeSchedulePage - 1) * schedulePageSize,
+        safeSchedulePage * schedulePageSize
+    );
 
     const markDateClass = ({ date: tileDate, view }) => {
         if (view !== "month") return null;
@@ -248,7 +257,7 @@ export default function AdminCalendar({
                                             {String(schedule.status || "confirmed").replace(/_/g, " ")}
                                         </span>
                                     </div>
-                                    <div className="small text-primary mt-1">{schedule.inquiry_number}</div>
+                                    <div className="small text-primary mt-1">{schedule.inquiry_number ? `Service # ${schedule.inquiry_number}` : "Service"}</div>
                                 </Link>
                             ))}
                         </div>
@@ -261,6 +270,13 @@ export default function AdminCalendar({
                             </Link>
                         </div>
                     )}
+                    <PanelPagination
+                        page={safeSchedulePage}
+                        totalPages={scheduleTotalPages}
+                        totalItems={allSchedules.length}
+                        pageSize={schedulePageSize}
+                        onPageChange={setSchedulePage}
+                    />
                 </div>
             </div>
         </div>
