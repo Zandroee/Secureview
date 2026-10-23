@@ -238,6 +238,8 @@ class PurchaseController extends Controller
             'order_status' => 'processing',
         ]);
 
+        app(PendingInquiryCheckoutService::class)->completePaidOrder($order->fresh());
+
         $activityLogger->record(
             $request,
             'order_cash_payment_confirmed',
