@@ -816,6 +816,34 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         )}
                     </section>
 
+                    <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="service-records">
+                        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                            <div>
+                                <div className="small text-primary fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Work history</div>
+                                <h2 className="h3 fw-bold mb-1">Post-Service Records</h2>
+                                <p className="text-secondary mb-0">Review completed work, parts pulled from stock, parts removed from the customer site, and recorded service income.</p>
+                            </div>
+                            <span className="badge rounded-pill bg-success-subtle text-success px-3 py-2">{completedJobs.filter((job) => job.service_record).length} saved records</span>
+                        </div>
+                        {completedJobs.some((job) => job.service_record) ? (
+                            <div className="row g-3">
+                                {completedJobs.filter((job) => job.service_record).map((job) => (
+                                    <div className="col-md-6 col-xxl-4" key={job.id}>
+                                        <JobCard job={job} products={inventory} />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center bg-light border rounded-4 p-4 p-lg-5">
+                                <div className="mx-auto d-flex align-items-center justify-content-center rounded-circle bg-white border text-primary mb-3" style={{ width: 58, height: 58 }}>
+                                    <i className="bi bi-journal-check fs-4" />
+                                </div>
+                                <h3 className="h5 fw-bold mb-2">No Post-Service Records yet</h3>
+                                <p className="text-secondary mb-0">When you complete a job, submit its Post-Service Record to save the work summary, parts, and service income here. Older completed jobs may not have a record.</p>
+                            </div>
+                        )}
+                    </section>
+
                     <section className="workspace-section p-3 p-lg-4 p-xl-5" id="inventory">
                         <div className="d-flex flex-column flex-xl-row justify-content-between align-items-xl-end gap-3 mb-4">
                             <div>
