@@ -356,25 +356,22 @@ export default function AdminProducts({
 
         if (editingProductId && hasNewImages) {
             // Multipart uploads use POST plus Laravel method spoofing on PHP 8.2.
-            productForm
-                .transform((data) => ({ ...data, _method: "patch" }))
-                .post("/admin/products/" + editingProductId, {
-                    ...options,
-                    forceFormData: true,
-                });
+            productForm.transform((data) => ({ ...data, _method: "patch" }));
+            productForm.post("/admin/products/" + editingProductId, {
+                ...options,
+                forceFormData: true,
+            });
         } else if (editingProductId) {
-            // Without new files, send JSON via the normal PATCH route. This avoids
-            // multipart parsing issues when the admin is only editing existing values.
-            productForm
-                .transform((data) => data)
-                .patch("/admin/products/" + editingProductId, options);
+            // useForm.transform() configures the payload transform; it does not return
+            // the form object, so call it separately before invoking patch().
+            productForm.transform((data) => data);
+            productForm.patch("/admin/products/" + editingProductId, options);
         } else {
-            productForm
-                .transform((data) => data)
-                .post("/admin/products", {
-                    ...options,
-                    forceFormData: hasNewImages,
-                });
+            productForm.transform((data) => data);
+            productForm.post("/admin/products", {
+                ...options,
+                forceFormData: hasNewImages,
+            });
         }
     };
 
