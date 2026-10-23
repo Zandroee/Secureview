@@ -11,6 +11,8 @@ class Inquiry extends Model
 {
     protected $fillable = [
         'user_id',
+        'order_id',
+        'payment_status',
         'technician_id',
         'inquiry_number',
         'inquirable_type',
@@ -26,6 +28,8 @@ class Inquiry extends Model
         'service_longitude',
         'google_place_id',
         'service_type',
+        'other_service_type',
+        'other_service_details',
         'urgency',
         'preferred_date',
         'preferred_time',
@@ -52,6 +56,37 @@ class Inquiry extends Model
             ->whereNotIn('status', ['completed', 'cancelled'])
             ->where('urgency', 'normal')
             ->update(['urgency' => 'urgent']);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function serviceRecord(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(ServiceRecord::class);
+    }
+
+    /**
+     * Installations linked to an order cannot be worked until payment is confirmed.
+     * Older general-service records default to "not_required".
+     */
+    public function paymentAllowsTechnicianWork(): bool
+    {
+        if (($this->payment_status ?? 'not_required') === 'pending') {
+            return false;
+        }
+
+        if (!$this->order_id) {
+            return ($this->payment_status ?? 'not_required') !== 'failed';
+        }
+
+        $this->loadMissing('order');
+
+        return $this->order !== null
+            && $this->order->payment_status === 'paid'
+            && $this->order->paid_at !== null;
     }
 
     public function user(): BelongsTo
