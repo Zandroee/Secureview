@@ -418,16 +418,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
     const [availableJobSearch, setAvailableJobSearch] = useState("");
     const [inventorySearch, setInventorySearch] = useState("");
     const [inventoryFilter, setInventoryFilter] = useState("all");
-    const [notificationPage, setNotificationPage] = useState(1);
-    const notificationPageSize = 3;
-    const notificationTotalPages = Math.ceil(recentNotifications.length / notificationPageSize);
-    const safeNotificationPage = Math.min(notificationPage, Math.max(1, notificationTotalPages));
-    const pageNotifications = recentNotifications.slice(
-        (safeNotificationPage - 1) * notificationPageSize,
-        safeNotificationPage * notificationPageSize
-    );
-
-    const upcomingTechnicianJobs = useMemo(() => jobs
+        const upcomingTechnicianJobs = useMemo(() => jobs
         .filter((job) => ["confirmed", "in_progress"].includes(job.status) && job.preferred_date_value)
         .sort((a, b) => String(a.preferred_date_value).localeCompare(String(b.preferred_date_value)))
         .slice(0, 50)
@@ -976,50 +967,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                     itemHrefPrefix="/technician/workspace#my-jobs"
                                 />
                             </div>
-
-                            <section className="card border rounded-3 mb-4">
-                                <div className="card-body p-3 p-lg-4">
-                                    <div className="d-flex align-items-start justify-content-between gap-2 mb-3">
-                                        <div>
-                                            <h5 className="fw-bold mb-1">Recent Notifications</h5>
-                                            <p className="small text-muted mb-0">Updates about your jobs and team.</p>
-                                        </div>
-                                        <Link href="/notifications" className="btn btn-sm btn-outline-primary text-nowrap">View all</Link>
-                                    </div>
-                                    {recentNotifications.length ? (
-                                        <>
-                                        <div className="d-flex flex-column gap-2">
-                                            {pageNotifications.map((notification) => (
-                                                <article key={notification.id} className="border rounded-3 p-3">
-                                                    <div className="d-flex align-items-start gap-2">
-                                                        <span className={"d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 " + (notification.read ? "bg-light text-secondary" : "bg-primary-subtle text-primary")} style={{ width: 34, height: 34 }}>
-                                                            <i className={"bi " + (notification.type === "announcement" ? "bi-megaphone" : "bi-bell")} />
-                                                        </span>
-                                                        <div className="min-w-0">
-                                                            <div className="fw-bold small">{notification.title}</div>
-                                                            <div className="small text-muted mt-1">{notification.created_at}</div>
-                                                        </div>
-                                                    </div>
-                                                    <p className="small mb-0 mt-2 text-secondary">{notification.message}</p>
-                                                </article>
-                                            ))}
-                                        </div>
-                                        <PanelPagination
-                                            page={safeNotificationPage}
-                                            totalPages={notificationTotalPages}
-                                            totalItems={recentNotifications.length}
-                                            pageSize={notificationPageSize}
-                                            onPageChange={setNotificationPage}
-                                        />
-                                        </>
-                                    ) : (
-                                        <div className="text-center rounded-3 bg-light p-4">
-                                            <i className="bi bi-bell fs-4 text-muted d-block mb-2" />
-                                            <p className="small text-muted mb-0">You're all caught up. New job updates and announcements will appear here.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </section>
 
                             <section className="card border rounded-3">
                                 <div className="card-body p-3 p-lg-4">
