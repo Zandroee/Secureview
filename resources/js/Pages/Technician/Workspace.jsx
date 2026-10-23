@@ -5,6 +5,7 @@ import PanelPagination from "../../Components/Admin/PanelPagination";
 import { Link, router, usePage } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 import { googleMapsDirectionsUrl } from "../../Components/GoogleMaps/ServiceLocation";
+import TechnicianSidebar from "../../Components/Technician/Sidebar";
 
 function statusClass(status) {
     if (status === "completed") return "bg-success-subtle text-success";
@@ -35,13 +36,22 @@ function productImageSource(product) {
     return "/storage/" + String(image).replace(/^\/+/, "");
 }
 
-function JobCard({ job, open = false }) {
+function JobCard({ job, open = false, products = [] }) {
     const [working, setWorking] = useState(false);
     const [error, setError] = useState("");
     const [editingSchedule, setEditingSchedule] = useState(false);
     const [scheduleDate, setScheduleDate] = useState(job.preferred_date_value || "");
     const [scheduleTime, setScheduleTime] = useState(job.preferred_time || "08:00 AM - 11:00 AM");
     const [scheduleError, setScheduleError] = useState("");
+    const [showServiceReport, setShowServiceReport] = useState(false);
+    const [serviceReportErrors, setServiceReportErrors] = useState({});
+    const [serviceReport, setServiceReport] = useState({
+        work_summary: "",
+        customer_notes: "",
+        labor_charge: "0",
+        additional_charge: "0",
+        items: [],
+    });
     const timeSlots = ["08:00 AM - 11:00 AM", "11:00 AM - 02:00 PM", "02:00 PM - 05:00 PM"];
 
     const claim = () => {
@@ -55,11 +65,69 @@ function JobCard({ job, open = false }) {
     };
 
     const updateStatus = (status) => {
+        if (status === "completed") {
+            setServiceReportErrors({});
+            setShowServiceReport(true);
+            return;
+        }
+
         setWorking(true);
         setError("");
         router.patch("/technician/jobs/" + job.id + "/status", { status }, {
             preserveScroll: true,
             onError: (errors) => setError(errors.status ?? "Unable to update job status."),
+            onFinish: () => setWorking(false),
+        });
+    };
+
+    const updateReportField = (field, value) => {
+        setServiceReport((current) => ({ ...current, [field]: value }));
+    };
+
+    const addReportItem = () => {
+        setServiceReport((current) => ({
+            ...current,
+            items: [...current.items, {
+                action: "used",
+                product_id: "",
+                product_name: "",
+                quantity: "1",
+                unit_price: "0",
+                notes: "",
+            }],
+        }));
+    };
+
+    const updateReportItem = (index, field, value) => {
+        setServiceReport((current) => {
+            const items = current.items.map((item, itemIndex) => {
+                if (itemIndex !== index) return item;
+                if (field === "action") {
+                    return { ...item, action: value, product_id: "", product_name: "", unit_price: "0" };
+                }
+                if (field === "product_id") {
+                    const selected = products.find((product) => String(product.id) === String(value));
+                    return {
+                        ...item,
+                        product_id: value,
+                        product_name: selected?.name ?? "",
+                        unit_price: selected ? String(selected.price ?? 0) : "0",
+                    };
+                }
+                return { ...item, [field]: value };
+            });
+            return { ...current, items };
+        });
+    };
+
+    const submitServiceReport = (event) => {
+        event.preventDefault();
+        setWorking(true);
+        setServiceReportErrors({});
+        router.post("/technician/jobs/" + job.id + "/post-service-record", serviceReport, {
+            preserveScroll: true,
+            onError: (errors) => setServiceReportErrors(errors ?? {}),
+            onSuccess: () => setShowServiceReport(false),
             onFinish: () => setWorking(false),
         });
     };
@@ -173,10 +241,136 @@ function JobCard({ job, open = false }) {
                 </button>
             ) : job.status === "in_progress" ? (
                 <button className="btn btn-success w-100 fw-bold" disabled={working} onClick={() => updateStatus("completed")}>
-                    {working ? "UPDATING..." : "MARK JOB COMPLETED"}
+                    <i className="bi bi-journal-check me-2" />POST SERVICE RECORD
                 </button>
             ) : (
-                <div className="small text-success fw-semibold">This job is completed.</div>
+                <div className="small text-success fw-semibold"><i className="bi bi-check-circle-fill me-1" />This job is completed.</div>
+            )}
+
+            {!open && job.status === "in_progress" && showServiceReport && (
+                <form onSubmit={submitServiceReport} className="mt-3 border rounded-4 bg-body-tertiary p-3 p-lg-4">
+                    <div className="d-flex align-items-start gap-2 mb-3">
+                        <span className="d-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary" style={{ width: 40, height: 40 }}>
+                            <i className="bi bi-journal-medical fs-5" />
+                        </span>
+                        <div>
+                            <h4 className="h5 fw-bold mb-1">Post-Service Record</h4>
+                            <p className="small text-secondary mb-0">Record the work performed and every shop product taken for the job before completing it.</p>
+                        </div>
+                    </div>
+
+                    {Object.entries(serviceReportErrors).map(([field, messages]) => (
+                        <div className="small text-danger mb-1" key={field}>{Array.isArray(messages) ? messages[0] : messages}</div>
+                    ))}
+
+                    <label className="form-label fw-semibold">Work performed <span className="text-danger">*</span></label>
+                    <textarea
+                        className={"form-control mb-3 " + (serviceReportErrors.work_summary ? "is-invalid" : "")}
+                        rows={3}
+                        minLength={10}
+                        maxLength={5000}
+                        required
+                        value={serviceReport.work_summary}
+                        onChange={(event) => updateReportField("work_summary", event.target.value)}
+                        placeholder="Describe diagnostics, repairs, configuration, tests, and result."
+                    />
+
+                    <div className="row g-2 mb-3">
+                        <div className="col-sm-6">
+                            <label className="form-label fw-semibold">Labor / service income (₱)</label>
+                            <input type="number" min="0" step="0.01" max="10000000" className="form-control" value={serviceReport.labor_charge} onChange={(event) => updateReportField("labor_charge", event.target.value)} required />
+                        </div>
+                        <div className="col-sm-6">
+                            <label className="form-label fw-semibold">Other service charge (₱)</label>
+                            <input type="number" min="0" step="0.01" max="10000000" className="form-control" value={serviceReport.additional_charge} onChange={(event) => updateReportField("additional_charge", event.target.value)} />
+                        </div>
+                    </div>
+
+                    <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+                        <h5 className="h6 fw-bold mb-0">Parts used or removed</h5>
+                        <button type="button" className="btn btn-sm btn-outline-primary fw-semibold" onClick={addReportItem} disabled={working || serviceReport.items.length >= 20}>
+                            <i className="bi bi-plus-lg me-1" />ADD PART
+                        </button>
+                    </div>
+                    <p className="small text-secondary mb-3">“Used from shop stock” deducts the quantity and creates an inventory audit. “Removed from customer site” records the old part without changing shop stock.</p>
+
+                    {serviceReport.items.map((item, index) => (
+                        <div className="border rounded-3 bg-body p-3 mb-2" key={index}>
+                            <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <strong className="small">Part {index + 1}</strong>
+                                <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setServiceReport((current) => ({ ...current, items: current.items.filter((_, itemIndex) => itemIndex !== index) }))} aria-label={"Remove part " + (index + 1)}>
+                                    <i className="bi bi-trash" />
+                                </button>
+                            </div>
+                            <div className="row g-2">
+                                <div className="col-12 col-md-4">
+                                    <label className="form-label small fw-semibold">Record type</label>
+                                    <select className="form-select form-select-sm" value={item.action} onChange={(event) => updateReportItem(index, "action", event.target.value)}>
+                                        <option value="used">Used from shop stock</option>
+                                        <option value="removed">Removed from customer site</option>
+                                    </select>
+                                </div>
+                                <div className="col-12 col-md-8">
+                                    <label className="form-label small fw-semibold">{item.action === "used" ? "Shop product" : "Removed product / component"}</label>
+                                    {item.action === "used" ? (
+                                        <select className="form-select form-select-sm" required value={item.product_id} onChange={(event) => updateReportItem(index, "product_id", event.target.value)}>
+                                            <option value="">Select product from inventory</option>
+                                            {products.map((product) => (
+                                                <option key={product.id} value={product.id}>{product.name} · {product.stock_quantity} in stock</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input className="form-control form-control-sm" required maxLength={180} value={item.product_name} onChange={(event) => updateReportItem(index, "product_name", event.target.value)} placeholder="e.g. damaged camera, old HDD, cable section" />
+                                    )}
+                                </div>
+                                <div className="col-6 col-md-3">
+                                    <label className="form-label small fw-semibold">Quantity</label>
+                                    <input className="form-control form-control-sm" type="number" min="1" max="10000" step="1" required value={item.quantity} onChange={(event) => updateReportItem(index, "quantity", event.target.value)} />
+                                </div>
+                                {item.action === "used" && (
+                                    <div className="col-6 col-md-3">
+                                        <label className="form-label small fw-semibold">Charge per unit (₱)</label>
+                                        <input className="form-control form-control-sm" type="number" min="0" max="10000000" step="0.01" value={item.unit_price} onChange={(event) => updateReportItem(index, "unit_price", event.target.value)} />
+                                    </div>
+                                )}
+                                <div className="col-12 col-md">
+                                    <label className="form-label small fw-semibold">Part notes (optional)</label>
+                                    <input className="form-control form-control-sm" maxLength={1000} value={item.notes} onChange={(event) => updateReportItem(index, "notes", event.target.value)} placeholder="Condition / reason / serial details" />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+
+                    <label className="form-label fw-semibold mt-2">Customer-facing notes (optional)</label>
+                    <textarea className="form-control mb-3" rows={2} maxLength={3000} value={serviceReport.customer_notes} onChange={(event) => updateReportField("customer_notes", event.target.value)} placeholder="Recommendations, replaced parts, and follow-up advice." />
+
+                    <div className="d-flex flex-column flex-sm-row gap-2">
+                        <button type="submit" className="btn btn-success fw-bold flex-grow-1" disabled={working}>
+                            {working ? <><span className="spinner-border spinner-border-sm me-2" />SAVING RECORD...</> : <><i className="bi bi-check2-circle me-2" />SAVE RECORD & COMPLETE JOB</>}
+                        </button>
+                        <button type="button" className="btn btn-outline-secondary fw-semibold" disabled={working} onClick={() => setShowServiceReport(false)}>CANCEL</button>
+                    </div>
+                </form>
+            )}
+
+            {!open && job.status === "completed" && job.service_record && (
+                <div className="mt-3 border rounded-3 bg-body-tertiary p-3">
+                    <div className="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <div className="fw-bold"><i className="bi bi-journal-check me-2 text-success" />Post-Service Record</div>
+                            <div className="small text-secondary mt-1">{job.service_record.work_summary}</div>
+                        </div>
+                        <span className="badge rounded-pill bg-success-subtle text-success">Saved</span>
+                    </div>
+                    <div className="fw-bold text-success mt-2">Recorded income: ₱{Number(job.service_record.total_income ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    {(job.service_record.items ?? []).length > 0 && (
+                        <ul className="small mt-2 mb-0 ps-3">
+                            {job.service_record.items.map((item, index) => (
+                                <li key={index}>{item.action === "used" ? "Used" : "Removed"}: {item.product_name} × {item.quantity}</li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
             )}
 
             {!open && job.status === "confirmed" && job.reschedule_request_status === "pending" && (
