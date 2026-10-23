@@ -2,6 +2,7 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Calendar from "../../Components/Admin/Calendar";
 import PanelPagination from "../../Components/Admin/PanelPagination";
+import TechnicianSidebar from "../../Components/Technician/Sidebar";
 import { Link, router, usePage } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 import { googleMapsDirectionsUrl } from "../../Components/GoogleMaps/ServiceLocation";
@@ -22,6 +23,8 @@ function priorityClass(urgency) {
     return "bg-light text-secondary border";
 }
 
+function money(value) { return "₱" + Number(value ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
 function stockClass(quantity) {
     if (Number(quantity) <= 0) return "bg-danger-subtle text-danger";
     if (Number(quantity) <= 5) return "bg-warning-subtle text-warning-emphasis";
@@ -35,13 +38,24 @@ function productImageSource(product) {
     return "/storage/" + String(image).replace(/^\/+/, "");
 }
 
-function JobCard({ job, open = false }) {
+function JobCard({ job, open = false, inventory = [] }) {
     const [working, setWorking] = useState(false);
     const [error, setError] = useState("");
     const [editingSchedule, setEditingSchedule] = useState(false);
     const [scheduleDate, setScheduleDate] = useState(job.preferred_date_value || "");
     const [scheduleTime, setScheduleTime] = useState(job.preferred_time || "08:00 AM - 11:00 AM");
     const [scheduleError, setScheduleError] = useState("");
+    const [recordOpen, setRecordOpen] = useState(false);
+    const [recordWorking, setRecordWorking] = useState(false);
+    const [recordErrors, setRecordErrors] = useState({});
+    const [recordData, setRecordData] = useState({
+        service_outcome: "completed_as_requested",
+        work_summary: "",
+        recommendations: "",
+        service_charge: "0",
+        payment_method: "cash",
+        items: [],
+    });
     const timeSlots = ["08:00 AM - 11:00 AM", "11:00 AM - 02:00 PM", "02:00 PM - 05:00 PM"];
 
     const claim = () => {
@@ -74,6 +88,58 @@ function JobCard({ job, open = false }) {
         });
     };
 
+    const updateRecordField = (field, value) => {
+        setRecordData((current) => ({ ...current, [field]: value }));
+    };
+
+    const addUsedProduct = () => {
+        setRecordData((current) => ({
+            ...current,
+            items: [...current.items, { product_id: "", quantity: "1", notes: "" }],
+        }));
+    };
+
+    const updateUsedProduct = (index, field, value) => {
+        setRecordData((current) => ({
+            ...current,
+            items: current.items.map((item, row) => row === index ? { ...item, [field]: value } : item),
+        }));
+    };
+
+    const removeUsedProduct = (index) => {
+        setRecordData((current) => ({
+            ...current,
+            items: current.items.filter((item, row) => row !== index),
+        }));
+    };
+
+    const submitPostServiceRecord = (event) => {
+        event.preventDefault();
+        setRecordWorking(true);
+        setRecordErrors({});
+        const items = recordData.items
+            .filter((item) => String(item.product_id || "").trim() !== "")
+            .map((item) => ({
+                product_id: Number(item.product_id),
+                quantity: Number(item.quantity),
+                notes: item.notes || "",
+            }));
+
+        router.post("/technician/jobs/" + job.id + "/post-service-record", {
+            service_outcome: recordData.service_outcome,
+            work_summary: recordData.work_summary,
+            recommendations: recordData.recommendations,
+            service_charge: recordData.service_charge,
+            payment_method: recordData.payment_method,
+            items,
+        }, {
+            preserveScroll: true,
+            onError: (errors) => setRecordErrors(errors),
+            onSuccess: () => setRecordOpen(false),
+            onFinish: () => setRecordWorking(false),
+        });
+    };
+
     const saveSchedule = (event) => {
         event.preventDefault();
         setWorking(true);
@@ -96,6 +162,7 @@ function JobCard({ job, open = false }) {
                     <div className="small text-primary fw-bold">Service # {job.inquiry_number}</div>
                     <h3 className="h5 fw-bold mb-1">{job.service_type}</h3>
                     <div className="small text-muted">{job.item_name || "General service"}</div>
+                    {job.other_service_type && <div className="small text-primary fw-semibold mt-1">Other service: {job.other_service_type}</div>}
                 </div>
                 {!open && <span className={"badge rounded-pill text-capitalize px-3 py-2 " + statusClass(job.status)}>{formatStatus(job.status)}</span>}
                 {open && <span className="badge rounded-pill text-bg-success">Available to join</span>}
@@ -157,24 +224,115 @@ function JobCard({ job, open = false }) {
                             <i className="bi bi-sign-turn-right me-2" />NAVIGATE TO SERVICE
                         </a>
                     )}
-                    {job.notes && <div className="small mt-2"><span className="fw-semibold">Notes:</span> {job.notes}</div>}
+                    {job.other_service_details && <div className="small mt-2"><span className="fw-semibold">Additional service details:</span> {job.other_service_details}</div>}
+                    {job.notes && <div className="small mt-2"><span className="fw-semibold">Customer notes:</span> {job.notes}</div>}
                 </div>
             )}
 
             {error && <div className="alert alert-danger py-2 small" role="alert">{error}</div>}
 
             {open ? (
-                <button className="btn btn-primary w-100 fw-bold" disabled={working} onClick={claim}>
-                    {working ? "JOINING..." : "JOIN THIS SERVICE"}
+                <button className="btn btn-primary w-100 fw-bold" disabled={working || job.payment_status === "pending"} onClick={claim}>
+                    {working ? "JOINING..." : job.payment_status === "pending" ? "WAITING FOR PAYMENT" : "JOIN THIS SERVICE"}
                 </button>
             ) : job.status === "confirmed" ? (
-                <button className="btn btn-primary w-100 fw-bold" disabled={working} onClick={() => updateStatus("in_progress")}>
-                    {working ? "UPDATING..." : "START JOB"}
+                <button className="btn btn-primary w-100 fw-bold" disabled={working || job.payment_status === "pending"} onClick={() => updateStatus("in_progress")}>
+                    {working ? "UPDATING..." : job.payment_status === "pending" ? "PAYMENT PENDING" : "START JOB"}
                 </button>
             ) : job.status === "in_progress" ? (
-                <button className="btn btn-success w-100 fw-bold" disabled={working} onClick={() => updateStatus("completed")}>
-                    {working ? "UPDATING..." : "MARK JOB COMPLETED"}
-                </button>
+                <div className="d-grid gap-2">
+                    {job.service_record ? (
+                        <div className="border border-success-subtle bg-success-subtle text-success rounded-3 p-3 small">
+                            <div className="fw-bold mb-1"><i className="bi bi-check-circle me-2" />POST-SERVICE RECORD SAVED</div>
+                            <div>{job.service_record.service_outcome.replaceAll("_", " ")} · {money(job.service_record.service_charge)}</div>
+                            <div className="mt-1">{job.service_record.items.length} inventory item line(s) recorded.</div>
+                            {job.service_record.payment_status === "pending" && <div className="text-warning-emphasis mt-1">Service charge is awaiting admin payment confirmation.</div>}
+                        </div>
+                    ) : (
+                        <button type="button" className="btn btn-outline-primary fw-bold" onClick={() => setRecordOpen((value) => !value)}>
+                            <i className="bi bi-journal-plus me-2" />{recordOpen ? "CLOSE POST-SERVICE RECORD" : "RECORD WORK & PARTS USED"}
+                        </button>
+                    )}
+                    {recordOpen && !job.service_record && (
+                        <form className="border rounded-3 p-3 p-lg-4 bg-body-tertiary" onSubmit={submitPostServiceRecord}>
+                            <h4 className="h6 fw-bold mb-1">Post-service record</h4>
+                            <p className="small text-muted mb-3">Record what you did, recommendations, any replacement products pulled from stock, and the service charge. Used stock is deducted and audited when you submit.</p>
+
+                            <label className="form-label small fw-semibold">Outcome *</label>
+                            <select className={"form-select mb-2 " + (recordErrors.service_outcome ? "is-invalid" : "")} value={recordData.service_outcome} onChange={(event) => updateRecordField("service_outcome", event.target.value)} required>
+                                <option value="completed_as_requested">Completed as requested</option>
+                                <option value="repaired_with_replacement">Repaired with replacement part(s)</option>
+                                <option value="follow_up_required">Follow-up required</option>
+                                <option value="inspection_only">Inspection only</option>
+                                <option value="no_fault_found">No fault found</option>
+                            </select>
+                            {recordErrors.service_outcome && <div className="small text-danger mb-2">{recordErrors.service_outcome}</div>}
+
+                            <label className="form-label small fw-semibold">Work performed *</label>
+                            <textarea className={"form-control mb-2 " + (recordErrors.work_summary ? "is-invalid" : "")} rows={3} minLength={5} maxLength={3000} value={recordData.work_summary} onChange={(event) => updateRecordField("work_summary", event.target.value)} placeholder="Describe the fault, diagnosis, repair, tests, and outcome." required />
+                            {recordErrors.work_summary && <div className="small text-danger mb-2">{recordErrors.work_summary}</div>}
+
+                            <label className="form-label small fw-semibold">Recommendations / follow-up</label>
+                            <textarea className="form-control mb-3" rows={2} maxLength={2000} value={recordData.recommendations} onChange={(event) => updateRecordField("recommendations", event.target.value)} placeholder="Optional maintenance or follow-up notes." />
+
+                            <div className="row g-2 mb-3">
+                                <div className="col-sm-6">
+                                    <label className="form-label small fw-semibold">Service charge (PHP) *</label>
+                                    <input className={"form-control " + (recordErrors.service_charge ? "is-invalid" : "")} type="number" min="0" max="10000000" step="0.01" value={recordData.service_charge} onChange={(event) => updateRecordField("service_charge", event.target.value)} required />
+                                    {recordErrors.service_charge && <div className="small text-danger">{recordErrors.service_charge}</div>}
+                                </div>
+                                <div className="col-sm-6">
+                                    <label className="form-label small fw-semibold">Payment method (if charged)</label>
+                                    <select className="form-select" value={recordData.payment_method} onChange={(event) => updateRecordField("payment_method", event.target.value)}>
+                                        <option value="cash">Cash</option><option value="gcash">GCash</option><option value="card">Card</option><option value="maya">Maya</option>
+                                    </select>
+                                    <div className="form-text">Income remains pending until admin confirms receipt.</div>
+                                </div>
+                            </div>
+
+                            <div className="border rounded-3 p-3 mb-3 bg-white">
+                                <div className="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                    <div><div className="fw-bold small">Products used / removed from stock</div><div className="small text-muted">Add replacement cameras, drives, cables, or other stocked items.</div></div>
+                                    <button type="button" className="btn btn-sm btn-outline-primary text-nowrap" onClick={addUsedProduct} disabled={recordData.items.length >= 30}><i className="bi bi-plus-lg me-1" />Add item</button>
+                                </div>
+                                {!recordData.items.length ? <div className="small text-muted py-2">No products added. Leave this empty when no stock was used.</div> : recordData.items.map((item, index) => (
+                                    <div className="row g-2 align-items-end mb-2" key={index}>
+                                        <div className="col-12 col-md-6">
+                                            <label className="form-label small">Product *</label>
+                                            <select className={"form-select form-select-sm " + (recordErrors["items." + index + ".product_id"] ? "is-invalid" : "")} value={item.product_id} onChange={(event) => updateUsedProduct(index, "product_id", event.target.value)} required>
+                                                <option value="">Choose stock item</option>
+                                                {inventory.map((product) => <option key={product.id} value={product.id} disabled={Number(product.stock_quantity) <= 0}>{product.name} — {product.stock_quantity} available</option>)}
+                                            </select>
+                                            {recordErrors["items." + index + ".product_id"] && <div className="small text-danger">{recordErrors["items." + index + ".product_id"]}</div>}
+                                            {recordErrors["items." + index + ".quantity"] && <div className="small text-danger">{recordErrors["items." + index + ".quantity"]}</div>}
+                                        </div>
+                                        <div className="col-5 col-md-2">
+                                            <label className="form-label small">Qty *</label>
+                                            <input type="number" className="form-control form-control-sm" min="1" step="1" max="999" value={item.quantity} onChange={(event) => updateUsedProduct(index, "quantity", event.target.value)} required />
+                                        </div>
+                                        <div className="col-7 col-md-3">
+                                            <label className="form-label small">Item notes</label>
+                                            <input className="form-control form-control-sm" value={item.notes} onChange={(event) => updateUsedProduct(index, "notes", event.target.value)} maxLength={255} placeholder="e.g. Replacement unit" />
+                                        </div>
+                                        <div className="col-12 col-md-1">
+                                            <button type="button" className="btn btn-sm btn-outline-danger w-100" onClick={() => removeUsedProduct(index)} aria-label="Remove stock item"><i className="bi bi-trash" /></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {recordErrors.record && <div className="alert alert-danger py-2 small">{recordErrors.record}</div>}
+                            {recordErrors.payment && <div className="alert alert-danger py-2 small">{recordErrors.payment}</div>}
+                            {recordErrors.items && <div className="alert alert-danger py-2 small">{recordErrors.items}</div>}
+                            <button type="submit" className="btn btn-primary fw-bold w-100" disabled={recordWorking}>{recordWorking ? "SAVING RECORD..." : "SAVE POST-SERVICE RECORD"}</button>
+                        </form>
+                    )}
+                    {job.service_record && (
+                        <button className="btn btn-success w-100 fw-bold" disabled={working || job.service_record === null} onClick={() => updateStatus("completed")}>
+                            {working ? "UPDATING..." : "MARK JOB COMPLETED"}
+                        </button>
+                    )}
+                    {!job.service_record && <div className="small text-muted">Complete the post-service record before marking this job finished.</div>}
+                </div>
             ) : (
                 <div className="small text-success fw-semibold">This job is completed.</div>
             )}
