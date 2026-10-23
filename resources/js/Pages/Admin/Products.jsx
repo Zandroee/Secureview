@@ -339,30 +339,42 @@ export default function AdminProducts({
 
     const saveProduct = (event) => {
         event.preventDefault();
+
+        const hasNewImages = (productForm.data.image_files ?? []).length > 0;
         const options = {
             preserveScroll: true,
-            forceFormData: true,
             onSuccess: () => {
                 setProductModalOpen(false);
                 setEditingProductId(null);
                 productForm.reset();
             },
             onFinish: () => {
-                // Restore the default payload transform after the request completes.
+                // Ensure a multipart-only method override never leaks into the next save.
                 productForm.transform((data) => data);
             },
         };
 
-        if (editingProductId) {
-            // PHP 8.2 does not reliably populate multipart fields on a direct PATCH.
-            // Send multipart data as POST and let Laravel's _method field spoof PATCH.
+        if (editingProductId && hasNewImages) {
+            // Multipart uploads use POST plus Laravel method spoofing on PHP 8.2.
             productForm
                 .transform((data) => ({ ...data, _method: "patch" }))
-                .post("/admin/products/" + editingProductId, options);
+                .post("/admin/products/" + editingProductId, {
+                    ...options,
+                    forceFormData: true,
+                });
+        } else if (editingProductId) {
+            // Without new files, send JSON via the normal PATCH route. This avoids
+            // multipart parsing issues when the admin is only editing existing values.
+            productForm
+                .transform((data) => data)
+                .patch("/admin/products/" + editingProductId, options);
         } else {
             productForm
                 .transform((data) => data)
-                .post("/admin/products", options);
+                .post("/admin/products", {
+                    ...options,
+                    forceFormData: hasNewImages,
+                });
         }
     };
 

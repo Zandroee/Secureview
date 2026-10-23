@@ -302,7 +302,7 @@ export default function AdminPackages({
     const [generalError, setGeneralError] = useState("");
 
     const form = useForm(emptyPackage());
-    const { data, setData, post, processing, errors, clearErrors, transform } = form;
+    const { data, setData, post, patch, processing, errors, clearErrors, transform } = form;
     const componentsLocked = Boolean(
         editingPackage && editingPackage.can_edit_components === false
     );
@@ -388,12 +388,12 @@ export default function AdminPackages({
         clearErrors();
         setGeneralError("");
 
-        transform((values) => {
+        const hasNewImages = (data.image_files ?? []).length > 0;
+        const normalizePayload = (values) => {
             const { specificationsText, ...payload } = values;
 
             return {
                 ...payload,
-                ...(editingPackage ? { _method: "patch" } : {}),
                 specifications: specificationsText
                     .split(/\r?\n/)
                     .map((line) => line.trim())
@@ -404,21 +404,36 @@ export default function AdminPackages({
                     quantity: Number(item.quantity),
                 })),
             };
-        });
+        };
 
         const options = {
             preserveScroll: true,
-            forceFormData: true,
             onSuccess: () => closeForm(),
             onError: () => setGeneralError("Please review the highlighted fields and try again."),
+            onFinish: () => transform((values) => values),
         };
 
-        // POST keeps PHP 8.2 multipart fields available; Laravel honors _method=patch.
+        if (editingPackage && !hasNewImages) {
+            // With no new file uploads, JSON PATCH sends all populated fields directly.
+            transform((values) => normalizePayload(values));
+            patch("/admin/packages/" + editingPackage.id, options);
+            return;
+        }
+
+        transform((values) => ({
+            ...normalizePayload(values),
+            ...(editingPackage ? { _method: "patch" } : {}),
+        }));
+
+        // Only force multipart encoding when the request actually includes new files.
         post(
             editingPackage
                 ? "/admin/packages/" + editingPackage.id
                 : "/admin/packages",
-            options
+            {
+                ...options,
+                forceFormData: hasNewImages,
+            }
         );
     };
 
