@@ -11,9 +11,9 @@ function money(value) {
 }
 
 function paymentBadge(status) {
-    return status === "paid"
-        ? "bg-success-subtle text-success"
-        : "bg-warning-subtle text-warning-emphasis";
+    if (status === "paid") return "bg-success-subtle text-success";
+    if (status === "not_required") return "bg-secondary-subtle text-secondary";
+    return "bg-warning-subtle text-warning-emphasis";
 }
 
 export default function ServiceRecords({ records = [], filters = {}, summary = {} }) {
@@ -125,7 +125,7 @@ export default function ServiceRecords({ records = [], filters = {}, summary = {
                                          ) : rows.map((record) => (
                                             <Fragment key={record.id}>
                                                 <tr>
-                                                    <td className="ps-3"><div className="fw-bold">{record.inquiry_number}</div><div className="small text-muted">{record.customer_name} · {record.service_type}</div><div className="small text-muted">{record.created_at}</div></td>
+                                                    <td className="ps-3"><div className="fw-bold">{record.inquiry_number}</div><div className="small text-muted">{record.customer_name} · {record.service_type}{record.other_service_type ? " · " + record.other_service_type : ""}</div><div className="small text-muted">{record.created_at}</div></td>
                                                     <td>{record.technician_name}</td>
                                                     <td style={{ minWidth: 220, maxWidth: 340 }}><div className="text-truncate" title={record.work_summary}>{record.work_summary}</div><div className="small text-muted">{record.service_outcome.replaceAll("_", " ")}</div></td>
                                                     <td><span className="badge bg-light text-dark border">{record.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} unit(s)</span></td>
