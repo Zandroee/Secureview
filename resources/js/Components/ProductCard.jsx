@@ -56,7 +56,13 @@ export default function ProductCard({
                         className="w-100 rounded-2"
                         loading="lazy"
                         onError={() => setFailedImageUrl(imageUrl)}
-                        style={{ height: imageHeight, objectFit: "cover", backgroundColor: "#f8f9fa" }}
+                        style={{
+                            height: imageHeight,
+                            objectFit: "contain",
+                            objectPosition: "center",
+                            padding: "6px",
+                            backgroundColor: "#f8f9fa",
+                        }}
                     />
                 ) : imageFallback}
 
