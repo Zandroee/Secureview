@@ -529,7 +529,12 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                 }
             `}</style>
 
-            <main style={{ minHeight: "75vh", fontFamily: "Outfit, sans-serif" }}>
+            <div className="container-fluid">
+                <div className="row">
+                    <aside className="col-md-3 col-lg-2 px-0">
+                        <TechnicianSidebar active="dashboard" />
+                    </aside>
+                    <main className="col-md-9 col-lg-10 p-3 p-md-4" style={{ minHeight: "75vh", backgroundColor: "#f5f6f8", fontFamily: "Outfit, sans-serif" }}>
                 <div className="container-fluid px-3 px-xl-4 py-4 py-xl-5" style={{ maxWidth: "1680px", margin: "0 auto" }}>
                     <section className="workspace-hero p-3 p-lg-4 p-xl-5 mb-4">
                         <div className="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
@@ -538,9 +543,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                     <i className="bi bi-tools fs-3" />
                                 </div>
                                 <div>
-                                    <div className="small text-primary fw-bold text-uppercase mb-1" style={{ letterSpacing: ".09em" }}>
-                                        SecureView · Field Operations
-                                    </div>
                                     <h1 className="fw-bold mb-2" style={{ fontSize: "clamp(1.65rem, 2.4vw, 2.35rem)", letterSpacing: "-.035em" }}>
                                         Technician Workspace
                                     </h1>
@@ -549,19 +551,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                     </p>
                                 </div>
                             </div>
-                            <div className="d-flex flex-wrap align-items-center gap-2">
-                                <span className="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2">
-                                    <i className="bi bi-circle-fill me-2" style={{ fontSize: ".45rem" }} />
-                                    Field operations
-                                </span>
-                                <Link href="/notifications" className="btn btn-primary fw-semibold px-3 py-2">
-                                    <i className="bi bi-bell me-2" />
-                                    Notifications
-                                    {Number(props.notificationCount ?? 0) > 0 && (
-                                        <span className="badge text-bg-light text-primary ms-2">{props.notificationCount > 99 ? "99+" : props.notificationCount}</span>
-                                    )}
-                                </Link>
-                            </div>
+
                         </div>
                     </section>
 
@@ -656,7 +646,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                             <div className="row g-3">
                                 {filteredJobs.map((job) => (
                                     <div className="col-md-6 col-xxl-4" key={job.id}>
-                                        <JobCard job={job} />
+                                        <JobCard job={job} inventory={inventory} />
                                     </div>
                                 ))}
                             </div>
@@ -709,7 +699,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                             <div className="row g-3">
                                 {filteredOpenJobs.map((job) => (
                                     <div className="col-md-6 col-xxl-4" key={job.id}>
-                                        <JobCard job={job} open />
+                                        <JobCard job={job} open inventory={inventory} />
                                     </div>
                                 ))}
                             </div>
@@ -843,14 +833,14 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         </div>
 
                         <aside className="col-lg-3">
-                            <div className="mb-4">
+                            <div className="mb-4" id="my-schedule">
                                 <Calendar
                                     title="My Schedule"
                                     subtitle="Your assigned appointments and service dates."
                                     schedules={upcomingTechnicianJobs}
                                     upcomingCount={activeJobs.length}
-                                    viewAllHref="/technician/workspace#my-jobs"
-                                    itemHrefPrefix="/technician/workspace#my-jobs"
+                                    viewAllHref="/technician/dashboard#my-schedule"
+                                    itemHrefPrefix="/technician/dashboard#my-jobs"
                                 />
                             </div>
 
@@ -914,6 +904,8 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                     </div>
                 </div>
             </main>
+                </div>
+            </div>
             <Footer />
         </div>
     );
