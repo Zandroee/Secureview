@@ -148,8 +148,7 @@ export default function Inquiries({ inquiries = [] }) {
                                         </h5>
 
                                         <p className="small text-muted mb-3">
-                                            Your submitted service requests
-                                            will appear here.
+                                            {inquiries.length === 0 ? "Your submitted service requests will appear here." : "Try changing or clearing your filters."}
                                         </p>
 
                                         <Link
