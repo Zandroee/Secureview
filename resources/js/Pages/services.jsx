@@ -123,7 +123,7 @@ export default function Services() {
 
                         <div className="text-center mt-5">
                             <p className="text-muted mb-3">
-                                Need a CCTV service? Submit an inquiry and
+                                Need a CCTV service? Submit a service request and
                                 choose your preferred schedule.
                             </p>
 
@@ -131,7 +131,7 @@ export default function Services() {
                                 href="/inquiry"
                                 className="btn btn-primary fw-bold px-4"
                             >
-                                MAKE AN INQUIRY
+                                REQUEST A SERVICE
                             </Link>
                         </div>
                     </div>
