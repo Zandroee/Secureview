@@ -52,7 +52,6 @@ export default function Navbar() {
 
     if (isAuthenticated) {
         navigationItems.push(
-            { label: "Account Settings", href: "/settings", icon: "bi-gear", keywords: "profile preferences password appearance theme dark mode notifications security" },
             { label: "Notifications", href: "/notifications", icon: "bi-bell", keywords: "alerts messages updates unread" }
         );
     }
@@ -637,6 +636,13 @@ export default function Navbar() {
         const interval = window.setInterval(pollNotifications, 10000);
         return () => window.clearInterval(interval);
     }, [isLoggedIn, url, notificationPopupsEnabled]);
+
+    useEffect(() => {
+        const serviceNotification = props.flash?.serviceNotification;
+        if (notificationPopupsEnabled && serviceNotification?.title && serviceNotification?.message) {
+            setLiveNotification({ ...serviceNotification, isFlash: true });
+        }
+    }, [props.flash?.serviceNotification, notificationPopupsEnabled]);
 
     useEffect(() => {
         if (!notificationPopupsEnabled) {
@@ -1258,10 +1264,6 @@ export default function Navbar() {
                                                     <i className="bi bi-arrow-up-right ms-auto" aria-hidden="true"></i>
                                                 </Link>
                                             )}
-                                            <Link href="/settings" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
-                                                <i className="bi bi-gear" aria-hidden="true"></i>
-                                                <span>Account settings</span>
-                                            </Link>
                                             <Link href="/schedules" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
                                                 <i className="bi bi-calendar3" aria-hidden="true"></i>
                                                 <span>Schedules</span>
@@ -1330,8 +1332,14 @@ export default function Navbar() {
                             className="btn btn-sm btn-primary fw-semibold mt-3"
                             onClick={() => {
                                 const notificationId = liveNotification.id;
+                                const actionUrl = liveNotification.action_url;
+                                const isFlashNotification = liveNotification.isFlash;
                                 setLiveNotification(null);
-                                router.post("/notifications/" + notificationId + "/read");
+                                if (isFlashNotification && actionUrl) {
+                                    router.visit(actionUrl);
+                                } else if (notificationId) {
+                                    router.post("/notifications/" + notificationId + "/read");
+                                }
                             }}
                         >
                             OPEN NOTIFICATION
