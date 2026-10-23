@@ -194,6 +194,51 @@ class AdminProductManagementTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_delete_product_with_order_history_and_preserve_order_snapshot(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+        $product = $this->createProduct('Archived Camera', 0);
+
+        $order = Order::create([
+            'user_id' => $customer->id,
+            'order_number' => 'ORD-' . fake()->unique()->numerify('######'),
+            'subtotal' => 1500,
+            'shipping_fee' => 0,
+            'total' => 1500,
+            'payment_method' => 'cash',
+            'payment_status' => 'paid',
+            'order_status' => 'completed',
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'delivery_address' => '123 Test Street, Taguig',
+        ]);
+
+        $orderItem = $order->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'name' => $product->name,
+            'price' => $product->price,
+            'quantity' => 2,
+            'subtotal' => $product->price * 2,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.products.destroy', $product))
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+        $this->assertDatabaseHas('order_items', [
+            'id' => $orderItem->id,
+            'name' => 'Archived Camera',
+            'price' => $product->price,
+            'quantity' => 2,
+            'subtotal' => $product->price * 2,
+        ]);
+    }
+
     public function test_product_form_rejects_invalid_price_and_stock(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
