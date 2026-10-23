@@ -588,7 +588,7 @@ export default function AdminSchedules({
                                     <input
                                         type="text"
                                         className="form-control"
-                                        placeholder="Inquiry, customer, or service"
+                                        placeholder="Service ID, customer, or service type"
                                         value={search}
                                         onChange={(event) =>
                                             setSearch(event.target.value)
