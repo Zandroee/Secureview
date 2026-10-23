@@ -159,16 +159,26 @@ class AdminPackageManagementTest extends TestCase
             ->from(route('admin.packages.index'))
             ->delete(route('admin.packages.destroy', $package))
             ->assertRedirect(route('admin.packages.index'))
-            ->assertSessionHasErrors('package');
+            ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseHas('packages', ['id' => $package->id]);
-        $this->assertDatabaseMissing('admin_activity_logs', [
+        $this->assertDatabaseMissing('packages', ['id' => $package->id]);
+        $this->assertDatabaseHas('order_items', [
+            'order_id' => $order->id,
+            'purchasable_type' => Package::class,
+            'purchasable_id' => $package->id,
+            'name' => 'Purchased Kit',
+            'price' => '9999.00',
+            'quantity' => 1,
+            'subtotal' => '9999.00',
+        ]);
+        $this->assertDatabaseHas('admin_activity_logs', [
+            'admin_id' => $admin->id,
             'action' => 'package_deleted',
             'subject_id' => $package->id,
         ]);
     }
 
-    public function test_package_with_order_history_cannot_be_deleted(): void
+    public function test_package_with_order_history_can_be_deleted_while_snapshot_is_retained(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = User::factory()->create(['role' => 'user']);
