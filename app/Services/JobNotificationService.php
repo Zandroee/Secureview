@@ -69,14 +69,38 @@ class JobNotificationService
     {
         $priority = strtoupper($inquiry->urgency);
         $subject = "[{$priority}] SecureView service {$inquiry->inquiry_number}";
-        $message = "{$priority} SERVICE REQUEST\n\n"
+        $schedule = "{$date}, {$inquiry->preferred_time}";
+        $generalMessage = "{$priority} SERVICE REQUEST\n\n"
             . "Service ID: {$inquiry->inquiry_number}\n"
             . "Service: {$inquiry->service_type}\n"
-            . "Customer: {$inquiry->customer_name}\n"
-            . "Requested schedule: {$date}, {$inquiry->preferred_time}\n"
-            . "Location: " . trim(implode(', ', array_filter([$inquiry->street_address, $inquiry->address_details, $inquiry->city]))) . "\n"
-            . "Notes: " . ($inquiry->notes ?: 'None provided') . "\n\n"
+            . "Urgency: {$priority}\n"
+            . "Requested schedule: {$schedule}\n\n"
             . "Please review the service request in SecureView.";
+
+        // Customer details are limited to administrators and technicians who are
+        // already assigned. Unassigned technicians receive only the information
+        // needed to identify and claim the job.
+        $assignedTechnicianIds = $inquiry->technicians()
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if ($inquiry->technician_id) {
+            $assignedTechnicianIds[] = (int) $inquiry->technician_id;
+        }
+
+        $assignedTechnicianIds = array_values(array_unique($assignedTechnicianIds));
+
+        $adminMessage = $generalMessage . "\n\n"
+            . "Customer: {$inquiry->customer_name}\n"
+            . "Customer email: " . ($inquiry->customer_email ?: 'Not provided') . "\n"
+            . "Customer phone: " . ($inquiry->customer_phone ?: 'Not provided') . "\n"
+            . "Location: " . trim(implode(', ', array_filter([
+                $inquiry->street_address,
+                $inquiry->address_details,
+                $inquiry->city,
+            ]))) . "\n"
+            . "Notes: " . ($inquiry->notes ?: 'None provided');
 
         $recipients = User::query()->whereIn('role', ['admin', 'technician'])->get();
         foreach ($recipients as $recipient) {
@@ -87,7 +111,7 @@ class JobNotificationService
                     'user_id' => $recipient->id,
                     'type' => 'urgent_service',
                     'title' => $priority . ' service requires attention',
-                    'message' => "{$priority} {$inquiry->service_type} service {$inquiry->inquiry_number} is scheduled for {$date}, {$inquiry->preferred_time}.",
+                    'message' => "{$priority} {$inquiry->service_type} service {$inquiry->inquiry_number} is scheduled for {$schedule}.",
                     'action_url' => $recipient->role === 'admin'
                         ? route('admin.inquiries.show', $inquiry)
                         : route('technician.dashboard'),
@@ -96,10 +120,15 @@ class JobNotificationService
                 ]
             );
 
+            $isAssignedTechnician = in_array((int) $recipient->id, $assignedTechnicianIds, true);
+            $recipientMessage = $recipient->role === 'admin' || $isAssignedTechnician
+                ? $adminMessage
+                : $generalMessage;
+
             if ($notification->wasRecentlyCreated && filled($recipient->email)) {
                 try {
-                    Mail::raw($message, fn ($mail) => $mail->to($recipient->email)->subject($subject));
-                } catch (\Throwable $exception) {
+                    Mail::raw($recipientMessage, fn ($mail) => $mail->to($recipient->email)->subject($subject));
+                } catch (\\Throwable $exception) {
                     report($exception);
                 }
             }
@@ -121,10 +150,18 @@ class JobNotificationService
                 ]
             );
 
+            // Send the customer only their own confirmation and schedule; internal
+            // notes and private location metadata are not included in the email.
+            $customerMessage = "Hello {$customer->name},\n\n"
+                . "Your {$priority} service request {$inquiry->inquiry_number} ({$inquiry->service_type}) "
+                . "has been received. Requested schedule: {$schedule}.\n"
+                . "You can view the request here: " . route('inquiries.show', $inquiry) . "\n\n"
+                . "SecureView";
+
             if ($notification->wasRecentlyCreated && filled($customer->email)) {
                 try {
-                    Mail::raw($message, fn ($mail) => $mail->to($customer->email)->subject($subject));
-                } catch (\Throwable $exception) {
+                    Mail::raw($customerMessage, fn ($mail) => $mail->to($customer->email)->subject($subject));
+                } catch (\\Throwable $exception) {
                     report($exception);
                 }
             }
