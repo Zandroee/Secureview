@@ -17,15 +17,15 @@ Schedule::command('secureview:send-upcoming-job-reminders')
     ->name('send-upcoming-job-reminders')
     ->withoutOverlapping();
 Schedule::call(function () {
-    \\App\\Models\\Inquiry::escalateOverdueUrgency();
+    \App\Models\Inquiry::escalateOverdueUrgency();
 
-    $urgentServices = \\App\\Models\\Inquiry::query()
+    $urgentServices = \App\Models\Inquiry::query()
         ->with('user')
         ->whereIn('urgency', ['urgent', 'emergency'])
         ->whereNotIn('status', ['completed', 'cancelled'])
         ->get();
 
-    app(\\App\\Services\\JobNotificationService::class)
+    app(\App\Services\JobNotificationService::class)
         ->notifyUrgencyEscalations($urgentServices);
 })
     ->name('escalate-overdue-inquiry-urgency')
