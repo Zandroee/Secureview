@@ -230,6 +230,9 @@ export default function PurchaseDetails({ order }) {
                                                         item.price
                                                     ).toLocaleString()}
                                                 </div>
+                                                <div className="small text-muted mt-1">
+                                                    Warranty: {item.warranty_period || "Not specified"}
+                                                </div>
                                                 {order.payment_status === "paid" &&
                                                     order.order_status !== "cancelled" &&
                                                     item.purchasable_id && (
