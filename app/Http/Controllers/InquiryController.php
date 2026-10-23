@@ -254,7 +254,7 @@ class InquiryController extends Controller
             'preferred_date' => ['required', 'date', 'after_or_equal:today'],
             'preferred_time' => ['required', 'string', Rule::in(self::BOOKING_TIME_SLOTS)],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'payment_method' => ['nullable', 'required_if:service_type,Installation', 'in:gcash,card,maya'],
+            'payment_method' => ['nullable', 'required_if:service_type,Installation', 'in:cash,gcash,card,maya'],
         ]);
 
         $hasLatitude = filled($validated['service_latitude'] ?? null);
@@ -321,7 +321,7 @@ class InquiryController extends Controller
                 ]);
             }
 
-            return $this->startInstallationPayment($request, $validated, $inquirable, $inventory);
+            return $this->startInstallationPayment($request, $validated, $inquirable, $inventory, $jobNotifications);
         }
 
         do {
@@ -366,10 +366,12 @@ class InquiryController extends Controller
         Request $request,
         array $validated,
         Product|Package $item,
-        InventoryService $inventory
+        InventoryService $inventory,
+        JobNotificationService $jobNotifications
     ) {
+        $paymentMethod = $validated['payment_method'] ?? 'gcash';
         $secretKey = config('services.paymongo.secret_key');
-        if (!$secretKey) {
+        if ($paymentMethod !== 'cash' && !$secretKey) {
             return back()->withErrors([
                 'payment' => 'Online payments are not configured yet. Add the PayMongo test secret key before booking an installation.',
             ])->withInput();
@@ -381,7 +383,6 @@ class InquiryController extends Controller
             return back()->withErrors(['item_id' => $stockError])->withInput();
         }
 
-        $paymentMethod = $validated['payment_method'] ?? 'gcash';
         $installationFee = max(0, (float) ($item->installation_fee ?? 0));
         $itemPrice = (float) $item->price;
         $itemSubtotal = $itemPrice * $itemQuantity;
@@ -392,7 +393,7 @@ class InquiryController extends Controller
             $validated['city'],
         ])));
 
-        $order = DB::transaction(function () use (
+        [$order, $inquiry] = DB::transaction(function () use (
             $request, $validated, $item, $paymentMethod, $installationFee, $itemPrice, $itemQuantity, $itemSubtotal, $totalInstallationFee, $serviceAddress
         ) {
             do {
@@ -408,7 +409,7 @@ class InquiryController extends Controller
                 'total' => $itemSubtotal + $totalInstallationFee,
                 'payment_method' => $paymentMethod,
                 'payment_status' => 'pending',
-                'order_status' => 'awaiting_payment',
+                'order_status' => $paymentMethod === 'cash' ? 'pending' : 'awaiting_payment',
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
                 'customer_email' => $validated['customer_email'],
@@ -426,15 +427,55 @@ class InquiryController extends Controller
                 'subtotal' => $itemSubtotal,
             ]);
 
+            do {
+                $inquiryNumber = 'INQ-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
+            } while (Inquiry::where('inquiry_number', $inquiryNumber)->exists());
+
+            $inquiry = Inquiry::create([
+                'user_id' => $request->user()->id,
+                'inquiry_number' => $inquiryNumber,
+                'inquirable_type' => get_class($item),
+                'inquirable_id' => $item->id,
+                'item_name' => $item->name,
+                'customer_name' => $validated['customer_name'],
+                'customer_phone' => $validated['customer_phone'],
+                'customer_email' => $validated['customer_email'],
+                'street_address' => $validated['street_address'],
+                'address_details' => $validated['address_details'] ?? null,
+                'city' => $validated['city'],
+                'service_latitude' => $validated['service_latitude'] ?? null,
+                'service_longitude' => $validated['service_longitude'] ?? null,
+                'google_place_id' => $validated['google_place_id'] ?? null,
+                'service_type' => 'Installation',
+                'urgency' => $validated['urgency'],
+                'preferred_date' => $validated['preferred_date'],
+                'preferred_time' => $validated['preferred_time'],
+                'notes' => $validated['notes'] ?? null,
+                'status' => 'pending',
+            ]);
+
             PendingInquiryCheckout::create([
                 'user_id' => $request->user()->id,
                 'order_id' => $order->id,
+                'inquiry_id' => $inquiry->id,
                 'payload' => $validated,
                 'status' => 'pending_payment',
             ]);
 
-            return $order;
+            return [$order, $inquiry];
         });
+
+        $jobNotifications->notifyNewInquirySubmitted($inquiry);
+
+        if ($paymentMethod === 'cash') {
+            return redirect()->route('inquiries.show', $inquiry)
+                ->with('success', 'Your installation service has been booked. Payment is pending until SecureView confirms receipt of cash.')
+                ->with('serviceNotification', [
+                    'title' => 'Installation service booked',
+                    'message' => 'Your service ' . $inquiry->inquiry_number . ' is saved and awaiting payment confirmation.',
+                    'action_url' => route('inquiries.show', $inquiry),
+                ]);
+        }
 
         $lineItems = [[
             'name' => $item->name,
