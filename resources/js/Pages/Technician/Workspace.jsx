@@ -444,7 +444,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
     const filteredInventory = useMemo(() => {
         const query = inventorySearch.trim().toLowerCase();
         return inventory.filter((product) => {
-            const matchesSearch = !query || [product.name, product.category, String(product.id)]
+            const matchesSearch = !query || [product.name, product.brand, product.category, String(product.id)]
                 .some((value) => String(value ?? "").toLowerCase().includes(query));
             const quantity = Number(product.stock_quantity ?? 0);
             const matchesFilter = inventoryFilter === "low"
@@ -616,6 +616,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                     </div>
 
                     <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="my-jobs">
+                        <span id="post-service-records" className="d-block position-relative" style={{ top: "-90px", visibility: "hidden" }} aria-hidden="true" />
                         <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
                             <div>
                                 <div className="small text-primary fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Your workload</div>
@@ -718,8 +719,8 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         <div className="d-flex flex-column flex-xl-row justify-content-between align-items-xl-end gap-3 mb-4">
                             <div>
                                 <div className="small text-warning-emphasis fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Stock control</div>
-                                <h2 className="h3 fw-bold mb-1">Inventory</h2>
-                                <p className="text-secondary mb-0">Record every stock adjustment with a reason. Each update creates an audit record.</p>
+                                <h2 className="h3 fw-bold mb-1">Products & Inventory</h2>
+                                <p className="text-secondary mb-0">Manage products consistently with the catalog. Record every stock adjustment with a reason; all changes create an audit trail.</p>
                             </div>
                             <div className="d-flex flex-column flex-sm-row gap-2" style={{ width: "100%", maxWidth: "520px", minWidth: 0, flex: "1 1 300px" }}>
                                 <div className="input-group">
@@ -754,7 +755,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                     <thead className="table-light">
                                         <tr>
                                             <th className="ps-3">Product</th>
-                                            <th>Category</th>
+                                            <th>Brand / Category</th>
                                             <th>Current stock</th>
                                             <th style={{ minWidth: 150 }}>Adjustment (+ / −)</th>
                                             <th style={{ minWidth: 230 }}>Reason for change</th>
@@ -777,11 +778,15 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                             )}
                                                             <div>
                                                                 <div className="fw-semibold">{product.name}</div>
+                                                                <div className="small text-primary fw-semibold">{product.brand || "Brand not set"}</div>
                                                                 <div className="small text-muted">SKU · {String(product.id).padStart(7, "0")}</div>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td><span className="badge bg-light text-secondary border">{product.category || "Uncategorized"}</span></td>
+                                                    <td>
+                                                        <div className="fw-semibold">{product.brand || "—"}</div>
+                                                        <span className="badge bg-light text-secondary border mt-1">{product.category || "Uncategorized"}</span>
+                                                    </td>
                                                     <td>
                                                         <span className={"badge rounded-pill px-3 py-2 " + stockClass(product.stock_quantity)}>{product.stock_quantity} units</span>
                                                     </td>
