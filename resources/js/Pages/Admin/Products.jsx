@@ -41,6 +41,7 @@ function money(value) {
 function emptyProduct() {
     return {
         name: "",
+        brand: "",
         category: "",
         warranty: "1 year",
         price: "",
@@ -320,6 +321,7 @@ export default function AdminProducts({
         productForm.clearErrors();
         productForm.setData({
             name: product.name ?? "",
+            brand: product.brand ?? "",
             category: product.category ?? "",
             warranty: product.warranty ?? "1 year",
             price: String(product.price ?? ""),
@@ -684,7 +686,7 @@ export default function AdminProducts({
                                                                 )}
                                                                 <div>
                                                                     <div className="fw-semibold">{product.name}</div>
-                                                                    <div className="small text-muted">Product #{product.id} · {product.category}</div>
+                                                                    <div className="small text-muted">Product #{product.id} · {product.category}{product.brand ? " · " + product.brand : ""}</div>
                                                                     {product.badge && (
                                                                         <span className="badge bg-primary-subtle text-primary mt-1">{product.badge}</span>
                                                                     )}
@@ -846,6 +848,19 @@ export default function AdminProducts({
                                                 required
                                             />
                                             <FieldError message={productForm.errors.name} />
+                                        </div>
+
+                                        <div className="col-md-4">
+                                            <label className="form-label fw-semibold">Brand <span className="text-muted fw-normal">(optional)</span></label>
+                                            <input
+                                                type="text"
+                                                className={"form-control " + (productForm.errors.brand ? "is-invalid" : "")}
+                                                value={productForm.data.brand ?? ""}
+                                                onChange={(event) => productForm.setData("brand", event.target.value)}
+                                                maxLength={120}
+                                                placeholder="e.g. Dahua, Hikvision, TP-Link"
+                                            />
+                                            <FieldError message={productForm.errors.brand} />
                                         </div>
 
                                         <div className="col-md-4">
