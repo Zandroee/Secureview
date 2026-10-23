@@ -1,7 +1,7 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import { router, usePage } from "@inertiajs/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import catalogImageUrl from "../Components/catalogImageUrl";
 
 function Stars({ rating }) {
@@ -72,10 +72,14 @@ export default function PackageDetails({ package: packageData, reviews = [], can
     const [amount, setAmount] = useState(1);
     const [cartMessage, setCartMessage] = useState("");
     const [cartError, setCartError] = useState("");
-    const rawGalleryImages = Array.isArray(packageData.images) && packageData.images.length
-        ? packageData.images
-        : (packageData.image ? [packageData.image] : []);
-    const galleryImages = rawGalleryImages.map(catalogImageUrl).filter(Boolean);
+    const galleryImages = useMemo(() => {
+        const rawImages = Array.isArray(packageData.images) && packageData.images.length
+            ? packageData.images
+            : (packageData.image ? [packageData.image] : []);
+
+        return rawImages.map(catalogImageUrl).filter(Boolean);
+    }, [packageData.images, packageData.image]);
+
     const [selectedImage, setSelectedImage] = useState(galleryImages[0] ?? "");
     const [failedImageUrls, setFailedImageUrls] = useState([]);
     const isImageFailed = (url) => failedImageUrls.includes(url);
@@ -83,6 +87,31 @@ export default function PackageDetails({ package: packageData, reviews = [], can
         current.includes(url) ? current : [...current, url]
     );
     const displayedImage = galleryImages.includes(selectedImage) ? selectedImage : (galleryImages[0] ?? "");
+
+    // Rotate through the gallery slowly. Selecting a thumbnail resets the timer;
+    // images that already failed to load are skipped automatically.
+    useEffect(() => {
+        if (galleryImages.length < 2) return undefined;
+
+        const timer = window.setTimeout(() => {
+            setSelectedImage((current) => {
+                const currentIndex = galleryImages.indexOf(current);
+                const startIndex = currentIndex < 0 ? 0 : currentIndex;
+
+                for (let step = 1; step <= galleryImages.length; step += 1) {
+                    const candidate = galleryImages[(startIndex + step) % galleryImages.length];
+
+                    if (!failedImageUrls.includes(candidate)) {
+                        return candidate;
+                    }
+                }
+
+                return current;
+            });
+        }, 5000);
+
+        return () => window.clearTimeout(timer);
+    }, [galleryImages, selectedImage, failedImageUrls]);
 
     const availableStock = Math.max(0, Number(packageData.available_stock ?? 0));
     const [reviewPage, setReviewPage] = useState(1);
@@ -193,11 +222,12 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                         <div className="col-lg-6">
                             {displayedImage && !isImageFailed(displayedImage) ? (
                                 <img
+                                    key={displayedImage}
                                     src={displayedImage}
                                     alt={packageData.name}
-                                    className="img-fluid w-100 rounded-2"
+                                    className="img-fluid w-100 rounded-2 catalog-detail-main-image"
                                     onError={() => markImageFailed(displayedImage)}
-                                    style={{ height: "330px", objectFit: "contain", backgroundColor: "#f8f9fa" }}
+                                    style={{ height: "330px", objectFit: "contain", objectPosition: "center", backgroundColor: "#f8f9fa" }}
                                 />
                             ) : (
                                 <div className="bg-secondary-subtle d-flex align-items-center justify-content-center" style={{ height: "330px" }}>
@@ -224,7 +254,7 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                                     src={image}
                                                     alt={packageData.name + " view " + (index + 1)}
                                                     onError={() => markImageFailed(image)}
-                                                    style={{ width: "68px", height: "68px", objectFit: "cover" }}
+                                                    style={{ width: "68px", height: "68px", objectFit: "contain", backgroundColor: "#f8f9fa", padding: "3px" }}
                                                 />
                                             )}
                                         </button>
