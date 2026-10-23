@@ -81,7 +81,7 @@ export default function Login() {
         setResendingVerification(true);
 
         router.post(
-            "/email/verification-notification",
+            "/email/verification-code/resend",
             { email },
             {
                 preserveScroll: true,
@@ -116,9 +116,9 @@ export default function Login() {
                         <p className="mb-2">
                             Your password is correct, but this account has not verified its email address yet.
                             {props.flash.verificationEmail ? (
-                                <> We are checking <strong>{props.flash.verificationEmail}</strong>. Please check your inbox and spam folder for the verification link before logging in.</>
+                                <> We are checking <strong>{props.flash.verificationEmail}</strong>. Please check your inbox and spam folder for the six-digit verification code before logging in.</>
                             ) : (
-                                <> Please check the inbox and spam folder for the verification link before logging in.</>
+                                <> Please check the inbox and spam folder for the six-digit verification code before logging in.</>
                             )}
                         </p>
                         <button
@@ -127,7 +127,7 @@ export default function Login() {
                             onClick={resendVerification}
                             disabled={resendingVerification}
                         >
-                            {resendingVerification ? "Sending..." : "Resend verification email"}
+                            {resendingVerification ? "Sending..." : "Resend verification code"}
                         </button>
                         {props.flash?.message && (
                             <div className="small mt-2" role="status">{props.flash.message}</div>

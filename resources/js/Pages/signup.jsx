@@ -1,25 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm, Link } from "@inertiajs/react";
 
 import Navbar from "../Components/navbar";
 import GoogleLoginButton from "../Components/GoogleLoginButton";
 import PasswordInput from "../Components/PasswordInput";
 import PasswordStrength from "../Components/PasswordStrength";
-import EmailVerificationModal from "../Components/EmailVerificationModal";
 import TermsAndConditionsModal from "../Components/TermsAndConditionsModal";
 
 import "../../css/signup.css";
 
-export default function Signup({ verificationSent = false, verificationEmail = "" }) {
-    const [showVerification, setShowVerification] = useState(verificationSent);
+export default function Signup() {
     const [showTerms, setShowTerms] = useState(false);
     const [termsRead, setTermsRead] = useState(false);
-
-    useEffect(() => {
-        if (verificationSent) {
-            setShowVerification(true);
-        }
-    }, [verificationSent]);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         firstName: "",
@@ -157,13 +149,6 @@ export default function Signup({ verificationSent = false, verificationEmail = "
         }
 
         post("/register", {
-            preserveState: true,
-            preserveScroll: true,
-
-            onSuccess: () => {
-                setShowVerification(true);
-            },
-
             onError: (serverErrors) => {
                 const emailExists =
                     serverErrors.email &&
@@ -493,12 +478,6 @@ export default function Signup({ verificationSent = false, verificationEmail = "
                 />
             )}
 
-            {showVerification && (
-                <EmailVerificationModal
-                    email={verificationEmail || data.email}
-                    onClose={() => setShowVerification(false)}
-                />
-            )}
         </>
     );
 }

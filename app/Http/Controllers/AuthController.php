@@ -3,19 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\EmailVerificationCodeService;
 use App\Services\AdminActivityLogger;
 use App\Services\SingleLoginSessionService;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
+    public function register(Request $request, EmailVerificationCodeService $verificationCodes)
     {
         $validated = $request->validate([
             'firstName' => ['required', 'string', 'max:50'],
@@ -58,15 +58,25 @@ class AuthController extends Controller
             'terms_version' => '1.0',
         ]);
 
-        event(new Registered($user));
+        try {
+            $codeSent = $verificationCodes->send($user);
+        } catch (\Throwable $exception) {
+            $codeSent = false;
+            Log::warning('SecureView account was created but its verification code could not be sent.', [
+                'user_id' => $user->id,
+                'exception' => get_class($exception),
+            ]);
+        }
 
-        return redirect()->route('signup')->with([
-            'verificationSent' => true,
+        return redirect()->route('verification.notice')->with([
             'verificationEmail' => $user->email,
+            'status' => $codeSent
+                ? 'We sent a six-digit verification code to your email address. It expires in 10 minutes.'
+                : 'Your account was created, but we could not send a code right now. Use Resend verification code below to try again.',
         ]);
     }
 
-    public function authenticate(Request $request, AdminActivityLogger $activityLogger, SingleLoginSessionService $singleLoginSession)
+    public function authenticate(Request $request, AdminActivityLogger $activityLogger, SingleLoginSessionService $singleLoginSession, EmailVerificationCodeService $verificationCodes)
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -94,17 +104,23 @@ class AuthController extends Controller
             ])->onlyInput('email');
         }
 
-        // Correct password, but email is still unverified.
+        // Correct password, but email is still unverified. Send a code without logging the user in.
         if (!$user->hasVerifiedEmail()) {
-            $cooldownKey = 'verification-email-cooldown:' . $user->id;
-
-            if (Cache::add($cooldownKey, true, now()->addSeconds(60))) {
-                $user->sendEmailVerificationNotification();
+            try {
+                $codeSent = $verificationCodes->send($user);
+            } catch (\Throwable $exception) {
+                $codeSent = false;
+                Log::warning('SecureView login could not send an email verification code.', [
+                    'user_id' => $user->id,
+                    'exception' => get_class($exception),
+                ]);
             }
 
-            return redirect()->route('login')->with([
-                'verificationRequired' => true,
+            return redirect()->route('verification.notice')->with([
                 'verificationEmail' => $user->email,
+                'status' => $codeSent
+                    ? 'Your password is correct. We sent a six-digit code to verify your email before you log in.'
+                    : 'Your email is not verified yet. Check your inbox for the current code, or request a new one below.',
             ]);
         }
 

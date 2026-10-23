@@ -9,9 +9,9 @@ use App\Models\PackageItem;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\User;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Mail\EmailVerificationCodeMail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -21,7 +21,7 @@ class CustomerReviewsAndFeaturedCatalogTest extends TestCase
 
     public function test_unverified_customer_sees_verification_guidance_after_entering_correct_password(): void
     {
-        Notification::fake();
+        Mail::fake();
 
         $customer = User::factory()->unverified()->create([
             'role' => 'user',
@@ -31,12 +31,12 @@ class CustomerReviewsAndFeaturedCatalogTest extends TestCase
             'email' => $customer->email,
             'password' => 'password',
         ])
-            ->assertRedirect(route('login'))
-            ->assertSessionHas('verificationRequired', true)
-            ->assertSessionHas('verificationEmail', $customer->email);
+            ->assertRedirect(route('verification.notice'))
+            ->assertSessionHas('verificationEmail', $customer->email)
+            ->assertSessionHas('status');
 
         $this->assertGuest();
-        Notification::assertSentTo($customer, VerifyEmail::class);
+        Mail::assertSent(EmailVerificationCodeMail::class, fn (EmailVerificationCodeMail $mail) => $mail->user->is($customer) && preg_match('/^\d{6}$/', $mail->code) === 1);
     }
 
     public function test_homepage_featured_items_include_stock_state_and_package_inclusions(): void
