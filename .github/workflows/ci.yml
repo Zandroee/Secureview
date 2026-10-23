@@ -114,6 +114,7 @@ jobs:
           cp app/Services/OrderCancellationService.php hostinger-release/app/Services/OrderCancellationService.php
           cp routes/console.php hostinger-release/routes/console.php
           cp database/migrations/2026_10_23_230000_create_service_records_tables.php hostinger-release/database/migrations/2026_10_23_230000_create_service_records_tables.php
+          cp database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php hostinger-release/database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php
           cp routes/web.php hostinger-release/routes/web.php
 
@@ -123,5 +124,28 @@ jobs:
         with:
           name: secureview-hostinger-release-${{ github.sha }}
           path: hostinger-release/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Package Hostinger release ZIP and SHA-256
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
+        shell: bash
+        run: |
+          ZIP_NAME="secureview-hostinger-release-${GITHUB_SHA}.zip"
+          (cd hostinger-release && zip -qr "../${ZIP_NAME}" .)
+          cp scripts/deploy-hostinger-release.sh ./deploy-hostinger-release.sh
+          sha256sum "${ZIP_NAME}" > "${ZIP_NAME}.sha256"
+          sha256sum --check "${ZIP_NAME}.sha256"
+          unzip -t "${ZIP_NAME}" | tail -n 2
+
+      - name: Upload ready-to-deploy Hostinger package
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@v4
+        with:
+          name: secureview-hostinger-release-zip-${{ github.sha }}
+          path: |
+            secureview-hostinger-release-${{ github.sha }}.zip
+            secureview-hostinger-release-${{ github.sha }}.zip.sha256
+            deploy-hostinger-release.sh
           if-no-files-found: error
           retention-days: 7
