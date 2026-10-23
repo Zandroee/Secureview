@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withCommands([
-        \\App\\Console\\Commands\\ClearProductPackageReferences::class,
+        \App\Console\Commands\ClearProductPackageReferences::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
