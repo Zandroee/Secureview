@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
@@ -92,7 +93,7 @@ export default function ServiceRecords({ records = [], filters = {}, summary = {
                                 <div className="col-6 col-lg-2">
                                     <label className="form-label small fw-semibold mb-1">PAYMENT</label>
                                     <select className="form-select" value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value)}>
-                                        <option value="">All payments</option><option value="paid">Paid</option><option value="pending">Pending</option>
+                                        <option value="">All payments</option><option value="paid">Paid</option><option value="pending">Pending</option><option value="not_required">No charge</option>
                                     </select>
                                 </div>
                                 <div className="col-6 col-lg-2">
@@ -121,9 +122,9 @@ export default function ServiceRecords({ records = [], filters = {}, summary = {
                                     <tbody>
                                         {!rows.length ? (
                                             <tr><td colSpan="7" className="text-center p-5"><i className="bi bi-journal-text fs-3 text-muted" /><div className="fw-semibold mt-2">No service records found</div><div className="small text-muted">Records appear after a technician submits a post-service report.</div></td></tr>
-                                        ) : rows.map((record) => (
-                                            <>
-                                                <tr key={record.id}>
+                                         ) : rows.map((record) => (
+                                            <Fragment key={record.id}>
+                                                <tr>
                                                     <td className="ps-3"><div className="fw-bold">{record.inquiry_number}</div><div className="small text-muted">{record.customer_name} · {record.service_type}</div><div className="small text-muted">{record.created_at}</div></td>
                                                     <td>{record.technician_name}</td>
                                                     <td style={{ minWidth: 220, maxWidth: 340 }}><div className="text-truncate" title={record.work_summary}>{record.work_summary}</div><div className="small text-muted">{record.service_outcome.replaceAll("_", " ")}</div></td>
@@ -147,7 +148,7 @@ export default function ServiceRecords({ records = [], filters = {}, summary = {
                                                         </div>
                                                     </td></tr>
                                                 )}
-                                            </>
+                                            </Fragment>
                                         ))}
                                     </tbody>
                                 </table>
