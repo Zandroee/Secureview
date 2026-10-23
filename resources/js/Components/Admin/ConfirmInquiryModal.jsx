@@ -87,7 +87,7 @@ export default function ConfirmInquiryModal({
                 <div className="p-4 border-bottom d-flex align-items-start justify-content-between gap-3">
                     <div>
                         <div className="small text-primary fw-bold mb-1">
-                            INQUIRY {inquiry.inquiry_number}
+                            SERVICE REQUEST {inquiry.inquiry_number}
                         </div>
                         <h2 className="h4 fw-bold mb-1" id="confirm-inquiry-title">
                             Confirm &amp; Schedule Service
@@ -192,7 +192,7 @@ export default function ConfirmInquiryModal({
 
                         {technicians.length === 0 && (
                             <div className="small text-danger mt-2">
-                                No technicians are available. Add a technician account before confirming this inquiry.
+                                No technicians are available. Add a technician account before confirming this service request.
                             </div>
                         )}
 
