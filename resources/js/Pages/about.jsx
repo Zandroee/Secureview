@@ -63,9 +63,9 @@ export default function About() {
                         </div>
                     </div>
                 </div>
-            </header>   </header>
+            </header>
 
-            {/* NETMAX Section */}
+            {/* NETMAX TRADING */}
             <section className="about-story-section about-company-section">
                 <div className="container">
                     <div className="row g-4 g-lg-5 align-items-center">
