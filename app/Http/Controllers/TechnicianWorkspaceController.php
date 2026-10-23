@@ -79,7 +79,7 @@ class TechnicianWorkspaceController extends Controller
 
         $recentNotifications = $technician->customerNotifications()
             ->latest('id')
-            ->limit(5)
+            ->limit(50)
             ->get(['id', 'type', 'title', 'message', 'read_at', 'created_at'])
             ->map(fn (CustomerNotification $notification) => [
                 'id' => $notification->id,
