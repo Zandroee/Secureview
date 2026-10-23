@@ -15,7 +15,7 @@ const menuGroups = [
         {
             label: "Services",
             href: "/admin/inquiries",
-            key: "inquiries",
+            key: "services",
             icon: "bi-chat-left-text",
         },
         {
