@@ -64,7 +64,7 @@ class Inquiry extends Model
             ->update(['urgency' => 'urgent']);
 
         if ($updated > 0) {
-            app(\\App\\Services\\JobNotificationService::class)
+            app(\App\Services\JobNotificationService::class)
                 ->notifyUrgencyEscalations(static::query()->whereIn('id', $ids)->where('urgency', 'urgent')->get());
         }
 
