@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Order;
 use App\Models\Package;
