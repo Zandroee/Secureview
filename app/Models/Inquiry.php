@@ -78,6 +78,11 @@ class Inquiry extends Model
         return $this->hasOne(ServiceRecord::class);
     }
 
+    public function pendingCheckout(): HasOne
+    {
+        return $this->hasOne(PendingInquiryCheckout::class, 'inquiry_id');
+    }
+
     public function inquirable(): MorphTo
     {
         return $this->morphTo();
