@@ -421,6 +421,10 @@ class ScheduleController extends Controller
     }
     public function updateSchedule(Request $request, Inquiry $inquiry)
     {
+        if (!$inquiry->paymentAllowsTechnicianWork()) {
+            return back()->withErrors(['schedule' => 'Payment must be confirmed before changing this service schedule.']);
+        }
+
         if (!in_array($inquiry->status, ['confirmed', 'in_progress'], true)) {
             return back()->withErrors(['schedule' => 'Only confirmed or in-progress services can be rescheduled.']);
         }
@@ -468,6 +472,10 @@ class ScheduleController extends Controller
 
     public function approveReschedule(Request $request, Inquiry $inquiry)
     {
+        if (!$inquiry->paymentAllowsTechnicianWork()) {
+            return back()->withErrors(['reschedule' => 'Payment must be confirmed before approving a service schedule change.']);
+        }
+
         if ($inquiry->status !== 'confirmed' || ($inquiry->reschedule_request_status ?? 'none') !== 'pending') {
             return back()->withErrors(['reschedule' => 'There is no pending customer reschedule request to approve.']);
         }
