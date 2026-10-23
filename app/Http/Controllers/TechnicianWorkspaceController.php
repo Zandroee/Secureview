@@ -54,8 +54,12 @@ class TechnicianWorkspaceController extends Controller
 
         $openJobs = Inquiry::query()
             ->with('technicians:id,name,email')
-            ->where('status', 'confirmed')
+            ->whereIn('status', ['pending', 'confirmed'])
             ->whereDate('preferred_date', '>=', today())
+            ->where(function ($query) use ($technician) {
+                $query->whereNull('technician_id')
+                    ->orWhere('technician_id', '!=', $technician->id);
+            })
             ->whereDoesntHave('technicians', fn ($query) => $query->where('users.id', $technician->id))
             ->orderBy('preferred_date')
             ->orderBy('preferred_time')
@@ -120,7 +124,7 @@ class TechnicianWorkspaceController extends Controller
         $appointmentStart = $this->appointmentDateTime($inquiry);
 
         if (
-            $inquiry->status !== 'confirmed'
+            !in_array($inquiry->status, ['pending', 'confirmed'], true)
             || !$appointmentStart
             || !$appointmentStart->isFuture()
         ) {
@@ -167,7 +171,7 @@ class TechnicianWorkspaceController extends Controller
             $lockedAppointmentStart = $this->appointmentDateTime($lockedInquiry);
 
             if (
-                $lockedInquiry->status !== 'confirmed'
+                !in_array($lockedInquiry->status, ['pending', 'confirmed'], true)
                 || !$lockedAppointmentStart
                 || !$lockedAppointmentStart->isFuture()
             ) {
