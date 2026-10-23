@@ -16,3 +16,8 @@ Schedule::call(fn () => \App\Models\Inquiry::escalateOverdueUrgency())
     ->name('escalate-overdue-inquiry-urgency')
     ->dailyAt('00:01')
     ->withoutOverlapping();
+
+Schedule::command('secureview:cancel-expired-unpaid-orders')
+    ->dailyAt('01:10')
+    ->name('cancel-expired-unpaid-orders')
+    ->withoutOverlapping();
