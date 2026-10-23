@@ -21,6 +21,7 @@ class PackageController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:120'],
+            'brand' => ['nullable', 'string', 'max:120'],
             'featured' => ['nullable', 'in:yes,no'],
         ]);
 
@@ -45,6 +46,10 @@ class PackageController extends Controller
 
         if (!empty($filters['category'])) {
             $query->where('category', $filters['category']);
+        }
+
+        if (!empty($filters['brand'])) {
+            $query->where('brand', $filters['brand']);
         }
 
         if (($filters['featured'] ?? '') === 'yes') {
@@ -104,7 +109,7 @@ class PackageController extends Controller
 
         $allPackages = Package::with('packageItems.product')->get();
 
-        $allProductsForOptions = Product::query()->get(['category', 'warranty', 'badge']);
+        $allProductsForOptions = Product::query()->get(['brand', 'category', 'warranty', 'badge']);
 
         // Include values already in the catalog and explicitly-added options, except
         // options that an admin has removed from the shared dropdown.
@@ -148,11 +153,13 @@ class PackageController extends Controller
                 ->values(),
             'categories' => $categories,
             'categoryOptions' => $catalogOptions('category'),
+            'brandOptions' => $catalogOptions('brand'),
             'warrantyOptions' => $catalogOptions('warranty'),
             'badgeOptions' => $catalogOptions('badge'),
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'category' => $filters['category'] ?? '',
+                'brand' => $filters['brand'] ?? '',
                 'featured' => $filters['featured'] ?? '',
             ],
             'summary' => [

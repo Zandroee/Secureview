@@ -12,7 +12,7 @@ class CatalogOptionController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'field' => ['required', Rule::in(['category', 'warranty', 'badge'])],
+            'field' => ['required', Rule::in(['category', 'brand', 'warranty', 'badge'])],
             'value' => ['required', 'string', 'max:120'],
         ]);
 
@@ -35,7 +35,7 @@ class CatalogOptionController extends Controller
     public function destroy(Request $request)
     {
         $validated = $request->validate([
-            'field' => ['required', Rule::in(['category', 'warranty', 'badge'])],
+            'field' => ['required', Rule::in(['category', 'brand', 'warranty', 'badge'])],
             'value' => ['required', 'string', 'max:120'],
         ]);
 

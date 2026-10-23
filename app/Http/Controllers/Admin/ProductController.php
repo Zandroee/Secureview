@@ -22,6 +22,7 @@ class ProductController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
+            'brand' => ['nullable', 'string', 'max:120'],
         ]);
 
         $query = Product::query()
@@ -40,6 +41,10 @@ class ProductController extends Controller
 
         if (!empty($filters['category'])) {
             $query->where('category', $filters['category']);
+        }
+
+        if (!empty($filters['brand'])) {
+            $query->where('brand', $filters['brand']);
         }
 
         $products = $query
@@ -66,7 +71,7 @@ class ProductController extends Controller
 
         $allProducts = Product::all();
 
-        $allPackagesForOptions = Package::query()->get(['category', 'warranty', 'badge']);
+        $allPackagesForOptions = Package::query()->get(['brand', 'category', 'warranty', 'badge']);
 
         // Include values already in the catalog and explicitly-added options, except
         // options that an admin has removed from the shared dropdown.
@@ -111,6 +116,7 @@ class ProductController extends Controller
             'products' => $products,
             'categories' => $categories,
             'categoryOptions' => $catalogOptions('category'),
+            'brandOptions' => $catalogOptions('brand'),
             'warrantyOptions' => $catalogOptions('warranty'),
             'badgeOptions' => $catalogOptions('badge'),
             'packages' => $packages,
@@ -123,6 +129,7 @@ class ProductController extends Controller
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'category' => $filters['category'] ?? '',
+                'brand' => $filters['brand'] ?? '',
             ],
             'success' => $request->session()->get('success'),
         ]);

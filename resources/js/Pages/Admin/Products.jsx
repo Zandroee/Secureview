@@ -285,6 +285,7 @@ export default function AdminProducts({
     products = [],
     categories = [],
     categoryOptions = [],
+    brandOptions = [],
     warrantyOptions = [],
     badgeOptions = [],
     summary = {},
@@ -294,6 +295,7 @@ export default function AdminProducts({
 }) {
     const [search, setSearch] = useState(filters.search ?? "");
     const [category, setCategory] = useState(filters.category ?? "");
+    const [brand, setBrand] = useState(filters.brand ?? "");
     const [stockValues, setStockValues] = useState(
         () =>
             Object.fromEntries(
@@ -408,6 +410,7 @@ export default function AdminProducts({
             {
                 search,
                 category,
+                brand,
             },
             {
                 preserveState: true,
@@ -420,6 +423,7 @@ export default function AdminProducts({
     const clearFilters = () => {
         setSearch("");
         setCategory("");
+        setBrand("");
 
         router.get(
             "/admin/products",
@@ -568,7 +572,7 @@ export default function AdminProducts({
                                 className="row g-2 align-items-end"
                                 onSubmit={applyFilters}
                             >
-                                <div className="col-lg-6">
+                                <div className="col-lg-4">
                                     <label className="form-label small fw-semibold mb-1">
                                         SEARCH
                                     </label>
@@ -576,7 +580,7 @@ export default function AdminProducts({
                                     <input
                                         type="text"
                                         className="form-control"
-                                        placeholder="Product name or category"
+                                        placeholder="Product name, brand, or category"
                                         value={search}
                                         onChange={(event) =>
                                             setSearch(event.target.value)
@@ -584,7 +588,7 @@ export default function AdminProducts({
                                     />
                                 </div>
 
-                                <div className="col-sm-6 col-lg-3">
+                                <div className="col-sm-6 col-lg-2">
                                     <label className="form-label small fw-semibold mb-1">
                                         CATEGORY
                                     </label>
@@ -608,7 +612,15 @@ export default function AdminProducts({
                                     </select>
                                 </div>
 
-                                <div className="col-sm-6 col-lg-1 d-grid">
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">BRAND</label>
+                                    <select className="form-select" value={brand} onChange={(event) => setBrand(event.target.value)}>
+                                        <option value="">All brands</option>
+                                        {brandOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+                                    </select>
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2 d-grid">
                                     <button
                                         type="submit"
                                         className="btn btn-primary fw-bold"
@@ -852,13 +864,13 @@ export default function AdminProducts({
 
                                         <div className="col-md-4">
                                             <label className="form-label fw-semibold">Brand <span className="text-muted fw-normal">(optional)</span></label>
-                                            <input
-                                                type="text"
-                                                className={"form-control " + (productForm.errors.brand ? "is-invalid" : "")}
+                                            <CatalogOptionSelect
+                                                label="Brand"
                                                 value={productForm.data.brand ?? ""}
-                                                onChange={(event) => productForm.setData("brand", event.target.value)}
-                                                maxLength={120}
-                                                placeholder="e.g. Dahua, Hikvision, TP-Link"
+                                                options={brandOptions}
+                                                allowBlank
+                                                error={productForm.errors.brand}
+                                                onChange={(value) => productForm.setData("brand", value)}
                                             />
                                             <FieldError message={productForm.errors.brand} />
                                         </div>
