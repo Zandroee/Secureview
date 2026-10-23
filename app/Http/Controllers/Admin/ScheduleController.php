@@ -7,6 +7,8 @@ use App\Models\BlockedBookingDate;
 use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
+use App\Models\ServiceRecord;
+use App\Models\ServiceRecordItem;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -299,7 +301,7 @@ class ScheduleController extends Controller
         ]);
 
         $query = Inquiry::query()
-            ->with('technicians')
+            ->with(['technicians', 'serviceRecord.technician', 'serviceRecord.items'])
             ->where('status', 'completed');
 
         if (!empty($filters['search'])) {
@@ -335,12 +337,34 @@ class ScheduleController extends Controller
                         'id' => $technician->id,
                         'name' => $technician->name,
                     ])->values(),
-                    'completed_at' => $inquiry->updated_at?->format('M d, Y h:i A'),
+                    'completed_at' => $inquiry->serviceRecord?->completed_at?->format('M d, Y h:i A')
+                        ?? $inquiry->updated_at?->format('M d, Y h:i A'),
+                    'service_record' => $inquiry->serviceRecord ? [
+                        'id' => $inquiry->serviceRecord->id,
+                        'technician_name' => $inquiry->serviceRecord->technician?->name,
+                        'work_summary' => $inquiry->serviceRecord->work_summary,
+                        'labor_charge' => (float) $inquiry->serviceRecord->labor_charge,
+                        'additional_charge' => (float) $inquiry->serviceRecord->additional_charge,
+                        'total_income' => (float) $inquiry->serviceRecord->total_income,
+                        'items' => $inquiry->serviceRecord->items->map(fn ($item) => [
+                            'product_name' => $item->product_name,
+                            'action' => $item->action,
+                            'quantity' => (int) $item->quantity,
+                            'unit_price' => (float) $item->unit_price,
+                        ])->values(),
+                    ] : null,
                 ];
             });
 
         return Inertia::render('Admin/ServiceHistory', [
             'services' => $services,
+            'serviceIncomeSummary' => [
+                'recorded_service_income' => (float) ServiceRecord::query()->sum('total_income'),
+                'service_records' => ServiceRecord::query()->count(),
+                'completed_without_record' => Inquiry::query()->where('status', 'completed')->whereDoesntHave('serviceRecord')->count(),
+                'parts_revenue' => (float) (ServiceRecordItem::query()->where('action', 'used')
+                    ->selectRaw('COALESCE(SUM(quantity * unit_price), 0) as amount')->value('amount') ?? 0),
+            ],
             'filters' => [
                 'search' => $filters['search'] ?? '',
             ],
