@@ -117,10 +117,6 @@ class TechnicianWorkspaceController extends Controller
     {
         $technician = $request->user();
 
-        if ($this->hasPendingServicePayment($inquiry)) {
-            return back()->withErrors(['job' => 'This service cannot be joined until its required payment is confirmed.']);
-        }
-
         $appointmentStart = $this->appointmentDateTime($inquiry);
 
         if (
@@ -182,12 +178,6 @@ class TechnicianWorkspaceController extends Controller
             ) {
                 throw ValidationException::withMessages([
                     'job' => 'This job is no longer available to join.',
-                ]);
-            }
-
-            if ($this->hasPendingServicePayment($lockedInquiry)) {
-                throw ValidationException::withMessages([
-                    'job' => 'This service cannot be joined until its required payment is confirmed.',
                 ]);
             }
 
