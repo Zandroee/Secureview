@@ -133,6 +133,8 @@ class ServiceRecordController extends Controller
             'inquiry_number' => $inquiry?->inquiry_number ?? 'Deleted service',
             'customer_name' => $inquiry?->customer_name ?? '—',
             'service_type' => $inquiry?->service_type ?? 'Service',
+            'other_service_type' => $inquiry?->other_service_type,
+            'other_service_details' => $inquiry?->other_service_details,
             'service_status' => $inquiry?->status ?? 'unknown',
             'technician_name' => $record->technician?->name ?? '—',
             'service_outcome' => $record->service_outcome,
