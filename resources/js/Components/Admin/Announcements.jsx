@@ -61,37 +61,37 @@ export default function Announcements({
                 {rows.length > 0 ? (
                     <>
                     <div className="d-flex flex-column gap-2">
-                        {pageRows.map((inquiry) => (
+                        {pageRows.map((service) => (
                             <Link
-                                key={inquiry.id}
-                                href={"/admin/inquiries/" + inquiry.id}
+                                key={service.id}
+                                href={"/admin/inquiries/" + service.id}
                                 className="d-block border rounded-3 p-3 text-decoration-none text-reset"
                             >
                                 <div className="d-flex align-items-start justify-content-between gap-2">
                                     <div className="min-w-0">
-                                        <div className="fw-bold">{inquiry.title}</div>
+                                        <div className="fw-bold">{service.title}</div>
                                         <div className="small text-muted mt-1">
-                                            {inquiry.inquiry_number}
-                                            {inquiry.customer_name ? " · " + inquiry.customer_name : ""}
+                                            {service.service_number}
+                                            {service.customer_name ? " · " + service.customer_name : ""}
                                         </div>
                                     </div>
-                                    <span className={"badge rounded-pill text-capitalize flex-shrink-0 " + urgencyClass(inquiry.urgency)}>
-                                        {inquiry.urgency || "normal"}
+                                    <span className={"badge rounded-pill text-capitalize flex-shrink-0 " + urgencyClass(service.urgency)}>
+                                        {service.urgency || "normal"}
                                     </span>
                                 </div>
 
                                 <div className="d-flex flex-wrap align-items-center gap-2 mt-2">
-                                    <span className={"badge rounded-pill text-capitalize " + statusClass(inquiry.status)}>
-                                        {String(inquiry.status || "pending").replace(/_/g, " ")}
+                                    <span className={"badge rounded-pill text-capitalize " + statusClass(service.status)}>
+                                        {String(service.status || "pending").replace(/_/g, " ")}
                                     </span>
-                                    <span className="small text-muted">{inquiry.date}</span>
+                                    <span className="small text-muted">{service.date}</span>
                                 </div>
 
-                                {(inquiry.preferred_date || inquiry.preferred_time) && (
+                                {(service.preferred_date || service.preferred_time) && (
                                     <div className="small text-muted mt-2">
                                         <i className="bi bi-calendar-event me-1" />
-                                        {inquiry.preferred_date || "Date not set"}
-                                        {inquiry.preferred_time ? " · " + inquiry.preferred_time : ""}
+                                        {service.preferred_date || "Date not set"}
+                                        {service.preferred_time ? " · " + service.preferred_time : ""}
                                     </div>
                                 )}
                                 <div className="small text-primary fw-semibold mt-2">
