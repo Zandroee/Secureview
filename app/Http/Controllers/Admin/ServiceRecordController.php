@@ -14,7 +14,7 @@ class ServiceRecordController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'payment_status' => ['nullable', 'in:paid,pending'],
+            'payment_status' => ['nullable', 'in:paid,pending,not_required'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
