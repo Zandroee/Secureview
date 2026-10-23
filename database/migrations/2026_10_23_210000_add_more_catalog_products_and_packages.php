@@ -302,7 +302,6 @@ return new class extends Migration
                 ]);
             }
         }
-    }
 
         // Set Brand for existing records only when it is currently blank and
         // the manufacturer is explicit in the saved catalog name.
