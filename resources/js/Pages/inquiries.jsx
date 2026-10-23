@@ -64,7 +64,7 @@ export default function Inquiries({ inquiries = [] }) {
                                                 fontSize: "1.05rem",
                                             }}
                                         >
-                                            INQUIRY HISTORY
+                                            SERVICE HISTORY
                                         </h2>
                                     </div>
 
@@ -72,7 +72,7 @@ export default function Inquiries({ inquiries = [] }) {
                                         href="/inquiry"
                                         className="btn btn-primary btn-sm fw-bold"
                                     >
-                                        NEW INQUIRY
+                                        NEW SERVICE REQUEST
                                     </Link>
                                 </div>
 
@@ -95,11 +95,11 @@ export default function Inquiries({ inquiries = [] }) {
                                                     "Outfit, sans-serif",
                                             }}
                                         >
-                                            NO INQUIRIES YET
+                                            NO SERVICE REQUESTS YET
                                         </h5>
 
                                         <p className="small text-muted mb-3">
-                                            Your submitted service inquiries
+                                            Your submitted service requests
                                             will appear here.
                                         </p>
 
@@ -107,7 +107,7 @@ export default function Inquiries({ inquiries = [] }) {
                                             href="/inquiry"
                                             className="btn btn-primary btn-sm fw-bold px-4"
                                         >
-                                            MAKE AN INQUIRY
+                                            REQUEST A SERVICE
                                         </Link>
                                     </div>
                                 ) : (
@@ -125,7 +125,7 @@ export default function Inquiries({ inquiries = [] }) {
                                                     <div className="col-md-4">
                                                         <div className="small">
                                                             <strong>
-                                                                Inquiry ID:
+                                                                Service ID:
                                                             </strong>{" "}
                                                             {
                                                                 inquiry.inquiry_number
@@ -198,7 +198,7 @@ export default function Inquiries({ inquiries = [] }) {
 
                                                         <div className="fw-semibold small text-truncate">
                                                             {inquiry.item_name ||
-                                                                "General Inquiry"}
+                                                                "General Service"}
                                                         </div>
 
                                                         {(inquiry.street_address || inquiry.city) && (
