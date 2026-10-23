@@ -52,7 +52,7 @@ function JobCard({ job, open = false, inventory = [] }) {
         service_outcome: "completed_as_requested",
         work_summary: "",
         recommendations: "",
-        service_charge: "0",
+        service_charge: "",
         payment_method: "cash",
         items: [],
     });
@@ -770,7 +770,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                     <td className="ps-3" style={{ minWidth: 260 }}>
                                                         <div className="d-flex align-items-center gap-3">
                                                             {image ? (
-                                                                <img src={image} alt="" loading="lazy" className="rounded-3 border bg-white flex-shrink-0" style={{ width: 46, height: 46, objectFit: "cover" }} />
+                                                                <img src={image} alt="" loading="lazy" className="rounded-3 border bg-white flex-shrink-0" style={{ width: 46, height: 46, objectFit: "contain", padding: 3 }} />
                                                             ) : (
                                                                 <span className="d-flex align-items-center justify-content-center rounded-3 border bg-light text-secondary flex-shrink-0" style={{ width: 46, height: 46 }}>
                                                                     <i className="bi bi-box-seam fs-5" />
@@ -778,7 +778,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                             )}
                                                             <div>
                                                                 <div className="fw-semibold">{product.name}</div>
-                                                                <div className="small text-primary fw-semibold">{product.brand || "Brand not set"}</div>
                                                                 <div className="small text-muted">SKU · {String(product.id).padStart(7, "0")}</div>
                                                             </div>
                                                         </div>
