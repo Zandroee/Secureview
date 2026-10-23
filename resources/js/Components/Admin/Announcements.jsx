@@ -71,7 +71,7 @@ export default function Announcements({
                                     <div className="min-w-0">
                                         <div className="fw-bold">{service.title}</div>
                                         <div className="small text-muted mt-1">
-                                            {service.service_number}
+                                            {service.inquiry_number}
                                             {service.customer_name ? " · " + service.customer_name : ""}
                                         </div>
                                     </div>
