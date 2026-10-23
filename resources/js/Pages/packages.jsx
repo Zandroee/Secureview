@@ -3,11 +3,8 @@ import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import PackageCard from "../Components/PackageCard";
 import Pagination from "../Components/Pagination";
-
 import { router, usePage } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
-
-export default function Packages({ packages = [] }) {
 
 function searchableValues(value) {
     if (Array.isArray(value)) return value;
@@ -15,14 +12,26 @@ function searchableValues(value) {
     return value === null || value === undefined ? [] : [value];
 }
 
+function normalize(value) {
+    return String(value ?? "").trim().toLocaleLowerCase();
+}
+
+function money(value) {
+    return "₱" + Number(value || 0).toLocaleString("en-PH");
+}
+
+export default function Packages({ packages = [] }) {
     const { url } = usePage();
     const queryString = url.includes("?") ? url.split("?")[1].split("#")[0] : "";
     const searchFromUrl = new URLSearchParams(queryString).get("search") ?? "";
 
     const [search, setSearch] = useState(searchFromUrl);
-    const [category, setCategory] = useState([]);
-    const [price, setPrice] = useState("");
+    const [categories, setCategories] = useState([]);
+    const [minPrice, setMinPrice] = useState("");
+    const [maxPrice, setMaxPrice] = useState("");
     const [rating, setRating] = useState("");
+    const [availability, setAvailability] = useState("all");
+    const [sortBy, setSortBy] = useState("recommended");
     const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
@@ -30,26 +39,29 @@ function searchableValues(value) {
         setCurrentPage(1);
     }, [searchFromUrl]);
 
-    const packagesPerPage = 6;
-
-    const packageCategories = useMemo(() => {
-        return [...new Set(packages.map((pkg) => pkg.category).filter(Boolean))];
-    }, [packages]);
+    const packageCategories = useMemo(
+        () => [...new Set(packages.map((pkg) => String(pkg.category ?? "").trim()).filter(Boolean))]
+            .sort((a, b) => a.localeCompare(b)),
+        [packages]
+    );
 
     const filteredPackages = useMemo(() => {
-        return packages.filter((pkg) => {
+        const query = normalize(search);
+        const selectedCategories = new Set(categories.map(normalize));
+        const minimum = minPrice.trim() === "" ? null : Number(minPrice);
+        const maximum = maxPrice.trim() === "" ? null : Number(maxPrice);
 
+        const result = packages.filter((pkg) => {
             const packageItems = Array.isArray(pkg.package_items)
                 ? pkg.package_items
-                : Array.isArray(pkg.packageItems)
-                  ? pkg.packageItems
-                  : [];
+                : Array.isArray(pkg.packageItems) ? pkg.packageItems : [];
             const itemSearchText = packageItems.flatMap((item) => [
                 item?.product?.name,
                 item?.product?.category,
                 item?.product?.warranty,
                 ...searchableValues(item?.product?.specifications),
             ]);
+
             const packageSearchText = [
                 pkg.name,
                 pkg.category,
@@ -57,211 +69,229 @@ function searchableValues(value) {
                 pkg.warranty,
                 ...searchableValues(pkg.specifications),
                 ...itemSearchText,
-            ].filter(Boolean).join(" ").toLowerCase();
-            const matchesSearch = packageSearchText.includes(search.toLowerCase());
+            ].filter(Boolean).join(" ");
 
-            const matchesCategory = category.length === 0 || category.includes(pkg.category);
+            const matchesSearch = !query || normalize(packageSearchText).includes(query);
+            const matchesCategory = selectedCategories.size === 0 || selectedCategories.has(normalize(pkg.category));
+            const priceValue = Number(pkg.price || 0);
+            const matchesMinimum = minimum === null || priceValue >= minimum;
+            const matchesMaximum = maximum === null || priceValue <= maximum;
+            const ratingValue = Number(pkg.rating || 0);
+            const matchesRating = rating === "" || ratingValue >= Number(rating);
+            const inStock = Number(pkg.available_stock || 0) > 0;
+            const matchesAvailability = availability === "all"
+                || (availability === "in_stock" && inStock)
+                || (availability === "out_of_stock" && !inStock);
 
-            let matchesPrice = true;
-
-            if (price === "low") {
-                matchesPrice = Number(pkg.price) < 15000;
-            }
-
-            if (price === "medium") {
-                matchesPrice = Number(pkg.price) >= 15000 && Number(pkg.price) <= 25000;
-            }
-
-            if (price === "high") {
-                matchesPrice = Number(pkg.price) > 25000;
-            }
-
-            let matchesRating = true;
-
-            if (rating === "5") {
-                matchesRating = Number(pkg.rating) === 5;
-            }
-
-            if (rating === "4") {
-                matchesRating = Number(pkg.rating) >= 4;
-            }
-
-            if (rating === "3") {
-                matchesRating = Number(pkg.rating) >= 3;
-            }
-
-            return matchesSearch && matchesCategory && matchesPrice && matchesRating;
+            return matchesSearch && matchesCategory && matchesMinimum && matchesMaximum
+                && matchesRating && matchesAvailability;
         });
-    }, [packages, search, category, price, rating]);
 
+        const sorters = {
+            name_asc: (a, b) => String(a.name).localeCompare(String(b.name)),
+            name_desc: (a, b) => String(b.name).localeCompare(String(a.name)),
+            price_asc: (a, b) => Number(a.price) - Number(b.price),
+            price_desc: (a, b) => Number(b.price) - Number(a.price),
+            rating_desc: (a, b) => Number(b.rating || 0) - Number(a.rating || 0),
+            stock_desc: (a, b) => Number(b.available_stock || 0) - Number(a.available_stock || 0),
+        };
+
+        return sortBy === "recommended" ? result : result.sort(sorters[sortBy] ?? (() => 0));
+    }, [packages, search, categories, minPrice, maxPrice, rating, availability, sortBy]);
+
+    const packagesPerPage = 8;
     const totalPages = Math.ceil(filteredPackages.length / packagesPerPage);
-    const startIndex = (currentPage - 1) * packagesPerPage;
+    const safePage = Math.min(currentPage, Math.max(1, totalPages));
+    const startIndex = (safePage - 1) * packagesPerPage;
     const currentPackages = filteredPackages.slice(startIndex, startIndex + packagesPerPage);
 
     const handlePageChange = (page) => {
         setCurrentPage(page);
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth",
-        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const handleCategoryChange = (value) => {
-        setCategory((previous) => previous.includes(value) ? previous.filter((item) => item !== value) : [...previous, value]);
-        setCurrentPage(1);
-    };
-
-    const handlePriceChange = (value) => {
-        setPrice(value);
-        setCurrentPage(1);
-    };
-
-    const handleRatingChange = (value) => {
-        setRating(value);
+    const toggleCategory = (value) => {
+        setCategories((previous) => previous.includes(value)
+            ? previous.filter((item) => item !== value)
+            : [...previous, value]);
         setCurrentPage(1);
     };
 
     const resetFilters = () => {
-        setCategory([]);
-        setPrice("");
-        setRating("");
         setSearch("");
+        setCategories([]);
+        setMinPrice("");
+        setMaxPrice("");
+        setRating("");
+        setAvailability("all");
+        setSortBy("recommended");
         setCurrentPage(1);
     };
 
+    const activeFilters = [
+        ...(search.trim() ? [{ key: "search", label: `Search: “${search.trim()}”`, remove: () => setSearch("") }] : []),
+        ...categories.map((value) => ({ key: "category-" + value, label: value, remove: () => toggleCategory(value) })),
+        ...(minPrice !== "" ? [{ key: "minPrice", label: "From " + money(minPrice), remove: () => setMinPrice("") }] : []),
+        ...(maxPrice !== "" ? [{ key: "maxPrice", label: "Up to " + money(maxPrice), remove: () => setMaxPrice("") }] : []),
+        ...(rating !== "" ? [{ key: "rating", label: rating + "+ stars", remove: () => setRating("") }] : []),
+        ...(availability !== "all" ? [{
+            key: "availability",
+            label: availability === "in_stock" ? "In stock" : "Out of stock",
+            remove: () => setAvailability("all"),
+        }] : []),
+    ];
+
     return (
         <div>
-
             <Navbar />
 
-            <div className="container-fluid mt-5 px-4 px-md-5">
-
-                {/* SEARCH */}
-
-                <div className="position-relative w-50 mx-auto mb-5">
-
-                    <input type="text" className="form-control catalog-search-input" placeholder="SEARCH" value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} style={{ height: "60px", borderRadius: "24px", backgroundColor: "#f1f1f1", padding: "0 48px 0 30px", fontSize: "1rem", fontFamily: "Outfit, sans-serif", color: "#555", boxShadow: "none", textTransform: "uppercase" }} />
-
-                    <i className="bi bi-search position-absolute top-50 end-0 translate-middle-y me-4 text-secondary catalog-search-icon" style={{ fontSize: "1rem" }}></i>
-
+            <main className="container-fluid mt-4 mt-lg-5 px-3 px-xl-5" style={{ fontFamily: "Outfit, sans-serif" }}>
+                <div className="position-relative w-100 mx-auto mb-4 mb-lg-5" style={{ maxWidth: "820px" }}>
+                    <label htmlFor="package-search" className="visually-hidden">Search packages</label>
+                    <input
+                        id="package-search"
+                        type="search"
+                        className="form-control catalog-search-input"
+                        placeholder="Search packages by name, category, feature, or included product"
+                        value={search}
+                        onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
+                        style={{
+                            height: "56px",
+                            borderRadius: "18px",
+                            backgroundColor: "#f7f8fa",
+                            padding: "0 52px 0 22px",
+                            fontSize: "1rem",
+                            color: "#343a40",
+                            boxShadow: "none",
+                        }}
+                    />
+                    <i className="bi bi-search position-absolute top-50 end-0 translate-middle-y me-4 text-secondary" aria-hidden="true" />
                 </div>
 
-                <div className="row g-4">
+                <div className="row g-4 align-items-start">
+                    <aside className="col-12 col-lg-3 col-xl-2">
+                        <section className="products-filter-card card shadow-none" style={{ borderRadius: "12px" }}>
+                            <div className="card-body p-3 p-xl-4">
+                                <div className="d-flex justify-content-between align-items-center gap-2 mb-3">
+                                    <h2 className="products-filter-title h5 mb-0">Filters</h2>
+                                    <button type="button" className="btn btn-link btn-sm p-0 text-decoration-none" onClick={resetFilters} disabled={activeFilters.length === 0 && sortBy === "recommended"}>
+                                        Reset all
+                                    </button>
+                                </div>
 
-                    {/* FILTERS */}
-
-                    <div className="col-lg-3" style={{ fontFamily: "Outfit, sans-serif" }}>
-
-                        <div className="products-filter-card card shadow-none sticky-lg-top" style={{ top: "20px" }}>
-
-                            <div className="card-body">
-
-                                <h5 className="products-filter-title mb-3">
-                                    Filters
-                                </h5>
-
-                                {/* CATEGORY */}
-
-                                <h6>Category</h6>
-
-                                {packageCategories.length > 0 ? (
-                                    packageCategories.map((item) => (
-                                        <div className="form-check" key={item}>
-                                            <input className="form-check-input" type="checkbox" id={`category-${item}`} checked={category.includes(item)} onChange={() => handleCategoryChange(item)} />
-                                            <label className="form-check-label" htmlFor={`category-${item}`}>
-                                                {item}
-                                            </label>
+                                <div className="mb-4">
+                                    <h3 className="h6 fw-bold mb-2">Category</h3>
+                                    {packageCategories.length ? packageCategories.map((item) => (
+                                        <div className="form-check mb-1" key={item}>
+                                            <input
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                id={"package-category-" + item}
+                                                checked={categories.includes(item)}
+                                                onChange={() => toggleCategory(item)}
+                                            />
+                                            <label className="form-check-label" htmlFor={"package-category-" + item}>{item}</label>
                                         </div>
-                                    ))
-                                ) : (
-                                    <p className="text-muted small">No categories available</p>
-                                )}
-
-                                <div className="mb-4"></div>
-
-                                {/* PRICE */}
-
-                                <h6>Price</h6>
-
-                                <div className="form-check">
-                                    <input className="form-check-input" type="radio" name="package-price" id="package-low" checked={price === "low"} onChange={() => handlePriceChange("low")} />
-                                    <label className="form-check-label" htmlFor="package-low">Under ₱15,000</label>
+                                    )) : <p className="small text-muted mb-0">No categories available</p>}
                                 </div>
 
-                                <div className="form-check">
-                                    <input className="form-check-input" type="radio" name="package-price" id="package-medium" checked={price === "medium"} onChange={() => handlePriceChange("medium")} />
-                                    <label className="form-check-label" htmlFor="package-medium">₱15,000 - ₱25,000</label>
-                                </div>
-
-                                <div className="form-check mb-4">
-                                    <input className="form-check-input" type="radio" name="package-price" id="package-high" checked={price === "high"} onChange={() => handlePriceChange("high")} />
-                                    <label className="form-check-label" htmlFor="package-high">₱25,000+</label>
-                                </div>
-
-                                {/* RATING */}
-
-                                <h6>Rating</h6>
-
-                                <select value={rating} onChange={(e) => handleRatingChange(e.target.value)} className="form-select border-0 mb-3" style={{ height: "50px", borderRadius: "25px", backgroundColor: "#f1f1f1", color: "#6c6c6c", fontSize: "1rem", fontWeight: "500", padding: "0 42px 0 16px", boxShadow: "none", appearance: "none", textTransform: "uppercase" }}>
-                                    <option value="">Any Rating</option>
-                                    <option value="5">5 Stars</option>
-                                    <option value="4">4 Stars</option>
-                                    <option value="3">3 Stars</option>
-                                </select>
-
-                                {/* RESET */}
-
-                                <button type="button" className="btn btn-primary w-100" onClick={resetFilters}>
-                                    RESET FILTERS
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    {/* PACKAGES */}
-
-                    <div className="col-lg-9">
-
-                        <div className="d-flex justify-content-between align-items-center mb-4">
-
-                            <div>
-
-                                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-4">
-
-                                    <div>
-
-                                        <h1 className="products-page-title mb-1" style={{ fontFamily: "Outfit, sans-serif" }}>
-                                            Browse Packages
-                                        </h1>
-
-                                        <p className="products-page-description mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>
-                                            Explore our CCTV packages designed for home, business, and other security needs.
-                                        </p>
-
+                                <div className="mb-4">
+                                    <h3 className="h6 fw-bold mb-2">Price range</h3>
+                                    <div className="row g-2">
+                                        <div className="col-6 col-lg-12 col-xxl-6">
+                                            <label htmlFor="package-min-price" className="form-label small text-muted mb-1">Minimum (₱)</label>
+                                            <input id="package-min-price" type="number" min="0" step="1" inputMode="numeric" className="form-control" placeholder="No minimum" value={minPrice} onChange={(event) => { setMinPrice(event.target.value); setCurrentPage(1); }} />
+                                        </div>
+                                        <div className="col-6 col-lg-12 col-xxl-6">
+                                            <label htmlFor="package-max-price" className="form-label small text-muted mb-1">Maximum (₱)</label>
+                                            <input id="package-max-price" type="number" min="0" step="1" inputMode="numeric" className="form-control" placeholder="No maximum" value={maxPrice} onChange={(event) => { setMaxPrice(event.target.value); setCurrentPage(1); }} />
+                                        </div>
                                     </div>
-
+                                    {minPrice !== "" && maxPrice !== "" && Number(minPrice) > Number(maxPrice) && (
+                                        <p className="small text-danger mt-2 mb-0">Minimum price must not exceed maximum price.</p>
+                                    )}
                                 </div>
 
+                                <div className="mb-4">
+                                    <label htmlFor="package-min-rating" className="form-label h6 fw-bold mb-2">Minimum rating</label>
+                                    <select id="package-min-rating" value={rating} onChange={(event) => { setRating(event.target.value); setCurrentPage(1); }} className="form-select">
+                                        <option value="">Any rating</option>
+                                        <option value="1">1 star &amp; up</option>
+                                        <option value="2">2 stars &amp; up</option>
+                                        <option value="3">3 stars &amp; up</option>
+                                        <option value="4">4 stars &amp; up</option>
+                                        <option value="5">5 stars</option>
+                                    </select>
+                                    <div className="small text-muted mt-1">Unreviewed packages have a 0 rating.</div>
+                                </div>
+
+                                <div className="mb-4">
+                                    <label htmlFor="package-availability" className="form-label h6 fw-bold mb-2">Availability</label>
+                                    <select id="package-availability" className="form-select" value={availability} onChange={(event) => { setAvailability(event.target.value); setCurrentPage(1); }}>
+                                        <option value="all">All packages</option>
+                                        <option value="in_stock">In stock</option>
+                                        <option value="out_of_stock">Out of stock</option>
+                                    </select>
+                                </div>
+
+                                <button type="button" className="btn btn-primary w-100 fw-semibold" onClick={resetFilters} disabled={activeFilters.length === 0 && sortBy === "recommended"}>
+                                    <i className="bi bi-arrow-counterclockwise me-2" />Reset filters
+                                </button>
                             </div>
+                        </section>
+                    </aside>
 
-                            <span className="text-primary" style={{ fontFamily: "Outfit, sans-serif" }}>
-                                {filteredPackages.length} PACKAGES FOUND
-                            </span>
-
+                    <section className="col-12 col-lg-9 col-xl-10" aria-labelledby="packages-heading">
+                        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-3">
+                            <div>
+                                <h1 id="packages-heading" className="products-page-title mb-1">Browse Packages</h1>
+                                <p className="products-page-description mb-0">Explore CCTV packages for home, business, and other security needs.</p>
+                            </div>
+                            <div className="text-primary fw-semibold text-nowrap">
+                                {filteredPackages.length === packages.length
+                                    ? `${filteredPackages.length} packages`
+                                    : `${filteredPackages.length} of ${packages.length} packages`}
+                            </div>
                         </div>
 
-                        {/* PACKAGE GRID */}
+                        {activeFilters.length > 0 && (
+                            <div className="d-flex flex-wrap align-items-center gap-2 mb-3" aria-label="Active filters">
+                                <span className="small text-muted me-1">Active filters:</span>
+                                {activeFilters.map((filter) => (
+                                    <button key={filter.key} type="button" onClick={() => { filter.remove(); setCurrentPage(1); }} className="btn btn-sm btn-outline-secondary rounded-pill">
+                                        {filter.label} <span aria-hidden="true" className="ms-1">×</span>
+                                    </button>
+                                ))}
+                                <button type="button" className="btn btn-sm btn-link text-decoration-none" onClick={resetFilters}>Clear all</button>
+                            </div>
+                        )}
 
-                        {currentPackages.length > 0 ? (
+                        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 border-bottom pb-3 mb-4">
+                            <span className="small text-muted">
+                                {filteredPackages.length === 0
+                                    ? "No matching packages"
+                                    : `Showing ${startIndex + 1}–${Math.min(startIndex + packagesPerPage, filteredPackages.length)} of ${filteredPackages.length}`}
+                            </span>
+                            <div className="d-flex align-items-center gap-2">
+                                <label htmlFor="package-sort" className="small text-muted text-nowrap">Sort by</label>
+                                <select id="package-sort" className="form-select form-select-sm" style={{ minWidth: "185px" }} value={sortBy} onChange={(event) => { setSortBy(event.target.value); setCurrentPage(1); }}>
+                                    <option value="recommended">Recommended</option>
+                                    <option value="name_asc">Name: A to Z</option>
+                                    <option value="name_desc">Name: Z to A</option>
+                                    <option value="price_asc">Price: Low to high</option>
+                                    <option value="price_desc">Price: High to low</option>
+                                    <option value="rating_desc">Highest rated</option>
+                                    <option value="stock_desc">Most available</option>
+                                </select>
+                            </div>
+                        </div>
 
-                            <div className="row g-4">
-
+                        {minPrice !== "" && maxPrice !== "" && Number(minPrice) > Number(maxPrice) ? (
+                            <div className="alert alert-warning">Adjust the price range to continue.</div>
+                        ) : currentPackages.length > 0 ? (
+                            <div className="row g-3 g-xl-4">
                                 {currentPackages.map((pkg) => (
-                                    <div className="col-sm-6 col-lg-4" key={pkg.id}>
+                                    <div className="col-12 col-sm-6 col-xl-4 col-xxl-3" key={pkg.id}>
                                         <PackageCard
                                             name={pkg.name}
                                             image={pkg.image}
@@ -281,39 +311,24 @@ function searchableValues(value) {
                                         />
                                     </div>
                                 ))}
-
                             </div>
-
                         ) : (
-
-                            <div className="text-center py-5">
-
-                                <i className="bi bi-camera-video fs-1 text-muted"></i>
-
-                                <h4 className="mt-3">
-                                    No packages found
-                                </h4>
-
-                                <p className="text-muted">
-                                    Try changing your search or filters.
-                                </p>
-
+                            <div className="text-center py-5 border rounded-3">
+                                <i className="bi bi-funnel fs-1 text-muted" aria-hidden="true" />
+                                <h2 className="h4 mt-3">No packages match these filters</h2>
+                                <p className="text-muted mb-3">Try another search, expand the price range, or remove a filter.</p>
+                                <button type="button" className="btn btn-primary" onClick={resetFilters}>Clear filters</button>
                             </div>
-
                         )}
 
-                        {/* PAGINATION */}
-
-                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
-
-                    </div>
-
+                        <div className="mt-4">
+                            <Pagination currentPage={safePage} totalPages={totalPages} onPageChange={handlePageChange} />
+                        </div>
+                    </section>
                 </div>
-
-            </div>
+            </main>
 
             <Footer />
-
         </div>
     );
 }
