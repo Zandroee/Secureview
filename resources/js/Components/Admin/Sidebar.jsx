@@ -30,6 +30,12 @@ const menuGroups = [
             key: "service-history",
             icon: "bi-clock-history",
         },
+        {
+            label: "Service Records",
+            href: "/admin/service-records",
+            key: "service-records",
+            icon: "bi-journal-check",
+        },
     ],
     [
         {
@@ -49,6 +55,12 @@ const menuGroups = [
             href: "/admin/purchases",
             key: "purchases",
             icon: "bi-bag-check",
+        },
+        {
+            label: "Order History",
+            href: "/admin/order-history",
+            key: "order-history",
+            icon: "bi-archive",
         },
         {
             label: "Packages",
@@ -71,12 +83,6 @@ const menuGroups = [
             href: "/admin/transactions",
             key: "transactions",
             icon: "bi-receipt",
-        },
-        {
-            label: "Settings",
-            href: "/settings",
-            key: "settings",
-            icon: "bi-gear",
         },
         {
             label: "Invoice Settings",
