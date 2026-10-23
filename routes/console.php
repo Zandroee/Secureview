@@ -16,9 +16,20 @@ Schedule::command('secureview:send-upcoming-job-reminders')
     ->everyFifteenMinutes()
     ->name('send-upcoming-job-reminders')
     ->withoutOverlapping();
-Schedule::call(fn () => \App\Models\Inquiry::escalateOverdueUrgency())
+Schedule::call(function () {
+    \\App\\Models\\Inquiry::escalateOverdueUrgency();
+
+    $urgentServices = \\App\\Models\\Inquiry::query()
+        ->with('user')
+        ->whereIn('urgency', ['urgent', 'emergency'])
+        ->whereNotIn('status', ['completed', 'cancelled'])
+        ->get();
+
+    app(\\App\\Services\\JobNotificationService::class)
+        ->notifyUrgencyEscalations($urgentServices);
+})
     ->name('escalate-overdue-inquiry-urgency')
-    ->dailyAt('00:01')
+    ->dailyAt('00:02')
     ->withoutOverlapping();
 
 Artisan::command('secureview:cancel-expired-unpaid-orders', function (
