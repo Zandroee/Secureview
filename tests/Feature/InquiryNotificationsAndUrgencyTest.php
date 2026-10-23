@@ -62,7 +62,12 @@ class InquiryNotificationsAndUrgencyTest extends TestCase
 
     public function test_urgent_service_sends_email_and_in_app_notifications_to_admin_technicians_and_customer(): void
     {
-        Mail::shouldReceive('raw')->times(3);
+        $sentMessages = [];
+        Mail::shouldReceive('raw')
+            ->times(3)
+            ->andReturnUsing(function ($message, $callback) use (&$sentMessages) {
+                $sentMessages[] = $message;
+            });
 
         $customer = User::factory()->create(['role' => 'user']);
         $admin = User::factory()->create(['role' => 'admin']);
@@ -79,10 +84,26 @@ class InquiryNotificationsAndUrgencyTest extends TestCase
                 'urgency' => 'emergency',
                 'preferred_date' => today()->addDays(2)->toDateString(),
                 'preferred_time' => '11:00 AM - 02:00 PM',
+                'notes' => 'PRIVATE_SERVICE_NOTES_DO_NOT_SHARE',
             ])
             ->assertRedirect();
 
         $inquiry = Inquiry::query()->where('customer_email', $customer->email)->firstOrFail();
+
+        $this->assertCount(3, $sentMessages);
+        $adminEmail = collect($sentMessages)->first(fn ($message) => str_contains($message, '123 Test Street'));
+        $this->assertNotNull($adminEmail);
+        $this->assertStringContainsString('PRIVATE_SERVICE_NOTES_DO_NOT_SHARE', $adminEmail);
+
+        $nonAdminEmails = array_values(array_filter(
+            $sentMessages,
+            fn ($message) => !str_contains($message, '123 Test Street')
+        ));
+        $this->assertCount(2, $nonAdminEmails);
+        foreach ($nonAdminEmails as $message) {
+            $this->assertStringNotContainsString('PRIVATE_SERVICE_NOTES_DO_NOT_SHARE', $message);
+            $this->assertStringNotContainsString('123 Test Street', $message);
+        }
 
         foreach ([$admin, $technician, $customer] as $recipient) {
             $this->assertDatabaseHas('customer_notifications', [
