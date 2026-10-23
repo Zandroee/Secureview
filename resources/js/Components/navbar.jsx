@@ -1283,7 +1283,7 @@ export default function Navbar() {
                                             </Link>
                                             <Link href="/inquiries" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
                                                 <i className="bi bi-chat-left-text" aria-hidden="true"></i>
-                                                <span>Services</span>
+                                                <span>Service History</span>
                                             </Link>
                                             {!isAdmin && !isTechnician && (
                                                 <Link href="/warranty-claims" className="navbar-account-menu-link" role="menuitem" onClick={() => setShowUserMenu(false)}>
