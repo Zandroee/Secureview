@@ -326,7 +326,7 @@ class InquiryController extends Controller
                     'user_id' => $inquiry->user_id,
                     'type' => 'technician_assignment',
                     'title' => 'Technician team updated',
-                    'message' => 'The team assigned to inquiry ' . $inquiry->inquiry_number . ' is now: ' . ($names ?: 'not assigned') . '.',
+                    'message' => 'The team assigned to service ' . $inquiry->inquiry_number . ' is now: ' . ($names ?: 'not assigned') . '.',
                     'action_url' => route('inquiries.show', $inquiry),
                     'related_type' => Inquiry::class,
                     'related_id' => $inquiry->id,
@@ -354,7 +354,7 @@ class InquiryController extends Controller
     ) {
         if ($inquiry->status !== 'pending') {
             return back()->withErrors([
-                'status' => 'Only pending inquiries can use the confirmation workflow.',
+                'status' => 'Only pending service requests can use the confirmation workflow.',
             ]);
         }
 
@@ -491,8 +491,8 @@ class InquiryController extends Controller
             CustomerNotification::create([
                 'user_id' => $inquiry->user_id,
                 'type' => 'inquiry_status',
-                'title' => 'Service inquiry confirmed',
-                'message' => 'Your inquiry ' . $inquiry->inquiry_number
+                'title' => 'Service request confirmed',
+                'message' => 'Your service request ' . $inquiry->inquiry_number
                     . ' has been confirmed for ' . $inquiry->preferred_date->format('F j, Y')
                     . ' (' . $inquiry->preferred_time . '). Assigned technicians: ' . $technicianNames . '.',
                 'action_url' => route('inquiries.show', $inquiry),
@@ -515,7 +515,7 @@ class InquiryController extends Controller
             );
         });
 
-        return back()->with('success', 'Inquiry confirmed, schedule saved, and technician team assigned successfully.');
+        return back()->with('success', 'Service confirmed, schedule saved, and technician team assigned successfully.');
     }
 
     public function updateStatus(
@@ -533,13 +533,13 @@ class InquiryController extends Controller
 
         if ($newStatus === 'confirmed' && $oldStatus !== 'confirmed') {
             return back()->withErrors([
-                'status' => 'Use Confirm & Assign Technician to set the schedule before confirming this inquiry.',
+                'status' => 'Use Confirm & Assign Technician to set the schedule before confirming this service request.',
             ]);
         }
 
         if ($oldStatus === 'pending' && $newStatus === 'in_progress') {
             return back()->withErrors([
-                'status' => 'Confirm and schedule this inquiry before marking the job in progress.',
+                'status' => 'Confirm and schedule this service request before marking the job in progress.',
             ]);
         }
 
@@ -557,13 +557,13 @@ class InquiryController extends Controller
 
         if (in_array($oldStatus, ['completed', 'cancelled'], true) && $newStatus !== $oldStatus) {
             return back()->withErrors([
-                'status' => 'Completed or cancelled inquiries cannot be reopened through a status change.',
+                'status' => 'Completed or cancelled service requests cannot be reopened through a status change.',
             ]);
         }
 
         if (in_array($oldStatus, ['confirmed', 'in_progress'], true) && $newStatus === 'pending') {
             return back()->withErrors([
-                'status' => 'An active scheduled job cannot be moved back to pending. Cancel the inquiry if the service will not proceed.',
+                'status' => 'An active scheduled job cannot be moved back to pending. Cancel the service request if the service will not proceed.',
             ]);
         }
 
@@ -589,8 +589,8 @@ class InquiryController extends Controller
                 CustomerNotification::create([
                     'user_id' => $inquiry->user_id,
                     'type' => 'inquiry_status',
-                    'title' => 'Inquiry status updated',
-                    'message' => 'Your inquiry ' . $inquiry->inquiry_number . ' is now marked as ' . str_replace('_', ' ', $newStatus) . '.',
+                    'title' => 'Service status updated',
+                    'message' => 'Your service request ' . $inquiry->inquiry_number . ' is now marked as ' . str_replace('_', ' ', $newStatus) . '.',
                     'action_url' => route('inquiries.show', $inquiry),
                     'related_type' => Inquiry::class,
                     'related_id' => $inquiry->id,
@@ -601,7 +601,7 @@ class InquiryController extends Controller
                 $activityLogger->record(
                     $request,
                     'inquiry_status_updated',
-                    "Changed inquiry {$inquiry->inquiry_number} status from {$oldStatus} to {$newStatus}.",
+                    "Changed service {$inquiry->inquiry_number} status from {$oldStatus} to {$newStatus}.",
                     $inquiry,
                     ['status' => $oldStatus],
                     ['status' => $newStatus]
@@ -609,7 +609,7 @@ class InquiryController extends Controller
             });
         }
 
-        return back()->with('success', 'Inquiry status updated successfully.');
+        return back()->with('success', 'Service status updated successfully.');
     }
     private function dateUnavailableByTechnicianCapacity(string $date, ?int $exceptInquiryId = null): bool
     {
