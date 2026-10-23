@@ -34,6 +34,7 @@ class PackageController extends Controller
             $query->where(function ($builder) use ($search) {
                 $builder
                     ->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('brand', 'like', '%' . $search . '%')
                     ->orWhere('category', 'like', '%' . $search . '%')
                     ->orWhere('badge', 'like', '%' . $search . '%')
                     ->orWhereHas('packageItems.product', function ($productQuery) use ($search) {
@@ -63,6 +64,7 @@ class PackageController extends Controller
                 return [
                     'id' => $package->id,
                     'name' => $package->name,
+                    'brand' => $package->brand,
                     'category' => $package->category,
                     'warranty' => $package->warranty,
                     'price' => (float) $package->price,
@@ -411,6 +413,7 @@ class PackageController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'brand' => ['nullable', 'string', 'max:120'],
             'category' => ['required', 'string', 'max:120'],
             'warranty' => ['required', 'string', 'max:120'],
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
@@ -442,6 +445,7 @@ class PackageController extends Controller
 
         return [
             'name' => $validated['name'],
+            'brand' => filled($validated['brand'] ?? null) ? trim($validated['brand']) : null,
             'category' => $validated['category'],
             'warranty' => $validated['warranty'],
             'price' => $validated['price'],
@@ -482,6 +486,7 @@ class PackageController extends Controller
     {
         return [
             'name' => $package->name,
+            'brand' => $package->brand,
             'category' => $package->category,
             'warranty' => $package->warranty,
             'price' => (float) $package->price,

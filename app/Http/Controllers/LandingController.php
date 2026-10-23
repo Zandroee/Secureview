@@ -11,7 +11,7 @@ class LandingController extends Controller
 {
     public function index(InventoryService $inventory)
     {
-        $cctvPackages = Package::with('packageItems.product')
+        $cctvPackages = Package::withCount('reviews')->with('packageItems.product')
             ->where('is_featured', true)
             ->orderBy('id')
             ->take(8)
@@ -36,7 +36,7 @@ class LandingController extends Controller
                 return $package;
             });
 
-        $cameras = Product::where('is_featured', true)
+        $cameras = Product::withCount('reviews')->where('is_featured', true)
             ->orderBy('id')
             ->take(8)
             ->get()

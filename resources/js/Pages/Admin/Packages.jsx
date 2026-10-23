@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 function emptyPackage() {
     return {
         name: "",
+        brand: "",
         category: "",
         warranty: "1 year",
         price: "",
@@ -360,6 +361,7 @@ export default function AdminPackages({
         clearErrors();
         setData({
             name: item.name ?? "",
+            brand: item.brand ?? "",
             category: item.category ?? "",
             warranty: item.warranty ?? "",
             price: String(item.price ?? ""),
@@ -583,7 +585,7 @@ export default function AdminPackages({
                                             value={search}
                                             maxLength={120}
                                             onChange={(event) => setSearch(event.target.value)}
-                                            placeholder="Package, category, badge, or product"
+                                            placeholder="Package, brand, category, badge, or product"
                                         />
                                     </div>
 
@@ -677,7 +679,7 @@ export default function AdminPackages({
                                                             )}
                                                             <div>
                                                                 <div className="fw-semibold">{item.name}</div>
-                                                                <div className="small text-muted">{item.category}</div>
+                                                                <div className="small text-muted">{item.category}{item.brand ? " · " + item.brand : ""}</div>
                                                                 {item.badge && (
                                                                     <span className="badge bg-primary-subtle text-primary mt-1">{item.badge}</span>
                                                                 )}
@@ -819,6 +821,19 @@ export default function AdminPackages({
                                                 required
                                             />
                                             <ErrorText message={errors.name} />
+                                        </div>
+
+                                        <div className="col-md-6">
+                                            <label className="form-label fw-semibold">BRAND <span className="text-muted fw-normal">(OPTIONAL)</span></label>
+                                            <input
+                                                type="text"
+                                                className={"form-control " + (errors.brand ? "is-invalid" : "")}
+                                                value={data.brand ?? ""}
+                                                onChange={(event) => setData("brand", event.target.value)}
+                                                maxLength={120}
+                                                placeholder="e.g. Dahua, Hikvision, or mixed-brand package"
+                                            />
+                                            <ErrorText message={errors.brand} />
                                         </div>
 
                                         <div className="col-md-3">

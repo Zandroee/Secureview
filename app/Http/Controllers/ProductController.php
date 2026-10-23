@@ -11,7 +11,7 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::all();
+        $products = Product::withCount('reviews')->get();
 
         return Inertia::render('products', [
             'products' => $products,

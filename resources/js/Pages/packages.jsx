@@ -64,6 +64,7 @@ export default function Packages({ packages = [] }) {
 
             const packageSearchText = [
                 pkg.name,
+                pkg.brand,
                 pkg.category,
                 pkg.badge,
                 pkg.warranty,
@@ -294,6 +295,8 @@ export default function Packages({ packages = [] }) {
                                     <div className="col-12 col-sm-6 col-xl-4 col-xxl-3" key={pkg.id}>
                                         <PackageCard
                                             name={pkg.name}
+                                            brand={pkg.brand}
+                                            reviewsCount={pkg.reviews_count}
                                             image={pkg.image}
                                             price={pkg.price}
                                             badge={pkg.badge}
