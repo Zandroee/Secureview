@@ -22,8 +22,11 @@ class TechnicianWorkspaceController extends Controller
 {
     private const MAX_TECHNICIANS_PER_JOB = 10;
 
-    public function index(Request $request)
+    public function index(Request $request, string $page = 'dashboard')
     {
+        $validPages = ['dashboard', 'services', 'available-jobs', 'post-service-records', 'service-history', 'products', 'schedule'];
+        abort_unless(in_array($page, $validPages, true), 404);
+
         Inquiry::escalateOverdueUrgency();
 
         $technician = $request->user();
@@ -78,12 +81,13 @@ class TechnicianWorkspaceController extends Controller
 
         $inventory = Product::query()
             ->orderBy('name')
-            ->get(['id', 'name', 'brand', 'category', 'price', 'stock_quantity', 'image', 'images'])
+            ->get(['id', 'name', 'brand', 'category', 'warranty', 'price', 'stock_quantity', 'image', 'images'])
             ->map(fn (Product $product) => [
                 'id' => $product->id,
                 'name' => $product->name,
                 'brand' => $product->brand,
                 'category' => $product->category,
+                'warranty' => $product->warranty,
                 'price' => (float) $product->price,
                 'stock_quantity' => $product->stock_quantity,
                 'image' => $product->image,
@@ -106,8 +110,10 @@ class TechnicianWorkspaceController extends Controller
             ->values();
 
         return Inertia::render('Technician/Workspace', [
+            'activePage' => $page,
             'jobs' => $jobs,
             'openJobs' => $openJobs,
+            'serviceHistory' => $jobs->filter(fn (array $job) => $job['status'] === 'completed')->values(),
             'inventory' => $inventory,
             'recentNotifications' => $recentNotifications,
         ]);
