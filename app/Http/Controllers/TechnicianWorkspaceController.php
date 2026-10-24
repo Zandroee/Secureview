@@ -129,7 +129,7 @@ class TechnicianWorkspaceController extends Controller
             ->count();
 
         $recentServices = $technician->assignedInquiries()
-            ->whereIn('inquiries.status', ['pending', 'confirmed', 'in_progress', 'completed'])
+            ->whereIn('inquiries.status', ['confirmed', 'in_progress', 'completed'])
             ->orderByDesc('inquiries.updated_at')
             ->limit(50)
             ->get([
