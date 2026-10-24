@@ -56,7 +56,7 @@ export default function Announcements({
                     >
                         <span className="small fw-semibold">
                             <i className="bi bi-bell me-2" />
-                            Unread service alerts
+                            {alertLabel}
                         </span>
                         <span className="badge bg-warning text-dark rounded-pill">
                             {unreadNotificationCount}
