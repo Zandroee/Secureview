@@ -772,7 +772,8 @@ class TechnicianWorkspaceController extends Controller
         if ($includeCustomerDetails) {
             $data['customer_name'] = $inquiry->customer_name;
             $data['customer_phone'] = $inquiry->customer_phone;
-            $data['notes'] = $inquiry->notes;
+            // Notes may contain access instructions or sensitive location details.
+            $data['notes'] = $includePreciseLocation ? $inquiry->notes : null;
         }
 
         return $data;
