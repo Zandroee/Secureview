@@ -459,7 +459,7 @@ export default function PackageDetails({ package: packageData, reviews = [], can
 
 
                 {(canReview || userReview) && (
-                    <div className="border rounded-3 p-3 p-md-4 mb-4" style={{ backgroundColor: "#fff" }}>
+                    <div className="border rounded-3 p-3 p-md-4 mb-4 review-form-panel">
                         <h3 className="fw-bold mb-1">
                             {userReview ? "Update your review" : "Rate this package"}
                         </h3>
