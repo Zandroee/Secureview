@@ -123,7 +123,7 @@ export default function AdminInquiryDetails({
     const pageTitle = fromHistory
         ? "SERVICE HISTORY DETAILS"
         : fromSchedule
-            ? "SERVICE SCHEDULE DETAILS"
+            ? "SCHEDULED SERVICE DETAILS"
             : "SERVICE DETAILS";
     const activeSection = fromHistory
         ? "service-history"
