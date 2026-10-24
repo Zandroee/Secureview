@@ -755,7 +755,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                 </section>
                                 <div className="row g-3">
                                     <div className="col-xl-6">
-                                        <Calendar title="My Schedule" subtitle="Your assigned appointments and service dates." schedules={upcomingTechnicianJobs} upcomingCount={activeJobs.length} viewAllHref="/technician/schedule" itemHrefPrefix="/technician/services" />
+                                        <Calendar title="My Schedule" subtitle="Your assigned appointments and service dates." schedules={upcomingTechnicianJobs} upcomingCount={activeJobs.length} viewAllHref="/technician/schedule" itemHrefPrefix="/technician/services#my-jobs" />
                                     </div>
                                     <div className="col-xl-6">
                                         <section className="workspace-section p-3 p-lg-4 h-100">
@@ -1063,7 +1063,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                             {activePage === "schedule" && (
                             <section className="workspace-section p-3 p-lg-4 mb-3">
                                 <div className="mb-3"><div className="small text-primary fw-bold text-uppercase mb-1">Your calendar</div><h2 className="h4 fw-bold mb-1">My Schedule</h2><p className="text-secondary mb-0">Only your confirmed and ongoing assigned appointments are shown.</p></div>
-                                <Calendar title="My Schedule" subtitle="Your assigned appointments and service dates." schedules={upcomingTechnicianJobs} upcomingCount={activeJobs.length} viewAllHref="/technician/services" itemHrefPrefix="/technician/services" />
+                                <Calendar title="My Schedule" subtitle="Your assigned appointments and service dates." schedules={upcomingTechnicianJobs} upcomingCount={activeJobs.length} viewAllHref="/technician/services" itemHrefPrefix="/technician/services#my-jobs" />
                                 <div className="small text-muted mt-3">To review details or request a schedule change, open My Services.</div>
                                 <Link href="/technician/services" className="btn btn-outline-primary fw-semibold mt-2"><i className="bi bi-clipboard-check me-2" />Open My Services</Link>
                             </section>
