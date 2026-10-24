@@ -1,6 +1,8 @@
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Calendar from "../../Components/Admin/Calendar";
+import Announcements from "../../Components/Admin/Announcements";
+import AnnouncementFeed from "../../Components/Admin/AnnouncementFeed";
 import AdminPagination from "../../Components/Admin/AdminPagination";
 import { Link, router, usePage } from "@inertiajs/react";
 import { useMemo, useState } from "react";
@@ -422,10 +424,18 @@ function JobCard({ job, open = false, products = [] }) {
     );
 }
 
-export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventory = [], recentNotifications = [], serviceHistory = [], activePage = "dashboard" }) {
+export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventory = [], recentNotifications = [], serviceHistory = [], activePage = "dashboard", recentServices = [], recentAnnouncements = [], scheduleData = [], upcomingScheduleCount = 0, calendarAvailability = { fullyBookedDates: [], partiallyBlockedDates: [] }, unreadNotificationCount = 0 }) {
     const { props } = usePage();
+    const [recentNotificationsPage, setRecentNotificationsPage] = useState(1);
     const serviceHistoryRows = serviceHistory?.data ?? [];
     const serviceHistoryTotal = serviceHistory?.total ?? serviceHistoryRows.length;
+    const notificationPageSize = 3;
+    const notificationPageCount = Math.ceil(recentNotifications.length / notificationPageSize);
+    const safeNotificationPage = Math.min(recentNotificationsPage, Math.max(1, notificationPageCount));
+    const visibleNotifications = recentNotifications.slice(
+        (safeNotificationPage - 1) * notificationPageSize,
+        safeNotificationPage * notificationPageSize
+    );
     const [stockChanges, setStockChanges] = useState({});
     const [stockErrors, setStockErrors] = useState({});
     const [savingProduct, setSavingProduct] = useState(null);
@@ -549,7 +559,11 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
             <Navbar />
             <style>{`
                 .technician-workspace { background: #f4f7fb; }
-                .technician-workspace .technician-content { background: #f5f6f8; }
+                .technician-workspace .technician-main-content { min-width: 0; }
+                .technician-workspace .technician-sidebar-column { min-width: 0; background: var(--bs-body-bg); }
+                .technician-workspace .technician-sidebar-column .admin-sidebar-desktop { min-height: calc(100vh - 70px) !important; height: 100%; }
+                .technician-workspace .technician-content { min-width: 0; }
+                .technician-workspace .technician-right-sidebar { min-width: 0; }
                 .technician-workspace .workspace-hero {
                     background: linear-gradient(125deg, #ffffff 0%, #f1f6ff 100%);
                     border: 1px solid #dce6f3;
@@ -589,7 +603,8 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                 .technician-workspace .workspace-filter.active { background: #1769ed; color: #fff; border-color: #1769ed; }
                 .technician-workspace .workspace-filter:not(.active) { background: #fff; color: #526174; border-color: #d8e0eb; }
 
-                html[data-bs-theme="dark"] .technician-workspace .technician-content { background: var(--bs-body-bg) !important; }
+                html[data-bs-theme="dark"] .technician-workspace .technician-sidebar-column { background: var(--bs-body-bg) !important; }
+                html[data-bs-theme="dark"] .technician-workspace .technician-main-content { background: var(--bs-body-bg) !important; }
                 html[data-bs-theme="dark"] .technician-workspace {
                     background: var(--bs-body-bg);
                     color: var(--bs-body-color);
@@ -657,19 +672,23 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                     .technician-workspace .workspace-stat, .technician-workspace .technician-job-card { transition: none; }
                 }
             `}</style>
-            <main style={{ minHeight: "75vh", fontFamily: "Outfit, sans-serif" }}>
-                <div className="container-fluid px-3 px-xl-4 py-4 py-xl-5" style={{ maxWidth: "1680px", margin: "0 auto" }}>
-                    <div className="d-xl-none mb-3"><TechnicianSidebar mobileOnly active={activePage} /></div>
-                    <div className="row g-4">
-                        <aside className="col-xl-2 d-none d-xl-block"><TechnicianSidebar desktopOnly active={activePage} /></aside>
-                        <div className="col-12 col-xl-10 p-3 p-md-4 technician-content" style={{ minHeight: "75vh" }}>
-                            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-                            <div>
-                                <div className="small text-primary fw-bold">SECUREVIEW TECHNICIAN</div>
-                                <h1 className="fw-bold mb-1">{pageTitle}</h1>
-                                <div className="small text-muted">{pageDescription}</div>
+            <main className="technician-main" style={{ minHeight: "calc(100vh - 70px)", fontFamily: "Outfit, sans-serif" }}>
+                <div className="container-fluid px-0">
+                    <div className="row g-0 align-items-stretch">
+                        <aside className="col-12 col-md-3 col-lg-2 px-0 technician-sidebar-column">
+                            <TechnicianSidebar active={activePage} />
+                        </aside>
+                        <div className="col-12 col-md-9 col-lg-10 p-3 p-md-4 min-vh-100 technician-main-content">
+                            <div className="row g-4 align-items-start">
+                                <div className="col-12 col-lg-9 technician-content">
+                            <div className="d-flex justify-content-between align-items-center gap-3 mb-4">
+                                <div>
+                                    <div className="small text-primary fw-bold">SECUREVIEW TECHNICIAN</div>
+                                    <h1 className="fw-bold text-primary mb-0">{pageTitle}</h1>
+                                    <div className="small text-muted mt-1">{pageDescription}</div>
+                                </div>
+                                <span className="badge bg-light text-primary border px-3 py-2 flex-shrink-0">Live data</span>
                             </div>
-                        </div>
                         {props.flash?.success && (
                             <div className="alert alert-success d-flex align-items-center gap-2 mb-4" role="status"><i className="bi bi-check-circle-fill" /><span>{props.flash.success}</span></div>
                         )}
@@ -726,18 +745,17 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                 </div>
                         )}
                             {activePage === "dashboard" && (
-                            <>
                                 <section className="workspace-section p-3 p-lg-4 mb-3">
                                     <h2 className="h5 fw-bold mb-1">Quick access</h2>
                                     <p className="text-secondary mb-3">Open each tool on its own page, just like the admin workspace.</p>
                                     <div className="row g-3">
                                         {[
-                                            { title: "My Services", description: "Review your assigned jobs and update service progress.", href: "/technician/services", icon: "bi-clipboard-check" },
-                                            { title: "Available Jobs", description: "Find open team jobs that fit your schedule.", href: "/technician/available-jobs", icon: "bi-people" },
-                                            { title: "Schedule", description: "View your appointments and service dates.", href: "/technician/schedule", icon: "bi-calendar3" },
+                                            { title: "My Services", description: "Review assigned jobs and update service progress.", href: "/technician/services", icon: "bi-clipboard-check" },
+                                            { title: "Available Jobs", description: "Find team jobs that fit your schedule.", href: "/technician/available-jobs", icon: "bi-people" },
+                                            { title: "Schedule", description: "Review your appointments and service dates.", href: "/technician/schedule", icon: "bi-calendar3" },
                                             { title: "Post-Service Records", description: "Review saved work summaries and parts.", href: "/technician/post-service-records", icon: "bi-journal-check" },
-                                            { title: "Service History", description: "Review your completed services.", href: "/technician/service-history", icon: "bi-clock-history" },
-                                            { title: "Products", description: "View product stock and record stock adjustments.", href: "/technician/products", icon: "bi-camera-video" },
+                                            { title: "Service History", description: "Review completed services.", href: "/technician/service-history", icon: "bi-clock-history" },
+                                            { title: "Products", description: "View product stock and record adjustments.", href: "/technician/products", icon: "bi-camera-video" },
                                         ].map((item) => (
                                             <div className="col-sm-6 col-xxl-4" key={item.href}>
                                                 <Link href={item.href} className="text-decoration-none">
@@ -755,32 +773,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                         ))}
                                     </div>
                                 </section>
-                                <div className="row g-3">
-                                    <div className="col-xl-6">
-                                        <Calendar title="My Schedule" subtitle="Your assigned appointments and service dates." schedules={upcomingTechnicianJobs} upcomingCount={activeJobs.length} viewAllHref="/technician/schedule" itemHrefPrefix="/technician/services#my-jobs" />
-                                    </div>
-                                    <div className="col-xl-6">
-                                        <section className="workspace-section p-3 p-lg-4 h-100">
-                                            <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
-                                                <h2 className="h5 fw-bold mb-0">Recent Notifications</h2>
-                                                <span className="badge rounded-pill bg-primary-subtle text-primary">{recentNotifications.length}</span>
-                                            </div>
-                                            {recentNotifications.length ? (
-                                                <div className="d-flex flex-column gap-3">
-                                                    {recentNotifications.slice(0, 5).map((notification) => (
-                                                        <div className="border-bottom pb-3" key={notification.id}>
-                                                            <div className="fw-semibold">{notification.title}</div>
-                                                            <div className="small text-secondary">{notification.message}</div>
-                                                            <div className="small text-muted mt-1">{notification.created_at}</div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : <div className="text-center text-secondary py-4"><i className="bi bi-bell fs-3 d-block mb-2" />No recent notifications.</div>}
-                                        </section>
-                                    </div>
-                                </div>
-                            </>
-                        )}
+                            )}
                             {activePage === "services" && (
                                                 <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="my-jobs">
                                                     <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
@@ -1067,12 +1060,135 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         )}
                             {activePage === "schedule" && (
                             <section className="workspace-section p-3 p-lg-4 mb-3">
-                                <div className="mb-3"><div className="small text-primary fw-bold text-uppercase mb-1">Your calendar</div><h2 className="h4 fw-bold mb-1">My Schedule</h2><p className="text-secondary mb-0">Only your confirmed and ongoing assigned appointments are shown.</p></div>
-                                <Calendar title="My Schedule" subtitle="Your assigned appointments and service dates." schedules={upcomingTechnicianJobs} upcomingCount={activeJobs.length} viewAllHref="/technician/services" itemHrefPrefix="/technician/services#my-jobs" />
-                                <div className="small text-muted mt-3">To review details or request a schedule change, open My Services.</div>
-                                <Link href="/technician/services" className="btn btn-outline-primary fw-semibold mt-2"><i className="bi bi-clipboard-check me-2" />Open My Services</Link>
+                                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+                                    <div>
+                                        <div className="small text-primary fw-bold text-uppercase mb-1">Your appointments</div>
+                                        <h2 className="h4 fw-bold mb-1">My Schedule</h2>
+                                        <p className="text-secondary mb-0">Your confirmed and ongoing services are listed here. The calendar and appointment shortcuts stay on the right.</p>
+                                    </div>
+                                    <span className="badge rounded-pill bg-primary-subtle text-primary px-3 py-2">{scheduleData.length} upcoming shown</span>
+                                </div>
+                                <div className="table-responsive">
+                                    <table className="table table-hover align-middle mb-0">
+                                        <thead className="table-light">
+                                            <tr><th className="ps-3">Service</th><th>Date and time</th><th>Priority</th><th>Status</th><th>Action</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {scheduleData.length ? scheduleData.map((schedule) => (
+                                                <tr key={schedule.id}>
+                                                    <td className="ps-3">
+                                                        <div className="fw-semibold">{schedule.title}</div>
+                                                        <div className="small text-muted">{schedule.inquiry_number}</div>
+                                                        <div className="small text-muted">{schedule.customer_name || ""}</div>
+                                                    </td>
+                                                    <td><div className="fw-semibold">{schedule.date}</div><div className="small text-muted">{schedule.time || "Time not set"}</div></td>
+                                                    <td><span className={"badge rounded-pill text-capitalize " + priorityClass(schedule.urgency)}>{schedule.urgency || "normal"}</span></td>
+                                                    <td><span className={"badge rounded-pill text-capitalize " + statusClass(schedule.status)}>{formatStatus(schedule.status)}</span></td>
+                                                    <td><Link href="/technician/services#my-jobs" className="btn btn-sm btn-outline-primary text-nowrap">Open service</Link></td>
+                                                </tr>
+                                            )) : <tr><td colSpan="5" className="text-center py-5"><i className="bi bi-calendar-check fs-3 d-block text-muted mb-2" /><div className="fw-semibold">No upcoming appointments</div><div className="small text-muted">New assigned appointments will appear here.</div></td></tr>}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </section>
                         )}
+                                </div>
+                                <aside className="col-12 col-lg-3 technician-right-sidebar">
+                                    <Calendar
+                                        title="My Schedule"
+                                        subtitle="Your assigned appointments and service dates."
+                                        schedules={scheduleData}
+                                        upcomingCount={upcomingScheduleCount}
+                                        fullyBookedDates={calendarAvailability.fullyBookedDates ?? []}
+                                        partiallyBlockedDates={calendarAvailability.partiallyBlockedDates ?? []}
+                                        viewAllHref="/technician/schedule"
+                                        itemHrefPrefix="/technician/services#my-jobs"
+                                    />
+
+                                    <div className="mt-4">
+                                        <AnnouncementFeed
+                                            announcements={recentAnnouncements}
+                                            manageHref="/notifications"
+                                            manageLabel="View notifications"
+                                            emptyMessage="No admin announcements have been published yet."
+                                            emptyLinkLabel="View notifications"
+                                        />
+                                    </div>
+
+                                    <section className="card border rounded-3 mt-4">
+                                        <div className="card-body p-3 p-lg-4">
+                                            <div className="d-flex align-items-start justify-content-between gap-2 mb-3">
+                                                <div>
+                                                    <h5 className="fw-bold mb-1">Recent Notifications</h5>
+                                                    <p className="small text-muted mb-0">Updates for your technician account.</p>
+                                                </div>
+                                                <span className="badge bg-primary-subtle text-primary rounded-pill">{unreadNotificationCount} unread</span>
+                                            </div>
+
+                                            {recentNotifications.length > 0 ? (
+                                                <>
+                                                    <div className="d-flex flex-column gap-2">
+                                                        {visibleNotifications.map((notification) => (
+                                                            <Link
+                                                                key={notification.id}
+                                                                href="/notifications"
+                                                                className="d-block border rounded-3 p-3 text-decoration-none text-reset"
+                                                            >
+                                                                <div className="d-flex align-items-start gap-2">
+                                                                    <span className={"d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 " + (notification.read ? "bg-light text-secondary" : "bg-primary-subtle text-primary")} style={{ width: 34, height: 34 }}>
+                                                                        <i className={"bi " + (notification.type === "announcement" ? "bi-megaphone" : "bi-bell")} />
+                                                                    </span>
+                                                                    <div className="min-w-0 flex-grow-1">
+                                                                        <div className="fw-semibold">{notification.title}</div>
+                                                                        <div className="small text-muted mt-1" style={{ overflowWrap: "anywhere" }}>{notification.message}</div>
+                                                                        <div className="small text-muted mt-2">{notification.created_at}</div>
+                                                                    </div>
+                                                                    {!notification.read && <span className="badge bg-primary rounded-pill">New</span>}
+                                                                </div>
+                                                            </Link>
+                                                        ))}
+                                                    </div>
+                                                    <div className="d-flex justify-content-between align-items-center gap-2 mt-3 pt-3 border-top">
+                                                        <small className="text-muted">
+                                                            Showing {(safeNotificationPage - 1) * notificationPageSize + 1}–{Math.min(safeNotificationPage * notificationPageSize, recentNotifications.length)} of {recentNotifications.length}
+                                                        </small>
+                                                        <div className="d-flex gap-1">
+                                                            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setRecentNotificationsPage((page) => Math.max(1, page - 1))} disabled={safeNotificationPage <= 1} aria-label="Previous notifications page">
+                                                                <i className="bi bi-chevron-left" />
+                                                            </button>
+                                                            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setRecentNotificationsPage((page) => Math.min(notificationPageCount, page + 1))} disabled={safeNotificationPage >= notificationPageCount} aria-label="Next notifications page">
+                                                                <i className="bi bi-chevron-right" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="text-center border rounded-3 bg-light p-4">
+                                                    <i className="bi bi-bell fs-4 text-muted d-block mb-2" />
+                                                    <p className="small text-muted mb-0">No recent notifications.</p>
+                                                </div>
+                                            )}
+                                            <div className="text-end mt-3">
+                                                <Link href="/notifications" className="small fw-semibold text-decoration-none">Open notifications</Link>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <div className="mt-4">
+                                        <Announcements
+                                            title="Recent Services"
+                                            announcements={recentServices}
+                                            unreadNotificationCount={unreadNotificationCount}
+                                            viewAllHref="/technician/services"
+                                            serviceHref={() => "/technician/services#my-jobs"}
+                                            description="Recent services assigned to you and their current status."
+                                            emptyMessage="No recent services are assigned to you yet."
+                                            emptyLinkLabel="Open My Services"
+                                            alertLabel="Unread technician notifications"
+                                        />
+                                    </div>
+                                </aside>
+                            </div>
                         </div>
                     </div>
                 </div>

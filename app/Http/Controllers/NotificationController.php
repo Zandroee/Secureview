@@ -45,13 +45,13 @@ class NotificationController extends Controller
         ]);
 
         $recipients = User::query()
-            ->where('role', 'user')
+            ->whereIn('role', ['user', 'technician'])
             ->select('id')
             ->get();
 
         if ($recipients->isEmpty()) {
             return back()->withErrors([
-                'announcement' => 'There are no customer accounts to receive this announcement yet.',
+                'announcement' => 'There are no customer or technician accounts to receive this announcement yet.',
             ]);
         }
 
@@ -66,7 +66,7 @@ class NotificationController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Announcement sent to ' . $recipients->count() . ' customer account(s).');
+        return back()->with('success', 'Announcement sent to ' . $recipients->count() . ' customer and technician account(s).');
     }
 
     public function markAsRead(Request $request, CustomerNotification $notification)

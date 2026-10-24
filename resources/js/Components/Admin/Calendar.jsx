@@ -191,7 +191,7 @@ export default function AdminCalendar({
                         </p>
                     </div>
                     <Link
-                        href="/admin/schedules"
+                        href={viewAllHref}
                         className="btn btn-sm btn-outline-primary text-nowrap"
                         title="View all schedules"
                     >

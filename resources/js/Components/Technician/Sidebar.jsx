@@ -128,7 +128,7 @@ export default function TechnicianSidebar({ active = "dashboard", mobileOnly = f
             )}
 
             {!mobileOnly && (
-                <aside className="admin-sidebar-desktop d-none d-xl-block bg-white border-end min-vh-100 p-3" style={{ fontFamily: "Outfit, sans-serif" }}>
+                <aside className="admin-sidebar-desktop d-none d-xl-block bg-white border-end min-vh-100 p-3" style={{ fontFamily: "Outfit, sans-serif", minHeight: "calc(100vh - 70px)", height: "100%" }}>
                     {renderIdentity()}
                     <hr />
                     {renderNavigation()}

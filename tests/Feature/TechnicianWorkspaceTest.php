@@ -100,7 +100,14 @@ class TechnicianWorkspaceTest extends TestCase
                     ->has('jobs')
                     ->has('openJobs')
                     ->has('serviceHistory')
-                    ->has('inventory'));
+                    ->has('inventory')
+                    ->has('recentNotifications')
+                    ->has('recentServices')
+                    ->has('recentAnnouncements')
+                    ->has('scheduleData')
+                    ->has('calendarAvailability.fullyBookedDates')
+                    ->has('calendarAvailability.partiallyBlockedDates')
+                    ->has('unreadNotificationCount'));
         }
     }
 
@@ -144,6 +151,61 @@ class TechnicianWorkspaceTest extends TestCase
                 ->where('serviceHistory.current_page', 2)
                 ->has('serviceHistory.data', 1)
                 ->where('serviceHistory.data.0.id', $oldestCompleted->id));
+    }
+
+    public function test_technician_dashboard_sidebar_data_only_shows_services_assigned_to_that_technician(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $otherCustomer = User::factory()->create(['role' => 'user']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $otherTechnician = User::factory()->create(['role' => 'technician']);
+
+        $assignedService = $this->makeInquiry($customer, today()->addDays(3)->toDateString(), 'confirmed');
+        $assignedService->update(['technician_id' => $technician->id]);
+        $assignedService->technicians()->attach($technician->id, ['assigned_by' => $admin->id]);
+
+        $otherService = $this->makeInquiry($otherCustomer, today()->addDays(4)->toDateString(), 'confirmed');
+        $otherService->update(['technician_id' => $otherTechnician->id]);
+        $otherService->technicians()->attach($otherTechnician->id, ['assigned_by' => $admin->id]);
+
+        $this->actingAs($technician)
+            ->get(route('technician.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('recentServices.0.id', $assignedService->id)
+                ->has('recentServices', 1)
+                ->where('scheduleData.0.id', $assignedService->id)
+                ->has('scheduleData', 1));
+    }
+
+    public function test_admin_announcement_is_delivered_to_technician_notifications(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $customer = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.announcements.store'), [
+                'title' => 'Technician notice',
+                'message' => 'Please review the updated work schedule.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('customer_notifications', [
+            'user_id' => $technician->id,
+            'type' => 'announcement',
+            'title' => 'Technician notice',
+            'message' => 'Please review the updated work schedule.',
+        ]);
+
+        $this->assertDatabaseHas('customer_notifications', [
+            'user_id' => $customer->id,
+            'type' => 'announcement',
+            'title' => 'Technician notice',
+            'message' => 'Please review the updated work schedule.',
+        ]);
     }
 
     public function test_application_timezone_defaults_to_philippines(): void
