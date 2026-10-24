@@ -285,6 +285,39 @@ class TechnicianWorkspaceTest extends TestCase
                 ->where('jobs.0.status', 'pending'));
     }
 
+    public function test_legacy_technician_id_assignment_is_visible_and_actionable_without_a_pivot_row(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $inquiry = $this->makeInquiry($customer, today()->addDays(3)->toDateString(), 'confirmed');
+
+        // Older records may still use the legacy technician_id field without
+        // a matching inquiry_technician pivot row.
+        $inquiry->update(['technician_id' => $technician->id]);
+
+        $this->actingAs($technician)
+            ->get(route('technician.services'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('jobs.0.id', $inquiry->id)
+                ->where('jobs.0.status', 'confirmed')
+                ->where('jobs.0.technicians.0.id', $technician->id));
+
+        $this->actingAs($technician)
+            ->patch(route('technician.jobs.status', $inquiry), [
+                'status' => 'in_progress',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('inquiries', [
+            'id' => $inquiry->id,
+            'technician_id' => $technician->id,
+            'status' => 'in_progress',
+        ]);
+    }
+
     public function test_technician_cannot_join_a_job_when_they_have_a_time_conflict(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
