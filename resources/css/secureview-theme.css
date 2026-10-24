@@ -2389,3 +2389,21 @@ html[data-bs-theme="dark"] .review-public-photo {
         max-width: 62px;
     }
 }
+
+.review-form-panel {
+    background-color: #fff;
+    color: #212529;
+}
+html[data-bs-theme="dark"] .review-form-panel {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+html[data-bs-theme="dark"] .review-form-panel h1,
+html[data-bs-theme="dark"] .review-form-panel h2,
+html[data-bs-theme="dark"] .review-form-panel h3,
+html[data-bs-theme="dark"] .review-form-panel h4,
+html[data-bs-theme="dark"] .review-form-panel .fw-semibold,
+html[data-bs-theme="dark"] .review-form-panel .fw-bold {
+    color: #f3f6fb;
+}
