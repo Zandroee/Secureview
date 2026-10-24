@@ -3,6 +3,7 @@ import Footer from "../Components/footer";
 import { router, usePage } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
 import catalogImageUrl from "../Components/catalogImageUrl";
+import ReviewPhotoPicker, { reviewPhotoUrl } from "../Components/ReviewPhotoPicker";
 
 function Stars({ rating }) {
     return (
@@ -121,6 +122,8 @@ export default function PackageDetails({ package: packageData, reviews = [], can
     const [reviewSubmitting, setReviewSubmitting] = useState(false);
     const [reviewSubmitError, setReviewSubmitError] = useState("");
     const [reviewSubmitSuccess, setReviewSubmitSuccess] = useState("");
+    const [reviewPhotos, setReviewPhotos] = useState([]);
+    const [removeReviewPhotos, setRemoveReviewPhotos] = useState([]);
 
     const handleSubmitReview = (event) => {
         event.preventDefault();
@@ -133,10 +136,14 @@ export default function PackageDetails({ package: packageData, reviews = [], can
             item_id: packageData.id,
             rating: reviewRating,
             comment: reviewComment.trim(),
+            images: reviewPhotos,
+            remove_images: removeReviewPhotos,
         }, {
             preserveScroll: true,
             onSuccess: () => {
                 setReviewSubmitSuccess(userReview ? "Your review has been updated." : "Thank you for reviewing this package.");
+                setReviewPhotos([]);
+                setRemoveReviewPhotos([]);
             },
             onError: (errors) => {
                 setReviewSubmitError(errors.review || errors.rating || errors.comment || "Unable to save your review. Please try again.");
@@ -495,6 +502,18 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                 required
                                 placeholder="Share your experience with this item..."
                             />
+                            <ReviewPhotoPicker
+                                id="package-review-photos"
+                                files={reviewPhotos}
+                                onFilesChange={setReviewPhotos}
+                                existingImages={userReview?.images ?? []}
+                                removedImages={removeReviewPhotos}
+                                onRemovedImagesChange={setRemoveReviewPhotos}
+                                maxPhotos={5}
+                            />
+                            {reviewSubmitError && errors.images && (
+                                <div className="text-danger small mb-3">{errors.images}</div>
+                            )}
                             <button
                                 type="submit"
                                 className="btn btn-primary fw-semibold"
@@ -568,6 +587,15 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                     <p className="small text-muted mb-0">
                                         {review.comment}
                                     </p>
+                                    {review.images?.length > 0 && (
+                                        <div className="d-flex flex-wrap gap-2 mt-3">
+                                            {review.images.map((image, index) => (
+                                                <a key={image} href={reviewPhotoUrl(image)} target="_blank" rel="noreferrer" className="review-photo-link">
+                                                    <img src={reviewPhotoUrl(image)} alt={"Customer review photo " + (index + 1)} loading="lazy" className="review-public-photo" />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
 
                                 </div>
                             ))
