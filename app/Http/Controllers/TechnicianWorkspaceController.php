@@ -31,6 +31,15 @@ class TechnicianWorkspaceController extends Controller
 
         $technician = $request->user();
 
+        $serviceHistory = $technician->assignedInquiries()
+            ->with(['technicians:id,name,email', 'serviceRecord.items', 'pendingCheckout.order'])
+            ->where('status', 'completed')
+            ->orderByDesc('preferred_date')
+            ->orderByDesc('updated_at')
+            ->paginate(12)
+            ->withQueryString()
+            ->through(fn (Inquiry $inquiry) => $this->jobData($inquiry, true));
+
         $jobs = $technician->assignedInquiries()
             ->with(['technicians:id,name,email', 'serviceRecord.items', 'pendingCheckout.order'])
             ->whereIn('status', ['confirmed', 'in_progress', 'completed'])
@@ -113,7 +122,7 @@ class TechnicianWorkspaceController extends Controller
             'activePage' => $page,
             'jobs' => $jobs,
             'openJobs' => $openJobs,
-            'serviceHistory' => $jobs->filter(fn (array $job) => $job['status'] === 'completed')->values(),
+            'serviceHistory' => $serviceHistory,
             'inventory' => $inventory,
             'recentNotifications' => $recentNotifications,
         ]);

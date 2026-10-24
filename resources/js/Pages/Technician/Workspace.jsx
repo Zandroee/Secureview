@@ -1,7 +1,7 @@
 import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Calendar from "../../Components/Admin/Calendar";
-import PanelPagination from "../../Components/Admin/PanelPagination";
+import AdminPagination from "../../Components/Admin/AdminPagination";
 import { Link, router, usePage } from "@inertiajs/react";
 import { useMemo, useState } from "react";
 import { googleMapsDirectionsUrl } from "../../Components/GoogleMaps/ServiceLocation";
@@ -424,6 +424,8 @@ function JobCard({ job, open = false, products = [] }) {
 
 export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventory = [], recentNotifications = [], serviceHistory = [], activePage = "dashboard" }) {
     const { props } = usePage();
+    const serviceHistoryRows = serviceHistory?.data ?? [];
+    const serviceHistoryTotal = serviceHistory?.total ?? serviceHistoryRows.length;
     const [stockChanges, setStockChanges] = useState({});
     const [stockErrors, setStockErrors] = useState({});
     const [savingProduct, setSavingProduct] = useState(null);
@@ -916,13 +918,13 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                         <h2 className="h4 fw-bold mb-1">Service History</h2>
                                         <p className="text-secondary mb-0">Completed services assigned to you. Services with a Post-Service Record include their recorded work and income details.</p>
                                     </div>
-                                    <span className="badge rounded-pill bg-success-subtle text-success px-3 py-2">{serviceHistory.length} completed</span>
+                                    <span className="badge rounded-pill bg-success-subtle text-success px-3 py-2">{serviceHistoryTotal} completed</span>
                                 </div>
                                 <div className="table-responsive">
                                     <table className="table table-hover align-middle mb-0">
                                         <thead className="table-light"><tr><th className="ps-3">Service</th><th>Customer</th><th>Scheduled for</th><th>Priority</th><th>Post-Service Record</th></tr></thead>
                                         <tbody>
-                                            {serviceHistory.length ? serviceHistory.map((service) => (
+                                            {serviceHistoryRows.length ? serviceHistoryRows.map((service) => (
                                                 <tr key={service.id}>
                                                     <td className="ps-3"><div className="fw-bold">{service.service_type}</div><div className="small text-muted">{service.item_name || "General service"}</div><div className="small text-muted">{service.inquiry_number}</div></td>
                                                     <td><div className="fw-semibold">{service.customer_name || "—"}</div><div className="small text-muted">{service.city || "—"}</div></td>
@@ -934,6 +936,9 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                         </tbody>
                                     </table>
                                 </div>
+                                {serviceHistoryTotal > 0 && (
+                                    <AdminPagination pagination={serviceHistory} label="completed services" insideCard />
+                                )}
                             </section>
                         )}
                             {activePage === "products" && (
