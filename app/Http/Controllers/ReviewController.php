@@ -34,7 +34,7 @@ class ReviewController extends Controller
 
         $purchasable = $orderItem->purchasable;
 
-        if (! $purchasable instanceof Product && ! $purchasable instanceof Package) {
+        if (! ($purchasable instanceof Product) && ! ($purchasable instanceof Package)) {
             return redirect()
                 ->route('purchases.show', $order)
                 ->withErrors(['review' => 'This item is no longer available in the catalog, so a product review cannot be attached to it.']);
