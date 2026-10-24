@@ -37,8 +37,8 @@ class TechnicianWorkspaceController extends Controller
 
         $technician = $request->user();
 
-        $serviceHistory = $technician->assignedInquiries()
-            ->with(['technicians:id,name,email', 'serviceRecord.items', 'pendingCheckout.order'])
+        $serviceHistory = $this->assignedInquiryQuery($technician)
+            ->with(['technicians:id,name,email', 'technician:id,name,email', 'serviceRecord.items', 'pendingCheckout.order'])
             ->where('status', 'completed')
             ->orderByDesc('preferred_date')
             ->orderByDesc('updated_at')
@@ -46,9 +46,9 @@ class TechnicianWorkspaceController extends Controller
             ->withQueryString()
             ->through(fn (Inquiry $inquiry) => $this->jobData($inquiry, true));
 
-        $jobs = $technician->assignedInquiries()
-            ->with(['technicians:id,name,email', 'serviceRecord.items', 'pendingCheckout.order'])
-            ->whereIn('status', ['confirmed', 'in_progress', 'completed'])
+        $jobs = $this->assignedInquiryQuery($technician)
+            ->with(['technicians:id,name,email', 'technician:id,name,email', 'serviceRecord.items', 'pendingCheckout.order'])
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress', 'completed'])
             ->orderByRaw("CASE WHEN status = 'completed' THEN 4 WHEN urgency = 'emergency' THEN 1 WHEN urgency = 'urgent' THEN 2 ELSE 3 END")
             ->orderByRaw("CASE status WHEN 'in_progress' THEN 1 WHEN 'confirmed' THEN 2 ELSE 3 END")
             ->orderByRaw("CASE WHEN status = 'completed' THEN preferred_date END DESC")
@@ -128,8 +128,8 @@ class TechnicianWorkspaceController extends Controller
             ->whereNull('read_at')
             ->count();
 
-        $recentServices = $technician->assignedInquiries()
-            ->whereIn('inquiries.status', ['confirmed', 'in_progress', 'completed'])
+        $recentServices = $this->assignedInquiryQuery($technician)
+            ->whereIn('inquiries.status', ['pending', 'confirmed', 'in_progress', 'completed'])
             ->orderByDesc('inquiries.updated_at')
             ->limit(50)
             ->get([
@@ -158,7 +158,7 @@ class TechnicianWorkspaceController extends Controller
             ])
             ->values();
 
-        $scheduleQuery = $technician->assignedInquiries()
+        $scheduleQuery = $this->assignedInquiryQuery($technician)
             ->whereIn('inquiries.status', ['confirmed', 'in_progress'])
             ->whereDate('inquiries.preferred_date', '>=', today());
 
@@ -329,13 +329,13 @@ class TechnicianWorkspaceController extends Controller
             ]);
         }
 
-        if ($inquiry->technicians()->where('users.id', $technician->id)->exists()) {
+        if ($this->isAssignedToTechnician($inquiry, $technician)) {
             return back()->withErrors([
                 'job' => 'You are already assigned to this job.',
             ]);
         }
 
-        if ($inquiry->technicians()->count() >= self::MAX_TECHNICIANS_PER_JOB) {
+        if (count($this->assignedTechnicianIds($inquiry)) >= self::MAX_TECHNICIANS_PER_JOB) {
             return back()->withErrors([
                 'job' => 'This job has reached the maximum team size.',
             ]);
@@ -404,13 +404,13 @@ class TechnicianWorkspaceController extends Controller
                 ]);
             }
 
-            if ($lockedInquiry->technicians()->where('users.id', $lockedTechnician->id)->exists()) {
+            if ($this->isAssignedToTechnician($lockedInquiry, $lockedTechnician)) {
                 throw ValidationException::withMessages([
                     'job' => 'You are already assigned to this job.',
                 ]);
             }
 
-            if ($lockedInquiry->technicians()->count() >= self::MAX_TECHNICIANS_PER_JOB) {
+            if (count($this->assignedTechnicianIds($lockedInquiry)) >= self::MAX_TECHNICIANS_PER_JOB) {
                 throw ValidationException::withMessages([
                     'job' => 'This job has reached the maximum team size.',
                 ]);
@@ -442,7 +442,7 @@ class TechnicianWorkspaceController extends Controller
     {
         $validated = $request->validate(['status' => ['required', 'in:in_progress,completed']]);
         $technician = $request->user();
-        abort_unless($inquiry->technicians()->where('users.id', $technician->id)->exists(), 403);
+        abort_unless($this->isAssignedToTechnician($inquiry, $technician), 403);
 
         if ($this->hasPendingServicePayment($inquiry)) {
             return back()->withErrors(['status' => 'This service cannot be changed until its required payment is confirmed.']);
@@ -497,7 +497,7 @@ class TechnicianWorkspaceController extends Controller
         ]);
 
         $technician = $request->user();
-        abort_unless($inquiry->technicians()->where('users.id', $technician->id)->exists(), 403);
+        abort_unless($this->isAssignedToTechnician($inquiry, $technician), 403);
 
         if ($inquiry->status !== 'in_progress' || $this->hasPendingServicePayment($inquiry)) {
             return back()->withErrors([
@@ -607,6 +607,41 @@ class TechnicianWorkspaceController extends Controller
         });
 
         return back()->with('success', 'Post-Service Record saved and the service has been marked completed.');
+    }
+
+    /**
+     * Return inquiries assigned through the current team pivot or the legacy
+     * technician_id column so previously assigned services remain visible.
+     */
+    private function assignedInquiryQuery(User $technician)
+    {
+        return Inquiry::query()->where(function ($query) use ($technician) {
+            $query->where('technician_id', $technician->id)
+                ->orWhereHas('technicians', fn ($team) => $team->where('users.id', $technician->id));
+        });
+    }
+
+    private function isAssignedToTechnician(Inquiry $inquiry, User $technician): bool
+    {
+        return (int) $inquiry->technician_id === (int) $technician->id
+            || $inquiry->technicians()->where('users.id', $technician->id)->exists();
+    }
+
+    /**
+     * Include legacy single-technician assignments without counting the same
+     * person twice when the pivot record is present too.
+     */
+    private function assignedTechnicianIds(Inquiry $inquiry): array
+    {
+        $ids = $inquiry->technicians()->pluck('users.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if ($inquiry->technician_id) {
+            $ids[] = (int) $inquiry->technician_id;
+        }
+
+        return array_values(array_unique($ids));
     }
 
     private function hasPendingServicePayment(Inquiry $inquiry): bool
@@ -719,10 +754,13 @@ class TechnicianWorkspaceController extends Controller
                     'notes' => $item->notes,
                 ])->values(),
             ] : null,
-            'technicians' => $inquiry->technicians->map(fn (User $user) => [
-                'id' => $user->id,
-                'name' => $user->name,
-            ])->values(),
+            'technicians' => ($inquiry->technicians->isNotEmpty()
+                ? $inquiry->technicians
+                : ($inquiry->technician ? collect([$inquiry->technician]) : collect()))
+                ->map(fn (User $user) => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                ])->values(),
         ];
 
         if ($includeCustomerDetails) {
@@ -736,7 +774,7 @@ class TechnicianWorkspaceController extends Controller
     public function updateJobSchedule(Request $request, Inquiry $inquiry)
     {
         $technician = $request->user();
-        abort_unless($inquiry->technicians()->where('users.id', $technician->id)->exists(), 404);
+        abort_unless($this->isAssignedToTechnician($inquiry, $technician), 404);
 
         if ($this->hasPendingServicePayment($inquiry)) {
             return back()->withErrors(['schedule' => 'This service cannot be rescheduled until its required payment is confirmed.']);
@@ -762,7 +800,7 @@ class TechnicianWorkspaceController extends Controller
             return back()->withErrors(['preferred_time' => 'That time slot is marked fully booked.']);
         }
 
-        $teamIds = $inquiry->technicians()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+        $teamIds = $this->assignedTechnicianIds($inquiry);
         $conflicts = Inquiry::query()
             ->where('id', '!=', $inquiry->id)
             ->whereDate('preferred_date', $validated['preferred_date'])
@@ -809,7 +847,7 @@ class TechnicianWorkspaceController extends Controller
 
     public function reviewReschedule(Request $request, Inquiry $inquiry, string $decision)
     {
-        abort_unless($inquiry->technicians()->where('users.id', $request->user()->id)->exists(), 404);
+        abort_unless($this->isAssignedToTechnician($inquiry, $request->user()), 404);
 
         if ($this->hasPendingServicePayment($inquiry)) {
             return back()->withErrors(['reschedule' => 'This service cannot be rescheduled until its required payment is confirmed.']);
@@ -856,7 +894,7 @@ class TechnicianWorkspaceController extends Controller
             return back()->withErrors(['reschedule' => 'The requested time slot is now marked fully booked.']);
         }
 
-        $teamIds = $inquiry->technicians()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+        $teamIds = $this->assignedTechnicianIds($inquiry);
         $conflicts = Inquiry::query()
             ->where('id', '!=', $inquiry->id)
             ->whereDate('preferred_date', $date)
