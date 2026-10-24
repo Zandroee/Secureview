@@ -402,7 +402,7 @@ export default function AdminInquiryDetails({
 
             {confirming && (
                 <ConfirmInquiryModal
-                    service={service}
+                    inquiry={service}
                     technicians={technicians}
                     bookingTimeSlots={bookingTimeSlots}
                     todayDate={todayDate}

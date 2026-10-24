@@ -3,7 +3,7 @@ import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import AdminPagination from "../../Components/Admin/AdminPagination";
 import { router, usePage } from "@inertiajs/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function paymentClass(status) {
     if (status === "paid") {
@@ -67,6 +67,18 @@ export default function AdminPurchases({
     const [recordingInvoiceId, setRecordingInvoiceId] = useState(null);
     const { props } = usePage();
     const orderRows = orders.data ?? (Array.isArray(orders) ? orders : []);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const requestedOrderId = new URLSearchParams(window.location.search).get("view");
+        if (!requestedOrderId) return;
+
+        const matchingOrder = orderRows.find((order) => String(order.id) === requestedOrderId);
+        if (matchingOrder) {
+            setViewingOrder(matchingOrder);
+        }
+    }, [orderRows]);
 
     const cancelOrder = (order) => {
         const reason = window.prompt(

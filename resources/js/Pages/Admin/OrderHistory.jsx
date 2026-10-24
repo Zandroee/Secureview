@@ -134,7 +134,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                                 <td><span className={"badge rounded-pill text-capitalize " + statusClass(order.order_status)}>{String(order.order_status).replaceAll("_", " ")}</span></td>
                                                 <td className="text-end fw-bold text-nowrap">{peso(order.total)}</td>
                                                 <td className="text-end pe-3">
-                                                    <Link href={"/admin/purchases?search=" + encodeURIComponent(order.order_number) + "&order_status=" + encodeURIComponent(order.order_status)} className="btn btn-sm btn-outline-primary fw-semibold text-nowrap">VIEW RECORD</Link>
+                                                    <Link href={"/admin/purchases?search=" + encodeURIComponent(order.order_number) + "&order_status=" + encodeURIComponent(order.order_status) + "&view=" + order.id} className="btn btn-sm btn-outline-primary fw-semibold text-nowrap">VIEW</Link>
                                                 </td>
                                             </tr>
                                         )) : (

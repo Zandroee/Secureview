@@ -12,6 +12,7 @@ import TechnicianSidebar from "../../Components/Technician/Sidebar";
 function statusClass(status) {
     if (status === "completed") return "bg-success-subtle text-success";
     if (status === "in_progress") return "bg-primary-subtle text-primary";
+    if (status === "pending") return "bg-warning-subtle text-warning-emphasis";
     return "bg-info-subtle text-info-emphasis";
 }
 
@@ -258,8 +259,12 @@ function JobCard({ job, open = false, products = [] }) {
                 <button className="btn btn-success w-100 fw-bold" disabled={working} onClick={() => updateStatus("completed")}>
                     <i className="bi bi-journal-check me-2" />POST SERVICE RECORD
                 </button>
-            ) : (
+            ) : job.status === "completed" ? (
                 <div className="small text-success fw-semibold"><i className="bi bi-check-circle-fill me-1" />This job is completed.</div>
+            ) : (
+                <div className="alert alert-warning py-2 small mb-0" role="status">
+                    <i className="bi bi-hourglass-split me-1" />You have joined this service. It will become actionable after an administrator confirms the booking.
+                </div>
             )}
 
             {!open && job.status === "in_progress" && showServiceReport && (
@@ -461,7 +466,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
         })), [jobs]);
 
     const activeJobs = useMemo(
-        () => jobs.filter((job) => ["confirmed", "in_progress"].includes(job.status)),
+        () => jobs.filter((job) => ["pending", "confirmed", "in_progress"].includes(job.status)),
         [jobs]
     );
     const inProgressJobs = useMemo(
@@ -474,6 +479,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
     );
     const filteredJobs = useMemo(() => {
         if (jobFilter === "active") return activeJobs;
+        if (jobFilter === "pending") return jobs.filter((job) => job.status === "pending");
         if (jobFilter === "confirmed") return jobs.filter((job) => job.status === "confirmed");
         if (jobFilter === "in_progress") return inProgressJobs;
         if (jobFilter === "completed") return completedJobs;
@@ -831,6 +837,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                         <div className="d-flex flex-wrap gap-2">
                                                             {[
                                                                 { key: "active", label: "Active", count: activeJobs.length },
+                                                                { key: "pending", label: "Awaiting review", count: jobs.filter((job) => job.status === "pending").length },
                                                                 { key: "confirmed", label: "Confirmed", count: jobs.filter((job) => job.status === "confirmed").length },
                                                                 { key: "in_progress", label: "In progress", count: inProgressJobs.length },
                                                                 { key: "completed", label: "Completed", count: completedJobs.length },
@@ -862,11 +869,11 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                                 <i className="bi bi-clipboard2-check fs-4" />
                                                             </div>
                                                             <h3 className="h5 fw-bold mb-2">
-                                                                {jobFilter === "active" ? "No active jobs assigned" : jobFilter === "completed" ? "No completed services yet" : "No jobs in this view"}
+                                                                {jobFilter === "active" ? "No active jobs assigned" : jobFilter === "pending" ? "No services awaiting review" : jobFilter === "completed" ? "No completed services yet" : "No jobs in this view"}
                                                             </h3>
                                                             <p className="text-secondary mb-3">
                                                                 {jobFilter === "active"
-                                                                    ? "When you're assigned to a service, it will appear here. You can also join an available job below."
+                                                                    ? "When you're assigned to or join a service, it will appear here. Jobs awaiting admin confirmation will be labelled clearly."
                                                                     : "Try another filter or check Available Jobs."}
                                                             </p>
                                                             <Link href="/technician/available-jobs" className="btn btn-outline-primary fw-semibold">
