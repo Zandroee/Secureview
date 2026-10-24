@@ -318,6 +318,139 @@ class BookingDateAvailabilityTest extends TestCase
             ->count());
     }
 
+    public function test_admin_confirmation_modal_receives_blocked_dates_slots_and_technician_bookings(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+        $firstTechnician = User::factory()->create(['role' => 'technician']);
+        $secondTechnician = User::factory()->create(['role' => 'technician']);
+
+        $blockedDate = today()->addDays(11)->toDateString();
+        $blockedSlotDate = today()->addDays(12)->toDateString();
+        $busyDate = today()->addDays(13)->toDateString();
+
+        BlockedBookingDate::create([
+            'booking_date' => $blockedDate,
+            'reason' => 'Office closed',
+            'blocked_by' => $admin->id,
+        ]);
+        BlockedBookingTimeSlot::create([
+            'booking_date' => $blockedSlotDate,
+            'booking_time' => '11:00 AM - 02:00 PM',
+            'reason' => 'Technician unavailable',
+            'blocked_by' => $admin->id,
+        ]);
+
+        $busyBooking = $this->createConfirmedBooking(
+            $customer,
+            $firstTechnician,
+            $admin,
+            $busyDate,
+            '08:00 AM - 11:00 AM',
+            'BOOKED-' . $busyDate
+        );
+        $pendingInquiry = $this->createPendingInquiry(
+            $customer,
+            today()->addDays(14)->toDateString(),
+            'PENDING-' . today()->addDays(14)->format('Ymd')
+        );
+
+        $this->actingAs($admin)
+            ->get(route('admin.inquiries.show', $pendingInquiry))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/InquiryDetails')
+                ->where('blockedBookingDates.0', $blockedDate)
+                ->where('blockedBookingTimeSlots.0.date', $blockedSlotDate)
+                ->where('blockedBookingTimeSlots.0.time', '11:00 AM - 02:00 PM')
+                ->where('technicianBookings.0.inquiry_id', $busyBooking->id)
+                ->where('technicianBookings.0.date', $busyDate)
+                ->has('technicianBookings', 2)
+                ->where('bookingTimeSlots.0', '08:00 AM - 11:00 AM')
+                ->has('technicians', 2));
+    }
+
+    public function test_admin_confirmation_still_rejects_blocked_dates_slots_and_busy_technicians(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+        $busyTechnician = User::factory()->create(['role' => 'technician']);
+        User::factory()->create(['role' => 'technician']);
+        $blockedDate = today()->addDays(15)->toDateString();
+        $blockedSlotDate = today()->addDays(16)->toDateString();
+        $busyDate = today()->addDays(17)->toDateString();
+
+        BlockedBookingDate::create([
+            'booking_date' => $blockedDate,
+            'reason' => 'Fully booked',
+            'blocked_by' => $admin->id,
+        ]);
+        BlockedBookingTimeSlot::create([
+            'booking_date' => $blockedSlotDate,
+            'booking_time' => '11:00 AM - 02:00 PM',
+            'reason' => 'Slot blocked',
+            'blocked_by' => $admin->id,
+        ]);
+        $this->createConfirmedBooking(
+            $customer,
+            $busyTechnician,
+            $admin,
+            $busyDate,
+            '08:00 AM - 11:00 AM',
+            'BUSY-' . $busyDate
+        );
+
+        $blockedDateInquiry = $this->createPendingInquiry($customer, $blockedDate, 'TRY-DATE-' . $blockedDate);
+        $blockedSlotInquiry = $this->createPendingInquiry($customer, $blockedSlotDate, 'TRY-SLOT-' . $blockedSlotDate);
+        $busyTechnicianInquiry = $this->createPendingInquiry($customer, $busyDate, 'TRY-TECH-' . $busyDate);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.inquiries.confirm', $blockedDateInquiry), [
+                'preferred_date' => $blockedDate,
+                'preferred_time' => '08:00 AM - 11:00 AM',
+                'technician_ids' => [$busyTechnician->id],
+            ])
+            ->assertSessionHasErrors('preferred_date');
+
+        $this->actingAs($admin)
+            ->patch(route('admin.inquiries.confirm', $blockedSlotInquiry), [
+                'preferred_date' => $blockedSlotDate,
+                'preferred_time' => '11:00 AM - 02:00 PM',
+                'technician_ids' => [$busyTechnician->id],
+            ])
+            ->assertSessionHasErrors('preferred_time');
+
+        $this->actingAs($admin)
+            ->patch(route('admin.inquiries.confirm', $busyTechnicianInquiry), [
+                'preferred_date' => $busyDate,
+                'preferred_time' => '02:00 PM - 05:00 PM',
+                'technician_ids' => [$busyTechnician->id],
+            ])
+            ->assertSessionHasErrors('technician_ids');
+
+        $this->assertDatabaseHas('inquiries', ['id' => $blockedDateInquiry->id, 'status' => 'pending']);
+        $this->assertDatabaseHas('inquiries', ['id' => $blockedSlotInquiry->id, 'status' => 'pending']);
+        $this->assertDatabaseHas('inquiries', ['id' => $busyTechnicianInquiry->id, 'status' => 'pending']);
+    }
+
+    private function createPendingInquiry(User $customer, string $date, string $number): Inquiry
+    {
+        return Inquiry::create([
+            'user_id' => $customer->id,
+            'inquiry_number' => $number,
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'street_address' => '123 Test Street',
+            'city' => 'Taguig',
+            'service_type' => 'Maintenance',
+            'urgency' => 'normal',
+            'preferred_date' => $date,
+            'preferred_time' => '08:00 AM - 11:00 AM',
+            'status' => 'pending',
+        ]);
+    }
+
     private function createConfirmedBooking(
         User $customer,
         User $technician,
