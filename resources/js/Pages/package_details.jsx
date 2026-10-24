@@ -3,6 +3,7 @@ import Footer from "../Components/footer";
 import { router, usePage } from "@inertiajs/react";
 import { useEffect, useMemo, useState } from "react";
 import catalogImageUrl from "../Components/catalogImageUrl";
+import ReviewPhotoPicker, { reviewPhotoUrl } from "../Components/ReviewPhotoPicker";
 
 function Stars({ rating }) {
     return (
@@ -121,6 +122,8 @@ export default function PackageDetails({ package: packageData, reviews = [], can
     const [reviewSubmitting, setReviewSubmitting] = useState(false);
     const [reviewSubmitError, setReviewSubmitError] = useState("");
     const [reviewSubmitSuccess, setReviewSubmitSuccess] = useState("");
+    const [reviewPhotos, setReviewPhotos] = useState([]);
+    const [removeReviewPhotos, setRemoveReviewPhotos] = useState([]);
 
     const handleSubmitReview = (event) => {
         event.preventDefault();
@@ -133,13 +136,17 @@ export default function PackageDetails({ package: packageData, reviews = [], can
             item_id: packageData.id,
             rating: reviewRating,
             comment: reviewComment.trim(),
+            images: reviewPhotos,
+            remove_images: removeReviewPhotos,
         }, {
             preserveScroll: true,
             onSuccess: () => {
                 setReviewSubmitSuccess(userReview ? "Your review has been updated." : "Thank you for reviewing this package.");
+                setReviewPhotos([]);
+                setRemoveReviewPhotos([]);
             },
             onError: (errors) => {
-                setReviewSubmitError(errors.review || errors.rating || errors.comment || "Unable to save your review. Please try again.");
+                setReviewSubmitError(errors.review || errors.rating || errors.comment || errors.images || errors["images.0"] || "Unable to save your review. Please try again.");
             },
             onFinish: () => setReviewSubmitting(false),
         });
@@ -452,7 +459,7 @@ export default function PackageDetails({ package: packageData, reviews = [], can
 
 
                 {(canReview || userReview) && (
-                    <div className="border rounded-3 p-3 p-md-4 mb-4" style={{ backgroundColor: "#fff" }}>
+                    <div className="border rounded-3 p-3 p-md-4 mb-4 review-form-panel">
                         <h3 className="fw-bold mb-1">
                             {userReview ? "Update your review" : "Rate this package"}
                         </h3>
@@ -494,6 +501,15 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                 rows={3}
                                 required
                                 placeholder="Share your experience with this item..."
+                            />
+                            <ReviewPhotoPicker
+                                id="package-review-photos"
+                                files={reviewPhotos}
+                                onFilesChange={setReviewPhotos}
+                                existingImages={userReview?.images ?? []}
+                                removedImages={removeReviewPhotos}
+                                onRemovedImagesChange={setRemoveReviewPhotos}
+                                maxPhotos={5}
                             />
                             <button
                                 type="submit"
@@ -568,6 +584,15 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                     <p className="small text-muted mb-0">
                                         {review.comment}
                                     </p>
+                                    {review.images?.length > 0 && (
+                                        <div className="d-flex flex-wrap gap-2 mt-3">
+                                            {review.images.map((image, index) => (
+                                                <a key={image} href={reviewPhotoUrl(image)} target="_blank" rel="noreferrer" className="review-photo-link">
+                                                    <img src={reviewPhotoUrl(image)} alt={"Customer review photo " + (index + 1)} loading="lazy" className="review-public-photo" />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
 
                                 </div>
                             ))

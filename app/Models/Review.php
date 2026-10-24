@@ -8,10 +8,15 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Review extends Model
 {
+    protected $casts = [
+        'images' => 'array',
+    ];
+
     protected $fillable = [
         'user_id',
         'rating',
         'comment',
+        'images',
     ];
 
     public function user(): BelongsTo

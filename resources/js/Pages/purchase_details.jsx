@@ -132,6 +132,10 @@ export default function PurchaseDetails({ order }) {
                         <div className="alert alert-danger mb-4">{props.errors.order}</div>
                     )}
 
+                    {props.errors?.review && (
+                        <div className="alert alert-danger mb-4">{props.errors.review}</div>
+                    )}
+
                     <div className="row g-4">
                         <div className="col-lg-8">
                             <div
@@ -235,10 +239,11 @@ export default function PurchaseDetails({ order }) {
                                                 </div>
                                                 {order.payment_status === "paid" &&
                                                     order.order_status !== "cancelled" &&
-                                                    item.purchasable_id && (
+                                                    item.purchasable_id &&
+                                                    item.can_review && (
                                                         <div className="mt-2">
                                                             <Link
-                                                                href={`/${item.type === "package" ? "packages" : "products"}/${item.purchasable_id}#reviews`}
+                                                                href={`/purchases/${order.id}/items/${item.id}/review`}
                                                                 className="btn btn-outline-primary btn-sm"
                                                             >
                                                                 <i className="bi bi-star me-1"></i>

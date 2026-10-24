@@ -193,6 +193,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/purchases/{order}/invoice', [InvoiceController::class, 'customer'])->name('purchases.invoice');
+    Route::get('/purchases/{order}/items/{orderItem}/review', [ReviewController::class, 'create'])->name('purchases.items.review');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
     Route::patch('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
