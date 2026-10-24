@@ -654,15 +654,23 @@ class InquiryController extends Controller
             ->pluck('booking_date')
             ->map(fn ($date) => \Illuminate\Support\Carbon::parse($date)->toDateString());
 
+        $blockedTimeSlotsRaw = BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', '>=', today())
+            ->get(['booking_date', 'booking_time']);
+
+        $datesWithAllSlotsBlocked = $blockedTimeSlotsRaw
+            ->groupBy(fn (BlockedBookingTimeSlot $slot) => $slot->booking_date?->format('Y-m-d'))
+            ->filter(fn ($slots) => $slots->pluck('booking_time')->unique()->count() >= count(self::BOOKING_TIME_SLOTS))
+            ->keys();
+
         $blockedBookingDates = $manuallyBlockedDates
             ->concat($capacityFullyBookedDates)
+            ->concat($datesWithAllSlotsBlocked)
             ->filter()
             ->unique()
             ->values();
 
-        $blockedBookingTimeSlots = BlockedBookingTimeSlot::query()
-            ->whereDate('booking_date', '>=', today())
-            ->get(['booking_date', 'booking_time'])
+        $blockedBookingTimeSlots = $blockedTimeSlotsRaw
             ->map(fn (BlockedBookingTimeSlot $slot) => [
                 'date' => $slot->booking_date?->format('Y-m-d'),
                 'time' => $slot->booking_time,
