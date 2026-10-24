@@ -114,6 +114,7 @@ class PurchaseController extends Controller
                             ? 'package'
                             : 'product',
                         'purchasable_id' => (int) $item->purchasable_id,
+                        'can_review' => $item->purchasable !== null,
                         'image' => $item->purchasable?->image,
                     ];
                 })->values(),
