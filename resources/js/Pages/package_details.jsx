@@ -146,7 +146,7 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                 setRemoveReviewPhotos([]);
             },
             onError: (errors) => {
-                setReviewSubmitError(errors.review || errors.rating || errors.comment || "Unable to save your review. Please try again.");
+                setReviewSubmitError(errors.review || errors.rating || errors.comment || errors.images || errors["images.0"] || "Unable to save your review. Please try again.");
             },
             onFinish: () => setReviewSubmitting(false),
         });
@@ -511,9 +511,6 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                 onRemovedImagesChange={setRemoveReviewPhotos}
                                 maxPhotos={5}
                             />
-                            {reviewSubmitError && errors.images && (
-                                <div className="text-danger small mb-3">{errors.images}</div>
-                            )}
                             <button
                                 type="submit"
                                 className="btn btn-primary fw-semibold"
