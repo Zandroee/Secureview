@@ -547,6 +547,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
             <Navbar />
             <style>{`
                 .technician-workspace { background: #f4f7fb; }
+                .technician-workspace .technician-content { background: #f5f6f8; }
                 .technician-workspace .workspace-hero {
                     background: linear-gradient(125deg, #ffffff 0%, #f1f6ff 100%);
                     border: 1px solid #dce6f3;
@@ -586,6 +587,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                 .technician-workspace .workspace-filter.active { background: #1769ed; color: #fff; border-color: #1769ed; }
                 .technician-workspace .workspace-filter:not(.active) { background: #fff; color: #526174; border-color: #d8e0eb; }
 
+                html[data-bs-theme="dark"] .technician-workspace .technician-content { background: var(--bs-body-bg) !important; }
                 html[data-bs-theme="dark"] .technician-workspace {
                     background: var(--bs-body-bg);
                     color: var(--bs-body-color);
@@ -658,7 +660,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                     <div className="d-xl-none mb-3"><TechnicianSidebar mobileOnly active={activePage} /></div>
                     <div className="row g-4">
                         <aside className="col-xl-2 d-none d-xl-block"><TechnicianSidebar desktopOnly active={activePage} /></aside>
-                        <div className="col-12 col-xl-10 p-3 p-md-4 technician-content" style={{ backgroundColor: "#f5f6f8", minHeight: "75vh" }}>
+                        <div className="col-12 col-xl-10 p-3 p-md-4 technician-content" style={{ minHeight: "75vh" }}>
                             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                             <div>
                                 <div className="small text-primary fw-bold">SECUREVIEW TECHNICIAN</div>
