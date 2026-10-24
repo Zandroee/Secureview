@@ -130,7 +130,7 @@ PAYMONGO_BASE_URL=https://api.paymongo.com
 
 Generate a new `APP_KEY` for a fresh production installation and keep it unchanged afterward. With SSH, from the application root run `php artisan key:generate` once after the private `.env` exists. If the application already has encrypted production data/sessions, do not replace its existing key. Never commit the production `.env` or paste any secret into GitHub, logs, screenshots, or chat.
 
-The project code accepts an `APP_TIMEZONE` value. Set the timezone that matches your actual business and booking operations; this guide uses `Asia/Manila` as the Philippines example. If you operate in another timezone, change it deliberately and test booking dates and scheduled tasks.
+SecureView now defaults to `APP_TIMEZONE=Asia/Manila` (Philippines time, UTC+08:00). In production, also set `APP_TIMEZONE=Asia/Manila` in the external Hostinger environment file at `domains/secureviewcctv.shop/hbuilds/config/.env`; an existing environment value overrides the code default. After changing it, clear Laravel's configuration cache using the established Hostinger deployment procedure, then test booking dates, notification timestamps, urgency escalation, and scheduled tasks.
 
 Use PayMongo **test** credentials first. Configure OAuth callback URLs in Google/Facebook developer settings to match the new domain, if those login providers are enabled. Configure the exact production HTTPS webhook URL as `https://YOUR_DOMAIN/api/webhooks/paymongo` for the `checkout_session.payment.paid` event. Do not mark an order paid from a browser return URL; PayMongo server-side confirmation remains required.
 
