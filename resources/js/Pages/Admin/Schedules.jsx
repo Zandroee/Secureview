@@ -288,7 +288,7 @@ export default function AdminSchedules({
                             </div>
 
                             <h1 className="fw-bold mb-1">
-                                SERVICE SCHEDULES
+                                SCHEDULED SERVICES
                             </h1>
 
                             <div className="small text-muted">
