@@ -132,6 +132,10 @@ export default function PurchaseDetails({ order }) {
                         <div className="alert alert-danger mb-4">{props.errors.order}</div>
                     )}
 
+                    {props.errors?.review && (
+                        <div className="alert alert-danger mb-4">{props.errors.review}</div>
+                    )}
+
                     <div className="row g-4">
                         <div className="col-lg-8">
                             <div
