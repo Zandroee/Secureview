@@ -92,6 +92,7 @@ jobs:
           cp app/Http/Controllers/PurchaseController.php hostinger-release/app/Http/Controllers/PurchaseController.php
           cp app/Http/Controllers/ReviewController.php hostinger-release/app/Http/Controllers/ReviewController.php
           cp app/Http/Controllers/ReviewController.php hostinger-release/app/Http/Controllers/ReviewController.php
+          cp app/Http/Controllers/ReviewController.php hostinger-release/app/Http/Controllers/ReviewController.php
           cp app/Console/Commands/ClearProductPackageReferences.php hostinger-release/app/Console/Commands/ClearProductPackageReferences.php
           cp app/Http/Controllers/ChatbotController.php hostinger-release/app/Http/Controllers/ChatbotController.php
           cp app/Services/EmailVerificationCodeService.php hostinger-release/app/Services/EmailVerificationCodeService.php
@@ -102,6 +103,7 @@ jobs:
           cp app/Models/Inquiry.php hostinger-release/app/Models/Inquiry.php
           cp app/Models/ServiceRecord.php hostinger-release/app/Models/ServiceRecord.php
           cp app/Models/ServiceRecordItem.php hostinger-release/app/Models/ServiceRecordItem.php
+          cp app/Models/Review.php hostinger-release/app/Models/Review.php
           cp app/Models/Review.php hostinger-release/app/Models/Review.php
           cp app/Http/Controllers/Admin/CatalogOptionController.php hostinger-release/app/Http/Controllers/Admin/CatalogOptionController.php
           cp database/migrations/2026_10_23_200000_add_brand_to_products_and_packages_table.php hostinger-release/database/migrations/2026_10_23_200000_add_brand_to_products_and_packages_table.php
@@ -118,6 +120,7 @@ jobs:
           cp routes/console.php hostinger-release/routes/console.php
           cp database/migrations/2026_10_23_230000_create_service_records_tables.php hostinger-release/database/migrations/2026_10_23_230000_create_service_records_tables.php
           cp database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php hostinger-release/database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php
+          cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php
           cp routes/web.php hostinger-release/routes/web.php
