@@ -50,7 +50,7 @@ export default function ConfirmInquiryModal({
         (technician) => !isTechnicianBusy(technician.id, preferredDate)
     );
     const selectedBusyIds = technicianIds.filter((id) => isTechnicianBusy(id, preferredDate));
-    const availableTimeSlots = timeSlots.filter((slot) => !isTimeSlotBlocked(preferredDate, slot));
+    const availableTimeSlots = dateBlocked ? [] : timeSlots.filter((slot) => !isTimeSlotBlocked(preferredDate, slot));
 
     const clearAvailabilityErrors = () => {
         setErrors((current) => {
