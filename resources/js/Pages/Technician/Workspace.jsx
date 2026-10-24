@@ -216,6 +216,11 @@ function JobCard({ job, open = false, products = [] }) {
                     <div className="small text-muted fw-semibold mb-2">CUSTOMER DETAILS</div>
                     <div className="fw-semibold">{job.customer_name}</div>
                     {job.customer_phone && <div className="small"><a href={"tel:" + job.customer_phone}>{job.customer_phone}</a></div>}
+                    {open && !job.street_address && (
+                        <div className="small text-muted mt-1">
+                            Exact street address, entrance instructions, and navigation become available after you join this service.
+                        </div>
+                    )}
                     {job.street_address && <div className="small text-muted mt-1">{job.street_address}, {job.city}</div>}
                     {job.address_details && <div className="small text-muted mt-1"><span className="fw-semibold">Entrance details:</span> {job.address_details}</div>}
                     {(job.google_place_id || job.service_latitude !== null && job.service_latitude !== undefined || job.street_address) && (
