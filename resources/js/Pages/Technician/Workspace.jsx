@@ -426,6 +426,7 @@ function JobCard({ job, open = false, products = [] }) {
 
 export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventory = [], recentNotifications = [], serviceHistory = [], activePage = "dashboard", recentServices = [], recentAnnouncements = [], scheduleData = [], upcomingScheduleCount = 0, calendarAvailability = { fullyBookedDates: [], partiallyBlockedDates: [] }, unreadNotificationCount = 0 }) {
     const { props } = usePage();
+    const [recentNotificationsPage, setRecentNotificationsPage] = useState(1);
     const serviceHistoryRows = serviceHistory?.data ?? [];
     const serviceHistoryTotal = serviceHistory?.total ?? serviceHistoryRows.length;
     const notificationPageSize = 3;
@@ -442,7 +443,6 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
     const [availableJobSearch, setAvailableJobSearch] = useState("");
     const [inventorySearch, setInventorySearch] = useState("");
     const [inventoryFilter, setInventoryFilter] = useState("all");
-    const [recentNotificationsPage, setRecentNotificationsPage] = useState(1);
         const upcomingTechnicianJobs = useMemo(() => jobs
         .filter((job) => ["confirmed", "in_progress"].includes(job.status) && job.preferred_date_value)
         .sort((a, b) => String(a.preferred_date_value).localeCompare(String(b.preferred_date_value)))
