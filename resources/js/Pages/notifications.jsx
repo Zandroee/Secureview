@@ -232,7 +232,7 @@ export default function Notifications({ notifications: paginator = {}, unreadCou
                                     <h5 className="fw-bold mb-0">Create announcement</h5>
                                 </div>
                                 <p className="small text-muted mb-3">
-                                    Send an announcement to all customer accounts. It will appear in their Notifications.
+                                    Send an announcement to all customer and technician accounts. It will appear in their Notifications.
                                 </p>
                                 {props.errors?.announcement && (
                                     <div className="alert alert-danger small">{props.errors.announcement}</div>
