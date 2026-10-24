@@ -273,6 +273,16 @@ class TechnicianWorkspaceTest extends TestCase
             'id' => $inquiry->id,
             'status' => 'pending',
         ]);
+
+        // A just-joined pending service must appear in My Services while it
+        // waits for admin confirmation instead of disappearing from the list.
+        $this->actingAs($technician)
+            ->get(route('technician.services'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('jobs.0.id', $inquiry->id)
+                ->where('jobs.0.status', 'pending'));
     }
 
     public function test_technician_cannot_join_a_job_when_they_have_a_time_conflict(): void
