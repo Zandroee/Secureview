@@ -1,5 +1,5 @@
 import { router } from "@inertiajs/react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 const DEFAULT_TIME_SLOTS = [
     "08:00 AM - 11:00 AM",
@@ -46,9 +46,8 @@ export default function ConfirmInquiryModal({
 
     const dateBlocked = isDateBlocked(preferredDate);
     const timeSlotBlocked = isTimeSlotBlocked(preferredDate, preferredTime);
-    const availableTechnicians = useMemo(
-        () => technicians.filter((technician) => !isTechnicianBusy(technician.id, preferredDate)),
-        [technicians, technicianBookings, preferredDate, inquiry.id, blockedBookingDates]
+    const availableTechnicians = technicians.filter(
+        (technician) => !isTechnicianBusy(technician.id, preferredDate)
     );
     const selectedBusyIds = technicianIds.filter((id) => isTechnicianBusy(id, preferredDate));
     const availableTimeSlots = timeSlots.filter((slot) => !isTimeSlotBlocked(preferredDate, slot));
