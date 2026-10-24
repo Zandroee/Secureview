@@ -88,7 +88,7 @@ class TechnicianWorkspaceController extends Controller
 
                 return $start
                     && $start->isFuture()
-                    && $inquiry->technicians->count() < self::MAX_TECHNICIANS_PER_JOB
+                    && count($this->assignedTechnicianIds($inquiry)) < self::MAX_TECHNICIANS_PER_JOB
                     && !in_array($inquiry->preferred_date?->format('Y-m-d') . '|' . $inquiry->preferred_time, $busySlots, true);
             })
             ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, false))
@@ -716,6 +716,14 @@ class TechnicianWorkspaceController extends Controller
 
     private function jobData(Inquiry $inquiry, bool $includeCustomerDetails): array
     {
+        $assignedTechnicians = $inquiry->technicians;
+        if (
+            $inquiry->technician
+            && !$assignedTechnicians->contains(fn (User $user) => (int) $user->id === (int) $inquiry->technician->id)
+        ) {
+            $assignedTechnicians->push($inquiry->technician);
+        }
+
         $data = [
             'id' => $inquiry->id,
             'inquiry_number' => $inquiry->inquiry_number,
@@ -754,9 +762,7 @@ class TechnicianWorkspaceController extends Controller
                     'notes' => $item->notes,
                 ])->values(),
             ] : null,
-            'technicians' => ($inquiry->technicians->isNotEmpty()
-                ? $inquiry->technicians
-                : ($inquiry->technician ? collect([$inquiry->technician]) : collect()))
+            'technicians' => $assignedTechnicians
                 ->map(fn (User $user) => [
                     'id' => $user->id,
                     'name' => $user->name,
