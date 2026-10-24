@@ -18,7 +18,9 @@ export default function ConfirmInquiryModal({
     onClose,
 }) {
     const timeSlots = bookingTimeSlots.length > 0 ? bookingTimeSlots : DEFAULT_TIME_SLOTS;
-    const requestedDate = inquiry.preferred_date_value || todayDate || "";
+    const requestedDate = inquiry.preferred_date_value && (!todayDate || inquiry.preferred_date_value >= todayDate)
+        ? inquiry.preferred_date_value
+        : todayDate || inquiry.preferred_date_value || "";
     const requestedTime = timeSlots.includes(inquiry.preferred_time) ? inquiry.preferred_time : timeSlots[0];
 
     const isDateBlocked = (date) => blockedBookingDates.map(String).includes(String(date));
@@ -44,7 +46,8 @@ export default function ConfirmInquiryModal({
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
 
-    const dateBlocked = isDateBlocked(preferredDate);
+    const dateInPast = Boolean(todayDate && preferredDate && preferredDate < todayDate);
+    const dateBlocked = isDateBlocked(preferredDate) || dateInPast;
     const timeSlotBlocked = isTimeSlotBlocked(preferredDate, preferredTime);
     const availableTechnicians = technicians.filter(
         (technician) => !isTechnicianBusy(technician.id, preferredDate)
@@ -101,7 +104,8 @@ export default function ConfirmInquiryModal({
 
         const nextErrors = {};
         if (!preferredDate) nextErrors.preferred_date = "Choose a service date.";
-        if (dateBlocked) nextErrors.preferred_date = "This date is fully booked or blocked. Choose another date.";
+        if (dateInPast) nextErrors.preferred_date = "Choose today or a future date.";
+        else if (dateBlocked) nextErrors.preferred_date = "This date is fully booked or blocked. Choose another date.";
         if (timeSlotBlocked) nextErrors.preferred_time = "This time slot is blocked for the selected date. Choose another slot.";
         if (technicianIds.length === 0) nextErrors.technician_ids = "Select at least one available technician.";
         if (selectedBusyIds.length > 0) nextErrors.technician_ids = "Remove technicians who are already assigned on this date.";
@@ -179,7 +183,8 @@ export default function ConfirmInquiryModal({
                                 onChange={(event) => changeDate(event.target.value)}
                             />
                             {errors.preferred_date && <div className="invalid-feedback">{errors.preferred_date}</div>}
-                            {!errors.preferred_date && dateBlocked && <div className="small text-danger mt-1">This date is blocked or all technicians are already scheduled. Choose a different date.</div>}
+                            {!errors.preferred_date && dateInPast && <div className="small text-danger mt-1">Choose today or a future date.</div>}
+                            {!errors.preferred_date && dateBlocked && !dateInPast && <div className="small text-danger mt-1">This date is blocked or all technicians are already scheduled. Choose a different date.</div>}
                             {!dateBlocked && preferredDate && <div className="form-text">Dates with no remaining technician capacity are rejected by the system.</div>}
                         </div>
 
