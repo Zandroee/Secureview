@@ -21,6 +21,12 @@ export default function Announcements({
     title = "Recent Services",
     announcements = [],
     unreadNotificationCount = 0,
+    viewAllHref = "/admin/inquiries",
+    serviceHref = (service) => "/admin/inquiries/" + service.id,
+    description = "Latest service requests and their current status.",
+    emptyMessage = "No pending service requests need attention right now.",
+    emptyLinkLabel = "Open services",
+    alertLabel = "Unread service alerts",
 }) {
     const rows = announcements ?? [];
     const [page, setPage] = useState(1);
@@ -35,9 +41,9 @@ export default function Announcements({
                 <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
                     <div>
                         <h5 className="fw-bold mb-1">{title}</h5>
-                        <div className="small text-muted">Latest service requests and their current status.</div>
+                        <div className="small text-muted">{description}</div>
                     </div>
-                    <Link href="/admin/inquiries" className="btn btn-sm btn-outline-primary text-nowrap">
+                    <Link href={viewAllHref} className="btn btn-sm btn-outline-primary text-nowrap">
                         View all services
                     </Link>
                 </div>
@@ -64,7 +70,7 @@ export default function Announcements({
                         {pageRows.map((service) => (
                             <Link
                                 key={service.id}
-                                href={"/admin/inquiries/" + service.id}
+                                href={serviceHref(service)}
                                 className="d-block border rounded-3 p-3 text-decoration-none text-reset"
                             >
                                 <div className="d-flex align-items-start justify-content-between gap-2">
@@ -111,9 +117,9 @@ export default function Announcements({
                 ) : (
                     <div className="text-center border rounded-3 bg-light p-4">
                         <i className="bi bi-chat-square-text fs-4 text-muted d-block mb-2" />
-                        <p className="small text-muted mb-2">No pending service requests need attention right now.</p>
-                        <Link href="/admin/inquiries" className="small fw-semibold text-decoration-none">
-                            Open services
+                        <p className="small text-muted mb-2">{emptyMessage}</p>
+                        <Link href={viewAllHref} className="small fw-semibold text-decoration-none">
+                            {emptyLinkLabel}
                         </Link>
                     </div>
                 )}
