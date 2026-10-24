@@ -97,6 +97,7 @@ export default function Checkout({
                 <Navbar />
 
                 <main
+                    className="checkout-page"
                     style={{
                         backgroundColor: "#f7f7f8",
                         minHeight: "65vh",
@@ -104,7 +105,7 @@ export default function Checkout({
                 >
                     <div className="container py-5">
                         <div
-                            className="mx-auto bg-white border rounded-4 p-4 p-md-5 text-center"
+                            className="mx-auto bg-white border rounded-4 p-4 p-md-5 text-center checkout-panel"
                             style={{ maxWidth: "700px" }}
                         >
                             <div
@@ -189,6 +190,7 @@ export default function Checkout({
             <Navbar />
 
             <main
+                className="checkout-page"
                 style={{
                     backgroundColor: "#f7f7f8",
                     minHeight: "65vh",
@@ -198,7 +200,7 @@ export default function Checkout({
                     <div className="row g-4 align-items-start">
                         <div className="col-lg-7">
                             <div
-                                className="bg-white border rounded-4 p-3 p-md-4"
+                                className="bg-white border rounded-4 p-3 p-md-4 checkout-panel"
                                 style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}
                             >
                                 <div className="d-flex justify-content-between align-items-center mb-4">
@@ -440,17 +442,7 @@ export default function Checkout({
                                                     >
                                                         <button
                                                             type="button"
-                                                            className="w-100 text-start border rounded-3 p-3"
-                                                            style={{
-                                                                backgroundColor:
-                                                                    selected
-                                                                        ? "#edf5ff"
-                                                                        : "#fff",
-                                                                borderColor:
-                                                                    selected
-                                                                        ? "#0d6efd"
-                                                                        : "#e3e3e6",
-                                                            }}
+                                                            className={"w-100 text-start border rounded-3 p-3 checkout-payment-method " + (selected ? "is-selected" : "")}
                                                             onClick={() =>
                                                                 setData(
                                                                     "payment_method",
@@ -460,7 +452,7 @@ export default function Checkout({
                                                         >
                                                             <div className="d-flex align-items-center gap-2">
                                                                 <div
-                                                                    className="d-flex align-items-center justify-content-center rounded-3 bg-light"
+                                                                    className="d-flex align-items-center justify-content-center rounded-3 bg-light checkout-method-icon"
                                                                     style={{
                                                                         width: "38px",
                                                                         height: "38px",
@@ -568,7 +560,7 @@ export default function Checkout({
 
                         <div className="col-lg-5">
                             <div
-                                className="bg-white border rounded-4 p-3 p-md-4 sticky-lg-top"
+                                className="bg-white border rounded-4 p-3 p-md-4 sticky-lg-top checkout-panel checkout-cart-panel"
                                 style={{
                                     top: "20px",
                                     boxShadow: "0 8px 24px rgba(0,0,0,0.04)",
@@ -596,12 +588,9 @@ export default function Checkout({
                                     {items.map((item) => (
                                         <div
                                             key={item.id}
-                                            className="border rounded-3 p-2"
-                                            style={{
-                                                backgroundColor: "#fafafa",
-                                            }}
+                                            className="border rounded-3 p-2 checkout-cart-item"
                                         >
-                                            <div className="d-flex gap-2 align-items-center">
+                                            <div className="d-flex gap-2 align-items-start checkout-cart-item-row">
                                                 {item.image ? (
                                                     <img
                                                         src={item.image}
@@ -634,18 +623,12 @@ export default function Checkout({
                                                     </div>
                                                 )}
 
-                                                <div className="flex-grow-1 min-w-0">
+                                                <div className="checkout-cart-item-details">
                                                     <div className="small text-primary text-uppercase fw-bold">
                                                         {item.type}
                                                     </div>
 
-                                                    <div
-                                                        className="fw-bold text-truncate"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit, sans-serif",
-                                                        }}
-                                                    >
+                                                    <div className="fw-bold checkout-cart-item-name">
                                                         {item.name}
                                                     </div>
 
@@ -670,7 +653,7 @@ export default function Checkout({
                                                     </div>
                                                 </div>
 
-                                                <div className="text-end">
+                                                <div className="text-end checkout-cart-item-subtotal">
                                                     <div className="fw-bold small">
                                                         ₱
                                                         {Number(
@@ -683,10 +666,7 @@ export default function Checkout({
                                     ))}
                                 </div>
 
-                                <div
-                                    className="rounded-3 p-3 mt-3"
-                                    style={{ backgroundColor: "#f6f6f7" }}
-                                >
+                                <div className="rounded-3 p-3 mt-3 checkout-order-summary">
                                     <div className="d-flex justify-content-between mb-2">
                                         <span className="text-muted small">
                                             Items
@@ -731,12 +711,7 @@ export default function Checkout({
                                     </div>
                                 </div>
 
-                                <div
-                                    className="rounded-3 p-3 mt-3"
-                                    style={{
-                                        backgroundColor: "#eef7ff",
-                                    }}
-                                >
+                                <div className="rounded-3 p-3 mt-3 checkout-secure-checkout">
                                     <div className="fw-bold small mb-2">
                                         <i className="bi bi-shield-check text-primary me-2"></i>
                                         SECURE CHECKOUT
