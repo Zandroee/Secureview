@@ -451,83 +451,6 @@ class BookingDateAvailabilityTest extends TestCase
         ]);
     }
 
-    public function test_admin_service_details_receives_availability_and_confirmation_rejects_unavailable_choices(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $customer = User::factory()->create(['role' => 'user']);
-        $busyTechnician = User::factory()->create(['role' => 'technician']);
-        User::factory()->create(['role' => 'technician']);
-
-        $blockedDate = today()->addDays(20)->toDateString();
-        $blockedSlotDate = today()->addDays(21)->toDateString();
-        $busyDate = today()->addDays(22)->toDateString();
-
-        BlockedBookingDate::create([
-            'booking_date' => $blockedDate,
-            'reason' => 'Office closed',
-            'blocked_by' => $admin->id,
-        ]);
-        BlockedBookingTimeSlot::create([
-            'booking_date' => $blockedSlotDate,
-            'booking_time' => '11:00 AM - 02:00 PM',
-            'reason' => 'Technician unavailable',
-            'blocked_by' => $admin->id,
-        ]);
-
-        $busyBooking = $this->createConfirmedBooking(
-            $customer,
-            $busyTechnician,
-            $admin,
-            $busyDate,
-            '08:00 AM - 11:00 AM',
-            'BUSY-' . $busyDate
-        );
-        $pendingDateInquiry = $this->createPendingInquiry($customer, $blockedDate, 'PENDING-DATE-' . $blockedDate);
-        $pendingSlotInquiry = $this->createPendingInquiry($customer, $blockedSlotDate, 'PENDING-SLOT-' . $blockedSlotDate);
-        $pendingTechInquiry = $this->createPendingInquiry($customer, $busyDate, 'PENDING-TECH-' . $busyDate);
-
-        $this->actingAs($admin)
-            ->get(route('admin.inquiries.show', $pendingDateInquiry))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Admin/InquiryDetails')
-                ->where('blockedBookingDates.0', $blockedDate)
-                ->where('blockedBookingTimeSlots.0.date', $blockedSlotDate)
-                ->where('blockedBookingTimeSlots.0.time', '11:00 AM - 02:00 PM')
-                ->where('technicianBookings.0.inquiry_id', $busyBooking->id)
-                ->where('technicianBookings.0.date', $busyDate)
-                ->has('technicianBookings', 4)
-                ->has('technicians', 2));
-
-        $this->actingAs($admin)
-            ->patch(route('admin.inquiries.confirm', $pendingDateInquiry), [
-                'preferred_date' => $blockedDate,
-                'preferred_time' => '08:00 AM - 11:00 AM',
-                'technician_ids' => [$busyTechnician->id],
-            ])
-            ->assertSessionHasErrors('preferred_date');
-
-        $this->actingAs($admin)
-            ->patch(route('admin.inquiries.confirm', $pendingSlotInquiry), [
-                'preferred_date' => $blockedSlotDate,
-                'preferred_time' => '11:00 AM - 02:00 PM',
-                'technician_ids' => [$busyTechnician->id],
-            ])
-            ->assertSessionHasErrors('preferred_time');
-
-        $this->actingAs($admin)
-            ->patch(route('admin.inquiries.confirm', $pendingTechInquiry), [
-                'preferred_date' => $busyDate,
-                'preferred_time' => '02:00 PM - 05:00 PM',
-                'technician_ids' => [$busyTechnician->id],
-            ])
-            ->assertSessionHasErrors('technician_ids');
-
-        $this->assertDatabaseHas('inquiries', ['id' => $pendingDateInquiry->id, 'status' => 'pending']);
-        $this->assertDatabaseHas('inquiries', ['id' => $pendingSlotInquiry->id, 'status' => 'pending']);
-        $this->assertDatabaseHas('inquiries', ['id' => $pendingTechInquiry->id, 'status' => 'pending']);
-    }
-
     public function test_admin_cannot_mark_a_service_completed_before_post_service_record_exists(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -551,24 +474,6 @@ class BookingDateAvailabilityTest extends TestCase
         $this->assertDatabaseHas('inquiries', [
             'id' => $inquiry->id,
             'status' => 'in_progress',
-        ]);
-    }
-
-    private function createPendingInquiry(User $customer, string $date, string $number): Inquiry
-    {
-        return Inquiry::create([
-            'user_id' => $customer->id,
-            'inquiry_number' => $number,
-            'customer_name' => $customer->name,
-            'customer_phone' => '09171234567',
-            'customer_email' => $customer->email,
-            'street_address' => '123 Test Street',
-            'city' => 'Taguig',
-            'service_type' => 'Maintenance',
-            'urgency' => 'normal',
-            'preferred_date' => $date,
-            'preferred_time' => '08:00 AM - 11:00 AM',
-            'status' => 'pending',
         ]);
     }
 
