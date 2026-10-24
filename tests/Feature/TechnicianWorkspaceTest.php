@@ -258,7 +258,15 @@ class TechnicianWorkspaceTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Technician/Workspace')
                 ->where('openJobs.0.id', $inquiry->id)
-                ->where('openJobs.0.status', 'pending'));
+                ->where('openJobs.0.status', 'pending')
+                ->where('openJobs.0.customer_name', $customer->name)
+                ->where('openJobs.0.customer_phone', '09171234567')
+                ->where('openJobs.0.street_address', null)
+                ->where('openJobs.0.address_details', null)
+                ->where('openJobs.0.google_place_id', null)
+                ->where('openJobs.0.service_latitude', null)
+                ->where('openJobs.0.service_longitude', null)
+                ->where('openJobs.0.notes', null));
 
         $this->actingAs($technician)
             ->post(route('technician.jobs.claim', $inquiry))

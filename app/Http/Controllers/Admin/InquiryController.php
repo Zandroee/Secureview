@@ -105,31 +105,14 @@ class InquiryController extends Controller
             ->get(['id', 'name', 'email'])
             ->values();
             
-        $technicianBookings = Inquiry::query()
-            ->with('technicians:id')
-            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
-            ->whereDate('preferred_date', '>=', today())
-            ->get(['id', 'technician_id', 'preferred_date', 'preferred_time'])
-            ->map(function (Inquiry $job) {
-                $technicianIds = $job->technicians->pluck('id')->map(fn ($id) => (int) $id);
-                if ($job->technician_id) {
-                    $technicianIds->push((int) $job->technician_id);
-                }
-
-                return [
-                    'inquiry_id' => $job->id,
-                    'date' => $job->preferred_date?->format('Y-m-d'),
-                    'time' => $job->preferred_time,
-                    'technician_ids' => $technicianIds->unique()->values(),
-                ];
-            })
-            ->values();
-
+        $bookingAvailability = $this->bookingAvailabilityData();
 
         return Inertia::render('Admin/Inquiries', [
             'inquiries' => $inquiries,
             'technicians' => $technicians,
-            'technicianBookings' => $technicianBookings,
+            'technicianBookings' => $bookingAvailability['technicianBookings'],
+            'blockedBookingDates' => $bookingAvailability['blockedBookingDates'],
+            'blockedBookingTimeSlots' => $bookingAvailability['blockedBookingTimeSlots'],
             'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
             'todayDate' => today()->toDateString(),
             'filters' => [
@@ -150,6 +133,8 @@ class InquiryController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email'])
             ->values();
+
+        $bookingAvailability = $this->bookingAvailabilityData();
 
         return Inertia::render('Admin/InquiryDetails', [
             'inquiry' => [
@@ -188,10 +173,14 @@ class InquiryController extends Controller
                 'preferred_time' => $inquiry->preferred_time,
                 'notes' => $inquiry->notes,
                 'status' => $inquiry->status,
+                'service_record_exists' => $inquiry->serviceRecord()->exists(),
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
                 'user_id' => $inquiry->user_id,
             ],
             'technicians' => $technicians,
+            'technicianBookings' => $bookingAvailability['technicianBookings'],
+            'blockedBookingDates' => $bookingAvailability['blockedBookingDates'],
+            'blockedBookingTimeSlots' => $bookingAvailability['blockedBookingTimeSlots'],
             'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
             'todayDate' => today()->toDateString(),
         ]);
@@ -555,6 +544,12 @@ class InquiryController extends Controller
             ]);
         }
 
+        if ($newStatus === 'completed' && !$inquiry->serviceRecord()->exists()) {
+            return back()->withErrors([
+                'status' => 'Save the Post-Service Record before marking this service completed.',
+            ]);
+        }
+
         if (in_array($oldStatus, ['completed', 'cancelled'], true) && $newStatus !== $oldStatus) {
             return back()->withErrors([
                 'status' => 'Completed or cancelled inquiries cannot be reopened through a status change.',
@@ -611,6 +606,93 @@ class InquiryController extends Controller
 
         return back()->with('success', 'Inquiry status updated successfully.');
     }
+    /**
+     * Shared availability data for confirmation modals in both admin entry points.
+     */
+    private function bookingAvailabilityData(): array
+    {
+        $technicianBookings = Inquiry::query()
+            ->with('technicians:id')
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->orderBy('preferred_date')
+            ->orderBy('preferred_time')
+            ->orderBy('id')
+            ->get(['id', 'technician_id', 'preferred_date', 'preferred_time'])
+            ->map(function (Inquiry $job) {
+                $ids = $job->technicians->pluck('id')->map(fn ($id) => (int) $id);
+                if ($job->technician_id) {
+                    $ids->push((int) $job->technician_id);
+                }
+
+                return [
+                    'inquiry_id' => $job->id,
+                    'date' => $job->preferred_date?->format('Y-m-d'),
+                    'time' => $job->preferred_time,
+                    'technician_ids' => $ids->unique()->values(),
+                ];
+            })->values();
+
+        $technicianCount = User::query()->where('role', 'technician')->count();
+        $activeBookings = Inquiry::query()
+            ->with('technicians:id')
+            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->get(['id', 'technician_id', 'preferred_date', 'preferred_time']);
+
+        $busyTechniciansByDate = $activeBookings
+            ->groupBy(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d'))
+            ->map(function ($jobs) {
+                $ids = $jobs->flatMap(function (Inquiry $job) {
+                    $jobIds = $job->technicians->pluck('id')->map(fn ($id) => (int) $id);
+                    if ($job->technician_id) {
+                        $jobIds->push((int) $job->technician_id);
+                    }
+
+                    return $jobIds->unique()->values();
+                })->unique();
+
+                return $ids->count();
+            });
+
+        $capacityFullyBookedDates = $technicianCount > 0
+            ? $busyTechniciansByDate->filter(fn ($busyCount) => $busyCount >= $technicianCount)->keys()
+            : collect();
+
+        $manuallyBlockedDates = BlockedBookingDate::query()
+            ->whereDate('booking_date', '>=', today())
+            ->pluck('booking_date')
+            ->map(fn ($date) => \Illuminate\Support\Carbon::parse($date)->toDateString());
+
+        $blockedTimeSlotsRaw = BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', '>=', today())
+            ->get(['booking_date', 'booking_time']);
+
+        $datesWithAllSlotsBlocked = $blockedTimeSlotsRaw
+            ->groupBy(fn (BlockedBookingTimeSlot $slot) => $slot->booking_date?->format('Y-m-d'))
+            ->filter(fn ($slots) => $slots->pluck('booking_time')->unique()->count() >= count(self::BOOKING_TIME_SLOTS))
+            ->keys();
+
+        $blockedBookingDates = $manuallyBlockedDates
+            ->concat($capacityFullyBookedDates)
+            ->concat($datesWithAllSlotsBlocked)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $blockedBookingTimeSlots = $blockedTimeSlotsRaw
+            ->map(fn (BlockedBookingTimeSlot $slot) => [
+                'date' => $slot->booking_date?->format('Y-m-d'),
+                'time' => $slot->booking_time,
+            ])->values();
+
+        return [
+            'technicianBookings' => $technicianBookings,
+            'blockedBookingDates' => $blockedBookingDates,
+            'blockedBookingTimeSlots' => $blockedBookingTimeSlots,
+        ];
+    }
+
     private function dateUnavailableByTechnicianCapacity(string $date, ?int $exceptInquiryId = null): bool
     {
         $technicianCount = User::query()->where('role', 'technician')->count();

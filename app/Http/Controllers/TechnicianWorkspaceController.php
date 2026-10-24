@@ -91,7 +91,7 @@ class TechnicianWorkspaceController extends Controller
                     && count($this->assignedTechnicianIds($inquiry)) < self::MAX_TECHNICIANS_PER_JOB
                     && !in_array($inquiry->preferred_date?->format('Y-m-d') . '|' . $inquiry->preferred_time, $busySlots, true);
             })
-            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, false))
+            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, true, false))
             ->values();
 
         $inventory = Product::query()
@@ -714,7 +714,7 @@ class TechnicianWorkspaceController extends Controller
         }
     }
 
-    private function jobData(Inquiry $inquiry, bool $includeCustomerDetails): array
+    private function jobData(Inquiry $inquiry, bool $includeCustomerDetails, bool $includePreciseLocation = true): array
     {
         $assignedTechnicians = $inquiry->technicians;
         if (
@@ -738,11 +738,11 @@ class TechnicianWorkspaceController extends Controller
             'reschedule_request_status' => $inquiry->reschedule_request_status ?? 'none',
             'reschedule_request_note' => $inquiry->reschedule_request_note,
             'city' => $inquiry->city,
-            'street_address' => $includeCustomerDetails ? $inquiry->street_address : null,
-            'address_details' => $includeCustomerDetails ? $inquiry->address_details : null,
-            'service_latitude' => $includeCustomerDetails ? $inquiry->service_latitude : null,
-            'service_longitude' => $includeCustomerDetails ? $inquiry->service_longitude : null,
-            'google_place_id' => $includeCustomerDetails ? $inquiry->google_place_id : null,
+            'street_address' => $includeCustomerDetails && $includePreciseLocation ? $inquiry->street_address : null,
+            'address_details' => $includeCustomerDetails && $includePreciseLocation ? $inquiry->address_details : null,
+            'service_latitude' => $includeCustomerDetails && $includePreciseLocation ? $inquiry->service_latitude : null,
+            'service_longitude' => $includeCustomerDetails && $includePreciseLocation ? $inquiry->service_longitude : null,
+            'google_place_id' => $includeCustomerDetails && $includePreciseLocation ? $inquiry->google_place_id : null,
             'status' => $inquiry->status,
             'payment_status' => $inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable',
             'payment_method' => $inquiry->pendingCheckout?->order?->payment_method,
@@ -772,7 +772,8 @@ class TechnicianWorkspaceController extends Controller
         if ($includeCustomerDetails) {
             $data['customer_name'] = $inquiry->customer_name;
             $data['customer_phone'] = $inquiry->customer_phone;
-            $data['notes'] = $inquiry->notes;
+            // Notes may contain access instructions or sensitive location details.
+            $data['notes'] = $includePreciseLocation ? $inquiry->notes : null;
         }
 
         return $data;

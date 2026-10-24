@@ -199,11 +199,11 @@ function JobCard({ job, open = false, products = [] }) {
             </div>
 
             {job.technicians?.length > 0 && (
-                <div className="rounded-3 bg-light p-3 mb-3">
-                    <div className="small text-muted fw-semibold mb-2">ASSIGNED TEAM</div>
+                <div className="assigned-team-panel rounded-3 p-3 mb-3">
+                    <div className="assigned-team-label small fw-semibold mb-2">ASSIGNED TEAM</div>
                     <div className="d-flex flex-wrap gap-2">
                         {job.technicians.map((technician) => (
-                            <span key={technician.id} className="badge rounded-pill text-bg-light border text-dark">
+                            <span key={technician.id} className="assigned-team-chip badge rounded-pill border">
                                 {technician.name}
                             </span>
                         ))}
@@ -211,11 +211,16 @@ function JobCard({ job, open = false, products = [] }) {
                 </div>
             )}
 
-            {!open && job.customer_name && (
+            {job.customer_name && (
                 <div className="border-top pt-3 mb-3">
                     <div className="small text-muted fw-semibold mb-2">CUSTOMER DETAILS</div>
                     <div className="fw-semibold">{job.customer_name}</div>
                     {job.customer_phone && <div className="small"><a href={"tel:" + job.customer_phone}>{job.customer_phone}</a></div>}
+                    {open && !job.street_address && (
+                        <div className="small text-muted mt-1">
+                            Exact street address, entrance instructions, and navigation become available after you join this service.
+                        </div>
+                    )}
                     {job.street_address && <div className="small text-muted mt-1">{job.street_address}, {job.city}</div>}
                     {job.address_details && <div className="small text-muted mt-1"><span className="fw-semibold">Entrance details:</span> {job.address_details}</div>}
                     {(job.google_place_id || job.service_latitude !== null && job.service_latitude !== undefined || job.street_address) && (
@@ -546,7 +551,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
         "post-service-records": "Post-Service Records",
         "service-history": "Service History",
         products: "Products",
-        schedule: "My Schedule",
+        schedule: "Scheduled Services",
     };
     const pageDescriptions = {
     "dashboard": "A quick overview of your workload, upcoming appointments, and technician tools.",
@@ -609,6 +614,23 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                 .technician-workspace .workspace-table tbody td { padding-top: .75rem; padding-bottom: .75rem; }
                 .technician-workspace .workspace-filter.active { background: #1769ed; color: #fff; border-color: #1769ed; }
                 .technician-workspace .workspace-filter:not(.active) { background: #fff; color: #526174; border-color: #d8e0eb; }
+
+                .technician-workspace .assigned-team-panel {
+                    background: #f1f5f9;
+                    color: #1e293b;
+                    border: 1px solid #cbd5e1;
+                }
+                .technician-workspace .assigned-team-label {
+                    color: #334155;
+                    letter-spacing: .035em;
+                }
+                .technician-workspace .assigned-team-chip {
+                    background: #fff;
+                    color: #1e293b;
+                    border-color: #cbd5e1 !important;
+                    font-weight: 600;
+                    padding: .42rem .7rem;
+                }
 
                 html[data-bs-theme="dark"] .technician-workspace .technician-sidebar-column { background: var(--bs-body-bg) !important; }
                 html[data-bs-theme="dark"] .technician-workspace .technician-main-content { background: #111827 !important; }
@@ -674,6 +696,20 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                     background: #263449;
                     border-color: #475569;
                     color: #dce5f0;
+                }
+
+                html[data-bs-theme="dark"] .technician-workspace .assigned-team-panel {
+                    background: #111827 !important;
+                    border-color: #405169 !important;
+                    color: #e5e7eb !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .assigned-team-label {
+                    color: #cbd5e1 !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .assigned-team-chip {
+                    background: #273449 !important;
+                    color: #f8fafc !important;
+                    border-color: #52647d !important;
                 }
                 html[data-bs-theme="dark"] .technician-workspace .border {
                     border-color: #405169 !important;

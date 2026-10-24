@@ -59,7 +59,7 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                             </div>
                             <Link href="/admin/schedules" className="btn btn-outline-primary fw-bold">
                                 <i className="bi bi-calendar3 me-2" />
-                                BACK TO SCHEDULES
+                                BACK TO SCHEDULED SERVICES
                             </Link>
                         </div>
 
