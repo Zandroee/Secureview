@@ -546,7 +546,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
         "post-service-records": "Post-Service Records",
         "service-history": "Service History",
         products: "Products",
-        schedule: "My Schedule",
+        schedule: "Scheduled Services",
     };
     const pageDescriptions = {
     "dashboard": "A quick overview of your workload, upcoming appointments, and technician tools.",
