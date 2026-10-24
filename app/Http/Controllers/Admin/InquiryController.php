@@ -615,6 +615,9 @@ class InquiryController extends Controller
             ->with('technicians:id')
             ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
             ->whereDate('preferred_date', '>=', today())
+            ->orderBy('preferred_date')
+            ->orderBy('preferred_time')
+            ->orderBy('id')
             ->get(['id', 'technician_id', 'preferred_date', 'preferred_time'])
             ->map(function (Inquiry $job) {
                 $ids = $job->technicians->pluck('id')->map(fn ($id) => (int) $id);
