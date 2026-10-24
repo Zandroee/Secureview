@@ -422,7 +422,7 @@ function JobCard({ job, open = false, products = [] }) {
     );
 }
 
-export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventory = [], recentNotifications = [] }) {
+export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventory = [], recentNotifications = [], serviceHistory = [], activePage = "dashboard" }) {
     const { props } = usePage();
     const [stockChanges, setStockChanges] = useState({});
     const [stockErrors, setStockErrors] = useState({});
@@ -484,7 +484,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
     const filteredInventory = useMemo(() => {
         const query = inventorySearch.trim().toLowerCase();
         return inventory.filter((product) => {
-            const matchesSearch = !query || [product.name, product.category, String(product.id)]
+            const matchesSearch = !query || [product.name, product.brand, product.category, product.warranty, String(product.id)]
                 .some((value) => String(value ?? "").toLowerCase().includes(query));
             const quantity = Number(product.stock_quantity ?? 0);
             const matchesFilter = inventoryFilter === "low"
@@ -521,11 +521,33 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
         }));
     };
 
-    return (
+    const pageTitles = {
+        dashboard: "Technician Workspace",
+        services: "My Services",
+        "available-jobs": "Available Jobs",
+        "post-service-records": "Post-Service Records",
+        "service-history": "Service History",
+        products: "Products",
+        schedule: "My Schedule",
+    };
+    const pageDescriptions = {
+    "dashboard": "A quick overview of your workload, upcoming appointments, and technician tools.",
+    "services": "Review assigned service jobs, open their details, and update service progress.",
+    "available-jobs": "Find available team jobs that fit your schedule and have room for another technician.",
+    "post-service-records": "Review the work summaries, parts, and service income saved after completed services.",
+    "service-history": "Browse completed services assigned to you, including whether a Post-Service Record was saved.",
+    "products": "View the product catalog and current stock, and record stock adjustments with a reason.",
+    "schedule": "Review your assigned appointments and service dates."
+};
+    const pageTitle = pageTitles[activePage] ?? pageTitles.dashboard;
+    const pageDescription = pageDescriptions[activePage] ?? pageDescriptions.dashboard;
+
+        return (
         <div className="technician-workspace">
             <Navbar />
             <style>{`
                 .technician-workspace { background: #f4f7fb; }
+                .technician-workspace .technician-content { background: #f5f6f8; }
                 .technician-workspace .workspace-hero {
                     background: linear-gradient(125deg, #ffffff 0%, #f1f6ff 100%);
                     border: 1px solid #dce6f3;
@@ -565,6 +587,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                 .technician-workspace .workspace-filter.active { background: #1769ed; color: #fff; border-color: #1769ed; }
                 .technician-workspace .workspace-filter:not(.active) { background: #fff; color: #526174; border-color: #d8e0eb; }
 
+                html[data-bs-theme="dark"] .technician-workspace .technician-content { background: var(--bs-body-bg) !important; }
                 html[data-bs-theme="dark"] .technician-workspace {
                     background: var(--bs-body-bg);
                     color: var(--bs-body-color);
@@ -632,367 +655,420 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                     .technician-workspace .workspace-stat, .technician-workspace .technician-job-card { transition: none; }
                 }
             `}</style>
-
             <main style={{ minHeight: "75vh", fontFamily: "Outfit, sans-serif" }}>
                 <div className="container-fluid px-3 px-xl-4 py-4 py-xl-5" style={{ maxWidth: "1680px", margin: "0 auto" }}>
-                    <section className="workspace-hero p-3 p-lg-4 p-xl-5 mb-4">
-                        <div className="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
-                            <div className="d-flex align-items-start gap-3">
-                                <div className="d-none d-sm-flex align-items-center justify-content-center rounded-4 bg-primary text-white flex-shrink-0" style={{ width: 58, height: 58, boxShadow: "0 8px 18px rgba(23,105,237,.2)" }}>
-                                    <i className="bi bi-tools fs-3" />
-                                </div>
-                                <div>
-                                    <h1 className="fw-bold mb-2" style={{ fontSize: "clamp(1.65rem, 2.4vw, 2.35rem)", letterSpacing: "-.035em" }}>
-                                        Technician Workspace
-                                    </h1>
-                                    <p className="text-secondary mb-0" style={{ maxWidth: 720 }}>
-                                        Manage your assigned services, join available team jobs, and keep product inventory accurate.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    {props.flash?.success && (
-                        <div className="alert alert-success d-flex align-items-center gap-2 mb-4" role="status">
-                            <i className="bi bi-check-circle-fill" />
-                            <span>{props.flash.success}</span>
-                        </div>
-                    )}
-
-                    <div className="d-xl-none mb-3">
-                        <TechnicianSidebar mobileOnly />
-                    </div>
-
+                    <div className="d-xl-none mb-3"><TechnicianSidebar mobileOnly active={activePage} /></div>
                     <div className="row g-4">
-                        <aside className="col-xl-2 d-none d-xl-block">
-                            <TechnicianSidebar desktopOnly />
-                        </aside>
-                        <div className="col-lg-8 col-xl-7">
-                    <div className="row g-3 mb-4">
-                        <div className="col-6 col-xl-3">
-                            <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
-                                <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                                    <span className="small text-secondary fw-semibold">MY ACTIVE JOBS</span>
-                                    <span className="stat-icon bg-primary-subtle text-primary"><i className="bi bi-clipboard2-check" /></span>
-                                </div>
-                                <div className="d-flex align-items-end justify-content-between">
-                                    <div className="display-6 fw-bold text-dark lh-1">{activeJobs.length}</div>
-                                    <span className="small text-muted">Confirmed + ongoing</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-6 col-xl-3">
-                            <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
-                                <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                                    <span className="small text-secondary fw-semibold">IN PROGRESS</span>
-                                    <span className="stat-icon bg-info-subtle text-info-emphasis"><i className="bi bi-tools" /></span>
-                                </div>
-                                <div className="d-flex align-items-end justify-content-between">
-                                    <div className="display-6 fw-bold text-dark lh-1">{inProgressJobs.length}</div>
-                                    <span className="small text-muted">Currently underway</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-6 col-xl-3">
-                            <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
-                                <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                                    <span className="small text-secondary fw-semibold">AVAILABLE JOBS</span>
-                                    <span className="stat-icon bg-success-subtle text-success"><i className="bi bi-people" /></span>
-                                </div>
-                                <div className="d-flex align-items-end justify-content-between">
-                                    <div className="display-6 fw-bold text-dark lh-1">{openJobs.length}</div>
-                                    <span className="small text-muted">Open team opportunities</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-6 col-xl-3">
-                            <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
-                                <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                                    <span className="small text-secondary fw-semibold">PRODUCTS TRACKED</span>
-                                    <span className="stat-icon bg-warning-subtle text-warning-emphasis"><i className="bi bi-box-seam" /></span>
-                                </div>
-                                <div className="d-flex align-items-end justify-content-between">
-                                    <div className="display-6 fw-bold text-dark lh-1">{inventory.length}</div>
-                                    <span className="small text-muted">Stock records</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="my-jobs">
-                        <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+                        <aside className="col-xl-2 d-none d-xl-block"><TechnicianSidebar desktopOnly active={activePage} /></aside>
+                        <div className="col-12 col-xl-10 p-3 p-md-4 technician-content" style={{ minHeight: "75vh" }}>
+                            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                             <div>
-                                <div className="small text-primary fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Your workload</div>
-                                <h2 className="h3 fw-bold mb-1">My Service Jobs</h2>
-                                <p className="text-secondary mb-0">Review job details, navigate to the service location, and update service progress.</p>
-                            </div>
-                            <div className="d-flex flex-wrap gap-2">
-                                {[
-                                    { key: "active", label: "Active", count: activeJobs.length },
-                                    { key: "confirmed", label: "Confirmed", count: jobs.filter((job) => job.status === "confirmed").length },
-                                    { key: "in_progress", label: "In progress", count: inProgressJobs.length },
-                                    { key: "completed", label: "Completed", count: completedJobs.length },
-                                    { key: "all", label: "All jobs", count: jobs.length },
-                                ].map((filter) => (
-                                    <button
-                                        key={filter.key}
-                                        type="button"
-                                        className={"workspace-filter btn btn-sm rounded-pill px-3 " + (jobFilter === filter.key ? "active" : "")}
-                                        onClick={() => setJobFilter(filter.key)}
-                                    >
-                                        {filter.label} <span className={"badge rounded-pill ms-1 " + (jobFilter === filter.key ? "text-bg-light text-primary" : "bg-light text-secondary")}>{filter.count}</span>
-                                    </button>
-                                ))}
+                                <div className="small text-primary fw-bold">SECUREVIEW TECHNICIAN</div>
+                                <h1 className="fw-bold mb-1">{pageTitle}</h1>
+                                <div className="small text-muted">{pageDescription}</div>
                             </div>
                         </div>
-
-                        {filteredJobs.length ? (
-                            <div className="row g-3">
-                                {filteredJobs.map((job) => (
-                                    <div className="col-md-6 col-xxl-4" key={job.id}>
-                                        <JobCard job={job} products={inventory} />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center bg-light border rounded-4 p-4 p-lg-5">
-                                <div className="mx-auto d-flex align-items-center justify-content-center rounded-circle bg-white border text-primary mb-3" style={{ width: 58, height: 58 }}>
-                                    <i className="bi bi-clipboard2-check fs-4" />
-                                </div>
-                                <h3 className="h5 fw-bold mb-2">
-                                    {jobFilter === "active" ? "No active jobs assigned" : jobFilter === "completed" ? "No completed services yet" : "No jobs in this view"}
-                                </h3>
-                                <p className="text-secondary mb-3">
-                                    {jobFilter === "active"
-                                        ? "When you're assigned to a service, it will appear here. You can also join an available job below."
-                                        : "Try another filter or check Available Jobs."}
-                                </p>
-                                <a href="#available-jobs" className="btn btn-outline-primary fw-semibold">
-                                    <i className="bi bi-search me-2" />Browse available jobs
-                                </a>
-                            </div>
+                        {props.flash?.success && (
+                            <div className="alert alert-success d-flex align-items-center gap-2 mb-4" role="status"><i className="bi bi-check-circle-fill" /><span>{props.flash.success}</span></div>
                         )}
-                    </section>
-
-                    <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="available-jobs">
-                        <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
-                            <div>
-                                <div className="small text-success fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Team opportunities</div>
-                                <h2 className="h3 fw-bold mb-1">Available Jobs</h2>
-                                <p className="text-secondary mb-0">Join a confirmed service when it fits your schedule and the team has room.</p>
-                            </div>
-                            <div className="input-group" style={{ maxWidth: 360 }}>
-                                <span className="input-group-text bg-white"><i className="bi bi-search" /></span>
-                                <input
-                                    type="search"
-                                    className="form-control"
-                                    value={availableJobSearch}
-                                    onChange={(event) => setAvailableJobSearch(event.target.value)}
-                                    placeholder="Search service, location, job ID..."
-                                    aria-label="Search available jobs"
-                                />
-                                {availableJobSearch && (
-                                    <button type="button" className="btn btn-outline-secondary" onClick={() => setAvailableJobSearch("")} aria-label="Clear job search">
-                                        <i className="bi bi-x-lg" />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {filteredOpenJobs.length ? (
-                            <div className="row g-3">
-                                {filteredOpenJobs.map((job) => (
-                                    <div className="col-md-6 col-xxl-4" key={job.id}>
-                                        <JobCard job={job} open products={inventory} />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center bg-light border rounded-4 p-4 p-lg-5">
-                                <div className="mx-auto d-flex align-items-center justify-content-center rounded-circle bg-white border text-success mb-3" style={{ width: 58, height: 58 }}>
-                                    <i className="bi bi-people fs-4" />
-                                </div>
-                                <h3 className="h5 fw-bold mb-2">{openJobs.length ? "No jobs match your search" : "No available jobs right now"}</h3>
-                                <p className="text-secondary mb-0">{openJobs.length ? "Try another service name, location, or service number." : "New confirmed services with open team spots will appear here automatically."}</p>
-                            </div>
-                        )}
-                    </section>
-
-                    <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="service-records">
-                        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-                            <div>
-                                <div className="small text-primary fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Work history</div>
-                                <h2 className="h3 fw-bold mb-1">Post-Service Records</h2>
-                                <p className="text-secondary mb-0">Review completed work, parts pulled from stock, parts removed from the customer site, and recorded service income.</p>
-                            </div>
-                            <span className="badge rounded-pill bg-success-subtle text-success px-3 py-2">{completedJobs.filter((job) => job.service_record).length} saved records</span>
-                        </div>
-                        {completedJobs.some((job) => job.service_record) ? (
-                            <div className="row g-3">
-                                {completedJobs.filter((job) => job.service_record).map((job) => (
-                                    <div className="col-md-6 col-xxl-4" key={job.id}>
-                                        <JobCard job={job} products={inventory} />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center bg-light border rounded-4 p-4 p-lg-5">
-                                <div className="mx-auto d-flex align-items-center justify-content-center rounded-circle bg-white border text-primary mb-3" style={{ width: 58, height: 58 }}>
-                                    <i className="bi bi-journal-check fs-4" />
-                                </div>
-                                <h3 className="h5 fw-bold mb-2">No Post-Service Records yet</h3>
-                                <p className="text-secondary mb-0">When you complete a job, submit its Post-Service Record to save the work summary, parts, and service income here. Older completed jobs may not have a record.</p>
-                            </div>
-                        )}
-                    </section>
-
-                    <section className="workspace-section p-3 p-lg-4 p-xl-5" id="inventory">
-                        <div className="d-flex flex-column flex-xl-row justify-content-between align-items-xl-end gap-3 mb-4">
-                            <div>
-                                <div className="small text-warning-emphasis fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Stock control</div>
-                                <h2 className="h3 fw-bold mb-1">Inventory</h2>
-                                <p className="text-secondary mb-0">Record every stock adjustment with a reason. Each update creates an audit record.</p>
-                            </div>
-                            <div className="d-flex flex-column flex-sm-row gap-2" style={{ width: "100%", maxWidth: "520px", minWidth: 0, flex: "1 1 300px" }}>
-                                <div className="input-group">
-                                    <span className="input-group-text bg-white"><i className="bi bi-search" /></span>
-                                    <input
-                                        className="form-control"
-                                        type="search"
-                                        value={inventorySearch}
-                                        onChange={(event) => setInventorySearch(event.target.value)}
-                                        placeholder="Search inventory..."
-                                        aria-label="Search inventory"
-                                    />
-                                </div>
-                                <select className="form-select" value={inventoryFilter} onChange={(event) => setInventoryFilter(event.target.value)} aria-label="Filter inventory by stock level" style={{ minWidth: 145 }}>
-                                    <option value="all">All stock</option>
-                                    <option value="low">Low stock (1–5)</option>
-                                    <option value="out">Out of stock</option>
-                                </select>
-                            </div>
-                        </div>
-
-
-                        <div className="d-flex flex-wrap gap-2 mb-3">
-                            <span className="badge rounded-pill bg-light text-secondary border px-3 py-2">{inventory.length} products</span>
-                            <span className="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2">{inventory.filter((product) => Number(product.stock_quantity) > 0 && Number(product.stock_quantity) <= 5).length} low stock</span>
-                            <span className="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">{inventory.filter((product) => Number(product.stock_quantity) <= 0).length} out of stock</span>
-                        </div>
-
-                        <div className="border rounded-4 overflow-hidden">
-                            <div className="table-responsive">
-                                <table className="table workspace-table align-middle mb-0">
-                                    <thead className="table-light">
-                                        <tr>
-                                            <th className="ps-3">Product</th>
-                                            <th>Brand</th>
-                                            <th>Category</th>
-                                            <th>Price</th>
-                                            <th>Current stock</th>
-                                            <th style={{ minWidth: 150 }}>Adjustment (+ / −)</th>
-                                            <th style={{ minWidth: 230 }}>Reason for change</th>
-                                            <th className="text-end pe-3">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredInventory.map((product) => {
-                                            const image = productImageSource(product);
-                                            return (
-                                                <tr key={product.id}>
-                                                    <td className="ps-3" style={{ minWidth: 260 }}>
-                                                        <div className="d-flex align-items-center gap-3">
-                                                            {image ? (
-                                                                <img src={image} alt="" loading="lazy" className="rounded-3 border bg-white flex-shrink-0" style={{ width: 56, height: 56, objectFit: "contain", padding: 3 }} />
-                                                            ) : (
-                                                                <span className="d-flex align-items-center justify-content-center rounded-3 border bg-light text-secondary flex-shrink-0" style={{ width: 56, height: 56 }}>
-                                                                    <i className="bi bi-box-seam fs-5" />
-                                                                </span>
-                                                            )}
-                                                            <div>
-                                                                <div className="fw-semibold">{product.name}</div>
-                                                                <div className="small text-muted">SKU · {String(product.id).padStart(7, "0")}</div>
+                            {activePage === "dashboard" && (
+                                                <div className="row g-3 mb-4">
+                                                    <div className="col-6 col-xl-3">
+                                                        <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
+                                                            <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                                                <span className="small text-secondary fw-semibold">MY ACTIVE JOBS</span>
+                                                                <span className="stat-icon bg-primary-subtle text-primary"><i className="bi bi-clipboard2-check" /></span>
+                                                            </div>
+                                                            <div className="d-flex align-items-end justify-content-between">
+                                                                <div className="display-6 fw-bold text-dark lh-1">{activeJobs.length}</div>
+                                                                <span className="small text-muted">Confirmed + ongoing</span>
                                                             </div>
                                                         </div>
-                                                    </td>
-                                                    <td><span className="badge bg-light text-secondary border">{product.brand || "—"}</span></td>
-                                                    <td><span className="badge bg-light text-secondary border">{product.category || "Uncategorized"}</span></td>
-                                                    <td className="text-nowrap">₱{Number(product.price ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                    <td>
-                                                        <span className={"badge rounded-pill px-3 py-2 " + stockClass(product.stock_quantity)}>{product.stock_quantity} units</span>
-                                                    </td>
-                                                    <td style={{ minWidth: 150 }}>
-                                                        <input
-                                                            className={"form-control " + (stockErrors[product.id]?.quantity_change ? "is-invalid" : "")}
-                                                            type="number"
-                                                            step="1"
-                                                            value={stockChanges[product.id]?.change ?? ""}
-                                                            placeholder="+5 or -2"
-                                                            aria-label={"Stock adjustment for " + product.name}
-                                                            onChange={(event) => updateStockField(product.id, "change", event.target.value)}
-                                                        />
-                                                    </td>
-                                                    <td style={{ minWidth: 230 }}>
-                                                        <input
-                                                            className={"form-control " + (stockErrors[product.id]?.reason ? "is-invalid" : "")}
-                                                            value={stockChanges[product.id]?.reason ?? ""}
-                                                            placeholder="e.g. Used for installation"
-                                                            aria-label={"Reason for stock adjustment for " + product.name}
-                                                            onChange={(event) => updateStockField(product.id, "reason", event.target.value)}
-                                                        />
-                                                        {stockErrors[product.id]?.reason && <div className="small text-danger mt-1">{stockErrors[product.id].reason}</div>}
-                                                        {stockErrors[product.id]?.quantity_change && <div className="small text-danger mt-1">{stockErrors[product.id].quantity_change}</div>}
-                                                    </td>
-                                                    <td className="text-end pe-3">
-                                                        <button type="button" className="btn btn-primary fw-semibold text-nowrap" disabled={savingProduct === product.id} onClick={(event) => adjustStock(event, product)}>
-                                                            {savingProduct === product.id ? <><span className="spinner-border spinner-border-sm me-2" />Saving</> : <><i className="bi bi-arrow-left-right me-2" />Adjust stock</>}
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                        {!filteredInventory.length && (
-                                            <tr><td colSpan="8" className="text-center text-secondary py-5">
-                                                <i className="bi bi-search fs-4 d-block mb-2" />
-                                                {inventory.length ? "No products match these filters." : "No products in inventory."}
-                                            </td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <p className="small text-muted mt-3 mb-0">
-                            <i className="bi bi-shield-check me-1" />
-                            Stock cannot be reduced below zero. All successful adjustments are recorded for audit and low-stock monitoring.
-                        </p>
-                    </section>
-                        </div>
-
-                        <aside className="col-xl-3 col-lg-4">
-                            <div className="mb-4" id="technician-calendar">
-                                <Calendar
-                                    title="My Schedule"
-                                    subtitle="Your assigned appointments and service dates."
-                                    schedules={upcomingTechnicianJobs}
-                                    upcomingCount={activeJobs.length}
-                                    viewAllHref="/technician/workspace#my-jobs"
-                                    itemHrefPrefix="/technician/workspace#my-jobs"
-                                />
-                            </div>
-
-                            <section className="card border rounded-3">
-                                <div className="card-body p-3 p-lg-4">
-                                    <h5 className="fw-bold mb-1">Quick Links</h5>
-                                    <p className="small text-muted mb-3">Jump to the tools you use most.</p>
-                                    <div className="d-grid gap-2">
-                                        <a href="#my-jobs" className="btn btn-outline-primary text-start"><i className="bi bi-clipboard2-check me-2" />My Service Jobs</a>
-                                        <a href="#available-jobs" className="btn btn-outline-primary text-start"><i className="bi bi-people me-2" />Available Jobs</a>
-                                        <a href="#inventory" className="btn btn-outline-primary text-start"><i className="bi bi-box-seam me-2" />Inventory</a>
+                                                    </div>
+                                                    <div className="col-6 col-xl-3">
+                                                        <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
+                                                            <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                                                <span className="small text-secondary fw-semibold">IN PROGRESS</span>
+                                                                <span className="stat-icon bg-info-subtle text-info-emphasis"><i className="bi bi-tools" /></span>
+                                                            </div>
+                                                            <div className="d-flex align-items-end justify-content-between">
+                                                                <div className="display-6 fw-bold text-dark lh-1">{inProgressJobs.length}</div>
+                                                                <span className="small text-muted">Currently underway</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-6 col-xl-3">
+                                                        <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
+                                                            <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                                                <span className="small text-secondary fw-semibold">AVAILABLE JOBS</span>
+                                                                <span className="stat-icon bg-success-subtle text-success"><i className="bi bi-people" /></span>
+                                                            </div>
+                                                            <div className="d-flex align-items-end justify-content-between">
+                                                                <div className="display-6 fw-bold text-dark lh-1">{openJobs.length}</div>
+                                                                <span className="small text-muted">Open team opportunities</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="col-6 col-xl-3">
+                                                        <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
+                                                            <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                                                <span className="small text-secondary fw-semibold">PRODUCTS TRACKED</span>
+                                                                <span className="stat-icon bg-warning-subtle text-warning-emphasis"><i className="bi bi-box-seam" /></span>
+                                                            </div>
+                                                            <div className="d-flex align-items-end justify-content-between">
+                                                                <div className="display-6 fw-bold text-dark lh-1">{inventory.length}</div>
+                                                                <span className="small text-muted">Stock records</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                        )}
+                            {activePage === "dashboard" && (
+                            <>
+                                <section className="workspace-section p-3 p-lg-4 mb-3">
+                                    <h2 className="h5 fw-bold mb-1">Quick access</h2>
+                                    <p className="text-secondary mb-3">Open each tool on its own page, just like the admin workspace.</p>
+                                    <div className="row g-3">
+                                        {[
+                                            { title: "My Services", description: "Review your assigned jobs and update service progress.", href: "/technician/services", icon: "bi-clipboard-check" },
+                                            { title: "Available Jobs", description: "Find open team jobs that fit your schedule.", href: "/technician/available-jobs", icon: "bi-people" },
+                                            { title: "Schedule", description: "View your appointments and service dates.", href: "/technician/schedule", icon: "bi-calendar3" },
+                                            { title: "Post-Service Records", description: "Review saved work summaries and parts.", href: "/technician/post-service-records", icon: "bi-journal-check" },
+                                            { title: "Service History", description: "Review your completed services.", href: "/technician/service-history", icon: "bi-clock-history" },
+                                            { title: "Products", description: "View product stock and record stock adjustments.", href: "/technician/products", icon: "bi-camera-video" },
+                                        ].map((item) => (
+                                            <div className="col-sm-6 col-xxl-4" key={item.href}>
+                                                <Link href={item.href} className="text-decoration-none">
+                                                    <div className="workspace-section h-100 p-3">
+                                                        <div className="d-flex align-items-start gap-3">
+                                                            <span className="stat-icon bg-primary-subtle text-primary"><i className={"bi " + item.icon} /></span>
+                                                            <div>
+                                                                <div className="fw-bold text-body">{item.title}</div>
+                                                                <div className="small text-secondary mt-1">{item.description}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                                <div className="row g-3">
+                                    <div className="col-xl-6">
+                                        <Calendar title="My Schedule" subtitle="Your assigned appointments and service dates." schedules={upcomingTechnicianJobs} upcomingCount={activeJobs.length} viewAllHref="/technician/schedule" itemHrefPrefix="/technician/services#my-jobs" />
+                                    </div>
+                                    <div className="col-xl-6">
+                                        <section className="workspace-section p-3 p-lg-4 h-100">
+                                            <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
+                                                <h2 className="h5 fw-bold mb-0">Recent Notifications</h2>
+                                                <span className="badge rounded-pill bg-primary-subtle text-primary">{recentNotifications.length}</span>
+                                            </div>
+                                            {recentNotifications.length ? (
+                                                <div className="d-flex flex-column gap-3">
+                                                    {recentNotifications.slice(0, 5).map((notification) => (
+                                                        <div className="border-bottom pb-3" key={notification.id}>
+                                                            <div className="fw-semibold">{notification.title}</div>
+                                                            <div className="small text-secondary">{notification.message}</div>
+                                                            <div className="small text-muted mt-1">{notification.created_at}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : <div className="text-center text-secondary py-4"><i className="bi bi-bell fs-3 d-block mb-2" />No recent notifications.</div>}
+                                        </section>
                                     </div>
                                 </div>
+                            </>
+                        )}
+                            {activePage === "services" && (
+                                                <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="my-jobs">
+                                                    <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+                                                        <div>
+                                                            <div className="small text-primary fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Your workload</div>
+                                                            <h2 className="h3 fw-bold mb-1">My Service Jobs</h2>
+                                                            <p className="text-secondary mb-0">Review job details, navigate to the service location, and update service progress.</p>
+                                                        </div>
+                                                        <div className="d-flex flex-wrap gap-2">
+                                                            {[
+                                                                { key: "active", label: "Active", count: activeJobs.length },
+                                                                { key: "confirmed", label: "Confirmed", count: jobs.filter((job) => job.status === "confirmed").length },
+                                                                { key: "in_progress", label: "In progress", count: inProgressJobs.length },
+                                                                { key: "completed", label: "Completed", count: completedJobs.length },
+                                                                { key: "all", label: "All jobs", count: jobs.length },
+                                                            ].map((filter) => (
+                                                                <button
+                                                                    key={filter.key}
+                                                                    type="button"
+                                                                    className={"workspace-filter btn btn-sm rounded-pill px-3 " + (jobFilter === filter.key ? "active" : "")}
+                                                                    onClick={() => setJobFilter(filter.key)}
+                                                                >
+                                                                    {filter.label} <span className={"badge rounded-pill ms-1 " + (jobFilter === filter.key ? "text-bg-light text-primary" : "bg-light text-secondary")}>{filter.count}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                            
+                                                    {filteredJobs.length ? (
+                                                        <div className="row g-3">
+                                                            {filteredJobs.map((job) => (
+                                                                <div className="col-md-6 col-xxl-4" key={job.id}>
+                                                                    <JobCard job={job} products={inventory} />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center bg-light border rounded-4 p-4 p-lg-5">
+                                                            <div className="mx-auto d-flex align-items-center justify-content-center rounded-circle bg-white border text-primary mb-3" style={{ width: 58, height: 58 }}>
+                                                                <i className="bi bi-clipboard2-check fs-4" />
+                                                            </div>
+                                                            <h3 className="h5 fw-bold mb-2">
+                                                                {jobFilter === "active" ? "No active jobs assigned" : jobFilter === "completed" ? "No completed services yet" : "No jobs in this view"}
+                                                            </h3>
+                                                            <p className="text-secondary mb-3">
+                                                                {jobFilter === "active"
+                                                                    ? "When you're assigned to a service, it will appear here. You can also join an available job below."
+                                                                    : "Try another filter or check Available Jobs."}
+                                                            </p>
+                                                            <Link href="/technician/available-jobs" className="btn btn-outline-primary fw-semibold">
+                                                                <i className="bi bi-search me-2" />Browse available jobs</Link>
+                                                        </div>
+                                                    )}
+                                                </section>
+                        )}
+                            {activePage === "available-jobs" && (
+                                                <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="available-jobs">
+                                                    <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+                                                        <div>
+                                                            <div className="small text-success fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Team opportunities</div>
+                                                            <h2 className="h3 fw-bold mb-1">Available Jobs</h2>
+                                                            <p className="text-secondary mb-0">Join a confirmed service when it fits your schedule and the team has room.</p>
+                                                        </div>
+                                                        <div className="input-group" style={{ maxWidth: 360 }}>
+                                                            <span className="input-group-text bg-white"><i className="bi bi-search" /></span>
+                                                            <input
+                                                                type="search"
+                                                                className="form-control"
+                                                                value={availableJobSearch}
+                                                                onChange={(event) => setAvailableJobSearch(event.target.value)}
+                                                                placeholder="Search service, location, job ID..."
+                                                                aria-label="Search available jobs"
+                                                            />
+                                                            {availableJobSearch && (
+                                                                <button type="button" className="btn btn-outline-secondary" onClick={() => setAvailableJobSearch("")} aria-label="Clear job search">
+                                                                    <i className="bi bi-x-lg" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                            
+                                                    {filteredOpenJobs.length ? (
+                                                        <div className="row g-3">
+                                                            {filteredOpenJobs.map((job) => (
+                                                                <div className="col-md-6 col-xxl-4" key={job.id}>
+                                                                    <JobCard job={job} open products={inventory} />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center bg-light border rounded-4 p-4 p-lg-5">
+                                                            <div className="mx-auto d-flex align-items-center justify-content-center rounded-circle bg-white border text-success mb-3" style={{ width: 58, height: 58 }}>
+                                                                <i className="bi bi-people fs-4" />
+                                                            </div>
+                                                            <h3 className="h5 fw-bold mb-2">{openJobs.length ? "No jobs match your search" : "No available jobs right now"}</h3>
+                                                            <p className="text-secondary mb-0">{openJobs.length ? "Try another service name, location, or service number." : "New confirmed services with open team spots will appear here automatically."}</p>
+                                                        </div>
+                                                    )}
+                                                </section>
+                        )}
+                            {activePage === "post-service-records" && (
+                                                <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="service-records">
+                                                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                                                        <div>
+                                                            <div className="small text-primary fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Work history</div>
+                                                            <h2 className="h3 fw-bold mb-1">Post-Service Records</h2>
+                                                            <p className="text-secondary mb-0">Review completed work, parts pulled from stock, parts removed from the customer site, and recorded service income.</p>
+                                                        </div>
+                                                        <span className="badge rounded-pill bg-success-subtle text-success px-3 py-2">{completedJobs.filter((job) => job.service_record).length} saved records</span>
+                                                    </div>
+                                                    {completedJobs.some((job) => job.service_record) ? (
+                                                        <div className="row g-3">
+                                                            {completedJobs.filter((job) => job.service_record).map((job) => (
+                                                                <div className="col-md-6 col-xxl-4" key={job.id}>
+                                                                    <JobCard job={job} products={inventory} />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center bg-light border rounded-4 p-4 p-lg-5">
+                                                            <div className="mx-auto d-flex align-items-center justify-content-center rounded-circle bg-white border text-primary mb-3" style={{ width: 58, height: 58 }}>
+                                                                <i className="bi bi-journal-check fs-4" />
+                                                            </div>
+                                                            <h3 className="h5 fw-bold mb-2">No Post-Service Records yet</h3>
+                                                            <p className="text-secondary mb-0">When you complete a job, submit its Post-Service Record to save the work summary, parts, and service income here. Older completed jobs may not have a record.</p>
+                                                        </div>
+                                                    )}
+                                                </section>
+                        )}
+                            {activePage === "service-history" && (
+                            <section className="workspace-section p-3 p-lg-4 mb-3">
+                                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+                                    <div>
+                                        <div className="small text-primary fw-bold text-uppercase mb-1">Completed work</div>
+                                        <h2 className="h4 fw-bold mb-1">Service History</h2>
+                                        <p className="text-secondary mb-0">Completed services assigned to you. Services with a Post-Service Record include their recorded work and income details.</p>
+                                    </div>
+                                    <span className="badge rounded-pill bg-success-subtle text-success px-3 py-2">{serviceHistory.length} completed</span>
+                                </div>
+                                <div className="table-responsive">
+                                    <table className="table table-hover align-middle mb-0">
+                                        <thead className="table-light"><tr><th className="ps-3">Service</th><th>Customer</th><th>Scheduled for</th><th>Priority</th><th>Post-Service Record</th></tr></thead>
+                                        <tbody>
+                                            {serviceHistory.length ? serviceHistory.map((service) => (
+                                                <tr key={service.id}>
+                                                    <td className="ps-3"><div className="fw-bold">{service.service_type}</div><div className="small text-muted">{service.item_name || "General service"}</div><div className="small text-muted">{service.inquiry_number}</div></td>
+                                                    <td><div className="fw-semibold">{service.customer_name || "—"}</div><div className="small text-muted">{service.city || "—"}</div></td>
+                                                    <td><div className="fw-semibold">{service.preferred_date || "—"}</div><div className="small text-muted">{service.preferred_time || "—"}</div></td>
+                                                    <td><span className={"badge rounded-pill text-capitalize " + (service.urgency === "emergency" ? "text-bg-danger" : service.urgency === "urgent" ? "text-bg-warning" : "text-bg-secondary")}>{service.urgency || "normal"}</span></td>
+                                                    <td>{service.service_record ? <div><div className="fw-semibold text-success">Recorded</div><div className="small text-muted">₱{Number(service.service_record.total_income ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div> : <span className="small text-muted">No record saved</span>}</td>
+                                                </tr>
+                                            )) : <tr><td colSpan="5" className="text-center py-5"><i className="bi bi-clock-history fs-3 text-muted d-block mb-2" /><div className="fw-semibold">No completed services in your history yet</div><div className="small text-muted">Completed services assigned to you will appear here.</div></td></tr>}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </section>
-                        </aside>
+                        )}
+                            {activePage === "products" && (
+                                                <section className="workspace-section p-3 p-lg-4 p-xl-5" id="inventory">
+                                                    <div className="d-flex flex-column flex-xl-row justify-content-between align-items-xl-end gap-3 mb-4">
+                                                        <div>
+                                                            <div className="small text-warning-emphasis fw-bold text-uppercase mb-1" style={{ letterSpacing: ".08em" }}>Product stock</div>
+                                                            <h2 className="h3 fw-bold mb-1">Products</h2>
+                                                            <p className="text-secondary mb-0">Review the product catalog and current stock. Record stock changes with a reason so the inventory history stays accurate.</p>
+                                                        </div>
+                                                        <div className="d-flex flex-column flex-sm-row gap-2" style={{ width: "100%", maxWidth: "520px", minWidth: 0, flex: "1 1 300px" }}>
+                                                            <div className="input-group">
+                                                                <span className="input-group-text bg-white"><i className="bi bi-search" /></span>
+                                                                <input
+                                                                    className="form-control"
+                                                                    type="search"
+                                                                    value={inventorySearch}
+                                                                    onChange={(event) => setInventorySearch(event.target.value)}
+                                                                    placeholder="Search inventory..."
+                                                                    aria-label="Search inventory"
+                                                                />
+                                                            </div>
+                                                            <select className="form-select" value={inventoryFilter} onChange={(event) => setInventoryFilter(event.target.value)} aria-label="Filter inventory by stock level" style={{ minWidth: 145 }}>
+                                                                <option value="all">All stock</option>
+                                                                <option value="low">Low stock (1–5)</option>
+                                                                <option value="out">Out of stock</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                            
+                            
+                                                    <div className="d-flex flex-wrap gap-2 mb-3">
+                                                        <span className="badge rounded-pill bg-light text-secondary border px-3 py-2">{inventory.length} products</span>
+                                                        <span className="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2">{inventory.filter((product) => Number(product.stock_quantity) > 0 && Number(product.stock_quantity) <= 5).length} low stock</span>
+                                                        <span className="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">{inventory.filter((product) => Number(product.stock_quantity) <= 0).length} out of stock</span>
+                                                    </div>
+                            
+                                                    <div className="border rounded-4 overflow-hidden">
+                                                        <div className="table-responsive">
+                                                            <table className="table workspace-table align-middle mb-0">
+                                                                <thead className="table-light">
+                                                                    <tr>
+                                                                        <th className="ps-3">Product</th>
+                                                                        <th>Brand</th>
+                                                                        <th>Category</th>
+                                                                        <th>Warranty</th>
+                                                                        <th>Price</th>
+                                                                        <th>Current stock</th>
+                                                                        <th style={{ minWidth: 150 }}>Adjustment (+ / −)</th>
+                                                                        <th style={{ minWidth: 230 }}>Reason for change</th>
+                                                                        <th className="text-end pe-3">Action</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {filteredInventory.map((product) => {
+                                                                        const image = productImageSource(product);
+                                                                        return (
+                                                                            <tr key={product.id}>
+                                                                                <td className="ps-3" style={{ minWidth: 260 }}>
+                                                                                    <div className="d-flex align-items-center gap-3">
+                                                                                        {image ? (
+                                                                                            <img src={image} alt="" loading="lazy" className="rounded-3 border bg-white flex-shrink-0" style={{ width: 56, height: 56, objectFit: "contain", padding: 3 }} />
+                                                                                        ) : (
+                                                                                            <span className="d-flex align-items-center justify-content-center rounded-3 border bg-light text-secondary flex-shrink-0" style={{ width: 56, height: 56 }}>
+                                                                                                <i className="bi bi-box-seam fs-5" />
+                                                                                            </span>
+                                                                                        )}
+                                                                                        <div>
+                                                                                            <div className="fw-semibold">{product.name}</div>
+                                                                                            <div className="small text-muted">SKU · {String(product.id).padStart(7, "0")}</div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td><span className="badge bg-light text-secondary border">{product.brand || "—"}</span></td>
+                                                                                <td><span className="badge bg-light text-secondary border">{product.category || "Uncategorized"}</span></td>
+                                                                                <td><span className="badge bg-light text-secondary border">{product.warranty || "Not specified"}</span></td>
+                                                                                <td className="text-nowrap">₱{Number(product.price ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                                                <td>
+                                                                                    <span className={"badge rounded-pill px-3 py-2 " + stockClass(product.stock_quantity)}>{product.stock_quantity} units</span>
+                                                                                </td>
+                                                                                <td style={{ minWidth: 150 }}>
+                                                                                    <input
+                                                                                        className={"form-control " + (stockErrors[product.id]?.quantity_change ? "is-invalid" : "")}
+                                                                                        type="number"
+                                                                                        step="1"
+                                                                                        value={stockChanges[product.id]?.change ?? ""}
+                                                                                        placeholder="+5 or -2"
+                                                                                        aria-label={"Stock adjustment for " + product.name}
+                                                                                        onChange={(event) => updateStockField(product.id, "change", event.target.value)}
+                                                                                    />
+                                                                                </td>
+                                                                                <td style={{ minWidth: 230 }}>
+                                                                                    <input
+                                                                                        className={"form-control " + (stockErrors[product.id]?.reason ? "is-invalid" : "")}
+                                                                                        value={stockChanges[product.id]?.reason ?? ""}
+                                                                                        placeholder="e.g. Used for installation"
+                                                                                        aria-label={"Reason for stock adjustment for " + product.name}
+                                                                                        onChange={(event) => updateStockField(product.id, "reason", event.target.value)}
+                                                                                    />
+                                                                                    {stockErrors[product.id]?.reason && <div className="small text-danger mt-1">{stockErrors[product.id].reason}</div>}
+                                                                                    {stockErrors[product.id]?.quantity_change && <div className="small text-danger mt-1">{stockErrors[product.id].quantity_change}</div>}
+                                                                                </td>
+                                                                                <td className="text-end pe-3">
+                                                                                    <button type="button" className="btn btn-primary fw-semibold text-nowrap" disabled={savingProduct === product.id} onClick={(event) => adjustStock(event, product)}>
+                                                                                        {savingProduct === product.id ? <><span className="spinner-border spinner-border-sm me-2" />Saving</> : <><i className="bi bi-arrow-left-right me-2" />Adjust stock</>}
+                                                                                    </button>
+                                                                                </td>
+                                                                            </tr>
+                                                                        );
+                                                                    })}
+                                                                    {!filteredInventory.length && (
+                                                                        <tr><td colSpan="9" className="text-center text-secondary py-5">
+                                                                            <i className="bi bi-search fs-4 d-block mb-2" />
+                                                                            {inventory.length ? "No products match these filters." : "No products in inventory."}
+                                                                        </td></tr>
+                                                                    )}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                    <p className="small text-muted mt-3 mb-0">
+                                                        <i className="bi bi-shield-check me-1" />
+                                                        Stock cannot be reduced below zero. All successful adjustments are recorded for audit and low-stock monitoring.
+                                                    </p>
+                                                </section>
+                        )}
+                            {activePage === "schedule" && (
+                            <section className="workspace-section p-3 p-lg-4 mb-3">
+                                <div className="mb-3"><div className="small text-primary fw-bold text-uppercase mb-1">Your calendar</div><h2 className="h4 fw-bold mb-1">My Schedule</h2><p className="text-secondary mb-0">Only your confirmed and ongoing assigned appointments are shown.</p></div>
+                                <Calendar title="My Schedule" subtitle="Your assigned appointments and service dates." schedules={upcomingTechnicianJobs} upcomingCount={activeJobs.length} viewAllHref="/technician/services" itemHrefPrefix="/technician/services#my-jobs" />
+                                <div className="small text-muted mt-3">To review details or request a schedule change, open My Services.</div>
+                                <Link href="/technician/services" className="btn btn-outline-primary fw-semibold mt-2"><i className="bi bi-clipboard-check me-2" />Open My Services</Link>
+                            </section>
+                        )}
+                        </div>
                     </div>
                 </div>
             </main>

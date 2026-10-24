@@ -216,7 +216,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'technician'])->prefix('technician')->name('technician.')->group(function () {
-    Route::get('/dashboard', [TechnicianWorkspaceController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'dashboard')->name('dashboard');
+    Route::get('/services', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'services')->name('services');
+    Route::get('/available-jobs', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'available-jobs')->name('available-jobs');
+    Route::get('/post-service-records', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'post-service-records')->name('post-service-records');
+    Route::get('/service-history', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'service-history')->name('service-history');
+    Route::get('/products', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'products')->name('products');
+    Route::get('/schedule', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'schedule')->name('schedule');
     Route::post('/jobs/{inquiry}/claim', [TechnicianWorkspaceController::class, 'claimJob'])->name('jobs.claim');
     Route::patch('/jobs/{inquiry}/status', [TechnicianWorkspaceController::class, 'updateJobStatus'])->name('jobs.status');
     Route::post('/jobs/{inquiry}/post-service-record', [TechnicianWorkspaceController::class, 'storePostServiceRecord'])->name('jobs.post-service-record');
