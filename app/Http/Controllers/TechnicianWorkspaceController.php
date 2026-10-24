@@ -91,7 +91,7 @@ class TechnicianWorkspaceController extends Controller
                     && count($this->assignedTechnicianIds($inquiry)) < self::MAX_TECHNICIANS_PER_JOB
                     && !in_array($inquiry->preferred_date?->format('Y-m-d') . '|' . $inquiry->preferred_time, $busySlots, true);
             })
-            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, false))
+            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, true))
             ->values();
 
         $inventory = Product::query()
