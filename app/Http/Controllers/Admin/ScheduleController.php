@@ -281,6 +281,7 @@ class ScheduleController extends Controller
                 'preferred_time' => $inquiry->preferred_time,
                 'notes' => $inquiry->notes,
                 'status' => $inquiry->status,
+                'service_record_exists' => $inquiry->serviceRecord()->exists(),
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
                 'user_id' => $inquiry->user_id,
             ],
