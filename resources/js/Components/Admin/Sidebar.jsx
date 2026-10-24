@@ -19,7 +19,7 @@ const menuGroups = [
             icon: "bi-chat-left-text",
         },
         {
-            label: "Schedules",
+            label: "Scheduled Services",
             href: "/admin/schedules",
             key: "schedules",
             icon: "bi-calendar3",
