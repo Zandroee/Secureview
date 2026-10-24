@@ -745,12 +745,35 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                 </div>
                         )}
                             {activePage === "dashboard" && (
-                            <>
                                 <section className="workspace-section p-3 p-lg-4 mb-3">
                                     <h2 className="h5 fw-bold mb-1">Quick access</h2>
                                     <p className="text-secondary mb-3">Open each tool on its own page, just like the admin workspace.</p>
-                                </>
-                        )}
+                                    <div className="row g-3">
+                                        {[
+                                            { title: "My Services", description: "Review assigned jobs and update service progress.", href: "/technician/services", icon: "bi-clipboard-check" },
+                                            { title: "Available Jobs", description: "Find team jobs that fit your schedule.", href: "/technician/available-jobs", icon: "bi-people" },
+                                            { title: "Schedule", description: "Review your appointments and service dates.", href: "/technician/schedule", icon: "bi-calendar3" },
+                                            { title: "Post-Service Records", description: "Review saved work summaries and parts.", href: "/technician/post-service-records", icon: "bi-journal-check" },
+                                            { title: "Service History", description: "Review completed services.", href: "/technician/service-history", icon: "bi-clock-history" },
+                                            { title: "Products", description: "View product stock and record adjustments.", href: "/technician/products", icon: "bi-camera-video" },
+                                        ].map((item) => (
+                                            <div className="col-sm-6 col-xxl-4" key={item.href}>
+                                                <Link href={item.href} className="text-decoration-none">
+                                                    <div className="workspace-section h-100 p-3">
+                                                        <div className="d-flex align-items-start gap-3">
+                                                            <span className="stat-icon bg-primary-subtle text-primary"><i className={"bi " + item.icon} /></span>
+                                                            <div>
+                                                                <div className="fw-bold text-body">{item.title}</div>
+                                                                <div className="small text-secondary mt-1">{item.description}</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </Link>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
                             {activePage === "services" && (
                                                 <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="my-jobs">
                                                     <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
