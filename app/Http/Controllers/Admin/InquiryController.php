@@ -173,6 +173,7 @@ class InquiryController extends Controller
                 'preferred_time' => $inquiry->preferred_time,
                 'notes' => $inquiry->notes,
                 'status' => $inquiry->status,
+                'service_record_exists' => $inquiry->serviceRecord()->exists(),
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
                 'user_id' => $inquiry->user_id,
             ],
@@ -540,6 +541,12 @@ class InquiryController extends Controller
         if ($newStatus === 'completed' && $oldStatus !== 'in_progress') {
             return back()->withErrors([
                 'status' => 'A job must be in progress before it can be completed.',
+            ]);
+        }
+
+        if ($newStatus === 'completed' && !$inquiry->serviceRecord()->exists()) {
+            return back()->withErrors([
+                'status' => 'Save the Post-Service Record before marking this service completed.',
             ]);
         }
 
