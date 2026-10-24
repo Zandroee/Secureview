@@ -77,10 +77,6 @@ export default function AdminPurchases({
         const matchingOrder = orderRows.find((order) => String(order.id) === requestedOrderId);
         if (matchingOrder) {
             setViewingOrder(matchingOrder);
-            // Prevent reopening the modal after a future refresh or navigation.
-            const url = new URL(window.location.href);
-            url.searchParams.delete("view");
-            window.history.replaceState(window.history.state, "", url);
         }
     }, [orderRows]);
 
