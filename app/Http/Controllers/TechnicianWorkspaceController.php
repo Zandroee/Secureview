@@ -22,6 +22,12 @@ class TechnicianWorkspaceController extends Controller
 {
     private const MAX_TECHNICIANS_PER_JOB = 10;
 
+    private const BOOKING_TIME_SLOTS = [
+        '08:00 AM - 11:00 AM',
+        '11:00 AM - 02:00 PM',
+        '02:00 PM - 05:00 PM',
+    ];
+
     public function index(Request $request, string $page = 'dashboard')
     {
         $validPages = ['dashboard', 'services', 'available-jobs', 'post-service-records', 'service-history', 'products', 'schedule'];
@@ -118,6 +124,172 @@ class TechnicianWorkspaceController extends Controller
             ])
             ->values();
 
+        $unreadNotificationCount = $technician->customerNotifications()
+            ->whereNull('read_at')
+            ->count();
+
+        $recentServices = $technician->assignedInquiries()
+            ->whereIn('inquiries.status', ['pending', 'confirmed', 'in_progress', 'completed'])
+            ->orderByDesc('inquiries.updated_at')
+            ->limit(50)
+            ->get([
+                'inquiries.id',
+                'inquiries.inquiry_number',
+                'inquiries.customer_name',
+                'inquiries.service_type',
+                'inquiries.status',
+                'inquiries.urgency',
+                'inquiries.preferred_date',
+                'inquiries.preferred_time',
+                'inquiries.created_at',
+                'inquiries.updated_at',
+            ])
+            ->map(fn (Inquiry $inquiry) => [
+                'id' => $inquiry->id,
+                'inquiry_number' => $inquiry->inquiry_number,
+                'title' => $inquiry->service_type ?: ('Service ' . $inquiry->inquiry_number),
+                'customer_name' => $inquiry->customer_name,
+                'message' => $inquiry->customer_name . ' · ' . str_replace('_', ' ', $inquiry->status),
+                'date' => $inquiry->updated_at?->diffForHumans() ?? '',
+                'status' => $inquiry->status,
+                'urgency' => $inquiry->urgency ?: 'normal',
+                'preferred_date' => $inquiry->preferred_date?->format('M j, Y'),
+                'preferred_time' => $inquiry->preferred_time,
+            ])
+            ->values();
+
+        $scheduleQuery = $technician->assignedInquiries()
+            ->whereIn('inquiries.status', ['confirmed', 'in_progress'])
+            ->whereDate('inquiries.preferred_date', '>=', today());
+
+        $upcomingScheduleCount = (clone $scheduleQuery)->count();
+        $scheduleData = $scheduleQuery
+            ->orderBy('inquiries.preferred_date')
+            ->orderBy('inquiries.preferred_time')
+            ->orderByRaw("CASE inquiries.urgency WHEN 'emergency' THEN 1 WHEN 'urgent' THEN 2 ELSE 3 END")
+            ->limit(50)
+            ->get([
+                'inquiries.id',
+                'inquiries.inquiry_number',
+                'inquiries.customer_name',
+                'inquiries.service_type',
+                'inquiries.preferred_date',
+                'inquiries.preferred_time',
+                'inquiries.status',
+                'inquiries.urgency',
+            ])
+            ->map(fn (Inquiry $inquiry) => [
+                'id' => $inquiry->id,
+                'title' => $inquiry->service_type ?: 'Service appointment',
+                'date' => $inquiry->preferred_date?->format('F j, Y') ?? 'Date not set',
+                'date_value' => $inquiry->preferred_date?->format('Y-m-d'),
+                'time' => $inquiry->preferred_time,
+                'customer_name' => $inquiry->customer_name,
+                'status' => $inquiry->status,
+                'urgency' => $inquiry->urgency ?: 'normal',
+                'description' => $inquiry->customer_name . ' · ' . str_replace('_', ' ', $inquiry->status),
+                'inquiry_number' => $inquiry->inquiry_number,
+            ])
+            ->values();
+
+        $recentAnnouncements = CustomerNotification::query()
+            ->where('type', 'announcement')
+            ->latest()
+            ->limit(1000)
+            ->get(['id', 'type', 'title', 'message', 'action_url', 'created_at'])
+            ->unique(fn (CustomerNotification $notification) => sha1(
+                $notification->title . '|' . $notification->message
+            ))
+            ->take(50)
+            ->map(fn (CustomerNotification $notification) => [
+                'id' => $notification->id,
+                'type' => $notification->type,
+                'title' => $notification->title,
+                'message' => $notification->message,
+                'action_url' => $notification->action_url,
+                'created_at' => $notification->created_at?->diffForHumans() ?? '',
+            ])
+            ->values();
+
+        $manuallyBlockedDates = BlockedBookingDate::query()
+            ->whereDate('booking_date', '>=', today())
+            ->pluck('booking_date')
+            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->unique()
+            ->values();
+
+        $manualBlockedSlotsByDate = BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', '>=', today())
+            ->get(['booking_date', 'booking_time'])
+            ->groupBy(fn (BlockedBookingTimeSlot $slot) => $slot->booking_date?->format('Y-m-d'))
+            ->map(fn ($slots) => $slots->pluck('booking_time')->unique()->values());
+
+        $technicianIds = User::query()
+            ->where('role', 'technician')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id);
+        $technicianCount = $technicianIds->count();
+
+        $assignedBookings = Inquiry::query()
+            ->with('technicians:id')
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->get(['id', 'technician_id', 'preferred_date', 'preferred_time']);
+
+        $assignedIdsForJob = function (Inquiry $job) {
+            $ids = $job->technicians->pluck('id')->map(fn ($id) => (int) $id);
+            if ($job->technician_id) {
+                $ids->push((int) $job->technician_id);
+            }
+            return $ids->unique()->values();
+        };
+
+        $busyTechniciansByDate = $assignedBookings
+            ->groupBy(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d'))
+            ->map(fn ($dayJobs) => $dayJobs->flatMap($assignedIdsForJob)->unique()->count());
+
+        $capacityFullyBookedDates = $technicianCount > 0
+            ? $busyTechniciansByDate
+                ->filter(fn ($busyCount) => $busyCount >= $technicianCount)
+                ->keys()
+                ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            : collect();
+
+        $manualFullyBookedDates = $manualBlockedSlotsByDate
+            ->filter(fn ($slots) => $slots->count() >= count(self::BOOKING_TIME_SLOTS))
+            ->keys();
+
+        $fullyBookedDates = $manuallyBlockedDates
+            ->concat($manualFullyBookedDates)
+            ->concat($capacityFullyBookedDates)
+            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->unique()
+            ->values();
+
+        $partiallyBlockedBySlots = $manualBlockedSlotsByDate
+            ->filter(fn ($slots, $date) => $slots->count() > 0
+                && $slots->count() < count(self::BOOKING_TIME_SLOTS)
+                && !$fullyBookedDates->contains($date))
+            ->keys();
+
+        $partiallyUsedCapacityDates = $technicianCount > 0
+            ? $busyTechniciansByDate
+                ->filter(fn ($busyCount) => $busyCount > 0 && $busyCount < $technicianCount)
+                ->keys()
+            : collect();
+
+        $partiallyBlockedDates = $partiallyBlockedBySlots
+            ->concat($partiallyUsedCapacityDates)
+            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->reject(fn ($date) => $fullyBookedDates->contains($date))
+            ->unique()
+            ->values();
+
+        $calendarAvailability = [
+            'fullyBookedDates' => $fullyBookedDates,
+            'partiallyBlockedDates' => $partiallyBlockedDates,
+        ];
+
         return Inertia::render('Technician/Workspace', [
             'activePage' => $page,
             'jobs' => $jobs,
@@ -125,6 +297,15 @@ class TechnicianWorkspaceController extends Controller
             'serviceHistory' => $serviceHistory,
             'inventory' => $inventory,
             'recentNotifications' => $recentNotifications,
+            'unreadNotificationCount' => $unreadNotificationCount,
+            'recentServices' => $recentServices,
+            'recentAnnouncements' => $recentAnnouncements,
+            'scheduleData' => $scheduleData,
+            'upcomingScheduleCount' => $upcomingScheduleCount,
+            'calendarAvailability' => [
+                'fullyBookedDates' => $calendarAvailability['fullyBookedDates']->all(),
+                'partiallyBlockedDates' => $calendarAvailability['partiallyBlockedDates']->all(),
+            ],
         ]);
     }
 
