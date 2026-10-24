@@ -118,7 +118,7 @@ export default function AdminInquiryDetails({
     const backLabel = fromHistory
         ? "BACK TO SERVICE HISTORY"
         : fromSchedule
-            ? "BACK TO SCHEDULES"
+            ? "BACK TO SCHEDULED SERVICES"
             : "BACK TO SERVICES";
     const pageTitle = fromHistory
         ? "SERVICE HISTORY DETAILS"
@@ -377,30 +377,39 @@ export default function AdminInquiryDetails({
                                     </h2>
 
                                     <select
-                                        className="form-select mb-3 text-capitalize"
+                                        id="service-status"
+                                        className="form-select mb-2 text-capitalize"
                                         value={service.status}
                                         onChange={updateStatus}
+                                        disabled={updatingStatus}
+                                        aria-label="Update service status"
                                     >
-                                        <option value="pending" disabled={service.status === "confirmed" || service.status === "in_progress"}>
-                                            Pending
-                                        </option>
-
-                                        <option value="confirmed" disabled={service.status !== "pending" && service.status !== "confirmed"}>
-                                            Confirmed
-                                        </option>
-
-                                        <option value="in_progress" disabled={service.status === "pending"}>
-                                            In Progress
-                                        </option>
-
-                                        <option value="completed" disabled={service.status !== "in_progress" && service.status !== "completed"}>
-                                            Completed
-                                        </option>
-
-                                        <option value="cancelled" disabled={service.status === "completed" || service.status === "cancelled"}>
-                                            Cancelled
-                                        </option>
+                                        {allowedStatusOptions.map((option) => (
+                                            <option key={option.value} value={option.value} disabled={Boolean(option.disabled)}>
+                                                {option.label}
+                                            </option>
+                                        ))}
                                     </select>
+
+                                    {updatingStatus && (
+                                        <div className="small text-primary mb-2" role="status">
+                                            <span className="spinner-border spinner-border-sm me-2" />
+                                            Saving status and notifying the customer…
+                                        </div>
+                                    )}
+                                    {statusError && <div className="alert alert-danger py-2 small mb-2" role="alert">{statusError}</div>}
+                                    {statusSuccess && <div className="alert alert-success py-2 small mb-2" role="status">{statusSuccess}</div>}
+                                    <div className="small text-muted mb-3">
+                                        {service.status === "pending"
+                                            ? "Confirm & schedule opens the date availability and technician assignment step."
+                                            : service.status === "confirmed"
+                                                ? "Start the service when the technicians are ready. Cancel only if the job will not proceed."
+                                                : service.status === "in_progress" && !service.service_record_exists
+                                                    ? "A Post-Service Record must be saved before this service can be marked completed."
+                                                    : service.status === "in_progress"
+                                                        ? "The Post-Service Record is saved, so the service can be completed."
+                                                        : "This service is in a final state and cannot be reopened here."}
+                                    </div>
 
                                     <span
                                         className={
@@ -441,6 +450,9 @@ export default function AdminInquiryDetails({
                 <ConfirmInquiryModal
                     inquiry={service}
                     technicians={technicians}
+                    technicianBookings={technicianBookings}
+                    blockedBookingDates={blockedBookingDates}
+                    blockedBookingTimeSlots={blockedBookingTimeSlots}
                     bookingTimeSlots={bookingTimeSlots}
                     todayDate={todayDate}
                     onClose={() => setConfirming(false)}
