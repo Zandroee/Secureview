@@ -42,6 +42,9 @@ function statusClass(status) {
 export default function AdminInquiryDetails({
     inquiry: service,
     technicians = [],
+    technicianBookings = [],
+    blockedBookingDates = [],
+    blockedBookingTimeSlots = [],
     bookingTimeSlots = [],
     todayDate = "",
     fromSchedule = false,
@@ -49,26 +52,60 @@ export default function AdminInquiryDetails({
 }) {
     const [confirming, setConfirming] = useState(false);
     const [managingTeam, setManagingTeam] = useState(false);
+    const [updatingStatus, setUpdatingStatus] = useState(false);
+    const [statusError, setStatusError] = useState("");
+    const [statusSuccess, setStatusSuccess] = useState("");
+
+    const statusOptions = {
+        pending: [
+            { value: "pending", label: "Pending" },
+            { value: "confirmed", label: "Confirm & schedule service" },
+            { value: "cancelled", label: "Cancel service" },
+        ],
+        confirmed: [
+            { value: "confirmed", label: "Confirmed" },
+            { value: "in_progress", label: "In progress" },
+            { value: "cancelled", label: "Cancel service" },
+        ],
+        in_progress: [
+            { value: "in_progress", label: "In progress" },
+            { value: "completed", label: service.service_record_exists ? "Completed" : "Completed (Post-Service Record required)", disabled: !service.service_record_exists },
+            { value: "cancelled", label: "Cancel service" },
+        ],
+        completed: [{ value: "completed", label: "Completed" }],
+        cancelled: [{ value: "cancelled", label: "Cancelled" }],
+    };
+    const allowedStatusOptions = statusOptions[service.status] ?? [{ value: service.status, label: service.status }];
 
     const updateStatus = (event) => {
         const nextStatus = event.target.value;
+        setStatusError("");
+        setStatusSuccess("");
+
+        if (nextStatus === service.status) return;
         if (nextStatus === "confirmed" && service.status !== "confirmed") {
             setConfirming(true);
             return;
         }
 
+        if (nextStatus === "cancelled" && !window.confirm("Cancel this service request? The customer and assigned technicians will be notified.")) {
+            return;
+        }
+
+        setUpdatingStatus(true);
         router.patch(
             "/admin/inquiries/" + service.id + "/status",
-            {
-                status: nextStatus,
-            },
+            { status: nextStatus },
             {
                 preserveScroll: true,
+                onError: (validationErrors) => setStatusError(validationErrors.status ?? "Unable to update service status."),
                 onSuccess: () => {
+                    setStatusSuccess("Service status updated successfully.");
                     if (fromSchedule && nextStatus === "completed") {
                         router.visit("/admin/service-history");
                     }
                 },
+                onFinish: () => setUpdatingStatus(false),
             }
         );
     };
