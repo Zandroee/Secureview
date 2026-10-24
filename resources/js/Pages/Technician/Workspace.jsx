@@ -1036,10 +1036,36 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         )}
                             {activePage === "schedule" && (
                             <section className="workspace-section p-3 p-lg-4 mb-3">
-                                <div className="mb-3"><div className="small text-primary fw-bold text-uppercase mb-1">Your calendar</div><h2 className="h4 fw-bold mb-1">My Schedule</h2><p className="text-secondary mb-0">Only your confirmed and ongoing assigned appointments are shown.</p></div>
-                                <Calendar title="My Schedule" subtitle="Your assigned appointments and service dates." schedules={upcomingTechnicianJobs} upcomingCount={activeJobs.length} viewAllHref="/technician/services" itemHrefPrefix="/technician/services#my-jobs" />
-                                <div className="small text-muted mt-3">To review details or request a schedule change, open My Services.</div>
-                                <Link href="/technician/services" className="btn btn-outline-primary fw-semibold mt-2"><i className="bi bi-clipboard-check me-2" />Open My Services</Link>
+                                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+                                    <div>
+                                        <div className="small text-primary fw-bold text-uppercase mb-1">Your appointments</div>
+                                        <h2 className="h4 fw-bold mb-1">My Schedule</h2>
+                                        <p className="text-secondary mb-0">Your confirmed and ongoing services are listed here. The calendar and appointment shortcuts stay on the right.</p>
+                                    </div>
+                                    <span className="badge rounded-pill bg-primary-subtle text-primary px-3 py-2">{scheduleData.length} upcoming shown</span>
+                                </div>
+                                <div className="table-responsive">
+                                    <table className="table table-hover align-middle mb-0">
+                                        <thead className="table-light">
+                                            <tr><th className="ps-3">Service</th><th>Date and time</th><th>Priority</th><th>Status</th><th>Action</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {scheduleData.length ? scheduleData.map((schedule) => (
+                                                <tr key={schedule.id}>
+                                                    <td className="ps-3">
+                                                        <div className="fw-semibold">{schedule.title}</div>
+                                                        <div className="small text-muted">{schedule.inquiry_number}</div>
+                                                        <div className="small text-muted">{schedule.customer_name || ""}</div>
+                                                    </td>
+                                                    <td><div className="fw-semibold">{schedule.date}</div><div className="small text-muted">{schedule.time || "Time not set"}</div></td>
+                                                    <td><span className={"badge rounded-pill text-capitalize " + priorityClass(schedule.urgency)}>{schedule.urgency || "normal"}</span></td>
+                                                    <td><span className={"badge rounded-pill text-capitalize " + statusClass(schedule.status)}>{formatStatus(schedule.status)}</span></td>
+                                                    <td><Link href="/technician/services#my-jobs" className="btn btn-sm btn-outline-primary text-nowrap">Open service</Link></td>
+                                                </tr>
+                                            )) : <tr><td colSpan="5" className="text-center py-5"><i className="bi bi-calendar-check fs-3 d-block text-muted mb-2" /><div className="fw-semibold">No upcoming appointments</div><div className="small text-muted">New assigned appointments will appear here.</div></td></tr>}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </section>
                         )}
                                 </div>
