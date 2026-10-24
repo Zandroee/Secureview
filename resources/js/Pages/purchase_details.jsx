@@ -235,10 +235,11 @@ export default function PurchaseDetails({ order }) {
                                                 </div>
                                                 {order.payment_status === "paid" &&
                                                     order.order_status !== "cancelled" &&
-                                                    item.purchasable_id && (
+                                                    item.purchasable_id &&
+                                                    item.can_review && (
                                                         <div className="mt-2">
                                                             <Link
-                                                                href={`/${item.type === "package" ? "packages" : "products"}/${item.purchasable_id}#reviews`}
+                                                                href={`/purchases/${order.id}/items/${item.id}/review`}
                                                                 className="btn btn-outline-primary btn-sm"
                                                             >
                                                                 <i className="bi bi-star me-1"></i>
