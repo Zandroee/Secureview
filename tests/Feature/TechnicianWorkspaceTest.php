@@ -104,6 +104,48 @@ class TechnicianWorkspaceTest extends TestCase
         }
     }
 
+    public function test_technician_service_history_is_paginated_separately_from_the_active_job_list(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $oldestCompleted = null;
+
+        // More records than fit on one page must still be available in history.
+        for ($day = 1; $day <= 13; $day++) {
+            $completed = $this->makeInquiry(
+                $customer,
+                today()->subDays($day)->toDateString(),
+                'completed'
+            );
+            $completed->update(['technician_id' => $technician->id]);
+            $completed->technicians()->attach($technician->id, [
+                'assigned_by' => $admin->id,
+            ]);
+            $oldestCompleted = $completed;
+        }
+
+        $this->actingAs($technician)
+            ->get(route('technician.service-history'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('activePage', 'service-history')
+                ->where('serviceHistory.total', 13)
+                ->where('serviceHistory.current_page', 1)
+                ->has('serviceHistory.data', 12));
+
+        $this->actingAs($technician)
+            ->get(route('technician.service-history') . '?page=2')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('serviceHistory.total', 13)
+                ->where('serviceHistory.current_page', 2)
+                ->has('serviceHistory.data', 1)
+                ->where('serviceHistory.data.0.id', $oldestCompleted->id));
+    }
+
     public function test_application_timezone_defaults_to_philippines(): void
     {
         $this->assertSame('Asia/Manila', config('app.timezone'));
