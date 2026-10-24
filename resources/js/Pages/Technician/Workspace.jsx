@@ -199,11 +199,11 @@ function JobCard({ job, open = false, products = [] }) {
             </div>
 
             {job.technicians?.length > 0 && (
-                <div className="rounded-3 bg-light p-3 mb-3">
-                    <div className="small text-muted fw-semibold mb-2">ASSIGNED TEAM</div>
+                <div className="assigned-team-panel rounded-3 p-3 mb-3">
+                    <div className="assigned-team-label small fw-semibold mb-2">ASSIGNED TEAM</div>
                     <div className="d-flex flex-wrap gap-2">
                         {job.technicians.map((technician) => (
-                            <span key={technician.id} className="badge rounded-pill text-bg-light border text-dark">
+                            <span key={technician.id} className="assigned-team-chip badge rounded-pill border">
                                 {technician.name}
                             </span>
                         ))}
@@ -211,7 +211,7 @@ function JobCard({ job, open = false, products = [] }) {
                 </div>
             )}
 
-            {!open && job.customer_name && (
+            {job.customer_name && (
                 <div className="border-top pt-3 mb-3">
                     <div className="small text-muted fw-semibold mb-2">CUSTOMER DETAILS</div>
                     <div className="fw-semibold">{job.customer_name}</div>
@@ -610,6 +610,23 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                 .technician-workspace .workspace-filter.active { background: #1769ed; color: #fff; border-color: #1769ed; }
                 .technician-workspace .workspace-filter:not(.active) { background: #fff; color: #526174; border-color: #d8e0eb; }
 
+                .technician-workspace .assigned-team-panel {
+                    background: #f1f5f9;
+                    color: #1e293b;
+                    border: 1px solid #cbd5e1;
+                }
+                .technician-workspace .assigned-team-label {
+                    color: #334155;
+                    letter-spacing: .035em;
+                }
+                .technician-workspace .assigned-team-chip {
+                    background: #fff;
+                    color: #1e293b;
+                    border-color: #cbd5e1 !important;
+                    font-weight: 600;
+                    padding: .42rem .7rem;
+                }
+
                 html[data-bs-theme="dark"] .technician-workspace .technician-sidebar-column { background: var(--bs-body-bg) !important; }
                 html[data-bs-theme="dark"] .technician-workspace .technician-main-content { background: #111827 !important; }
                 html[data-bs-theme="dark"] .technician-workspace .technician-main { background: #111827 !important; }
@@ -674,6 +691,20 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                     background: #263449;
                     border-color: #475569;
                     color: #dce5f0;
+                }
+
+                html[data-bs-theme="dark"] .technician-workspace .assigned-team-panel {
+                    background: #111827 !important;
+                    border-color: #405169 !important;
+                    color: #e5e7eb !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .assigned-team-label {
+                    color: #cbd5e1 !important;
+                }
+                html[data-bs-theme="dark"] .technician-workspace .assigned-team-chip {
+                    background: #273449 !important;
+                    color: #f8fafc !important;
+                    border-color: #52647d !important;
                 }
                 html[data-bs-theme="dark"] .technician-workspace .border {
                     border-color: #405169 !important;
