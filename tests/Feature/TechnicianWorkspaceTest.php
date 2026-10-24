@@ -76,6 +76,39 @@ class TechnicianWorkspaceTest extends TestCase
                 ->has('inventory'));
     }
 
+    public function test_technician_sections_are_separate_routes_with_the_correct_active_page(): void
+    {
+        $technician = User::factory()->create(['role' => 'technician']);
+
+        $pages = [
+            'technician.dashboard' => 'dashboard',
+            'technician.services' => 'services',
+            'technician.available-jobs' => 'available-jobs',
+            'technician.post-service-records' => 'post-service-records',
+            'technician.service-history' => 'service-history',
+            'technician.products' => 'products',
+            'technician.schedule' => 'schedule',
+        ];
+
+        foreach ($pages as $routeName => $activePage) {
+            $this->actingAs($technician)
+                ->get(route($routeName))
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->component('Technician/Workspace')
+                    ->where('activePage', $activePage)
+                    ->has('jobs')
+                    ->has('openJobs')
+                    ->has('serviceHistory')
+                    ->has('inventory'));
+        }
+    }
+
+    public function test_application_timezone_defaults_to_philippines(): void
+    {
+        $this->assertSame('Asia/Manila', config('app.timezone'));
+    }
+
     public function test_technician_can_join_an_open_job_if_their_schedule_is_free(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
