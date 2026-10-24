@@ -559,11 +559,12 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
             <Navbar />
             <style>{`
                 .technician-workspace { background: #f4f7fb; }
-                .technician-workspace .technician-main-content { min-width: 0; }
+                .technician-workspace .technician-main-content { min-width: 0; background: #f5f6f8; }
                 .technician-workspace .technician-sidebar-column { min-width: 0; background: var(--bs-body-bg); }
                 .technician-workspace .technician-sidebar-column .admin-sidebar-desktop { min-height: calc(100vh - 70px) !important; height: 100%; }
                 .technician-workspace .technician-content { min-width: 0; }
                 .technician-workspace .technician-right-sidebar { min-width: 0; }
+                .technician-workspace .technician-empty-state { background: #f8fafc; }
                 .technician-workspace .workspace-hero {
                     background: linear-gradient(125deg, #ffffff 0%, #f1f6ff 100%);
                     border: 1px solid #dce6f3;
@@ -604,11 +605,14 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                 .technician-workspace .workspace-filter:not(.active) { background: #fff; color: #526174; border-color: #d8e0eb; }
 
                 html[data-bs-theme="dark"] .technician-workspace .technician-sidebar-column { background: var(--bs-body-bg) !important; }
-                html[data-bs-theme="dark"] .technician-workspace .technician-main-content { background: var(--bs-body-bg) !important; }
+                html[data-bs-theme="dark"] .technician-workspace .technician-main-content { background: #111827 !important; }
+                html[data-bs-theme="dark"] .technician-workspace .technician-main { background: #111827 !important; }
+                html[data-bs-theme="dark"] .technician-workspace { --technician-canvas: #111827; }
                 html[data-bs-theme="dark"] .technician-workspace {
                     background: var(--bs-body-bg);
                     color: var(--bs-body-color);
                 }
+                html[data-bs-theme="dark"] .technician-workspace .technician-empty-state { background: #18212f !important; border-color: #405169 !important; }
                 html[data-bs-theme="dark"] .technician-workspace .workspace-hero,
                 html[data-bs-theme="dark"] .technician-workspace .workspace-section,
                 html[data-bs-theme="dark"] .technician-workspace .workspace-stat,
@@ -693,86 +697,128 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                             <div className="alert alert-success d-flex align-items-center gap-2 mb-4" role="status"><i className="bi bi-check-circle-fill" /><span>{props.flash.success}</span></div>
                         )}
                             {activePage === "dashboard" && (
-                                                <div className="row g-3 mb-4">
-                                                    <div className="col-6 col-xl-3">
-                                                        <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
-                                                            <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                                                                <span className="small text-secondary fw-semibold">MY ACTIVE JOBS</span>
-                                                                <span className="stat-icon bg-primary-subtle text-primary"><i className="bi bi-clipboard2-check" /></span>
-                                                            </div>
-                                                            <div className="d-flex align-items-end justify-content-between">
-                                                                <div className="display-6 fw-bold text-dark lh-1">{activeJobs.length}</div>
-                                                                <span className="small text-muted">Confirmed + ongoing</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-6 col-xl-3">
-                                                        <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
-                                                            <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                                                                <span className="small text-secondary fw-semibold">IN PROGRESS</span>
-                                                                <span className="stat-icon bg-info-subtle text-info-emphasis"><i className="bi bi-tools" /></span>
-                                                            </div>
-                                                            <div className="d-flex align-items-end justify-content-between">
-                                                                <div className="display-6 fw-bold text-dark lh-1">{inProgressJobs.length}</div>
-                                                                <span className="small text-muted">Currently underway</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-6 col-xl-3">
-                                                        <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
-                                                            <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                                                                <span className="small text-secondary fw-semibold">AVAILABLE JOBS</span>
-                                                                <span className="stat-icon bg-success-subtle text-success"><i className="bi bi-people" /></span>
-                                                            </div>
-                                                            <div className="d-flex align-items-end justify-content-between">
-                                                                <div className="display-6 fw-bold text-dark lh-1">{openJobs.length}</div>
-                                                                <span className="small text-muted">Open team opportunities</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="col-6 col-xl-3">
-                                                        <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
-                                                            <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-                                                                <span className="small text-secondary fw-semibold">PRODUCTS TRACKED</span>
-                                                                <span className="stat-icon bg-warning-subtle text-warning-emphasis"><i className="bi bi-box-seam" /></span>
-                                                            </div>
-                                                            <div className="d-flex align-items-end justify-content-between">
-                                                                <div className="display-6 fw-bold text-dark lh-1">{inventory.length}</div>
-                                                                <span className="small text-muted">Stock records</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                <>
+                                    <div className="row g-3 mb-4">
+                                        <div className="col-6 col-xl-3">
+                                            <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
+                                                <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                                    <span className="small text-secondary fw-semibold">MY ACTIVE JOBS</span>
+                                                    <span className="stat-icon bg-primary-subtle text-primary"><i className="bi bi-clipboard2-check" /></span>
                                                 </div>
-                        )}
-                            {activePage === "dashboard" && (
-                                <section className="workspace-section p-3 p-lg-4 mb-3">
-                                    <h2 className="h5 fw-bold mb-1">Quick access</h2>
-                                    <p className="text-secondary mb-3">Open each tool on its own page, just like the admin workspace.</p>
-                                    <div className="row g-3">
-                                        {[
-                                            { title: "My Services", description: "Review assigned jobs and update service progress.", href: "/technician/services", icon: "bi-clipboard-check" },
-                                            { title: "Available Jobs", description: "Find team jobs that fit your schedule.", href: "/technician/available-jobs", icon: "bi-people" },
-                                            { title: "Schedule", description: "Review your appointments and service dates.", href: "/technician/schedule", icon: "bi-calendar3" },
-                                            { title: "Post-Service Records", description: "Review saved work summaries and parts.", href: "/technician/post-service-records", icon: "bi-journal-check" },
-                                            { title: "Service History", description: "Review completed services.", href: "/technician/service-history", icon: "bi-clock-history" },
-                                            { title: "Products", description: "View product stock and record adjustments.", href: "/technician/products", icon: "bi-camera-video" },
-                                        ].map((item) => (
-                                            <div className="col-sm-6 col-xxl-4" key={item.href}>
-                                                <Link href={item.href} className="text-decoration-none">
-                                                    <div className="workspace-section h-100 p-3">
-                                                        <div className="d-flex align-items-start gap-3">
-                                                            <span className="stat-icon bg-primary-subtle text-primary"><i className={"bi " + item.icon} /></span>
-                                                            <div>
-                                                                <div className="fw-bold text-body">{item.title}</div>
-                                                                <div className="small text-secondary mt-1">{item.description}</div>
-                                                            </div>
-                                                        </div>
+                                                <div className="d-flex align-items-end justify-content-between gap-2">
+                                                    <div className="display-6 fw-bold text-dark lh-1">{activeJobs.length}</div>
+                                                    <span className="small text-muted">Confirmed + ongoing</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="col-6 col-xl-3">
+                                            <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
+                                                <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                                    <span className="small text-secondary fw-semibold">IN PROGRESS</span>
+                                                    <span className="stat-icon bg-info-subtle text-info-emphasis"><i className="bi bi-tools" /></span>
+                                                </div>
+                                                <div className="d-flex align-items-end justify-content-between gap-2">
+                                                    <div className="display-6 fw-bold text-dark lh-1">{inProgressJobs.length}</div>
+                                                    <span className="small text-muted">Currently underway</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="col-6 col-xl-3">
+                                            <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
+                                                <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                                    <span className="small text-secondary fw-semibold">AVAILABLE JOBS</span>
+                                                    <span className="stat-icon bg-success-subtle text-success"><i className="bi bi-people" /></span>
+                                                </div>
+                                                <div className="d-flex align-items-end justify-content-between gap-2">
+                                                    <div className="display-6 fw-bold text-dark lh-1">{openJobs.length}</div>
+                                                    <span className="small text-muted">Open team opportunities</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="col-6 col-xl-3">
+                                            <div className="workspace-stat bg-white border rounded-4 p-3 p-lg-4 h-100">
+                                                <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                                    <span className="small text-secondary fw-semibold">PRODUCTS TRACKED</span>
+                                                    <span className="stat-icon bg-warning-subtle text-warning-emphasis"><i className="bi bi-box-seam" /></span>
+                                                </div>
+                                                <div className="d-flex align-items-end justify-content-between gap-2">
+                                                    <div className="display-6 fw-bold text-dark lh-1">{inventory.length}</div>
+                                                    <span className="small text-muted">Stock records</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <section className="workspace-section p-3 p-lg-4 mb-4">
+                                        <div className="d-flex flex-column flex-md-row align-items-md-start justify-content-between gap-3 mb-3">
+                                            <div>
+                                                <div className="small text-primary fw-bold text-uppercase mb-1">Your workload</div>
+                                                <h2 className="h4 fw-bold mb-1">My Active Services</h2>
+                                                <p className="text-secondary mb-0">Confirmed and ongoing jobs that need your attention.</p>
+                                            </div>
+                                            <Link href="/technician/services" className="btn btn-sm btn-outline-primary fw-semibold text-nowrap">
+                                                View my services <i className="bi bi-arrow-right ms-1" />
+                                            </Link>
+                                        </div>
+
+                                        {activeJobs.length > 0 ? (
+                                            <div className="row g-3">
+                                                {activeJobs.slice(0, 3).map((job) => (
+                                                    <div className="col-12 col-xxl-6" key={job.id}>
+                                                        <JobCard job={job} products={inventory} />
                                                     </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="technician-empty-state border rounded-4 p-4 p-lg-5 text-center">
+                                                <span className="stat-icon bg-primary-subtle text-primary mx-auto mb-3"><i className="bi bi-clipboard-check" /></span>
+                                                <h3 className="h5 fw-bold mb-2">No active services assigned yet</h3>
+                                                <p className="text-secondary mb-3 mx-auto" style={{ maxWidth: 540 }}>
+                                                    When you're assigned to a confirmed service, its schedule, customer details, and next action will appear here. You can check available team jobs in the meantime.
+                                                </p>
+                                                <Link href="/technician/available-jobs" className="btn btn-primary fw-semibold">
+                                                    <i className="bi bi-search me-2" />Browse available jobs
                                                 </Link>
                                             </div>
-                                        ))}
-                                    </div>
-                                </section>
+                                        )}
+                                    </section>
+
+                                    <section className="workspace-section p-3 p-lg-4 mb-4">
+                                        <div className="d-flex flex-column flex-md-row align-items-md-start justify-content-between gap-3 mb-3">
+                                            <div>
+                                                <div className="small text-success fw-bold text-uppercase mb-1">Team opportunities</div>
+                                                <h2 className="h4 fw-bold mb-1">Available Jobs</h2>
+                                                <p className="text-secondary mb-0">Join a service when your schedule is free and the team has room.</p>
+                                            </div>
+                                            <Link href="/technician/available-jobs" className="btn btn-sm btn-outline-primary fw-semibold text-nowrap">
+                                                View all jobs <i className="bi bi-arrow-right ms-1" />
+                                            </Link>
+                                        </div>
+
+                                        {openJobs.length > 0 ? (
+                                            <>
+                                                <div className="row g-3">
+                                                    {openJobs.slice(0, 3).map((job) => (
+                                                        <div className="col-12 col-xxl-6" key={job.id}>
+                                                            <JobCard job={job} open products={inventory} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {openJobs.length > 3 && (
+                                                    <div className="small text-secondary mt-3">
+                                                        Showing 3 of {openJobs.length} available jobs. Open Available Jobs to see the rest.
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <div className="technician-empty-state border rounded-4 p-4 text-center">
+                                                <i className="bi bi-check2-circle fs-3 text-success d-block mb-2" />
+                                                <div className="fw-semibold mb-1">No open team jobs right now</div>
+                                                <p className="text-secondary small mb-0">New opportunities will appear here when a service has room for another technician.</p>
+                                            </div>
+                                        )}
+                                    </section>
+                                </>
                             )}
                             {activePage === "services" && (
                                                 <section className="workspace-section p-3 p-lg-4 p-xl-5 mb-4" id="my-jobs">
