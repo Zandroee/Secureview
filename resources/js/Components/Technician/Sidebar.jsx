@@ -9,7 +9,7 @@ const menuGroups = [
     [
         { label: "My Services", href: "/technician/services", key: "services", icon: "bi-clipboard-check" },
         { label: "Available Jobs", href: "/technician/available-jobs", key: "available-jobs", icon: "bi-people" },
-        { label: "Schedule", href: "/technician/schedule", key: "schedule", icon: "bi-calendar3" },
+        { label: "Scheduled Services", href: "/technician/schedule", key: "schedule", icon: "bi-calendar3" },
         { label: "Post-Service Records", href: "/technician/post-service-records", key: "post-service-records", icon: "bi-journal-check" },
         { label: "Service History", href: "/technician/service-history", key: "service-history", icon: "bi-clock-history" },
     ],
