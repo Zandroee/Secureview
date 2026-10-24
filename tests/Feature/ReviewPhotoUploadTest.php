@@ -24,6 +24,13 @@ class ReviewPhotoUploadTest extends TestCase
         [$order, $orderItem] = $this->paidOrderWithItem($customer, $product);
 
         $this->actingAs($customer)
+            ->get(route('purchases.show', $order))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('purchase_details')
+                ->where('order.items.0.can_review', true));
+
+        $this->actingAs($customer)
             ->get(route('purchases.items.review', [$order, $orderItem]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
