@@ -681,13 +681,14 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                         <div className="col-12 col-md-9 col-lg-10 p-3 p-md-4 min-vh-100 technician-main-content">
                             <div className="row g-4 align-items-start">
                                 <div className="col-12 col-lg-9 technician-content">
-                            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-                            <div>
-                                <div className="small text-primary fw-bold">SECUREVIEW TECHNICIAN</div>
-                                <h1 className="fw-bold mb-1">{pageTitle}</h1>
-                                <div className="small text-muted">{pageDescription}</div>
+                            <div className="d-flex justify-content-between align-items-center gap-3 mb-4">
+                                <div>
+                                    <div className="small text-primary fw-bold">SECUREVIEW TECHNICIAN</div>
+                                    <h1 className="fw-bold text-primary mb-0">{pageTitle}</h1>
+                                    <div className="small text-muted mt-1">{pageDescription}</div>
+                                </div>
+                                <span className="badge bg-light text-primary border px-3 py-2 flex-shrink-0">Live data</span>
                             </div>
-                        </div>
                         {props.flash?.success && (
                             <div className="alert alert-success d-flex align-items-center gap-2 mb-4" role="status"><i className="bi bi-check-circle-fill" /><span>{props.flash.success}</span></div>
                         )}
