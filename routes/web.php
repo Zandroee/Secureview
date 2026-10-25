@@ -267,6 +267,8 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/inquiries', [AdminInquiryController::class, 'index'])
         ->name('admin.inquiries.index');
+    Route::patch('/admin/service-booking-fees', [AdminInquiryController::class, 'updateBookingFees'])
+        ->name('admin.service-booking-fees.update');
 
     Route::get('/admin/products', [AdminProductController::class, 'index'])
         ->name('admin.products.index');
