@@ -501,6 +501,46 @@ class InstallationInquiryPaymentTest extends TestCase
         });
     }
 
+    public function test_repeated_priority_booking_submission_reuses_the_existing_fee_order(): void
+    {
+        config(['services.secureview.booking_fees.emergency' => 1500]);
+
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://api.paymongo.com/v2/checkout_sessions' => Http::response([
+                'data' => [
+                    'id' => 'cs_duplicate_priority_test',
+                    'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_duplicate_priority_test'],
+                ],
+            ], 200),
+        ]);
+
+        $payload = $this->inquiryPayload([
+            'service_type' => 'Repair',
+            'urgency' => 'emergency',
+            'payment_method' => 'gcash',
+        ]);
+
+        $this->actingAs($customer)->post('/inquiries', $payload);
+        $this->actingAs($customer)->post('/inquiries', $payload)->assertRedirect();
+
+        $this->assertDatabaseCount('inquiries', 1);
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertDatabaseCount('pending_inquiry_checkouts', 1);
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'booking_request_token' => $payload['booking_request_token'],
+            'status' => 'pending_payment',
+        ]);
+        $this->assertEquals(1500.00, (float) Order::query()->firstOrFail()->total);
+
+        // Only the first submission may create a hosted checkout session.
+        Http::assertSentCount(1);
+    }
+
     public function test_emergency_noninstallation_booking_creates_a_fee_only_order_without_a_catalog_item(): void
     {
         config(['services.secureview.booking_fees.emergency' => 1500]);
