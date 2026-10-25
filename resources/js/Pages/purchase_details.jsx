@@ -481,6 +481,15 @@ export default function PurchaseDetails({ order }) {
                                     </div>
                                 )}
 
+                                {Number(order.service_priority_fee ?? 0) > 0 && (
+                                    <div className="d-flex justify-content-between mb-2">
+                                        <span className="text-muted">Urgent / Emergency Booking Fee</span>
+                                        <span className="fw-semibold">
+                                            ₱{Number(order.service_priority_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
+                                )}
+
                                 <div className="d-flex justify-content-between mb-3">
                                     <span className="text-muted">
                                         Shipping
