@@ -43,6 +43,8 @@ export default function AdminWarranty({
     const { props } = usePage();
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
     const [editingClaim, setEditingClaim] = useState(null);
     const [viewingRecord, setViewingRecord] = useState(null);
     const [saving, setSaving] = useState(false);
@@ -62,7 +64,7 @@ export default function AdminWarranty({
         event.preventDefault();
         router.get(
             "/admin/warranty",
-            { search, status },
+            { search, status, date_from: dateFrom, date_to: dateTo },
             { preserveState: true, preserveScroll: true, replace: true }
         );
     };
@@ -70,6 +72,8 @@ export default function AdminWarranty({
     const clearFilters = () => {
         setSearch("");
         setStatus("");
+        setDateFrom("");
+        setDateTo("");
         router.get(
             "/admin/warranty",
             {},
@@ -186,6 +190,14 @@ export default function AdminWarranty({
                                 </div>
                                 <div className="col-6 col-lg-1 d-grid">
                                     <button type="button" className="btn btn-outline-primary fw-bold" onClick={clearFilters}>CLEAR</button>
+                                </div>
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">CLAIM DATE FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">CLAIM DATE TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
                                 </div>
                             </form>
                         </section>
