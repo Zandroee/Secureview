@@ -686,11 +686,19 @@ class CheckoutController extends Controller
             $inquiry = $this->completePaidInstallationInquiry($request, $order);
 
             if ($inquiry) {
+                $isInstallation = $inquiry->service_type === 'Installation';
+                $serviceLabel = strtolower($inquiry->service_type ?: 'service');
+                $urgencyLabel = ucfirst($inquiry->urgency ?: 'normal');
+                $successMessage = $isInstallation
+                    ? 'Payment confirmed. Your installation service request ' . $inquiry->inquiry_number . ' has been submitted.'
+                    : 'Payment confirmed. Your ' . $urgencyLabel . ' ' . $serviceLabel . ' request ' . $inquiry->inquiry_number . ' has been submitted.';
+                $notificationTitle = $isInstallation ? 'Installation service booked' : $urgencyLabel . ' service booking confirmed';
+
                 return redirect()->route('inquiries.show', $inquiry)
-                    ->with('success', 'Payment confirmed. Your installation service request ' . $inquiry->inquiry_number . ' has been submitted.')
+                    ->with('success', $successMessage)
                     ->with('serviceNotification', [
-                        'title' => 'Installation service booked',
-                        'message' => 'Payment is confirmed and installation service request ' . $inquiry->inquiry_number . ' has been submitted for review.',
+                        'title' => $notificationTitle,
+                        'message' => 'Payment is confirmed and service request ' . $inquiry->inquiry_number . ' has been submitted for review.',
                         'action_url' => route('inquiries.show', $inquiry),
                     ]);
             }
