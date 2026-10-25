@@ -357,6 +357,8 @@ class PurchaseController extends Controller
             'delivery_longitude' => $order->delivery_longitude,
             'notes' => $order->notes,
             'subtotal' => (float) $order->subtotal,
+            'installation_fee' => (float) $order->installation_fee,
+            'service_priority_fee' => (float) $order->service_priority_fee,
             'shipping_fee' => (float) $order->shipping_fee,
             'total' => (float) $order->total,
             'payment_method' => $order->payment_method,
