@@ -5,21 +5,33 @@ import AdminPagination from "../../Components/Admin/AdminPagination";
 import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
-export default function ServiceHistory({ services = [], filters = {}, serviceIncomeSummary = {} }) {
+export default function ServiceHistory({ services = [], filters = {}, technicians = [], serviceIncomeSummary = {} }) {
     const serviceRows = services.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
+    const [serviceType, setServiceType] = useState(filters.service_type ?? "");
+    const [urgency, setUrgency] = useState(filters.urgency ?? "");
+    const [technician, setTechnician] = useState(filters.technician ? String(filters.technician) : "");
+    const [recordStatus, setRecordStatus] = useState(filters.record_status ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
 
     const applySearch = (event) => {
         event.preventDefault();
         router.get(
             "/admin/service-history",
-            { search },
+            { search, service_type: serviceType, urgency, technician, record_status: recordStatus, date_from: dateFrom, date_to: dateTo },
             { preserveState: true, preserveScroll: true, replace: true }
         );
     };
 
     const clearSearch = () => {
         setSearch("");
+        setServiceType("");
+        setUrgency("");
+        setTechnician("");
+        setRecordStatus("");
+        setDateFrom("");
+        setDateTo("");
         router.get("/admin/service-history", {}, {
             preserveState: true,
             preserveScroll: true,
@@ -86,26 +98,52 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
 
                         <div className="bg-white border rounded-3 p-3 mb-3">
                             <form className="row g-2 align-items-end" onSubmit={applySearch}>
-                                <div className="col-md-9">
-                                    <label htmlFor="service-history-search" className="form-label small fw-semibold mb-1">
-                                        SEARCH COMPLETED SERVICES
-                                    </label>
-                                    <input
-                                        id="service-history-search"
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Inquiry number, customer, or service"
-                                        value={search}
-                                        onChange={(event) => setSearch(event.target.value)}
-                                    />
+                                <div className="col-12 col-xl-4">
+                                    <label htmlFor="service-history-search" className="form-label small fw-semibold mb-1">SEARCH COMPLETED SERVICES</label>
+                                    <input id="service-history-search" type="search" className="form-control" placeholder="Inquiry number, customer, or service" value={search} onChange={(event) => setSearch(event.target.value)} />
                                 </div>
-                                <div className="col-md-3 d-flex gap-2">
-                                    <button type="submit" className="btn btn-primary fw-bold flex-grow-1">
-                                        SEARCH
-                                    </button>
-                                    <button type="button" className="btn btn-outline-secondary fw-bold" onClick={clearSearch}>
-                                        CLEAR
-                                    </button>
+                                <div className="col-6 col-xl-2">
+                                    <label className="form-label small fw-semibold mb-1">SERVICE TYPE</label>
+                                    <select className="form-select" value={serviceType} onChange={(event) => setServiceType(event.target.value)}>
+                                        <option value="">All service types</option>
+                                        {["Installation", "Site Inspection", "Maintenance", "Repair", "Consultation", "Other"].map((value) => <option key={value} value={value}>{value}</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-6 col-xl-2">
+                                    <label className="form-label small fw-semibold mb-1">URGENCY</label>
+                                    <select className="form-select" value={urgency} onChange={(event) => setUrgency(event.target.value)}>
+                                        <option value="">All urgency</option>
+                                        <option value="normal">Normal</option>
+                                        <option value="urgent">Urgent</option>
+                                        <option value="emergency">Emergency</option>
+                                    </select>
+                                </div>
+                                <div className="col-6 col-xl-2">
+                                    <label className="form-label small fw-semibold mb-1">TECHNICIAN</label>
+                                    <select className="form-select" value={technician} onChange={(event) => setTechnician(event.target.value)}>
+                                        <option value="">All technicians</option>
+                                        {technicians.map((value) => <option key={value.id} value={value.id}>{value.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-6 col-xl-2">
+                                    <label className="form-label small fw-semibold mb-1">POST-SERVICE RECORD</label>
+                                    <select className="form-select" value={recordStatus} onChange={(event) => setRecordStatus(event.target.value)}>
+                                        <option value="">All services</option>
+                                        <option value="with_record">Has record</option>
+                                        <option value="without_record">No record</option>
+                                    </select>
+                                </div>
+                                <div className="col-6 col-xl-2">
+                                    <label className="form-label small fw-semibold mb-1">BOOKING DATE FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-6 col-xl-2">
+                                    <label className="form-label small fw-semibold mb-1">BOOKING DATE TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
+                                </div>
+                                <div className="col-12 d-flex justify-content-end gap-2 mt-2">
+                                    <button type="submit" className="btn btn-primary fw-bold">FILTER</button>
+                                    <button type="button" className="btn btn-outline-secondary fw-bold" onClick={clearSearch}>CLEAR</button>
                                 </div>
                             </form>
                         </div>
