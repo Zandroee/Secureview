@@ -16,13 +16,13 @@ class ExpiredUnpaidOrderCancellationTest extends TestCase
 
     public function test_scheduled_expiry_cancels_only_unpaid_orders_past_the_configured_deadline(): void
     {
-        config(['services.secureview.unpaid_order_expiry_days' => 14]);
+        config(['services.secureview.unpaid_order_expiry_hours' => 48]);
         $customer = User::factory()->create(['role' => 'user']);
 
         $expired = $this->makeOrder($customer, 'SV-EXPIRED-' . $customer->id, 'pending', 'pending');
         DB::table('orders')->where('id', $expired->id)->update([
-            'created_at' => now()->subDays(15),
-            'updated_at' => now()->subDays(15),
+            'created_at' => now()->subHours(49),
+            'updated_at' => now()->subHours(49),
         ]);
 
         $notExpired = $this->makeOrder($customer, 'SV-NEW-' . $customer->id, 'pending', 'awaiting_payment');
@@ -34,7 +34,7 @@ class ExpiredUnpaidOrderCancellationTest extends TestCase
         $this->assertDatabaseHas('orders', [
             'id' => $expired->id,
             'order_status' => 'cancelled',
-            'cancellation_reason' => 'Automatically cancelled after 14 days without confirmed payment.',
+            'cancellation_reason' => 'Automatically cancelled after 48 hours without confirmed payment.',
         ]);
         $this->assertDatabaseHas('customer_notifications', [
             'user_id' => $customer->id,
