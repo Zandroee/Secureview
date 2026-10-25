@@ -194,11 +194,11 @@ export default function AdminWarranty({
                             <div className="p-3 p-md-4 border-bottom">
                                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
                                     <div>
-                                        <h2 className="h5 fw-bold mb-1">Warranty Records</h2>
-                                        <p className="small text-muted mb-0">Each purchase appears once. Use View to inspect coverage and all claims linked to that item.</p>
+                                        <h2 className="h5 fw-bold mb-1">Warranty Claims</h2>
+                                        <p className="small text-muted mb-0">Only purchases with a submitted warranty claim appear here. Use View to check coverage and manage the claim.</p>
                                     </div>
                                     <div className="small text-muted text-md-end">
-                                        <div>{warranties.total ?? coverageRows.length} purchase records</div>
+                                        <div>{warranties.total ?? coverageRows.length} claimed purchase items</div>
                                         <div>{summary.total ?? 0} service claims</div>
                                     </div>
                                 </div>
@@ -219,8 +219,8 @@ export default function AdminWarranty({
                                             <tr>
                                                 <td colSpan="5" className="text-center py-5 text-muted">
                                                     <i className="bi bi-shield-check fs-2 d-block mb-2" />
-                                                    No warranty records or claims found.
-                                                    <div className="small mt-1">Try adjusting the search or claim-status filters.</div>
+                                                    No submitted warranty claims found.
+                                                    <div className="small mt-1">Purchases without claims remain available in Orders History, order details, and invoices.</div>
                                                 </td>
                                             </tr>
                                         ) : combinedRows.map((record) => {
