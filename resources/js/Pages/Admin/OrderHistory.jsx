@@ -35,10 +35,14 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
     const rows = orders.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [orderStatus, setOrderStatus] = useState(filters.order_status ?? "");
+    const [paymentStatus, setPaymentStatus] = useState(filters.payment_status ?? "");
+    const [paymentMethod, setPaymentMethod] = useState(filters.payment_method ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
 
     const applyFilters = (event) => {
         event.preventDefault();
-        router.get("/admin/order-history", { search, order_status: orderStatus }, {
+        router.get("/admin/order-history", { search, order_status: orderStatus, payment_status: paymentStatus, payment_method: paymentMethod, date_from: dateFrom, date_to: dateTo }, {
             preserveState: true,
             preserveScroll: true,
             replace: true,
@@ -48,6 +52,10 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
     const clearFilters = () => {
         setSearch("");
         setOrderStatus("");
+        setPaymentStatus("");
+        setPaymentMethod("");
+        setDateFrom("");
+        setDateTo("");
         router.get("/admin/order-history", {}, {
             preserveState: true,
             preserveScroll: true,
@@ -98,20 +106,48 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
 
                         <section className="bg-white border rounded-4 p-3 mb-3">
                             <form className="row g-2 align-items-end" onSubmit={applyFilters}>
-                                <div className="col-md-6">
+                                <div className="col-12 col-xl-4">
                                     <label className="form-label small fw-semibold" htmlFor="order-history-search">SEARCH ORDER HISTORY</label>
                                     <input id="order-history-search" type="search" className="form-control" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Order number, customer, email, or phone" />
                                 </div>
-                                <div className="col-md-3">
-                                    <label className="form-label small fw-semibold" htmlFor="order-history-status">STATUS</label>
+                                <div className="col-6 col-xl-2">
+                                    <label className="form-label small fw-semibold" htmlFor="order-history-status">ORDER STATUS</label>
                                     <select id="order-history-status" className="form-select" value={orderStatus} onChange={(event) => setOrderStatus(event.target.value)}>
                                         <option value="">All history</option>
                                         <option value="completed">Completed</option>
                                         <option value="cancelled">Cancelled</option>
                                     </select>
                                 </div>
-                                <div className="col-md-3 d-flex gap-2">
-                                    <button type="submit" className="btn btn-primary fw-bold flex-grow-1">FILTER</button>
+                                <div className="col-6 col-xl-2">
+                                    <label className="form-label small fw-semibold" htmlFor="order-history-payment-status">PAYMENT STATUS</label>
+                                    <select id="order-history-payment-status" className="form-select" value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value)}>
+                                        <option value="">All payments</option>
+                                        <option value="paid">Paid</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="failed">Failed</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                                <div className="col-6 col-xl-2">
+                                    <label className="form-label small fw-semibold" htmlFor="order-history-payment-method">PAYMENT METHOD</label>
+                                    <select id="order-history-payment-method" className="form-select" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}>
+                                        <option value="">All methods</option>
+                                        <option value="cash">Cash</option>
+                                        <option value="gcash">GCash</option>
+                                        <option value="card">Card</option>
+                                        <option value="maya">Maya</option>
+                                    </select>
+                                </div>
+                                <div className="col-6 col-xl-1">
+                                    <label className="form-label small fw-semibold" htmlFor="order-history-date-from">FROM</label>
+                                    <input id="order-history-date-from" type="date" className="form-control" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-6 col-xl-1">
+                                    <label className="form-label small fw-semibold" htmlFor="order-history-date-to">TO</label>
+                                    <input id="order-history-date-to" type="date" min={dateFrom || undefined} className="form-control" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
+                                </div>
+                                <div className="col-12 d-flex justify-content-end gap-2 mt-2">
+                                    <button type="submit" className="btn btn-primary fw-bold">FILTER</button>
                                     <button type="button" className="btn btn-outline-secondary fw-bold" onClick={clearFilters}>CLEAR</button>
                                 </div>
                             </form>
@@ -128,8 +164,8 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                         <tr>
                                             <th className="ps-3">ORDER</th>
                                             <th>CUSTOMER</th>
-                                            <th className="text-end">TOTAL</th>
-                                            <th>PAYMENT</th>
+                                            <th className="text-end pe-4" style={{ minWidth: "145px" }}>TOTAL</th>
+                                            <th className="ps-4" style={{ minWidth: "145px" }}>PAYMENT</th>
                                             <th>ORDER STATUS</th>
                                             <th>DATE</th>
                                             <th className="text-end pe-3">ACTION</th>
@@ -146,8 +182,8 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                                     <div className="fw-semibold">{order.customer_name}</div>
                                                     <div className="small text-secondary text-break">{order.customer_email}</div>
                                                 </td>
-                                                <td className="text-end fw-bold text-primary text-nowrap">{peso(order.total)}</td>
-                                                <td>
+                                                <td className="text-end fw-bold text-primary text-nowrap pe-4">{peso(order.total)}</td>
+                                                <td className="ps-4">
                                                     <div className="small fw-semibold">{paymentLabel(order.payment_method)}</div>
                                                     <span className={"badge rounded-pill " + paymentStatusClass(order.payment_status)}>{statusLabel(order.payment_status)}</span>
                                                 </td>
