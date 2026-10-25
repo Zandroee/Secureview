@@ -13,6 +13,7 @@ class PendingInquiryCheckout extends Model
         'payload',
         'status',
         'inquiry_id',
+        'booking_request_token',
     ];
 
     protected $casts = [
