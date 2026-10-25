@@ -31,6 +31,9 @@ class InquiryController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:pending,confirmed,in_progress,completed,cancelled'],
             'urgency' => ['nullable', 'in:normal,urgent,emergency'],
+            'service_type' => ['nullable', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         // Active jobs belong on Schedules; completed jobs belong in Service History.
@@ -55,6 +58,18 @@ class InquiryController extends Controller
 
         if (!empty($filters['urgency'])) {
             $query->where('urgency', $filters['urgency']);
+        }
+
+        if (!empty($filters['service_type'])) {
+            $query->where('service_type', $filters['service_type']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('preferred_date', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('preferred_date', '<=', $filters['date_to']);
         }
 
         $inquiries = $query
@@ -119,6 +134,9 @@ class InquiryController extends Controller
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
                 'urgency' => $filters['urgency'] ?? '',
+                'service_type' => $filters['service_type'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
         ]);
     }
