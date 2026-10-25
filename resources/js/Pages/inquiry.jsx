@@ -858,22 +858,22 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                     Item: ₱{(Number(selectedCatalogItem.price) * selectedItemQuantity).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </div>
                                                 {data.service_type === "Installation" && (
-                                                    <>
-                                                        <div className="small text-muted">
-                                                            Installation: {installationFee > 0
-                                                                ? "₱" + (installationFee * selectedItemQuantity).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                                                                : "Free"}
-                                                        </div>
-                                                        {urgencyFee > 0 && (
-                                                            <div className="small text-danger fw-semibold">
-                                                                {data.urgency === "emergency" ? "Emergency surcharge" : "Urgent surcharge"}: ₱{formattedUrgencyFee}
-                                                            </div>
-                                                        )}
-                                                        <div className="d-flex justify-content-between align-items-center border-top mt-2 pt-2">
-                                                            <span className="small fw-bold">Total due</span>
-                                                            <span className="fw-bold text-primary">₱{selectedItemTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                                        </div>
-                                                    </>
+                                                    <div className="small text-muted">
+                                                        Installation: {installationFee > 0
+                                                            ? "₱" + (installationFee * selectedItemQuantity).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                                            : "Free"}
+                                                    </div>
+                                                )}
+                                                {urgencyFee > 0 && (
+                                                    <div className="small text-danger fw-semibold">
+                                                        {data.urgency === "emergency" ? "Emergency surcharge" : "Urgent surcharge"}: ₱{formattedUrgencyFee}
+                                                    </div>
+                                                )}
+                                                {data.service_type === "Installation" && (
+                                                    <div className="d-flex justify-content-between align-items-center border-top mt-2 pt-2">
+                                                        <span className="small fw-bold">Total due</span>
+                                                        <span className="fw-bold text-primary">₱{selectedItemTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
