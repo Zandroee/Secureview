@@ -481,13 +481,13 @@ export default function Purchases({ orders = [] }) {
                                                     height: "70px",
                                                 }}
                                             >
-                                                <i className="bi bi-camera-video text-secondary"></i>
+                                                <i className={item.type === "service_fee" ? "bi bi-lightning-charge text-warning" : "bi bi-camera-video text-secondary"}></i>
                                             </div>
                                         )}
 
                                         <div className="flex-grow-1">
                                             <div className="small text-primary text-uppercase fw-bold">
-                                                {item.type}
+                                                {item.type === "service_fee" ? "Service fee" : item.type}
                                             </div>
 
                                             <div className="fw-bold">
@@ -505,9 +505,11 @@ export default function Purchases({ orders = [] }) {
                                                 ).toLocaleString()}
                                             </div>
 
-                                            <div className="small text-muted mt-1">
-                                                Warranty: {item.warranty_period || "Not specified"}
-                                            </div>
+                                            {item.type === "service_fee" ? (
+                                                <div className="small text-muted mt-1">Urgency surcharge for the requested service.</div>
+                                            ) : (
+                                                <div className="small text-muted mt-1">Warranty: {item.warranty_period || "Not specified"}</div>
+                                            )}
                                         </div>
 
                                         {item.type === "service_fee" ? (
