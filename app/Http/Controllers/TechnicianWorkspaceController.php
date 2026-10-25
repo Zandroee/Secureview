@@ -140,6 +140,7 @@ class TechnicianWorkspaceController extends Controller
                 'inquiries.status',
                 'inquiries.urgency',
                 'inquiries.urgency_fee',
+                'inquiries.urgency_fee',
                 'inquiries.preferred_date',
                 'inquiries.preferred_time',
                 'inquiries.created_at',
@@ -179,6 +180,7 @@ class TechnicianWorkspaceController extends Controller
                 'inquiries.preferred_time',
                 'inquiries.status',
                 'inquiries.urgency',
+                'inquiries.urgency_fee',
                 'inquiries.urgency_fee',
             ])
             ->map(fn (Inquiry $inquiry) => [
