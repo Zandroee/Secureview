@@ -27,6 +27,8 @@ class WarrantyController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:' . implode(',', self::STATUSES)],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $warrantyQuery = OrderItem::query()
@@ -55,6 +57,16 @@ class WarrantyController extends Controller
         if (!empty($filters['status'])) {
             $warrantyQuery->whereHas('warrantyClaims', fn ($claimQuery) =>
                 $claimQuery->where('status', $filters['status'])
+            );
+        }
+        if (!empty($filters['date_from'])) {
+            $warrantyQuery->whereHas('warrantyClaims', fn ($claimQuery) =>
+                $claimQuery->whereDate('created_at', '>=', $filters['date_from'])
+            );
+        }
+        if (!empty($filters['date_to'])) {
+            $warrantyQuery->whereHas('warrantyClaims', fn ($claimQuery) =>
+                $claimQuery->whereDate('created_at', '<=', $filters['date_to'])
             );
         }
 
@@ -111,6 +123,8 @@ class WarrantyController extends Controller
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
                 'total' => WarrantyClaim::count(),
