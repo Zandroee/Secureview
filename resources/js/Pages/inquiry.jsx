@@ -132,7 +132,12 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
             )
         );
     const installationFee = Number(selectedCatalogItem?.installation_fee ?? 0);
-    const selectedItemQuantity = Math.max(1, Number(data.item_quantity ?? 1));
+    const selectedItemQuantity = Math.max(
+        1,
+        Number(data.service_type === "Installation"
+            ? selectedCartItem?.quantity ?? data.item_quantity ?? 1
+            : data.item_quantity ?? 1)
+    );
     const urgencyFee = Math.max(0, Number(urgencyFees?.[data.urgency] ?? 0));
     const formattedUrgencyFee = urgencyFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const selectedItemTotal = (Number(selectedCatalogItem?.price ?? 0) + installationFee) * selectedItemQuantity + urgencyFee;
