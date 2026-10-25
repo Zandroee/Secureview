@@ -340,7 +340,7 @@ code,
    and Packages while giving the results panel enough space to be useful. */
 .navbar-navigation-search {
     position: relative;
-    z-index: 1060;
+    z-index: 1;
     width: clamp(230px, 22vw, 350px);
     min-width: 205px;
     flex: 0 1 clamp(230px, 22vw, 350px);
@@ -390,7 +390,7 @@ code,
 
 .navbar-search-dropdown {
     position: absolute;
-    z-index: 2000;
+    z-index: 2;
     top: calc(100% + 10px);
     right: 0;
     width: min(480px, calc(100vw - 2rem));
