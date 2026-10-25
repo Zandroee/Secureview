@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 class PendingInquiryCheckoutService
 {
     /**
-     * Finalize an Installation inquiry after the order is confirmed paid.
+     * Finalize a linked service inquiry after the order is confirmed paid.
      *
      * This method is intentionally idempotent so both the payment-return route
      * and a PayMongo webhook can safely call it for the same order.
