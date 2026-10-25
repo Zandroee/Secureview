@@ -374,6 +374,12 @@ export default function Invoice({ invoice }) {
                                     <span>{peso(invoice.installation_fee)}</span>
                                 </div>
                             )}
+                            {Number(invoice.service_priority_fee) > 0 && (
+                                <div className="d-flex justify-content-between py-2">
+                                    <span className="text-muted">Urgent / emergency booking fee</span>
+                                    <span>{peso(invoice.service_priority_fee)}</span>
+                                </div>
+                            )}
                             <div className="d-flex justify-content-between py-2">
                                 <span className="text-muted">Shipping</span>
                                 <span>{peso(invoice.shipping_fee)}</span>
