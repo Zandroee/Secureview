@@ -25,6 +25,7 @@ class PurchaseController extends Controller
                     'order_number' => $order->order_number,
                     'subtotal' => (float) $order->subtotal,
                     'installation_fee' => (float) $order->installation_fee,
+                    'service_priority_fee' => (float) $order->service_priority_fee,
                     'shipping_fee' => (float) $order->shipping_fee,
                     'total' => (float) $order->total,
                     'payment_method' => $order->payment_method,
@@ -71,6 +72,7 @@ class PurchaseController extends Controller
                 'order_number' => $order->order_number,
                 'subtotal' => (float) $order->subtotal,
                 'installation_fee' => (float) $order->installation_fee,
+                'service_priority_fee' => (float) $order->service_priority_fee,
                 'shipping_fee' => (float) $order->shipping_fee,
                 'total' => (float) $order->total,
                 'payment_method' => $order->payment_method,
@@ -259,6 +261,15 @@ class PurchaseController extends Controller
                 $lineItems[] = [
                     'name' => 'Installation fee',
                     'amount' => (int) round((float) $order->installation_fee * 100),
+                    'currency' => 'PHP',
+                    'quantity' => 1,
+                ];
+            }
+
+            if ((float) $order->service_priority_fee > 0) {
+                $lineItems[] = [
+                    'name' => 'Service booking priority fee',
+                    'amount' => (int) round((float) $order->service_priority_fee * 100),
                     'currency' => 'PHP',
                     'quantity' => 1,
                 ];
