@@ -67,7 +67,7 @@ const formatDateLabel = (value) => {
     });
 };
 
-export default function Service({ customer, item, catalogItems = [], cartItems = [], urgencyFees = { normal: 0, urgent: 500, emergency: 1500 }, initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
+export default function Service({ customer, item, catalogItems = [], cartItems = [], urgencyFees = { normal: 0, urgent: 0, emergency: 0 }, bookingRequestToken, initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
     const today = new Date();
     const [showDateModal, setShowDateModal] = useState(false);
 
@@ -79,6 +79,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
     const [selectedTime, setSelectedTime] = useState("");
 
     const { data, setData, post, processing, errors } = useForm({
+        booking_request_token: bookingRequestToken ?? "",
         item_type: item?.type ?? "",
         item_id: item?.id ?? "",
         item_quantity: cartItems.find((cartItem) =>
