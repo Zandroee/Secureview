@@ -483,7 +483,7 @@ class InstallationInquiryPaymentTest extends TestCase
         $this->assertEquals(3000.00, (float) $order->total);
         $this->assertEquals(500.00, (float) $inquiry->urgency_fee);
 
-        Http::assertSent(function (\\Illuminate\\Http\\Client\\Request $request) {
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
             if (!str_ends_with($request->url(), '/v2/checkout_sessions')) {
                 return false;
             }
@@ -539,7 +539,7 @@ class InstallationInquiryPaymentTest extends TestCase
             'status' => 'pending_payment',
         ]);
 
-        Http::assertSent(function (\\Illuminate\\Http\\Client\\Request $request) {
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
             if (!str_ends_with($request->url(), '/v2/checkout_sessions')) {
                 return false;
             }
