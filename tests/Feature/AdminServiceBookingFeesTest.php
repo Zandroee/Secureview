@@ -21,8 +21,8 @@ class AdminServiceBookingFeesTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Inquiries')
-                ->where('bookingFees.urgent', (float) config('services.secureview.booking_fees.urgent', 500))
-                ->where('bookingFees.emergency', (float) config('services.secureview.booking_fees.emergency', 1500))
+                ->where('bookingFees.urgent', (int) config('services.secureview.booking_fees.urgent', 500))
+                ->where('bookingFees.emergency', (int) config('services.secureview.booking_fees.emergency', 1500))
             );
 
         $this->actingAs($admin)
@@ -43,7 +43,7 @@ class AdminServiceBookingFeesTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('inquiry')
                 ->where('urgencyFees.urgent', 725.5)
-                ->where('urgencyFees.emergency', 2100.0)
+                ->where('urgencyFees.emergency', 2100)
             );
     }
 
