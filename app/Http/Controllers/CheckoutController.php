@@ -681,7 +681,8 @@ class CheckoutController extends Controller
             }
         }
 
-        // The actual Installation inquiry is created only after PayMongo confirms payment.
+        // Finalize the service request linked to a paid checkout. Both installation
+        // purchases and urgency-fee checkouts use this idempotent completion path.
         if ($order->payment_status === 'paid') {
             $inquiry = $this->completePaidInstallationInquiry($request, $order);
 
