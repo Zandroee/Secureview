@@ -235,6 +235,7 @@ class InquiryController extends Controller
                 'urgent' => (float) config('services.secureview.booking_fees.urgent', 0),
                 'emergency' => (float) config('services.secureview.booking_fees.emergency', 0),
             ],
+            'bookingRequestToken' => (string) Str::uuid(),
             'initialServiceType' => $initialServiceType,
         ]);
     }
@@ -254,6 +255,7 @@ class InquiryController extends Controller
             'service_latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'service_longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'google_place_id' => ['nullable', 'string', 'max:255'],
+            'booking_request_token' => ['required', 'uuid'],
             'service_type' => ['required', 'string', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
             'urgency' => ['required', 'in:normal,urgent,emergency'],
             'preferred_date' => ['required', 'date', 'after_or_equal:today'],
@@ -265,6 +267,33 @@ class InquiryController extends Controller
         $urgencyFee = $this->configuredUrgencyFee($validated['urgency']);
         // Persist only the server-derived amount in checkout payloads.
         $validated['urgency_fee'] = $urgencyFee;
+
+        // A repeated submission from the same rendered form must reuse its existing
+        // order instead of creating a second order with the same priority surcharge.
+        $existingCheckout = PendingInquiryCheckout::query()
+            ->with(['order', 'inquiry'])
+            ->where('user_id', $request->user()->id)
+            ->where('booking_request_token', $validated['booking_request_token'])
+            ->first();
+
+        if ($existingCheckout) {
+            $existingOrder = $existingCheckout->order;
+            $existingInquiry = $existingCheckout->inquiry;
+
+            if (!$existingOrder || !$existingInquiry) {
+                throw ValidationException::withMessages([
+                    'booking_request_token' => 'This booking submission was already received. Check your service history or orders before submitting again.',
+                ]);
+            }
+
+            if ($existingOrder->payment_method === 'cash' || $existingOrder->payment_status === 'paid') {
+                return redirect()->route('inquiries.show', $existingInquiry)
+                    ->with('success', 'This booking was already submitted. Your existing service request is shown here; no duplicate fee was created.');
+            }
+
+            return redirect()->route('purchases.show', $existingOrder)
+                ->with('success', 'This booking was already submitted. Continue from the existing order to retry payment; no duplicate fee was created.');
+        }
 
         if (
             $validated['service_type'] !== 'Installation' &&
@@ -518,6 +547,7 @@ class InquiryController extends Controller
                 'user_id' => $request->user()->id,
                 'order_id' => $order->id,
                 'inquiry_id' => $inquiry->id,
+                'booking_request_token' => $validated['booking_request_token'],
                 'payload' => $validated,
                 'status' => 'pending_payment',
             ]);
@@ -685,6 +715,7 @@ class InquiryController extends Controller
                 'user_id' => $request->user()->id,
                 'order_id' => $order->id,
                 'inquiry_id' => $inquiry->id,
+                'booking_request_token' => $validated['booking_request_token'],
                 'payload' => $validated,
                 'status' => 'pending_payment',
             ]);
