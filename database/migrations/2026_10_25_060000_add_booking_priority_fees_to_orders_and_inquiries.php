@@ -19,6 +19,12 @@ return new class extends Migration
                 $table->decimal('urgency_fee', 10, 2)->default(0)->after('urgency');
             });
         }
+
+        if (Schema::hasTable('pending_inquiry_checkouts') && !Schema::hasColumn('pending_inquiry_checkouts', 'booking_request_token')) {
+            Schema::table('pending_inquiry_checkouts', function (Blueprint $table) {
+                $table->string('booking_request_token', 36)->nullable()->unique();
+            });
+        }
     }
 
     public function down(): void
