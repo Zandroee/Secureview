@@ -267,7 +267,7 @@ class PurchaseController extends Controller
 
                         try {
                             $inventory->deductForOrder($order);
-                        } catch (\\Throwable $exception) {
+                        } catch (\Throwable $exception) {
                             report($exception);
                         }
 
