@@ -235,6 +235,11 @@ class InquiryController extends Controller
                 'urgent' => (float) config('services.secureview.booking_fees.urgent', 0),
                 'emergency' => (float) config('services.secureview.booking_fees.emergency', 0),
             ],
+            'urgencyFees' => [
+                'normal' => 0,
+                'urgent' => (float) config('services.secureview.booking_fees.urgent', 0),
+                'emergency' => (float) config('services.secureview.booking_fees.emergency', 0),
+            ],
             'initialServiceType' => $initialServiceType,
         ]);
     }
