@@ -50,6 +50,10 @@ export default function AdminServices({
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
     const [urgency, setUrgency] = useState(filters.urgency ?? "");
+    const [serviceType, setServiceType] = useState(filters.service_type ?? "");
+    const [paymentStatus, setPaymentStatus] = useState(filters.payment_status ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -60,6 +64,10 @@ export default function AdminServices({
                 search,
                 status,
                 urgency,
+                service_type: serviceType,
+                payment_status: paymentStatus,
+                date_from: dateFrom,
+                date_to: dateTo,
             },
             {
                 preserveState: true,
@@ -73,6 +81,10 @@ export default function AdminServices({
         setSearch("");
         setStatus("");
         setUrgency("");
+        setServiceType("");
+        setPaymentStatus("");
+        setDateFrom("");
+        setDateTo("");
 
         router.get(
             "/admin/inquiries",
@@ -142,7 +154,7 @@ export default function AdminServices({
                                 className="row g-2 align-items-end"
                                 onSubmit={applyFilters}
                             >
-                                <div className="col-lg-5">
+                                <div className="col-12 col-lg-4">
                                     <label className="form-label small fw-semibold mb-1">
                                         SEARCH
                                     </label>
@@ -199,6 +211,35 @@ export default function AdminServices({
                                             Normal
                                         </option>
                                     </select>
+                                </div>
+
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">SERVICE TYPE</label>
+                                    <select className="form-select" value={serviceType} onChange={(event) => setServiceType(event.target.value)}>
+                                        <option value="">All service types</option>
+                                        {["Installation", "Site Inspection", "Maintenance", "Repair", "Consultation", "Other"].map((value) => <option key={value} value={value}>{value}</option>)}
+                                    </select>
+                                </div>
+
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">PAYMENT STATUS</label>
+                                    <select className="form-select" value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value)}>
+                                        <option value="">All payment statuses</option>
+                                        <option value="not_applicable">No separate payment</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="paid">Paid</option>
+                                        <option value="failed">Failed</option>
+                                        <option value="cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">BOOKING DATE FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">BOOKING DATE TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
                                 </div>
 
                                 <div className="col-sm-6 col-lg-1 d-grid">
