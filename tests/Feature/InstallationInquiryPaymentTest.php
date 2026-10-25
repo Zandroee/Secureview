@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -556,6 +557,7 @@ class InstallationInquiryPaymentTest extends TestCase
     private function inquiryPayload(array $overrides = []): array
     {
         return array_merge([
+            'booking_request_token' => (string) Str::uuid(),
             'customer_name' => 'SecureView Test Customer',
             'customer_phone' => '09123456789',
             'customer_email' => 'customer@example.com',
