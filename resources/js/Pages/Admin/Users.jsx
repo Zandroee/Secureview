@@ -38,6 +38,8 @@ export default function AdminUsers({
     const userRows = users.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [role, setRole] = useState(filters.role ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
     const [roleValues, setRoleValues] = useState(
         () =>
             Object.fromEntries(
@@ -54,6 +56,8 @@ export default function AdminUsers({
             {
                 search,
                 role,
+                date_from: dateFrom,
+                date_to: dateTo,
             },
             {
                 preserveState: true,
@@ -66,6 +70,8 @@ export default function AdminUsers({
     const clearFilters = () => {
         setSearch("");
         setRole("");
+        setDateFrom("");
+        setDateTo("");
 
         router.get(
             "/admin/users",
@@ -242,6 +248,14 @@ export default function AdminUsers({
                                     >
                                         CLEAR
                                     </button>
+                                </div>
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">CREATED FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">CREATED TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
                                 </div>
                             </form>
                         </div>
