@@ -227,6 +227,11 @@ export default function Inquiries({ inquiries = [] }) {
                                                         >
                                                             {service.urgency}
                                                         </span>
+                                                        {Number(service.urgency_fee ?? 0) > 0 && (
+                                                            <div className="small text-warning-emphasis fw-semibold mt-1">
+                                                                Booking fee: ₱{Number(service.urgency_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </div>
+                                                        )}
 
                                                         <div className="small text-muted mt-1">
                                                             TECHNICIAN
