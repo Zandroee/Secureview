@@ -510,19 +510,17 @@ export default function Purchases({ orders = [] }) {
                                             </div>
                                         </div>
 
-                                        <Link
-                                            href={
-                                                item.type === "package"
-                                                    ? "/packages"
-                                                    : "/products"
-                                            }
-                                            className="btn btn-primary btn-sm fw-bold"
-                                            onClick={() =>
-                                                setViewingOrder(null)
-                                            }
-                                        >
-                                            DETAILS
-                                        </Link>
+                                        {item.type === "service_fee" ? (
+                                            <span className="badge rounded-pill bg-info-subtle text-info-emphasis">SERVICE CHARGE</span>
+                                        ) : (
+                                            <Link
+                                                href={item.type === "package" ? "/packages" : "/products"}
+                                                className="btn btn-primary btn-sm fw-bold"
+                                                onClick={() => setViewingOrder(null)}
+                                            >
+                                                DETAILS
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -530,8 +528,10 @@ export default function Purchases({ orders = [] }) {
 
                         <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
                             <span className="small text-muted">
-                                {viewingOrder.items.length} item
-                                {viewingOrder.items.length === 1 ? "" : "s"}
+                                {(viewingOrder.items ?? []).filter((item) => item.type !== "service_fee").length} {(viewingOrder.items ?? []).filter((item) => item.type !== "service_fee").length === 1 ? "item" : "items"}
+                                {(viewingOrder.items ?? []).some((item) => item.type === "service_fee") && (
+                                    <> · {(viewingOrder.items ?? []).filter((item) => item.type === "service_fee").length} service fee{(viewingOrder.items ?? []).filter((item) => item.type === "service_fee").length === 1 ? "" : "s"}</>
+                                )}
                             </span>
 
                             <span className="fw-bold text-primary">
