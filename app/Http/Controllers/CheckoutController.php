@@ -681,16 +681,19 @@ class CheckoutController extends Controller
             }
         }
 
-        // The actual Installation inquiry is created only after PayMongo confirms payment.
+        // Finalize any linked service inquiry idempotently after PayMongo confirms payment.
         if ($order->payment_status === 'paid') {
             $inquiry = $this->completePaidInstallationInquiry($request, $order);
 
             if ($inquiry) {
+                $serviceType = strtolower($inquiry->service_type);
+                $isInstallation = $inquiry->service_type === 'Installation';
+
                 return redirect()->route('inquiries.show', $inquiry)
-                    ->with('success', 'Payment confirmed. Your installation service request ' . $inquiry->inquiry_number . ' has been submitted.')
+                    ->with('success', 'Payment confirmed. Your ' . $serviceType . ' service request ' . $inquiry->inquiry_number . ' has been submitted for review.')
                     ->with('serviceNotification', [
-                        'title' => 'Installation service booked',
-                        'message' => 'Payment is confirmed and installation service request ' . $inquiry->inquiry_number . ' has been submitted for review.',
+                        'title' => $isInstallation ? 'Installation service booked' : 'Service booking fee paid',
+                        'message' => 'Payment is confirmed and service request ' . $inquiry->inquiry_number . ' is awaiting review.',
                         'action_url' => route('inquiries.show', $inquiry),
                     ]);
             }
