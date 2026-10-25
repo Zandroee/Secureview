@@ -452,6 +452,11 @@ class OrderCancellationTest extends TestCase
         };
 
         $ageOrder($oldCashOrder, 49);
+        // Activity updates must not reset the 48-hour order-placement deadline.
+        $oldCashOrder->timestamps = false;
+        $oldCashOrder->forceFill(['updated_at' => now()])->save();
+        $oldCashOrder->timestamps = true;
+
         $ageOrder($oldFailedOrder, 72);
         $ageOrder($recentOrder, 47);
         $ageOrder($paidOrder, 72);
