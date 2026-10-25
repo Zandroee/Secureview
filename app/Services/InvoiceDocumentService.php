@@ -41,6 +41,7 @@ class InvoiceDocumentService
             'items' => $order->items->map(fn ($item) => [
                 'id' => $item->id,
                 'name' => $item->name,
+                'warranty_period' => $item->warranty_period,
                 'quantity' => (int) $item->quantity,
                 'unit_price' => (float) $item->price,
                 'amount' => (float) $item->subtotal,
