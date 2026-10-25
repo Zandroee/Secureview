@@ -320,7 +320,7 @@ class PurchaseController extends Controller
             (!$installationCheckout->inquiry || $installationCheckout->inquiry->status !== 'completed')
         ) {
             return back()->withErrors([
-                'order' => 'This order includes an installation service. Complete the related service from Schedules and Service History before marking the order Completed.',
+                'order' => 'This order is linked to a service booking. Complete the related service from Schedules and Service History before marking the order Completed.',
             ]);
         }
 
