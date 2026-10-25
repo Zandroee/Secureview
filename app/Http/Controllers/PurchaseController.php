@@ -10,7 +10,6 @@ use App\Services\OrderCancellationService;
 use App\Services\PendingInquiryCheckoutService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class PurchaseController extends Controller
@@ -272,7 +271,7 @@ class PurchaseController extends Controller
 
                     try {
                         $inventory->deductForOrder($order);
-                    } catch (\\Throwable $exception) {
+                    } catch (\Throwable $exception) {
                         report($exception);
                     }
 
