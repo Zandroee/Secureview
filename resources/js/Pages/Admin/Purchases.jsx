@@ -865,6 +865,18 @@ export default function AdminPurchases({
                                 </span>
                             </div>
 
+                            {Number(viewingOrder.installation_fee ?? 0) > 0 && (
+                                <div className="d-flex justify-content-between mt-1">
+                                    <span className="small text-muted">INSTALLATION FEE</span>
+                                    <span>₱{Number(viewingOrder.installation_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
+                            {Number(viewingOrder.service_priority_fee ?? 0) > 0 && (
+                                <div className="d-flex justify-content-between mt-1">
+                                    <span className="small text-warning-emphasis">URGENT / EMERGENCY BOOKING FEE</span>
+                                    <span className="fw-semibold">₱{Number(viewingOrder.service_priority_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
                             <div className="d-flex justify-content-between mt-1">
                                 <span className="small text-muted">
                                     SHIPPING
