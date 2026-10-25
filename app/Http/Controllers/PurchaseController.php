@@ -43,9 +43,10 @@ class PurchaseController extends Controller
                             'subtotal' => (float) $item->subtotal,
                             'type' => $item->purchasable_type === \App\Models\Package::class
                                 ? 'package'
-                                : 'product',
+                                : ($item->purchasable_type === \App\Models\Product::class ? 'product' : 'service_fee'),
                             'purchasable_id' => (int) $item->purchasable_id,
-                            'can_review' => $item->purchasable !== null,
+                            'can_review' => in_array($item->purchasable_type, [\App\Models\Package::class, \App\Models\Product::class], true)
+                                && $item->purchasable !== null,
                             'image' => $item->purchasable?->image,
                         ];
                     })->values(),
@@ -112,9 +113,10 @@ class PurchaseController extends Controller
                         'subtotal' => (float) $item->subtotal,
                         'type' => $item->purchasable_type === \App\Models\Package::class
                             ? 'package'
-                            : 'product',
+                            : ($item->purchasable_type === \App\Models\Product::class ? 'product' : 'service_fee'),
                         'purchasable_id' => (int) $item->purchasable_id,
-                        'can_review' => $item->purchasable !== null,
+                        'can_review' => in_array($item->purchasable_type, [\App\Models\Package::class, \App\Models\Product::class], true)
+                            && $item->purchasable !== null,
                         'image' => $item->purchasable?->image,
                     ];
                 })->values(),
@@ -177,6 +179,10 @@ class PurchaseController extends Controller
         $stockError = null;
 
         foreach ($order->items()->get() as $orderItem) {
+            if (!in_array($orderItem->purchasable_type, [\App\Models\Product::class, \App\Models\Package::class], true)) {
+                continue;
+            }
+
             $purchasable = $orderItem->purchasable;
 
             if (!$purchasable) {
