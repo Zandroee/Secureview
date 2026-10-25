@@ -423,6 +423,9 @@ class PurchaseController extends Controller
                     ->exists(),
             'items' => $order->items->map(fn ($item) => [
                 'id' => $item->id,
+                'type' => in_array($item->purchasable_type, [\\App\\Models\\Product::class, \\App\\Models\\Package::class], true)
+                    ? 'catalog'
+                    : 'service_fee',
                 'name' => $item->name,
                 'price' => (float) $item->price,
                 'quantity' => (int) $item->quantity,
