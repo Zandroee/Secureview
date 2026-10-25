@@ -51,6 +51,13 @@ return [
         // Host administrators may override this only by setting the hour-based
         // value explicitly; the legacy *_DAYS setting is no longer used.
         'unpaid_order_expiry_hours' => max(1, (int) env('SECUREVIEW_UNPAID_ORDER_EXPIRY_HOURS', 48)),
+
+        // Proposed default priority surcharges (PHP, charged once per booking).
+        // Confirm the business amounts before configuring these on production.
+        'booking_fees' => [
+            'urgent' => max(0, (float) env('SECUREVIEW_URGENT_BOOKING_FEE', 500)),
+            'emergency' => max(0, (float) env('SECUREVIEW_EMERGENCY_BOOKING_FEE', 1500)),
+        ],
     ],
 
 ];
