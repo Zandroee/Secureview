@@ -32,7 +32,7 @@ class PendingInquiryCheckoutService
 
             if ((int) $pending->user_id !== (int) $order->user_id) {
                 report(new \RuntimeException(
-                    'Pending installation checkout user does not match its order.'
+                    'Pending service checkout user does not match its order.'
                 ));
 
                 return null;
