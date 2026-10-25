@@ -176,7 +176,12 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                             <tr key={order.id}>
                                                 <td className="ps-3">
                                                     <div className="fw-bold">{order.order_number}</div>
-                                                    <div className="small text-secondary">{order.items?.length ?? 0} {(order.items?.length ?? 0) === 1 ? "item" : "items"}</div>
+                                                    <div className="small text-secondary">
+                                                        {(order.items ?? []).filter((item) => item.type !== "service_fee").length} {(order.items ?? []).filter((item) => item.type !== "service_fee").length === 1 ? "item" : "items"}
+                                                        {(order.items ?? []).some((item) => item.type === "service_fee") && (
+                                                            <span> · {(order.items ?? []).filter((item) => item.type === "service_fee").length} service fee{(order.items ?? []).filter((item) => item.type === "service_fee").length === 1 ? "" : "s"}</span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td>
                                                     <div className="fw-semibold">{order.customer_name}</div>
