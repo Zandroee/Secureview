@@ -54,7 +54,7 @@ jobs:
         run: npm run build
 
       - name: Run Laravel feature and unit tests
-        run: php artisan test
+        run: COLUMNS=240 php artisan test --display-warnings
 
       - name: Upload production Vite assets for Hostinger
         if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
