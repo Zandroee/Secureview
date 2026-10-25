@@ -8,10 +8,13 @@ import { useState } from "react";
 export default function AdminInventoryAdjustments({ adjustments = [], filters = {} }) {
     const rows = adjustments.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
+    const [direction, setDirection] = useState(filters.direction ?? "");
 
     const applySearch = (event) => {
         event.preventDefault();
-        router.get("/admin/inventory-adjustments", { search }, {
+        router.get("/admin/inventory-adjustments", { search, date_from: dateFrom, date_to: dateTo, direction }, {
             preserveState: true,
             preserveScroll: true,
             replace: true,
@@ -31,10 +34,36 @@ export default function AdminInventoryAdjustments({ adjustments = [], filters = 
                             <p className="text-muted mb-0">Audit stock changes made by administrators and technicians.</p>
                         </div>
 
-                        <form onSubmit={applySearch} className="bg-white border rounded-3 p-3 mb-3 d-flex flex-column flex-md-row gap-2">
-                            <input className="form-control" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search product, reason, or staff member" />
-                            <button className="btn btn-primary fw-bold" type="submit">SEARCH</button>
-                            <button className="btn btn-outline-secondary fw-semibold" type="button" onClick={() => { setSearch(""); router.get("/admin/inventory-adjustments"); }}>CLEAR</button>
+                        <form onSubmit={applySearch} className="bg-white border rounded-3 p-3 mb-3">
+                            <div className="row g-2 align-items-end">
+                                <div className="col-12 col-lg-4">
+                                    <label className="form-label small fw-semibold mb-1">SEARCH</label>
+                                    <input className="form-control" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search product, reason, or staff member" />
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">DIRECTION</label>
+                                    <select className="form-select" value={direction} onChange={(event) => setDirection(event.target.value)}>
+                                        <option value="">All changes</option>
+                                        <option value="increase">Stock increases</option>
+                                        <option value="decrease">Stock decreases</option>
+                                    </select>
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">DATE FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">DATE TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
+                                </div>
+                                <div className="col-sm-6 col-lg-2 d-flex gap-2">
+                                    <button className="btn btn-primary fw-bold flex-grow-1" type="submit">FILTER</button>
+                                    <button className="btn btn-outline-secondary fw-semibold" type="button" onClick={() => {
+                                        setSearch(""); setDateFrom(""); setDateTo(""); setDirection("");
+                                        router.get("/admin/inventory-adjustments", {}, { preserveState: true, preserveScroll: true, replace: true });
+                                    }}>CLEAR</button>
+                                </div>
+                            </div>
                         </form>
 
                         <div className="bg-white border rounded-3 overflow-hidden">
