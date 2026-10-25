@@ -312,6 +312,17 @@ class PurchaseController extends Controller
 
             $order->load('items');
 
+            $pendingCheckout = PendingInquiryCheckout::query()
+                ->with('inquiry')
+                ->where('order_id', $order->id)
+                ->first();
+            $linkedInquiry = $pendingCheckout?->inquiry;
+            $isInstallationBooking = $linkedInquiry?->service_type === 'Installation';
+            $isPriorityServiceFeeOnly = $linkedInquiry
+                && !$isInstallationBooking
+                && (float) $order->service_priority_fee > 0
+                && $order->items->isEmpty();
+
             $lineItems = $order->items->map(function ($item) {
                 return [
                     'name' => $item->name,
@@ -321,7 +332,18 @@ class PurchaseController extends Controller
                 ];
             })->values()->all();
 
-            if ((float) $order->installation_fee > 0) {
+            if ($isInstallationBooking && (float) $order->installation_fee > 0) {
+                $installationItem = $order->items->first();
+                $installationQuantity = max(1, (int) ($installationItem?->quantity ?? 1));
+                $installationFeePerUnit = (float) $order->installation_fee / $installationQuantity;
+
+                $lineItems[] = [
+                    'name' => 'Installation fee — ' . ($installationItem?->name ?? 'Service installation'),
+                    'amount' => (int) round($installationFeePerUnit * 100),
+                    'currency' => 'PHP',
+                    'quantity' => $installationQuantity,
+                ];
+            } elseif (!$isInstallationBooking && (float) $order->installation_fee > 0) {
                 $lineItems[] = [
                     'name' => 'Installation fee',
                     'amount' => (int) round((float) $order->installation_fee * 100),
@@ -332,18 +354,48 @@ class PurchaseController extends Controller
 
             if ((float) $order->service_priority_fee > 0) {
                 $lineItems[] = [
-                    'name' => 'Service booking priority fee',
+                    'name' => $isInstallationBooking
+                        ? ucfirst($linkedInquiry->urgency) . ' service booking fee'
+                        : ($isPriorityServiceFeeOnly
+                            ? ucfirst($linkedInquiry->urgency) . ' service booking fee — ' . $linkedInquiry->service_type
+                            : 'Service booking priority fee'),
                     'amount' => (int) round((float) $order->service_priority_fee * 100),
                     'currency' => 'PHP',
                     'quantity' => 1,
                 ];
             }
 
+            $idempotencyKey = $order->paymongo_checkout_session_id
+                ? 'secureview-retry-' . $order->id . '-' . $order->paymongo_checkout_session_id
+                : ($isInstallationBooking
+                    ? 'secureview-installation-' . $order->order_number
+                    : ($isPriorityServiceFeeOnly
+                        ? 'secureview-priority-service-' . $order->order_number
+                        : 'secureview-retry-' . $order->id . '-initial'));
+
+            $checkoutDescription = $isInstallationBooking
+                ? 'SecureView Installation Booking ' . $order->order_number
+                : ($isPriorityServiceFeeOnly
+                    ? 'SecureView ' . ucfirst($linkedInquiry->urgency) . ' Service Booking Fee ' . $order->order_number
+                    : 'SecureView Order ' . $order->order_number);
+
+            $checkoutMetadata = [
+                'order_id' => (string) $order->id,
+                'order_number' => $order->order_number,
+            ];
+
+            if ($isInstallationBooking) {
+                $checkoutMetadata['booking_type'] = 'installation_inquiry';
+            } elseif ($isPriorityServiceFeeOnly) {
+                $checkoutMetadata['booking_type'] = 'priority_service_inquiry';
+                $checkoutMetadata['inquiry_id'] = (string) $linkedInquiry->id;
+            }
+
             $response = Http::withBasicAuth($secretKey, '')
                 ->acceptJson()
                 ->asJson()
                 ->withHeaders([
-                    'Idempotency-Key' => 'secureview-retry-' . $order->id . '-' . ($order->paymongo_checkout_session_id ?: 'initial'),
+                    'Idempotency-Key' => $idempotencyKey,
                 ])
                 ->post(
                     $baseUrl . '/v2/checkout_sessions',
@@ -357,12 +409,9 @@ class PurchaseController extends Controller
                                     'email' => $order->customer_email,
                                     'phone' => $order->customer_phone,
                                 ],
-                                'description' => 'SecureView Order ' . $order->order_number,
+                                'description' => $checkoutDescription,
                                 'reference_number' => $order->order_number,
-                                'metadata' => [
-                                    'order_id' => (string) $order->id,
-                                    'order_number' => $order->order_number,
-                                ],
+                                'metadata' => $checkoutMetadata,
                                 'send_email_receipt' => true,
                                 'show_description' => true,
                                 'show_line_items' => true,
