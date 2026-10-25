@@ -758,6 +758,11 @@ export default function AdminSchedules({
                                                         >
                                                             {schedule.urgency}
                                                         </span>
+                                                        {Number(schedule.urgency_fee ?? 0) > 0 && (
+                                                            <div className="small text-warning-emphasis fw-semibold mt-1">
+                                                                ₱{Number(schedule.urgency_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </div>
+                                                        )}
                                                     </td>
 
                                                     <td>
