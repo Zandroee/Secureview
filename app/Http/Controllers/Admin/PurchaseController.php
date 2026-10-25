@@ -74,7 +74,7 @@ class PurchaseController extends Controller
             $query->whereNull('paid_at')
                 ->whereIn('payment_status', ['pending', 'failed'])
                 ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed'])
-                ->where('updated_at', '<=', now()->subHours(24));
+                ->where('created_at', '<=', now()->subHours(48));
         }
 
         $orders = $query
@@ -90,7 +90,7 @@ class PurchaseController extends Controller
         $attentionOrders = (clone $unpaidOrderQuery)
             ->with(['user', 'items', 'events.actor', 'invoiceRecord'])
             ->orderByRaw("CASE WHEN payment_status = 'failed' OR order_status = 'payment_failed' THEN 0 WHEN payment_method = 'cash' THEN 1 ELSE 2 END")
-            ->orderBy('updated_at')
+            ->orderBy('created_at')
             ->limit(6)
             ->get()
             ->map(fn (Order $order) => $this->formatOrder($order, $invoiceProfileReady))
@@ -124,7 +124,7 @@ class PurchaseController extends Controller
                     ->where('order_status', 'pending')
                     ->count(),
                 'stale_unpaid_orders' => (clone $unpaidOrderQuery)
-                    ->where('updated_at', '<=', now()->subHours(24))
+                    ->where('created_at', '<=', now()->subHours(48))
                     ->count(),
                 'revenue' => (float) Order::where('payment_status', 'paid')->sum('total'),
             ],
@@ -359,12 +359,12 @@ class PurchaseController extends Controller
                 'issued_at' => $invoiceRecord->issued_at?->format('M d, Y h:i A'),
             ] : null,
             'can_record_invoice' => $canRecordInvoice,
-            'age_hours' => $order->updated_at ? (int) $order->updated_at->diffInHours(now()) : 0,
+            'age_hours' => $order->created_at ? (int) $order->created_at->diffInHours(now()) : 0,
             'is_stale_unpaid' => $order->payment_status !== 'paid'
                 && $order->paid_at === null
                 && in_array($order->payment_status, ['pending', 'failed'], true)
                 && in_array($order->order_status, ['pending', 'awaiting_payment', 'payment_failed'], true)
-                && $order->updated_at?->lte(now()->subHours(24)),
+                && $order->created_at?->lte(now()->subHours(48)),
             'next_action' => $order->payment_status === 'paid' || $order->paid_at !== null
                 ? 'none'
                 : ($order->payment_method === 'cash' && $order->order_status === 'pending'

@@ -25,8 +25,8 @@ Artisan::command('secureview:cancel-expired-unpaid-orders', function (
     OrderCancellationService $cancellation,
     InventoryService $inventory
 ) {
-    $days = max(1, (int) config('services.secureview.unpaid_order_expiry_days', 14));
-    $cutoff = now()->subDays($days);
+    $hours = max(1, (int) config('services.secureview.unpaid_order_expiry_hours', 48));
+    $cutoff = now()->subHours($hours);
     $cancelled = 0;
     $deferred = 0;
 
@@ -36,11 +36,11 @@ Artisan::command('secureview:cancel-expired-unpaid-orders', function (
         ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed'])
         ->where('created_at', '<=', $cutoff)
         ->orderBy('id')
-        ->chunkById(100, function ($orders) use ($cancellation, $inventory, $days, &$cancelled, &$deferred) {
+        ->chunkById(100, function ($orders) use ($cancellation, $inventory, $hours, &$cancelled, &$deferred) {
             foreach ($orders as $order) {
                 $previousStatus = $order->order_status;
                 $previousPaymentStatus = $order->payment_status;
-                $reason = "Automatically cancelled after {$days} days without confirmed payment.";
+                $reason = "Automatically cancelled after {$hours} hours without confirmed payment.";
 
                 try {
                     $cancellation->cancel($order, $inventory, $reason);
@@ -56,7 +56,7 @@ Artisan::command('secureview:cancel-expired-unpaid-orders', function (
                             'user_id' => $order->user_id,
                             'type' => 'order_cancelled',
                             'title' => 'Unpaid order automatically cancelled',
-                            'message' => "Order {$order->order_number} was automatically cancelled after {$days} days without confirmed payment.",
+                            'message' => "Order {$order->order_number} was automatically cancelled after {$hours} hours without confirmed payment.",
                             'action_url' => route('purchases.show', $order),
                             'related_type' => Order::class,
                             'related_id' => $order->id,
@@ -72,7 +72,7 @@ Artisan::command('secureview:cancel-expired-unpaid-orders', function (
                         'payment_status_after' => $order->payment_status,
                         'order_status_before' => $previousStatus,
                         'order_status_after' => $order->order_status,
-                        'metadata' => ['expiry_days' => $days],
+                        'metadata' => ['expiry_hours' => $hours],
                     ]);
 
                     $cancelled++;
@@ -89,8 +89,8 @@ Artisan::command('secureview:cancel-expired-unpaid-orders', function (
             }
         });
 
-    $this->info("Expired unpaid orders: {$cancelled} cancelled; {$deferred} deferred. Deadline: {$days} days.");
-})->purpose('Automatically cancel orders that remain unpaid beyond the configured business deadline');
+    $this->info("Expired unpaid orders: {$cancelled} cancelled; {$deferred} deferred. Deadline: {$hours} hours.");
+})->purpose('Automatically cancel unpaid orders 48 hours after placement if payment is still unconfirmed');
 
 Schedule::command('secureview:cancel-expired-unpaid-orders')
     ->hourly()

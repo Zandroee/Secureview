@@ -166,7 +166,7 @@ class WarrantyClaimTest extends TestCase
                 ->has('eligibleItems', 0));
     }
 
-    public function test_admin_can_view_paid_purchase_warranty_coverage_register(): void
+    public function test_admin_warranty_page_hides_purchase_items_without_claims(): void
     {
         $customer = User::factory()->create([
             'role' => 'user',
@@ -183,12 +183,8 @@ class WarrantyClaimTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Warranty')
-                ->has('warranties.data', 1)
-                ->where('warranties.data.0.id', $item->id)
-                ->where('warranties.data.0.item_name', $item->name)
-                ->where('warranties.data.0.warranty_period', '18 months')
-                ->where('warranties.data.0.coverage_status', 'active')
-                ->has('warranties.data.0.claims', 0));
+                ->has('warranties.data', 0)
+                ->where('warranties.total', 0));
     }
 
     public function test_admin_warranty_record_contains_all_associated_claims_in_one_paginated_list(): void

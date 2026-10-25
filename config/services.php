@@ -47,9 +47,10 @@ return [
     ],
 
     'secureview' => [
-        // Set SECUREVIEW_UNPAID_ORDER_EXPIRY_DAYS in the hosting environment to
-        // change the business deadline without modifying application code.
-        'unpaid_order_expiry_days' => max(1, (int) env('SECUREVIEW_UNPAID_ORDER_EXPIRY_DAYS', 14)),
+        // Unpaid orders are automatically cancelled 48 hours after placement.
+        // Host administrators may override this only by setting the hour-based
+        // value explicitly; the legacy *_DAYS setting is no longer used.
+        'unpaid_order_expiry_hours' => max(1, (int) env('SECUREVIEW_UNPAID_ORDER_EXPIRY_HOURS', 48)),
     ],
 
 ];

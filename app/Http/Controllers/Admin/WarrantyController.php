@@ -31,6 +31,7 @@ class WarrantyController extends Controller
 
         $warrantyQuery = OrderItem::query()
             ->with(['order', 'purchasable', 'warrantyClaims'])
+            ->whereHas('warrantyClaims')
             ->whereHas('order', fn ($orderQuery) => $orderQuery
                 ->where('payment_status', 'paid')
                 ->whereNotIn('order_status', ['cancelled', 'payment_failed']));

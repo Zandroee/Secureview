@@ -314,7 +314,7 @@ export default function AdminPurchases({
                                     <h2 className="h5 fw-bold mb-1">Payment queue</h2>
                                     <p className="small text-muted mb-0">Orders that may need follow-up. Selecting a card filters the order list below.</p>
                                 </div>
-                                <span className="small text-muted">{attentionOrders.length} priority orders shown</span>
+                                <span className="small text-muted">{attentionOrders.length} unpaid orders shown</span>
                             </div>
 
                             <div className="row g-2 mb-4">
@@ -322,28 +322,28 @@ export default function AdminPurchases({
                                     <button type="button" onClick={() => applyQuickFilter({ payment_status: "pending", order_status: "awaiting_payment" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-warning-subtle">
                                         <div className="small text-secondary fw-semibold">PENDING ONLINE</div>
                                         <div className="h3 fw-bold mb-1 text-warning-emphasis">{summary.pending_online_payments ?? 0}</div>
-                                        <div className="small text-secondary">Waiting on customer payment</div>
+                                        <div className="small text-secondary">GCash, Card, or Maya payment not confirmed. Auto-cancels after 48 hours unpaid.</div>
                                     </button>
                                 </div>
                                 <div className="col-6 col-xl-3">
                                     <button type="button" onClick={() => applyQuickFilter({ payment_status: "failed", order_status: "payment_failed" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-danger-subtle">
                                         <div className="small text-secondary fw-semibold">PAYMENT FAILED</div>
                                         <div className="h3 fw-bold mb-1 text-danger">{summary.failed_payments ?? 0}</div>
-                                        <div className="small text-secondary">Customer may retry or cancel</div>
+                                        <div className="small text-secondary">Payment failed. Customer may retry; unpaid orders auto-cancel after 48 hours.</div>
                                     </button>
                                 </div>
                                 <div className="col-6 col-xl-3">
                                     <button type="button" onClick={() => applyQuickFilter({ payment_status: "pending", order_status: "pending", payment_method: "cash" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-info-subtle">
                                         <div className="small text-secondary fw-semibold">CASH TO CONFIRM</div>
                                         <div className="h3 fw-bold mb-1 text-info-emphasis">{summary.cash_awaiting_confirmation ?? 0}</div>
-                                        <div className="small text-secondary">Confirm only when cash is received</div>
+                                        <div className="small text-secondary">Confirm only after cash is received. Unpaid orders auto-cancel after 48 hours.</div>
                                     </button>
                                 </div>
                                 <div className="col-6 col-xl-3">
                                     <button type="button" onClick={() => applyQuickFilter({ attention: "stale" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-light">
-                                        <div className="small text-secondary fw-semibold">UNPAID OVER 24 HOURS</div>
+                                        <div className="small text-secondary fw-semibold">UNPAID OVER 48 HOURS</div>
                                         <div className="h3 fw-bold mb-1 text-dark">{summary.stale_unpaid_orders ?? 0}</div>
-                                        <div className="small text-secondary">Review stale checkouts</div>
+                                        <div className="small text-secondary">The automatic cancellation deadline has passed.</div>
                                     </button>
                                 </div>
                             </div>
@@ -356,28 +356,28 @@ export default function AdminPurchases({
                             {attentionOrders.length ? (
                                 <div className="d-flex flex-column gap-2">
                                     {attentionOrders.map((order) => {
-                                        const actionText = order.next_action === "confirm_cash_payment"
-                                            ? "Confirm only after cash has been received."
-                                            : order.next_action === "retry_or_cancel"
-                                                ? "Customer can retry payment. Cancel if they no longer wish to proceed."
-                                                : order.is_stale_unpaid
-                                                    ? "Stale checkout: verify payment state before cancelling."
-                                                    : "Waiting for payment confirmation.";
+                                        const actionText = order.is_stale_unpaid
+                                            ? "Unpaid for over 48 hours. The scheduled job will cancel it after verifying payment is still unpaid."
+                                            : order.next_action === "confirm_cash_payment"
+                                                ? "Payment is pending. Confirm only after cash has been received; unpaid orders auto-cancel after 48 hours."
+                                                : order.next_action === "retry_or_cancel"
+                                                    ? "Payment failed. The customer may retry; this order auto-cancels after 48 hours if it remains unpaid."
+                                                    : "Waiting for payment confirmation. This order auto-cancels after 48 hours if unpaid.";
 
                                         return (
                                             <div key={order.id} className="border rounded-3 p-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
                                                 <div className="min-w-0">
                                                     <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
                                                         <span className="fw-bold">{order.order_number}</span>
-                                                        {order.is_stale_unpaid && <span className="badge rounded-pill bg-danger-subtle text-danger">Over 24 hours</span>}
-                                                        <span className={"badge rounded-pill text-capitalize " + paymentClass(order.payment_status)}>{statusLabel(order.payment_status)}</span>
-                                                        <span className={"badge rounded-pill text-capitalize " + orderClass(order.order_status)}>{statusLabel(order.order_status)}</span>
+                                                        {order.is_stale_unpaid && <span className="badge rounded-pill bg-danger-subtle text-danger">Over 48 hours unpaid</span>}
+                                                        <span title="Payment status" className={"badge rounded-pill " + paymentClass(order.payment_status)}>Payment: {statusLabel(order.payment_status)}</span>
+                                                        <span title="Order workflow status" className={"badge rounded-pill " + orderClass(order.order_status)}>Order: {statusLabel(order.order_status)}</span>
                                                     </div>
                                                     <div className="small text-muted">{order.customer_name} · {paymentLabel(order.payment_method)} · ₱{Number(order.total ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                                     <div className={"small mt-1 " + (order.is_stale_unpaid ? "text-danger fw-semibold" : "text-secondary")}>
                                                         {order.age_hours >= 24
-                                                            ? "Last order update " + Math.floor(order.age_hours / 24) + " day(s) ago"
-                                                            : "Last order update " + order.age_hours + " hour(s) ago"}
+                                                            ? "Order placed " + Math.floor(order.age_hours / 24) + " day(s) ago"
+                                                            : "Order placed " + order.age_hours + " hour(s) ago"}
                                                         {" · "}{actionText}
                                                     </div>
                                                 </div>
