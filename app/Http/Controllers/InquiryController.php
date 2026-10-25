@@ -541,7 +541,7 @@ class InquiryController extends Controller
 
             $order->update(['paymongo_checkout_session_id' => $checkoutSessionId]);
             return Inertia::location($checkoutUrl);
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             report($exception);
             $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
             return back()->withErrors([
