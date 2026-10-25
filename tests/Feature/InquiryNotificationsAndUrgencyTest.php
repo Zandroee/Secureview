@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
+use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -73,8 +74,12 @@ class InquiryNotificationsAndUrgencyTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $technician = User::factory()->create(['role' => 'technician']);
 
+        config(['services.secureview.booking_fees.emergency' => 1500]);
+
         $this->actingAs($customer)
             ->post(route('inquiries.store'), [
+                'booking_request_token' => (string) \Illuminate\Support\Str::uuid(),
+                'payment_method' => 'cash',
                 'customer_name' => $customer->name,
                 'customer_phone' => '09171234567',
                 'customer_email' => $customer->email,
@@ -89,6 +94,13 @@ class InquiryNotificationsAndUrgencyTest extends TestCase
             ->assertRedirect();
 
         $inquiry = Inquiry::query()->where('customer_email', $customer->email)->firstOrFail();
+        $priorityOrder = Order::query()->where('user_id', $customer->id)->firstOrFail();
+
+        $this->assertSame('emergency', $inquiry->urgency);
+        $this->assertEquals(1500.00, (float) $inquiry->urgency_fee);
+        $this->assertEquals(1500.00, (float) $priorityOrder->service_priority_fee);
+        $this->assertEquals(1500.00, (float) $priorityOrder->total);
+        $this->assertSame('pending', $priorityOrder->payment_status);
 
         $this->assertCount(3, $sentMessages);
         $adminEmail = collect($sentMessages)->first(fn ($message) => str_contains($message, '123 Test Street'));
