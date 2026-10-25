@@ -173,7 +173,10 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                                             <div className="small text-break" title={service.service_record.work_summary}>{service.service_record.work_summary}</div>
                                                         </div>
                                                     ) : (
-                                                        <span className="badge rounded-pill bg-warning-subtle text-warning-emphasis" title="This service was completed before the Post-Service Record feature was introduced, so detailed work notes and parts used may not have been saved.">No Post-Service Record — older service</span>
+                                                        <div>
+                                                            <span className="badge rounded-pill bg-warning-subtle text-warning-emphasis" title="No detailed post-service record is linked to this completed service.">No Post-Service Record</span>
+                                                            <div className="small text-muted mt-1">Detailed work notes and parts used were not saved; this may be an older service from before records were introduced.</div>
+                                                        </div>
                                                     )}
                                                 </td>
                                                 <td className="small text-muted">{service.completed_at || "—"}</td>
