@@ -7,6 +7,7 @@ use App\Models\BlockedBookingDate;
 use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
+use App\Models\ServiceBookingFeeSetting;
 use App\Models\User;
 use App\Services\AdminActivityLogger;
 use App\Services\JobNotificationService;
@@ -131,6 +132,7 @@ class InquiryController extends Controller
             'blockedBookingTimeSlots' => $bookingAvailability['blockedBookingTimeSlots'],
             'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
             'todayDate' => today()->toDateString(),
+            'bookingFees' => ServiceBookingFeeSetting::current()->fees(),
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
@@ -140,6 +142,30 @@ class InquiryController extends Controller
                 'date_to' => $filters['date_to'] ?? '',
             ],
         ]);
+    }
+
+    public function updateBookingFees(Request $request)
+    {
+        $validated = $request->validate([
+            'urgent_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
+            'emergency_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
+        ]);
+
+        $settings = ServiceBookingFeeSetting::current();
+
+        if (!$settings->exists) {
+            throw ValidationException::withMessages([
+                'urgent_fee' => 'Service fee settings are unavailable until the database migrations have been run.',
+            ]);
+        }
+
+        $settings->urgent_fee = round((float) $validated['urgent_fee'], 2);
+        $settings->emergency_fee = round((float) $validated['emergency_fee'], 2);
+        $settings->save();
+
+        return redirect()
+            ->route('admin.inquiries.index')
+            ->with('success', 'Service booking fees saved. Changes apply to new service requests; existing requests keep their saved fees.');
     }
 
     public function show(Inquiry $inquiry)
