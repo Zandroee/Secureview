@@ -238,66 +238,76 @@ class PurchaseController extends Controller
                         $order->paymongo_checkout_session_id
                     );
 
-                if ($existingResponse->successful()) {
-                    $existingSession = $existingResponse->json('data');
-                    $existingAttributes = is_array($existingSession)
-                        ? ($existingSession['attributes'] ?? [])
-                        : [];
-                    $existingStatus = $existingAttributes['status'] ?? null;
-                    $existingCheckoutUrl = $existingAttributes['checkout_url'] ?? null;
-                    $paidPayment = null;
+                if (!$existingResponse->successful()) {
+                    return back()->withErrors([
+                        'payment' => 'We could not verify the existing checkout session. To prevent a duplicate payment, no replacement checkout was created. Please retry shortly or contact SecureView support.',
+                    ]);
+                }
 
-                    foreach (($existingAttributes['payments'] ?? []) as $existingPayment) {
-                        if (($existingPayment['attributes']['status'] ?? null) === 'paid') {
-                            $paidPayment = $existingPayment;
-                            break;
+                $existingSession = $existingResponse->json('data');
+                $existingAttributes = is_array($existingSession)
+                    ? ($existingSession['attributes'] ?? [])
+                    : [];
+                $existingStatus = $existingAttributes['status'] ?? null;
+                $existingCheckoutUrl = $existingAttributes['checkout_url'] ?? null;
+                $paidPayment = null;
+
+                foreach (($existingAttributes['payments'] ?? []) as $existingPayment) {
+                    if (($existingPayment['attributes']['status'] ?? null) === 'paid') {
+                        $paidPayment = $existingPayment;
+                        break;
+                    }
+                }
+
+                // A checkout revisit must reconcile an already-paid session before
+                // considering a new session. Otherwise a late webhook could make a
+                // second checkout available for the same priority surcharge.
+                if ($paidPayment !== null) {
+                    $order->update([
+                        'payment_status' => 'paid',
+                        'order_status' => 'processing',
+                        'paymongo_payment_id' => $paidPayment['id'] ?? null,
+                        'paid_at' => $order->paid_at ?? now(),
+                    ]);
+
+                    try {
+                        $inventory->deductForOrder($order);
+                    } catch (\\Throwable $exception) {
+                        report($exception);
+                    }
+
+                    CustomerNotification::create([
+                        'user_id' => $order->user_id,
+                        'type' => 'payment_paid',
+                        'title' => 'Payment successful',
+                        'message' => 'Payment for order ' . $order->order_number . ' was successful.',
+                        'action_url' => route('purchases.show', $order),
+                        'related_type' => Order::class,
+                        'related_id' => $order->id,
+                    ]);
+
+                    if (PendingInquiryCheckout::query()->where('order_id', $order->id)->exists()) {
+                        $inquiry = app(PendingInquiryCheckoutService::class)->completePaidOrder($order);
+                        if ($inquiry) {
+                            return redirect()->route('inquiries.show', $inquiry)->with(
+                                'success',
+                                'Payment confirmed. Your ' . strtolower($inquiry->service_type) . ' service request ' . $inquiry->inquiry_number . ' is awaiting review.'
+                            );
                         }
                     }
 
-                    // A checkout revisit must reconcile an already-paid session before
-                    // considering a new session. Otherwise a late webhook could make a
-                    // second checkout available for the same priority surcharge.
-                    if ($paidPayment !== null) {
-                        $order->update([
-                            'payment_status' => 'paid',
-                            'order_status' => 'processing',
-                            'paymongo_payment_id' => $paidPayment['id'] ?? null,
-                            'paid_at' => $order->paid_at ?? now(),
-                        ]);
+                    return redirect()->route('purchases.show', $order)
+                        ->with('success', 'Payment confirmed for order ' . $order->order_number . '.');
+                }
 
-                        try {
-                            $inventory->deductForOrder($order);
-                        } catch (\Throwable $exception) {
-                            report($exception);
-                        }
+                if ($existingStatus === 'active' && $existingCheckoutUrl) {
+                    return Inertia::location($existingCheckoutUrl);
+                }
 
-                        CustomerNotification::create([
-                            'user_id' => $order->user_id,
-                            'type' => 'payment_paid',
-                            'title' => 'Payment successful',
-                            'message' => 'Payment for order ' . $order->order_number . ' was successful.',
-                            'action_url' => route('purchases.show', $order),
-                            'related_type' => Order::class,
-                            'related_id' => $order->id,
-                        ]);
-
-                        if (PendingInquiryCheckout::query()->where('order_id', $order->id)->exists()) {
-                            $inquiry = app(PendingInquiryCheckoutService::class)->completePaidOrder($order);
-                            if ($inquiry) {
-                                return redirect()->route('inquiries.show', $inquiry)->with(
-                                    'success',
-                                    'Payment confirmed. Your ' . strtolower($inquiry->service_type) . ' service request ' . $inquiry->inquiry_number . ' is awaiting review.'
-                                );
-                            }
-                        }
-
-                        return redirect()->route('purchases.show', $order)
-                            ->with('success', 'Payment confirmed for order ' . $order->order_number . '.');
-                    }
-
-                    if ($existingStatus === 'active' && $existingCheckoutUrl) {
-                        return Inertia::location($existingCheckoutUrl);
-                    }
+                if ($existingStatus !== 'expired') {
+                    return back()->withErrors([
+                        'payment' => 'The existing checkout is not confirmed expired. No replacement checkout was created, to avoid a possible duplicate payment. Please refresh your order or contact SecureView support.',
+                    ]);
                 }
             }
 
@@ -334,7 +344,7 @@ class PurchaseController extends Controller
                 ->acceptJson()
                 ->asJson()
                 ->withHeaders([
-                    'Idempotency-Key' => 'secureview-retry-' . $order->id . '-' . Str::lower(Str::random(12)),
+                    'Idempotency-Key' => 'secureview-retry-' . $order->id . '-' . ($order->paymongo_checkout_session_id ?: 'initial'),
                 ])
                 ->post(
                     $baseUrl . '/v2/checkout_sessions',
