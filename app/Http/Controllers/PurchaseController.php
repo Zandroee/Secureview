@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CustomerNotification;
 use App\Models\Order;
+use App\Models\PendingInquiryCheckout;
 use App\Services\InventoryService;
 use App\Services\OrderCancellationService;
+use App\Services\PendingInquiryCheckoutService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -237,8 +240,60 @@ class PurchaseController extends Controller
 
                 if ($existingResponse->successful()) {
                     $existingSession = $existingResponse->json('data');
-                    $existingStatus = $existingSession['attributes']['status'] ?? null;
-                    $existingCheckoutUrl = $existingSession['attributes']['checkout_url'] ?? null;
+                    $existingAttributes = is_array($existingSession)
+                        ? ($existingSession['attributes'] ?? [])
+                        : [];
+                    $existingStatus = $existingAttributes['status'] ?? null;
+                    $existingCheckoutUrl = $existingAttributes['checkout_url'] ?? null;
+                    $paidPayment = null;
+
+                    foreach (($existingAttributes['payments'] ?? []) as $existingPayment) {
+                        if (($existingPayment['attributes']['status'] ?? null) === 'paid') {
+                            $paidPayment = $existingPayment;
+                            break;
+                        }
+                    }
+
+                    // A checkout revisit must reconcile an already-paid session before
+                    // considering a new session. Otherwise a late webhook could make a
+                    // second checkout available for the same priority surcharge.
+                    if ($paidPayment !== null) {
+                        $order->update([
+                            'payment_status' => 'paid',
+                            'order_status' => 'processing',
+                            'paymongo_payment_id' => $paidPayment['id'] ?? null,
+                            'paid_at' => $order->paid_at ?? now(),
+                        ]);
+
+                        try {
+                            $inventory->deductForOrder($order);
+                        } catch (\\Throwable $exception) {
+                            report($exception);
+                        }
+
+                        CustomerNotification::create([
+                            'user_id' => $order->user_id,
+                            'type' => 'payment_paid',
+                            'title' => 'Payment successful',
+                            'message' => 'Payment for order ' . $order->order_number . ' was successful.',
+                            'action_url' => route('purchases.show', $order),
+                            'related_type' => Order::class,
+                            'related_id' => $order->id,
+                        ]);
+
+                        if (PendingInquiryCheckout::query()->where('order_id', $order->id)->exists()) {
+                            $inquiry = app(PendingInquiryCheckoutService::class)->completePaidOrder($order);
+                            if ($inquiry) {
+                                return redirect()->route('inquiries.show', $inquiry)->with(
+                                    'success',
+                                    'Payment confirmed. Your ' . strtolower($inquiry->service_type) . ' service request ' . $inquiry->inquiry_number . ' is awaiting review.'
+                                );
+                            }
+                        }
+
+                        return redirect()->route('purchases.show', $order)
+                            ->with('success', 'Payment confirmed for order ' . $order->order_number . '.');
+                    }
 
                     if ($existingStatus === 'active' && $existingCheckoutUrl) {
                         return Inertia::location($existingCheckoutUrl);
