@@ -9,6 +9,7 @@ use App\Models\Inquiry;
 use App\Models\Order;
 use App\Models\PendingInquiryCheckout;
 use App\Models\Package;
+use App\Models\ServiceBookingFeeSetting;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\InventoryService;
@@ -230,11 +231,7 @@ class InquiryController extends Controller
             'item' => $item,
             'catalogItems' => $catalogItems,
             'cartItems' => $cartItems,
-            'urgencyFees' => [
-                'normal' => 0,
-                'urgent' => (float) config('services.secureview.booking_fees.urgent', 0),
-                'emergency' => (float) config('services.secureview.booking_fees.emergency', 0),
-            ],
+            'urgencyFees' => ServiceBookingFeeSetting::current()->fees(),
             'bookingRequestToken' => (string) Str::uuid(),
             'initialServiceType' => $initialServiceType,
         ]);
@@ -668,7 +665,9 @@ class InquiryController extends Controller
             return 0.0;
         }
 
-        return round(max(0, (float) config('services.secureview.booking_fees.' . $urgency, 0)), 2);
+        $fees = ServiceBookingFeeSetting::current()->fees();
+
+        return round(max(0, (float) ($fees[$urgency] ?? 0)), 2);
     }
 
     /**
