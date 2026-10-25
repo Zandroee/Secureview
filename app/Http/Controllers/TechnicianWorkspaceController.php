@@ -139,6 +139,7 @@ class TechnicianWorkspaceController extends Controller
                 'inquiries.service_type',
                 'inquiries.status',
                 'inquiries.urgency',
+                'inquiries.urgency_fee',
                 'inquiries.preferred_date',
                 'inquiries.preferred_time',
                 'inquiries.created_at',
@@ -153,6 +154,7 @@ class TechnicianWorkspaceController extends Controller
                 'date' => $inquiry->updated_at?->diffForHumans() ?? '',
                 'status' => $inquiry->status,
                 'urgency' => $inquiry->urgency ?: 'normal',
+                'urgency_fee' => (float) $inquiry->urgency_fee,
                 'preferred_date' => $inquiry->preferred_date?->format('M j, Y'),
                 'preferred_time' => $inquiry->preferred_time,
             ])
@@ -177,6 +179,7 @@ class TechnicianWorkspaceController extends Controller
                 'inquiries.preferred_time',
                 'inquiries.status',
                 'inquiries.urgency',
+                'inquiries.urgency_fee',
             ])
             ->map(fn (Inquiry $inquiry) => [
                 'id' => $inquiry->id,
@@ -187,6 +190,7 @@ class TechnicianWorkspaceController extends Controller
                 'customer_name' => $inquiry->customer_name,
                 'status' => $inquiry->status,
                 'urgency' => $inquiry->urgency ?: 'normal',
+                'urgency_fee' => (float) $inquiry->urgency_fee,
                 'description' => $inquiry->customer_name . ' · ' . str_replace('_', ' ', $inquiry->status),
                 'inquiry_number' => $inquiry->inquiry_number,
             ])
@@ -730,6 +734,7 @@ class TechnicianWorkspaceController extends Controller
             'service_type' => $inquiry->service_type,
             'item_name' => $inquiry->item_name,
             'urgency' => $inquiry->urgency,
+            'urgency_fee' => (float) $inquiry->urgency_fee,
             'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
             'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
             'preferred_time' => $inquiry->preferred_time,
