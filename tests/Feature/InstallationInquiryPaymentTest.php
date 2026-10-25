@@ -479,7 +479,7 @@ class InstallationInquiryPaymentTest extends TestCase
             'status' => 'pending_payment',
         ]);
 
-        Http::assertSent(function (\\Illuminate\\Http\\Client\\Request $request) {
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
             if (!str_ends_with($request->url(), '/v2/checkout_sessions')) {
                 return false;
             }
@@ -553,7 +553,7 @@ class InstallationInquiryPaymentTest extends TestCase
             'name' => 'Emergency booking surcharge',
         ]);
 
-        Http::assertSent(function (\\Illuminate\\Http\\Client\\Request $request) {
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
             if (!str_ends_with($request->url(), '/v2/checkout_sessions')) {
                 return false;
             }
