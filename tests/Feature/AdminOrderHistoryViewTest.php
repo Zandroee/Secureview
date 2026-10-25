@@ -53,7 +53,11 @@ class AdminOrderHistoryViewTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/OrderHistory')
                 ->where('orders.data.0.id', $order->id)
-                ->where('orders.data.0.order_number', $order->order_number));
+                ->where('orders.data.0.order_number', $order->order_number)
+                ->where('orders.data.0.payment_method', 'cash')
+                ->where('orders.data.0.payment_status', 'paid')
+                ->has('orders.data.0.items', 1)
+                ->where('orders.data.0.items.0.name', 'History test camera'));
 
         // The View link sends the archived order ID along with its status and
         // exact order number; the existing Orders page returns that order's
