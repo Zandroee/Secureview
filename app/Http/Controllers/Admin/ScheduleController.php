@@ -59,7 +59,10 @@ class ScheduleController extends Controller
         }
 
         if (!empty($filters['technician'])) {
-            $query->whereHas('technicians', fn ($builder) => $builder->where('users.id', $filters['technician']));
+            $query->where(function ($builder) use ($filters) {
+                $builder->whereHas('technicians', fn ($technicianQuery) => $technicianQuery->where('users.id', $filters['technician']))
+                    ->orWhere('technician_id', $filters['technician']);
+            });
         }
         if (!empty($filters['service_type'])) {
             $query->where('service_type', $filters['service_type']);
@@ -349,7 +352,10 @@ class ScheduleController extends Controller
             $query->where('urgency', $filters['urgency']);
         }
         if (!empty($filters['technician'])) {
-            $query->whereHas('technicians', fn ($builder) => $builder->where('users.id', $filters['technician']));
+            $query->where(function ($builder) use ($filters) {
+                $builder->whereHas('technicians', fn ($technicianQuery) => $technicianQuery->where('users.id', $filters['technician']))
+                    ->orWhere('technician_id', $filters['technician']);
+            });
         }
         if (!empty($filters['record_status'])) {
             $filters['record_status'] === 'with_record'
