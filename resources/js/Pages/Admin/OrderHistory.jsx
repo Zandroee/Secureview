@@ -14,6 +14,23 @@ const statusClass = (status) => status === "completed"
     ? "bg-success-subtle text-success"
     : "bg-danger-subtle text-danger";
 
+const statusLabel = (value) => String(value ?? "unknown")
+    .replaceAll("_", " ")
+    .replace(/^\w/, (letter) => letter.toUpperCase());
+
+const paymentLabel = (method) => ({
+    cash: "Cash",
+    gcash: "GCash",
+    card: "Card",
+    maya: "Maya",
+}[String(method ?? "").toLowerCase()] ?? statusLabel(method));
+
+const paymentStatusClass = (status) => status === "paid"
+    ? "bg-success-subtle text-success"
+    : ["cancelled", "failed"].includes(status)
+        ? "bg-danger-subtle text-danger"
+        : "bg-warning-subtle text-warning-emphasis";
+
 export default function OrderHistory({ orders = {}, filters = {}, summary = {} }) {
     const rows = orders.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
@@ -111,10 +128,10 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                         <tr>
                                             <th className="ps-3">ORDER</th>
                                             <th>CUSTOMER</th>
-                                            <th>DATE</th>
-                                            <th>PAYMENT</th>
-                                            <th>STATUS</th>
                                             <th className="text-end">TOTAL</th>
+                                            <th>PAYMENT</th>
+                                            <th>ORDER STATUS</th>
+                                            <th>DATE</th>
                                             <th className="text-end pe-3">ACTION</th>
                                         </tr>
                                     </thead>
@@ -123,16 +140,19 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                             <tr key={order.id}>
                                                 <td className="ps-3">
                                                     <div className="fw-bold">{order.order_number}</div>
-                                                    <div className="small text-secondary">{order.payment_method?.toUpperCase()}</div>
+                                                    <div className="small text-secondary">{order.items?.length ?? 0} {(order.items?.length ?? 0) === 1 ? "item" : "items"}</div>
                                                 </td>
                                                 <td>
                                                     <div className="fw-semibold">{order.customer_name}</div>
                                                     <div className="small text-secondary text-break">{order.customer_email}</div>
                                                 </td>
-                                                <td className="small text-secondary">{order.updated_at || order.created_at || "—"}</td>
-                                                <td><span className={"badge rounded-pill " + (order.payment_status === "paid" ? "bg-success-subtle text-success" : order.payment_status === "cancelled" || order.payment_status === "failed" ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning-emphasis")}>{String(order.payment_status).replaceAll("_", " ").replace(/^\w/, (letter) => letter.toUpperCase())}</span></td>
-                                                <td><span className={"badge rounded-pill text-capitalize " + statusClass(order.order_status)}>{String(order.order_status).replaceAll("_", " ")}</span></td>
-                                                <td className="text-end fw-bold text-nowrap">{peso(order.total)}</td>
+                                                <td className="text-end fw-bold text-primary text-nowrap">{peso(order.total)}</td>
+                                                <td>
+                                                    <div className="small fw-semibold">{paymentLabel(order.payment_method)}</div>
+                                                    <span className={"badge rounded-pill " + paymentStatusClass(order.payment_status)}>{statusLabel(order.payment_status)}</span>
+                                                </td>
+                                                <td><span className={"badge rounded-pill text-capitalize " + statusClass(order.order_status)}>{statusLabel(order.order_status)}</span></td>
+                                                <td className="small text-secondary">{order.created_at || order.updated_at || "—"}</td>
                                                 <td className="text-end pe-3">
                                                     <Link href={"/admin/purchases?search=" + encodeURIComponent(order.order_number) + "&order_status=" + encodeURIComponent(order.order_status) + "&view=" + order.id} className="btn btn-sm btn-outline-primary fw-semibold text-nowrap">VIEW</Link>
                                                 </td>
