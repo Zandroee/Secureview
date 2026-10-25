@@ -61,6 +61,8 @@ export default function AdminPurchases({
         filters.payment_method ?? ""
     );
     const [attentionFilter, setAttentionFilter] = useState(filters.attention ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
     const [viewingOrder, setViewingOrder] = useState(null);
     const [cancellingOrderId, setCancellingOrderId] = useState(null);
     const [updatingOrderId, setUpdatingOrderId] = useState(null);
@@ -158,6 +160,8 @@ export default function AdminPurchases({
                 order_status: orderStatus,
                 payment_method: paymentMethod,
                 attention: attentionFilter,
+                date_from: dateFrom,
+                date_to: dateTo,
             },
             {
                 preserveState: true,
@@ -174,6 +178,8 @@ export default function AdminPurchases({
             order_status: preset.order_status ?? "",
             payment_method: preset.payment_method ?? "",
             attention: preset.attention ?? "",
+            date_from: dateFrom,
+            date_to: dateTo,
         };
 
         setSearch(next.search);
@@ -195,6 +201,8 @@ export default function AdminPurchases({
         setOrderStatus("");
         setPaymentMethod("");
         setAttentionFilter("");
+        setDateFrom("");
+        setDateTo("");
 
         router.get(
             "/admin/purchases",
@@ -516,6 +524,14 @@ export default function AdminPurchases({
                                     >
                                         CLEAR
                                     </button>
+                                </div>
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">CREATED FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">CREATED TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
                                 </div>
                             </form>
                         </div>
