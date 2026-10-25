@@ -54,7 +54,11 @@ jobs:
         run: npm run build
 
       - name: Run Laravel feature and unit tests
-        run: COLUMNS=240 php artisan test --display-warnings
+        run: |
+          # Laravel's env bootstrap reads the root .env on each test app boot.
+          # CI injects its configuration as environment variables, so an empty file is sufficient.
+          touch .env
+          php artisan test
 
       - name: Upload production Vite assets for Hostinger
         if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
