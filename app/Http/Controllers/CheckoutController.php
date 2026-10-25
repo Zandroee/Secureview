@@ -719,7 +719,7 @@ class CheckoutController extends Controller
         }
 
         // Keep the pending checkout so the customer can retry payment from order details.
-        // No Installation inquiry is created unless the gateway later confirms payment.
+        // Linked service inquiries remain visible with their payment state until finalized.
         return redirect()->route('purchases.show', $order)->with([
             'paymentCancelled' => true,
         ]);
