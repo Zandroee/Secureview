@@ -67,7 +67,7 @@ const formatDateLabel = (value) => {
     });
 };
 
-export default function Service({ customer, item, catalogItems = [], cartItems = [], initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
+export default function Service({ customer, item, catalogItems = [], cartItems = [], initialServiceType = "Installation", urgencyFees = { normal: 0, urgent: 500, emergency: 1000 }, unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
     const today = new Date();
     const [showDateModal, setShowDateModal] = useState(false);
 
@@ -117,17 +117,25 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
         return () => window.clearInterval(intervalId);
     }, [processing]);
 
-    const selectedCatalogItem =
-        catalogItems.find((candidate) =>
-            candidate.type === data.item_type && String(candidate.id) === String(data.item_id)
-        ) || (
-            item && item.type === data.item_type && String(item.id) === String(data.item_id)
-                ? item
-                : null
+    const selectedCartItem = cartItems.find((candidate) =>
+        candidate.type === data.item_type && String(candidate.id) === String(data.item_id)
+    ) || null;
+    const selectedCatalogItem = data.service_type === "Installation"
+        ? selectedCartItem
+        : (
+            catalogItems.find((candidate) =>
+                candidate.type === data.item_type && String(candidate.id) === String(data.item_id)
+            ) || (
+                item && item.type === data.item_type && String(item.id) === String(data.item_id)
+                    ? item
+                    : selectedCartItem
+            )
         );
     const installationFee = Number(selectedCatalogItem?.installation_fee ?? 0);
     const selectedItemQuantity = Math.max(1, Number(data.item_quantity ?? 1));
-    const selectedItemTotal = (Number(selectedCatalogItem?.price ?? 0) + installationFee) * selectedItemQuantity;
+    const urgencyFee = Math.max(0, Number(urgencyFees?.[data.urgency] ?? 0));
+    const formattedUrgencyFee = urgencyFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const selectedItemTotal = (Number(selectedCatalogItem?.price ?? 0) + installationFee) * selectedItemQuantity + urgencyFee;
 
     const monthLabel = calendarMonth.toLocaleDateString("en-US", {
         month: "long",
@@ -567,6 +575,22 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                 )}
                                             </div>
 
+                                            {data.service_type === "Installation" && (
+                                                <div className="col-12">
+                                                    <div className="alert alert-info d-flex align-items-start gap-2 py-2 mb-0 small">
+                                                        <i className="bi bi-cart-check-fill fs-5" />
+                                                        <div>
+                                                            <div className="fw-bold">INSTALLATION REQUIRES A STORE CART ITEM</div>
+                                                            Add a product or package from the Store to your cart, then select it in the Cart panel before booking. An installation cannot be submitted with only a product page selection.
+                                                            <div className="d-flex gap-3 mt-2">
+                                                                <a href="/products" className="fw-bold">Browse products</a>
+                                                                <a href="/packages" className="fw-bold">Browse packages</a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             <div className="col-md-4">
                                                 <label className="form-label small fw-semibold mb-1">
                                                     Urgency *
@@ -603,10 +627,14 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
 
                                                 <div className="form-text small">
                                                     {data.urgency === "emergency"
-                                                        ? "Use only when there is an immediate safety or security risk."
+                                                        ? (urgencyFee > 0
+                                                            ? "Immediate safety or security risk only. Emergency surcharge: ₱" + formattedUrgencyFee + "."
+                                                            : "Use only for an immediate safety or security risk.")
                                                         : data.urgency === "urgent"
-                                                          ? "For a failed system, service disruption, or an issue that cannot reasonably wait."
-                                                          : "For routine installation, maintenance, or non-critical service requests."}
+                                                            ? (urgencyFee > 0
+                                                                ? "For a failed system or time-sensitive issue. Urgent surcharge: ₱" + formattedUrgencyFee + "."
+                                                                : "For a failed system, service disruption, or an issue that cannot reasonably wait.")
+                                                            : "For routine installation, maintenance, or non-critical service requests."}
                                                 </div>
 
                                                 {errors.urgency && (
@@ -712,7 +740,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                 </div>
                                             )}
 
-                                            {data.service_type === "Installation" && (
+                                            {(data.service_type === "Installation" || data.urgency !== "normal") && (
                                                 <div className="col-12">
                                                     <label className="form-label small fw-semibold mb-1">Payment Method *</label>
                                                     <select
@@ -728,9 +756,17 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                     </select>
                                                     {errors.payment_method && <div className="invalid-feedback">{errors.payment_method}</div>}
                                                     <div className="form-text">
-                                                        {data.payment_method === "cash"
-                                                            ? "Your service request will be saved immediately. Payment remains pending until SecureView confirms receipt of cash."
-                                                            : "You will be redirected to PayMongo. Your service request is saved immediately and remains visible in Service History while payment is pending."}
+                                                        {data.service_type === "Installation"
+                                                            ? (urgencyFee > 0
+                                                                ? "Your cart item, installation fee (if applicable), and ₱" + formattedUrgencyFee + " urgency surcharge are included in the total due."
+                                                                : (data.payment_method === "cash"
+                                                                    ? "Your installation request is saved immediately. Payment remains pending until SecureView confirms receipt of cash."
+                                                                    : "You will be redirected to PayMongo to pay for the cart item and any applicable installation fee."))
+                                                            : urgencyFee > 0
+                                                                ? (data.payment_method === "cash"
+                                                                    ? "The ₱" + formattedUrgencyFee + " urgency surcharge is due in cash and remains pending until SecureView confirms receipt."
+                                                                    : "You will be redirected to PayMongo to pay the ₱" + formattedUrgencyFee + " urgency surcharge for this booking.")
+                                                                : "No additional urgency surcharge is configured for this service."}
                                                     </div>
                                                 </div>
                                             )}
@@ -777,12 +813,12 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                     <button
                                         type="submit"
                                         className="btn btn-primary fw-bold w-100 py-2"
-                                        disabled={processing || (data.service_type === "Installation" && !selectedCatalogItem)}
+                                        disabled={processing || (data.service_type === "Installation" && !selectedCartItem)}
                                     >
                                         {processing
                                             ? "PROCESSING..."
-                                            : data.service_type === "Installation"
-                                                ? "CONTINUE TO PAYMENT"
+                                            : (data.service_type === "Installation" || urgencyFee > 0)
+                                                ? (data.payment_method === "cash" ? "SUBMIT BOOKING" : "CONTINUE TO PAYMENT")
                                                 : "CONFIRM SERVICE REQUEST"}
                                     </button>
                                 </form>
@@ -828,6 +864,11 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                                 ? "₱" + (installationFee * selectedItemQuantity).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                                                                 : "Free"}
                                                         </div>
+                                                        {urgencyFee > 0 && (
+                                                            <div className="small text-danger fw-semibold">
+                                                                {data.urgency === "emergency" ? "Emergency surcharge" : "Urgent surcharge"}: ₱{formattedUrgencyFee}
+                                                            </div>
+                                                        )}
                                                         <div className="d-flex justify-content-between align-items-center border-top mt-2 pt-2">
                                                             <span className="small fw-bold">Total due</span>
                                                             <span className="fw-bold text-primary">₱{selectedItemTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -851,6 +892,12 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                 ? "An installation requires a product or package. Select one of the cart items below."
                                                 : "Selecting a cart item is optional for this service."}
                                         </div>
+                                        {urgencyFee > 0 && (
+                                            <div className="d-flex justify-content-between align-items-center border-top mt-2 pt-2">
+                                                <span className="small fw-bold">{data.urgency === "emergency" ? "Emergency surcharge" : "Urgent surcharge"}</span>
+                                                <span className="fw-bold text-primary">₱{formattedUrgencyFee}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
