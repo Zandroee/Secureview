@@ -230,6 +230,11 @@ class InquiryController extends Controller
             'item' => $item,
             'catalogItems' => $catalogItems,
             'cartItems' => $cartItems,
+            'urgencyFees' => [
+                'normal' => 0,
+                'urgent' => (float) config('services.secureview.booking_fees.urgent', 0),
+                'emergency' => (float) config('services.secureview.booking_fees.emergency', 0),
+            ],
             'initialServiceType' => $initialServiceType,
         ]);
     }
@@ -796,6 +801,7 @@ class InquiryController extends Controller
                     'item_name' => $inquiry->item_name,
                     'service_type' => $inquiry->service_type,
                     'urgency' => $inquiry->urgency,
+                    'urgency_fee' => (float) $inquiry->urgency_fee,
                     'technician' => $inquiry->technician
                         ? [
                             'name' => $inquiry->technician->name,
@@ -860,6 +866,7 @@ class InquiryController extends Controller
                 'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
                 'urgency' => $inquiry->urgency,
+                'urgency_fee' => (float) $inquiry->urgency_fee,
                 'technician' => $inquiry->technician
                     ? [
                         'name' => $inquiry->technician->name,
