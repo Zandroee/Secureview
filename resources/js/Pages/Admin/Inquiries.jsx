@@ -50,6 +50,9 @@ export default function AdminServices({
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
     const [urgency, setUrgency] = useState(filters.urgency ?? "");
+    const [serviceType, setServiceType] = useState(filters.service_type ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
 
     const applyFilters = (event) => {
         event.preventDefault();
@@ -60,6 +63,9 @@ export default function AdminServices({
                 search,
                 status,
                 urgency,
+                service_type: serviceType,
+                date_from: dateFrom,
+                date_to: dateTo,
             },
             {
                 preserveState: true,
@@ -73,6 +79,9 @@ export default function AdminServices({
         setSearch("");
         setStatus("");
         setUrgency("");
+        setServiceType("");
+        setDateFrom("");
+        setDateTo("");
 
         router.get(
             "/admin/inquiries",
@@ -199,6 +208,29 @@ export default function AdminServices({
                                             Normal
                                         </option>
                                     </select>
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">SERVICE TYPE</label>
+                                    <select className="form-select" value={serviceType} onChange={(event) => setServiceType(event.target.value)}>
+                                        <option value="">All service types</option>
+                                        <option value="Installation">Installation</option>
+                                        <option value="Site Inspection">Site Inspection</option>
+                                        <option value="Maintenance">Maintenance</option>
+                                        <option value="Repair">Repair</option>
+                                        <option value="Consultation">Consultation</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">DATE FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">DATE TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
                                 </div>
 
                                 <div className="col-sm-6 col-lg-1 d-grid">
