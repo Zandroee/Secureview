@@ -13,10 +13,47 @@ class NotificationController extends Controller
 
     public function index(Request $request)
     {
-        $notifications = $request->user()
-            ->customerNotifications()
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+            'type' => ['nullable', 'string', 'max:60'],
+            'read_status' => ['nullable', 'in:read,unread'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+        ]);
+
+        // Scope every filter and result to the signed-in account.
+        $notificationsQuery = $request->user()->customerNotifications();
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $notificationsQuery->where(function ($query) use ($search) {
+                $query->where('title', 'like', '%' . $search . '%')
+                    ->orWhere('message', 'like', '%' . $search . '%');
+            });
+        }
+
+        if (!empty($filters['type'])) {
+            $notificationsQuery->where('type', $filters['type']);
+        }
+
+        if (($filters['read_status'] ?? null) === 'read') {
+            $notificationsQuery->whereNotNull('read_at');
+        } elseif (($filters['read_status'] ?? null) === 'unread') {
+            $notificationsQuery->whereNull('read_at');
+        }
+
+        if (!empty($filters['date_from'])) {
+            $notificationsQuery->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $notificationsQuery->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
+        $notifications = $notificationsQuery
             ->latest()
             ->paginate(self::NOTIFICATIONS_PER_PAGE)
+            ->withQueryString()
             ->through(function (CustomerNotification $notification) {
                 return [
                     'id' => $notification->id,
@@ -32,6 +69,19 @@ class NotificationController extends Controller
         return Inertia::render('notifications', [
             'notifications' => $notifications,
             'unreadCount' => $request->user()->customerNotifications()->whereNull('read_at')->count(),
+            'filters' => [
+                'search' => $filters['search'] ?? '',
+                'type' => $filters['type'] ?? '',
+                'read_status' => $filters['read_status'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
+            ],
+            'notificationTypes' => $request->user()->customerNotifications()
+                ->select('type')
+                ->distinct()
+                ->orderBy('type')
+                ->pluck('type')
+                ->values(),
         ]);
     }
 
