@@ -31,10 +31,14 @@ class InquiryController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:pending,confirmed,in_progress,completed,cancelled'],
             'urgency' => ['nullable', 'in:normal,urgent,emergency'],
+            'service_type' => ['nullable', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'payment_status' => ['nullable', 'in:not_applicable,pending,paid,failed,cancelled'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         // Active jobs belong on Schedules; completed jobs belong in Service History.
-        $query = Inquiry::with(['user', 'inquirable', 'technician', 'technicians'])
+        $query = Inquiry::with(['user', 'inquirable', 'technician', 'technicians', 'pendingCheckout.order'])
             ->whereNotIn('status', ['confirmed', 'in_progress', 'completed']);
 
         if (!empty($filters['search'])) {
@@ -55,6 +59,22 @@ class InquiryController extends Controller
 
         if (!empty($filters['urgency'])) {
             $query->where('urgency', $filters['urgency']);
+        }
+        if (!empty($filters['service_type'])) {
+            $query->where('service_type', $filters['service_type']);
+        }
+        if (!empty($filters['payment_status'])) {
+            if ($filters['payment_status'] === 'not_applicable') {
+                $query->whereDoesntHave('pendingCheckout.order');
+            } else {
+                $query->whereHas('pendingCheckout.order', fn ($orderQuery) => $orderQuery->where('payment_status', $filters['payment_status']));
+            }
+        }
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('preferred_date', '>=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('preferred_date', '<=', $filters['date_to']);
         }
 
         $inquiries = $query
@@ -85,6 +105,7 @@ class InquiryController extends Controller
                     ])->values(),
                     'service_type' => $inquiry->service_type,
                     'urgency' => $inquiry->urgency,
+                    'payment_status' => $inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable',
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                     'preferred_time' => $inquiry->preferred_time,
@@ -119,6 +140,10 @@ class InquiryController extends Controller
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
                 'urgency' => $filters['urgency'] ?? '',
+                'service_type' => $filters['service_type'] ?? '',
+                'payment_status' => $filters['payment_status'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
         ]);
     }
