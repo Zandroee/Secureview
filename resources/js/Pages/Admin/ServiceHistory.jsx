@@ -5,12 +5,6 @@ import AdminPagination from "../../Components/Admin/AdminPagination";
 import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
-function urgencyClass(urgency) {
-    if (urgency === "emergency") return "bg-danger-subtle text-danger";
-    if (urgency === "urgent") return "bg-warning-subtle text-warning-emphasis";
-    return "bg-success-subtle text-success";
-}
-
 export default function ServiceHistory({ services = [], filters = {}, serviceIncomeSummary = {} }) {
     const serviceRows = services.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
@@ -131,7 +125,6 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                             <th>CUSTOMER</th>
                                             <th>SCHEDULED FOR</th>
                                             <th>TECHNICIAN TEAM</th>
-                                            <th>PRIORITY</th>
                                             <th>POST-SERVICE / INCOME</th>
                                             <th>COMPLETED / UPDATED</th>
                                             <th className="text-end pe-3">ACTION</th>
@@ -140,7 +133,7 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                     <tbody>
                                         {serviceRows.length === 0 ? (
                                             <tr>
-                                                <td colSpan={8} className="text-center p-5">
+                                                <td colSpan={7} className="text-center p-5">
                                                     <i className="bi bi-archive text-muted fs-3" />
                                                     <div className="fw-semibold mt-2">No completed services found</div>
                                                     <div className="small text-muted">
@@ -173,11 +166,6 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                                     ) : <span className="small text-muted">No technician listed</span>}
                                                 </td>
                                                 <td>
-                                                    <span className={"badge rounded-pill text-capitalize px-3 py-2 " + urgencyClass(service.urgency)}>
-                                                        {service.urgency || "normal"}
-                                                    </span>
-                                                </td>
-                                                <td>
                                                     {service.service_record ? (
                                                         <div>
                                                             <div className="fw-bold text-success">₱{Number(service.service_record.total_income ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -185,7 +173,7 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                                             <div className="small text-break" title={service.service_record.work_summary}>{service.service_record.work_summary}</div>
                                                         </div>
                                                     ) : (
-                                                        <span className="badge rounded-pill bg-warning-subtle text-warning-emphasis">Legacy · no record</span>
+                                                        <span className="badge rounded-pill bg-warning-subtle text-warning-emphasis" title="This service was completed before the Post-Service Record feature was introduced, so detailed work notes and parts used may not have been saved.">No Post-Service Record — older service</span>
                                                     )}
                                                 </td>
                                                 <td className="small text-muted">{service.completed_at || "—"}</td>
