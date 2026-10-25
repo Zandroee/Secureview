@@ -64,6 +64,12 @@ class InventoryService
         $order->loadMissing('items');
 
         foreach ($order->items as $orderItem) {
+            // Non-catalog lines (such as an urgent/emergency booking surcharge) do
+            // not represent stock and must be ignored by inventory validation.
+            if (!in_array($orderItem->purchasable_type, [Product::class, Package::class], true)) {
+                continue;
+            }
+
             $purchasable = $orderItem->purchasable;
 
             if (!$purchasable) {
@@ -127,6 +133,10 @@ class InventoryService
                     continue;
                 }
 
+                if ($orderItem->purchasable_type !== Product::class) {
+                    continue;
+                }
+
                 $product = Product::query()
                     ->lockForUpdate()
                     ->find($orderItem->purchasable_id);
@@ -186,6 +196,10 @@ class InventoryService
                         }
                     }
 
+                    continue;
+                }
+
+                if ($orderItem->purchasable_type !== Product::class) {
                     continue;
                 }
 
