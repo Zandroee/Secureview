@@ -403,7 +403,7 @@ class PurchaseController extends Controller
                         'data' => [
                             'attributes' => [
                                 'line_items' => $lineItems,
-                                'payment_method_types' => [$paymentMethod],
+                                'payment_method_types' => [$paymentMethod === 'maya' ? 'paymaya' : $paymentMethod],
                                 'billing' => [
                                     'name' => $order->customer_name,
                                     'email' => $order->customer_email,
