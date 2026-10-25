@@ -405,6 +405,7 @@ class ScheduleController extends Controller
 
         return Inertia::render('Admin/ServiceHistory', [
             'services' => $services,
+            'technicians' => User::query()->where('role', 'technician')->orderBy('name')->get(['id', 'name']),
             'serviceIncomeSummary' => [
                 'recorded_service_income' => (float) ServiceRecord::query()->sum('total_income'),
                 'service_records' => ServiceRecord::query()->count(),
