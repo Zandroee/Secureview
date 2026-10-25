@@ -75,8 +75,23 @@ class WarrantyController extends Controller
             ->paginate(10, ['*'], 'coverage_page')
             ->withQueryString()
             ->through(function (OrderItem $item) use ($warrantyEligibility, $filters) {
-                $associatedClaims = $item->warrantyClaims
-                    ->sortByDesc('created_at')
+                $claimRows = $item->warrantyClaims->sortByDesc('created_at');
+
+                if (!empty($filters['status'])) {
+                    $claimRows = $claimRows->where('status', $filters['status']);
+                }
+                if (!empty($filters['date_from'])) {
+                    $claimRows = $claimRows->filter(
+                        fn (WarrantyClaim $claim) => $claim->created_at?->toDateString() >= $filters['date_from']
+                    );
+                }
+                if (!empty($filters['date_to'])) {
+                    $claimRows = $claimRows->filter(
+                        fn (WarrantyClaim $claim) => $claim->created_at?->toDateString() <= $filters['date_to']
+                    );
+                }
+
+                $associatedClaims = $claimRows
                     ->map(fn (WarrantyClaim $claim) => [
                         'id' => $claim->id,
                         'claim_number' => $claim->claim_number,
@@ -88,12 +103,6 @@ class WarrantyController extends Controller
                         'resolved_at' => $claim->resolved_at?->format('M d, Y h:i A'),
                     ])
                     ->values();
-
-                if (!empty($filters['status'])) {
-                    $associatedClaims = $associatedClaims
-                        ->where('status', $filters['status'])
-                        ->values();
-                }
 
                 $latestClaim = $associatedClaims->first();
                 $startDate = $item->order
