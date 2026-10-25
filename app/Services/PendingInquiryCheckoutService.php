@@ -98,6 +98,7 @@ class PendingInquiryCheckoutService
                 'google_place_id' => $payload['google_place_id'] ?? null,
                 'service_type' => 'Installation',
                 'urgency' => $payload['urgency'],
+                'urgency_fee' => (float) ($payload['urgency_fee'] ?? 0),
                 'preferred_date' => $payload['preferred_date'],
                 'preferred_time' => $payload['preferred_time'],
                 'notes' => $payload['notes'] ?? null,
