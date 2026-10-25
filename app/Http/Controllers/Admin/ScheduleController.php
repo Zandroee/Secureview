@@ -32,6 +32,10 @@ class ScheduleController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:confirmed,in_progress'],
             'technician' => ['nullable', 'integer', 'exists:users,id'],
+            'service_type' => ['nullable', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'urgency' => ['nullable', 'in:normal,urgent,emergency'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $query = Inquiry::with(['user', 'technicians'])
@@ -56,6 +60,18 @@ class ScheduleController extends Controller
 
         if (!empty($filters['technician'])) {
             $query->whereHas('technicians', fn ($builder) => $builder->where('users.id', $filters['technician']));
+        }
+        if (!empty($filters['service_type'])) {
+            $query->where('service_type', $filters['service_type']);
+        }
+        if (!empty($filters['urgency'])) {
+            $query->where('urgency', $filters['urgency']);
+        }
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('preferred_date', '>=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('preferred_date', '<=', $filters['date_to']);
         }
 
         $schedules = $query
@@ -220,6 +236,10 @@ class ScheduleController extends Controller
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
                 'technician' => $filters['technician'] ?? '',
+                'service_type' => $filters['service_type'] ?? '',
+                'urgency' => $filters['urgency'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
                 'active' => Inquiry::whereIn('status', ['confirmed', 'in_progress'])->count(),
