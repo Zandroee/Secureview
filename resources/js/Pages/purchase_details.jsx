@@ -201,10 +201,11 @@ export default function PurchaseDetails({ order }) {
                                                 >
                                                     <i
                                                         className={
-                                                            item.type ===
-                                                            "package"
-                                                                ? "bi bi-box-seam text-secondary"
-                                                                : "bi bi-camera-video text-secondary"
+                                                            item.type === "service_fee"
+                                                                ? "bi bi-lightning-charge text-warning"
+                                                                : item.type === "package"
+                                                                    ? "bi bi-box-seam text-secondary"
+                                                                    : "bi bi-camera-video text-secondary"
                                                         }
                                                         style={{
                                                             fontSize: "1.5rem",
@@ -215,7 +216,7 @@ export default function PurchaseDetails({ order }) {
 
                                             <div className="flex-grow-1">
                                                 <div className="small text-uppercase fw-bold text-primary">
-                                                    {item.type}
+                                                    {item.type === "service_fee" ? "Service fee" : item.type}
                                                 </div>
 
                                                 <div
@@ -234,9 +235,11 @@ export default function PurchaseDetails({ order }) {
                                                         item.price
                                                     ).toLocaleString()}
                                                 </div>
-                                                <div className="small text-muted mt-1">
-                                                    Warranty: {item.warranty_period || "Not specified"}
-                                                </div>
+                                                {item.type === "service_fee" ? (
+                                                    <div className="small text-muted mt-1">Urgency surcharge for the requested service.</div>
+                                                ) : (
+                                                    <div className="small text-muted mt-1">Warranty: {item.warranty_period || "Not specified"}</div>
+                                                )}
                                                 {order.payment_status === "paid" &&
                                                     order.order_status !== "cancelled" &&
                                                     item.purchasable_id &&
