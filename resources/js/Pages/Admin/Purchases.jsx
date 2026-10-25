@@ -356,13 +356,13 @@ export default function AdminPurchases({
                             {attentionOrders.length ? (
                                 <div className="d-flex flex-column gap-2">
                                     {attentionOrders.map((order) => {
-                                        const actionText = order.next_action === "confirm_cash_payment"
-                                            ? "Confirm only after cash has been received."
-                                            : order.next_action === "retry_or_cancel"
-                                                ? "Customer can retry payment. Cancel if they no longer wish to proceed."
-                                                : order.is_stale_unpaid
-                                                    ? "The 48-hour unpaid deadline has passed. The scheduled job will cancel this order after confirming it is still unpaid."
-                                                    : "Waiting for payment confirmation.";
+                                        const actionText = order.is_stale_unpaid
+                                            ? "Unpaid for over 48 hours. The scheduled job will cancel it after verifying payment is still unpaid."
+                                            : order.next_action === "confirm_cash_payment"
+                                                ? "Payment is pending. Confirm only after cash has been received; unpaid orders auto-cancel after 48 hours."
+                                                : order.next_action === "retry_or_cancel"
+                                                    ? "Payment failed. The customer may retry; this order auto-cancels after 48 hours if it remains unpaid."
+                                                    : "Waiting for payment confirmation. This order auto-cancels after 48 hours if unpaid.";
 
                                         return (
                                             <div key={order.id} className="border rounded-3 p-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
