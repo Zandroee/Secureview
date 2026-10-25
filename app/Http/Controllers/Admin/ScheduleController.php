@@ -299,6 +299,12 @@ class ScheduleController extends Controller
 
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
+            'service_type' => ['nullable', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'urgency' => ['nullable', 'in:normal,urgent,emergency'],
+            'technician' => ['nullable', 'integer', 'exists:users,id'],
+            'record_status' => ['nullable', 'in:with_record,without_record'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $query = Inquiry::query()
@@ -315,6 +321,26 @@ class ScheduleController extends Controller
                     ->orWhere('service_type', 'like', '%' . $search . '%')
                     ->orWhere('item_name', 'like', '%' . $search . '%');
             });
+        }
+        if (!empty($filters['service_type'])) {
+            $query->where('service_type', $filters['service_type']);
+        }
+        if (!empty($filters['urgency'])) {
+            $query->where('urgency', $filters['urgency']);
+        }
+        if (!empty($filters['technician'])) {
+            $query->whereHas('technicians', fn ($builder) => $builder->where('users.id', $filters['technician']));
+        }
+        if (!empty($filters['record_status'])) {
+            $filters['record_status'] === 'with_record'
+                ? $query->whereHas('serviceRecord')
+                : $query->whereDoesntHave('serviceRecord');
+        }
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('preferred_date', '>=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('preferred_date', '<=', $filters['date_to']);
         }
 
         $services = $query
@@ -368,6 +394,12 @@ class ScheduleController extends Controller
             ],
             'filters' => [
                 'search' => $filters['search'] ?? '',
+                'service_type' => $filters['service_type'] ?? '',
+                'urgency' => $filters['urgency'] ?? '',
+                'technician' => $filters['technician'] ?? '',
+                'record_status' => $filters['record_status'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
         ]);
     }
