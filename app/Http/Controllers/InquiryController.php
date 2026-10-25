@@ -255,7 +255,7 @@ class InquiryController extends Controller
             'service_latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'service_longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'google_place_id' => ['nullable', 'string', 'max:255'],
-            'booking_request_token' => ['required', 'uuid'],
+            'booking_request_token' => ['nullable', 'uuid'],
             'service_type' => ['required', 'string', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
             'urgency' => ['required', 'in:normal,urgent,emergency'],
             'preferred_date' => ['required', 'date', 'after_or_equal:today'],
@@ -265,16 +265,29 @@ class InquiryController extends Controller
         ]);
 
         $urgencyFee = $this->configuredUrgencyFee($validated['urgency']);
+        // Only flows that create an order require the stable form token. Existing
+        // standard service requests remain compatible and do not create fee orders.
+        if (
+            ($validated['service_type'] === 'Installation' || $urgencyFee > 0) &&
+            empty($validated['booking_request_token'])
+        ) {
+            throw ValidationException::withMessages([
+                'booking_request_token' => 'Refresh the booking form before submitting an installation, urgent, or emergency booking.',
+            ]);
+        }
+
         // Persist only the server-derived amount in checkout payloads.
         $validated['urgency_fee'] = $urgencyFee;
 
         // A repeated submission from the same rendered form must reuse its existing
         // order instead of creating a second order with the same priority surcharge.
-        $existingCheckout = PendingInquiryCheckout::query()
-            ->with(['order', 'inquiry'])
-            ->where('user_id', $request->user()->id)
-            ->where('booking_request_token', $validated['booking_request_token'])
-            ->first();
+        $existingCheckout = !empty($validated['booking_request_token'])
+            ? PendingInquiryCheckout::query()
+                ->with(['order', 'inquiry'])
+                ->where('user_id', $request->user()->id)
+                ->where('booking_request_token', $validated['booking_request_token'])
+                ->first()
+            : null;
 
         if ($existingCheckout) {
             $existingOrder = $existingCheckout->order;
