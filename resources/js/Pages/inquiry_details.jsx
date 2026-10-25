@@ -155,6 +155,11 @@ export default function ServiceDetails({ inquiry: service, success }) {
                                     >
                                         {service.urgency}
                                     </span>
+                                    {Number(service.urgency_fee ?? 0) > 0 && (
+                                        <div className="small text-warning-emphasis fw-semibold mt-1">
+                                            Booking fee: ₱{Number(service.urgency_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </div>
+                                    )}
 
                                     {service.payment_status && service.payment_status !== "not_applicable" && (
                                         <div className="small text-muted mt-3">
