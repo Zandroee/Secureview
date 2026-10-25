@@ -104,7 +104,11 @@ export default function AdminSchedules({
     const scheduleRows = schedules.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
-    const [technician, setTechnician] = useState(filters.technician ?? "");
+    const [technician, setTechnician] = useState(filters.technician ? String(filters.technician) : "");
+    const [serviceType, setServiceType] = useState(filters.service_type ?? "");
+    const [urgency, setUrgency] = useState(filters.urgency ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
     const [bookingDate, setBookingDate] = useState("");
     const [bookingType, setBookingType] = useState("full_date");
     const [bookingTime, setBookingTime] = useState("");
@@ -137,6 +141,10 @@ export default function AdminSchedules({
                 search,
                 status,
                 technician,
+                service_type: serviceType,
+                urgency,
+                date_from: dateFrom,
+                date_to: dateTo,
             },
             {
                 preserveState: true,
@@ -150,6 +158,10 @@ export default function AdminSchedules({
         setSearch("");
         setStatus("");
         setTechnician("");
+        setServiceType("");
+        setUrgency("");
+        setDateFrom("");
+        setDateTo("");
 
         router.get(
             "/admin/schedules",
@@ -580,7 +592,7 @@ export default function AdminSchedules({
                                 className="row g-2 align-items-end"
                                 onSubmit={applyFilters}
                             >
-                                <div className="col-lg-5">
+                                <div className="col-12 col-lg-4">
                                     <label className="form-label small fw-semibold mb-1">
                                         SEARCH
                                     </label>
@@ -618,7 +630,7 @@ export default function AdminSchedules({
                                     </select>
                                 </div>
 
-                                <div className="col-sm-6 col-lg-3">
+                                <div className="col-sm-6 col-lg-2">
                                     <label className="form-label small fw-semibold mb-1">
                                         TECHNICIAN
                                     </label>
@@ -643,6 +655,31 @@ export default function AdminSchedules({
                                             </option>
                                         ))}
                                     </select>
+                                </div>
+
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">SERVICE TYPE</label>
+                                    <select className="form-select" value={serviceType} onChange={(event) => setServiceType(event.target.value)}>
+                                        <option value="">All service types</option>
+                                        {["Installation", "Site Inspection", "Maintenance", "Repair", "Consultation", "Other"].map((value) => <option key={value} value={value}>{value}</option>)}
+                                    </select>
+                                </div>
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">URGENCY</label>
+                                    <select className="form-select" value={urgency} onChange={(event) => setUrgency(event.target.value)}>
+                                        <option value="">All urgency</option>
+                                        <option value="normal">Normal</option>
+                                        <option value="urgent">Urgent</option>
+                                        <option value="emergency">Emergency</option>
+                                    </select>
+                                </div>
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">BOOKING DATE FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">BOOKING DATE TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
                                 </div>
 
                                 <div className="col-sm-6 col-lg-1 d-grid">
