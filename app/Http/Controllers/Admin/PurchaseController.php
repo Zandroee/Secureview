@@ -33,6 +33,8 @@ class PurchaseController extends Controller
             'order_status' => ['nullable', 'in:' . implode(',', self::ORDER_STATUSES)],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
             'attention' => ['nullable', 'in:stale'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $invoiceProfileReady = app(InvoiceDocumentService::class)->profileReady();
@@ -70,6 +72,13 @@ class PurchaseController extends Controller
             $query->where('payment_method', $filters['payment_method']);
         }
 
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
         if (($filters['attention'] ?? null) === 'stale') {
             $query->whereNull('paid_at')
                 ->whereIn('payment_status', ['pending', 'failed'])
@@ -105,6 +114,8 @@ class PurchaseController extends Controller
                 'order_status' => $filters['order_status'] ?? '',
                 'payment_method' => $filters['payment_method'] ?? '',
                 'attention' => $filters['attention'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
                 'total_orders' => Order::count(),
@@ -136,6 +147,10 @@ class PurchaseController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'order_status' => ['nullable', 'in:completed,cancelled'],
+            'payment_status' => ['nullable', 'in:pending,paid,failed,cancelled'],
+            'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $invoiceProfileReady = app(InvoiceDocumentService::class)->profileReady();
@@ -156,6 +171,18 @@ class PurchaseController extends Controller
         if (!empty($filters['order_status'])) {
             $query->where('order_status', $filters['order_status']);
         }
+        if (!empty($filters['payment_status'])) {
+            $query->where('payment_status', $filters['payment_status']);
+        }
+        if (!empty($filters['payment_method'])) {
+            $query->where('payment_method', $filters['payment_method']);
+        }
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
 
         $orders = $query->paginate(12)->withQueryString()
             ->through(fn (Order $order) => $this->formatOrder($order, $invoiceProfileReady));
@@ -165,6 +192,10 @@ class PurchaseController extends Controller
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'order_status' => $filters['order_status'] ?? '',
+                'payment_status' => $filters['payment_status'] ?? '',
+                'payment_method' => $filters['payment_method'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
                 'completed_orders' => Order::query()->where('order_status', 'completed')->count(),
