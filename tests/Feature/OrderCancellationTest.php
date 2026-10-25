@@ -380,7 +380,10 @@ class OrderCancellationTest extends TestCase
             'order_status' => 'awaiting_payment',
         ]);
         $staleOrder->timestamps = false;
-        $staleOrder->forceFill(['updated_at' => now()->subHours(30)])->save();
+        $staleOrder->forceFill([
+            'created_at' => now()->subHours(50),
+            'updated_at' => now()->subHours(50),
+        ])->save();
 
         $this->actingAs($admin)
             ->get(route('admin.purchases.index'))
@@ -404,6 +407,92 @@ class OrderCancellationTest extends TestCase
                 ->where('filters.attention', 'stale')
                 ->has('orders.data', 1)
                 ->where('orders.data.0.order_number', 'ORD-ATTN-STALE'));
+    }
+
+    public function test_scheduled_command_auto_cancels_unpaid_orders_after_48_hours_only(): void
+    {
+        config(['services.secureview.unpaid_order_expiry_hours' => 48]);
+
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(20);
+
+        $oldCashOrder = $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-AUTO-CANCEL-CASH',
+            'payment_method' => 'cash',
+            'payment_status' => 'pending',
+            'order_status' => 'pending',
+        ]);
+        $oldFailedOrder = $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-AUTO-CANCEL-FAILED',
+            'payment_method' => 'gcash',
+            'payment_status' => 'failed',
+            'order_status' => 'payment_failed',
+        ]);
+        $recentOrder = $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-AUTO-CANCEL-RECENT',
+            'payment_method' => 'gcash',
+            'payment_status' => 'pending',
+            'order_status' => 'awaiting_payment',
+        ]);
+        $paidOrder = $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-AUTO-CANCEL-PAID',
+            'payment_method' => 'gcash',
+            'payment_status' => 'paid',
+            'order_status' => 'processing',
+            'paid_at' => now()->subHours(60),
+        ]);
+
+        $ageOrder = function (Order $order, int $hours): void {
+            $order->timestamps = false;
+            $order->forceFill([
+                'created_at' => now()->subHours($hours),
+                'updated_at' => now()->subHours($hours),
+            ])->save();
+            $order->timestamps = true;
+        };
+
+        $ageOrder($oldCashOrder, 49);
+        $ageOrder($oldFailedOrder, 72);
+        $ageOrder($recentOrder, 47);
+        $ageOrder($paidOrder, 72);
+
+        $this->artisan('secureview:cancel-expired-unpaid-orders')
+            ->expectsOutput('Expired unpaid orders: 2 cancelled; 0 deferred. Deadline: 48 hours.')
+            ->assertExitCode(0);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $oldCashOrder->id,
+            'order_status' => 'cancelled',
+            'payment_status' => 'cancelled',
+            'cancellation_reason' => 'Automatically cancelled after 48 hours without confirmed payment.',
+        ]);
+        $this->assertDatabaseHas('orders', [
+            'id' => $oldFailedOrder->id,
+            'order_status' => 'cancelled',
+            'payment_status' => 'cancelled',
+        ]);
+        $this->assertDatabaseHas('orders', [
+            'id' => $recentOrder->id,
+            'order_status' => 'awaiting_payment',
+            'payment_status' => 'pending',
+        ]);
+        $this->assertDatabaseHas('orders', [
+            'id' => $paidOrder->id,
+            'order_status' => 'processing',
+            'payment_status' => 'paid',
+        ]);
+
+        $this->assertDatabaseHas('customer_notifications', [
+            'user_id' => $customer->id,
+            'type' => 'order_cancelled',
+            'related_id' => $oldCashOrder->id,
+            'title' => 'Unpaid order automatically cancelled',
+        ]);
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $oldCashOrder->id,
+            'event_key' => 'unpaid_order_auto_cancelled',
+            'description' => 'Automatically cancelled after 48 hours without confirmed payment.',
+        ]);
     }
 
     public function test_admin_order_management_is_paginated_and_filters_by_status(): void
