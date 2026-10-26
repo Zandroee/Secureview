@@ -112,7 +112,7 @@ class PayMongoWebhookController extends Controller
         }
 
         if ($order->payment_status === 'paid') {
-            return $this->finalizePaidOrder($order, $inventory)
+            return $this->finalizePaidOrder($order, $inventory, false)
                 ?? response()->json(['received' => true]);
         }
 
@@ -125,7 +125,7 @@ class PayMongoWebhookController extends Controller
             'paid_at' => now(),
         ]);
 
-        return $this->finalizePaidOrder($order, $inventory)
+        return $this->finalizePaidOrder($order, $inventory, true)
             ?? response()->json(['received' => true]);
     }
 
@@ -137,7 +137,7 @@ class PayMongoWebhookController extends Controller
      * deliveries safely retry inventory while the order's marker prevents a
      * second deduction after a successful attempt.
      */
-    private function finalizePaidOrder(Order $order, InventoryService $inventory)
+    private function finalizePaidOrder(Order $order, InventoryService $inventory, bool $clearCart)
     {
         CustomerNotification::firstOrCreate(
             ['dedupe_key' => 'payment-paid:order:' . $order->id],
@@ -160,9 +160,9 @@ class PayMongoWebhookController extends Controller
             // Finalize the service request even if inventory reconciliation needs
             // another webhook delivery; the payment itself has been confirmed.
             app(PendingInquiryCheckoutService::class)->completePaidOrder($order);
-        } else {
-            // Clear the cart only for ordinary product checkout. Installation
-            // orders must not delete unrelated items from the customer's cart.
+        } elseif ($clearCart) {
+            // Clear the cart only on the first transition to paid. A duplicate
+            // webhook must not remove new items the customer added afterward.
             $order->user?->cart?->items()->delete();
         }
 

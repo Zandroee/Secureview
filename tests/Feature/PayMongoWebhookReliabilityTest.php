@@ -29,8 +29,25 @@ class PayMongoWebhookReliabilityTest extends TestCase
         $order = $this->makeOrder($customer, $product, quantity: 2);
 
         $this->sendPaidWebhook($order)->assertOk();
+
+        // A later cart can contain new, unrelated items. A duplicate event must
+        // not empty that cart simply because the paid order is being retried.
+        $unrelatedProduct = $this->makeProduct(stock: 4);
+        $cart = $customer->cart()->create();
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $unrelatedProduct->id,
+            'quantity' => 1,
+            'price' => $unrelatedProduct->price,
+        ]);
+
         $this->sendPaidWebhook($order)->assertOk();
 
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $cart->id,
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $unrelatedProduct->id,
+        ]);
         $this->assertSame(3, (int) $product->fresh()->stock_quantity);
         $this->assertSame('paid', $order->fresh()->payment_status);
         $this->assertNotNull($order->fresh()->stock_deducted_at);
