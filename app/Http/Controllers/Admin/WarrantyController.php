@@ -27,6 +27,8 @@ class WarrantyController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:' . implode(',', self::STATUSES)],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $warrantyQuery = OrderItem::query()
@@ -52,10 +54,24 @@ class WarrantyController extends Controller
             });
         }
 
-        if (!empty($filters['status'])) {
-            $warrantyQuery->whereHas('warrantyClaims', fn ($claimQuery) =>
-                $claimQuery->where('status', $filters['status'])
-            );
+        if (!empty($filters['status']) || !empty($filters['date_from']) || !empty($filters['date_to'])) {
+            $status = $filters['status'] ?? null;
+            $dateFrom = $filters['date_from'] ?? null;
+            $dateTo = $filters['date_to'] ?? null;
+
+            $warrantyQuery->whereHas('warrantyClaims', function ($claimQuery) use ($status, $dateFrom, $dateTo) {
+                if ($status) {
+                    $claimQuery->where('status', $status);
+                }
+
+                if ($dateFrom) {
+                    $claimQuery->whereDate('created_at', '>=', $dateFrom);
+                }
+
+                if ($dateTo) {
+                    $claimQuery->whereDate('created_at', '<=', $dateTo);
+                }
+            });
         }
 
         $warranties = $warrantyQuery
@@ -64,6 +80,21 @@ class WarrantyController extends Controller
             ->withQueryString()
             ->through(function (OrderItem $item) use ($warrantyEligibility, $filters) {
                 $associatedClaims = $item->warrantyClaims
+                    ->filter(function (WarrantyClaim $claim) use ($filters) {
+                        if (!empty($filters['status']) && $claim->status !== $filters['status']) {
+                            return false;
+                        }
+
+                        if (!empty($filters['date_from']) && $claim->created_at?->toDateString() < $filters['date_from']) {
+                            return false;
+                        }
+
+                        if (!empty($filters['date_to']) && $claim->created_at?->toDateString() > $filters['date_to']) {
+                            return false;
+                        }
+
+                        return true;
+                    })
                     ->sortByDesc('created_at')
                     ->map(fn (WarrantyClaim $claim) => [
                         'id' => $claim->id,
@@ -76,12 +107,6 @@ class WarrantyController extends Controller
                         'resolved_at' => $claim->resolved_at?->format('M d, Y h:i A'),
                     ])
                     ->values();
-
-                if (!empty($filters['status'])) {
-                    $associatedClaims = $associatedClaims
-                        ->where('status', $filters['status'])
-                        ->values();
-                }
 
                 $latestClaim = $associatedClaims->first();
                 $startDate = $item->order
@@ -111,6 +136,8 @@ class WarrantyController extends Controller
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
                 'total' => WarrantyClaim::count(),

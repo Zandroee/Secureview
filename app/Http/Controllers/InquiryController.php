@@ -9,6 +9,7 @@ use App\Models\Inquiry;
 use App\Models\Order;
 use App\Models\PendingInquiryCheckout;
 use App\Models\Package;
+use App\Models\ServiceBookingFeeSetting;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\InventoryService;
@@ -230,6 +231,8 @@ class InquiryController extends Controller
             'item' => $item,
             'catalogItems' => $catalogItems,
             'cartItems' => $cartItems,
+            'urgencyFees' => ServiceBookingFeeSetting::current()->fees(),
+            'bookingRequestToken' => (string) Str::uuid(),
             'initialServiceType' => $initialServiceType,
         ]);
     }
@@ -249,6 +252,7 @@ class InquiryController extends Controller
             'service_latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'service_longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'google_place_id' => ['nullable', 'string', 'max:255'],
+            'booking_request_token' => ['nullable', 'uuid'],
             'service_type' => ['required', 'string', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
             'urgency' => ['required', 'in:normal,urgent,emergency'],
             'preferred_date' => ['required', 'date', 'after_or_equal:today'],
@@ -256,6 +260,71 @@ class InquiryController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['nullable', 'required_if:service_type,Installation', 'in:cash,gcash,card,maya'],
         ]);
+
+        $urgencyFee = $this->configuredUrgencyFee($validated['urgency']);
+        // Only flows that create an order require the stable form token. Existing
+        // standard service requests remain compatible and do not create fee orders.
+        if (
+            ($validated['service_type'] === 'Installation' || $urgencyFee > 0) &&
+            empty($validated['booking_request_token'])
+        ) {
+            throw ValidationException::withMessages([
+                'booking_request_token' => 'Refresh the booking form before submitting an installation, urgent, or emergency booking.',
+            ]);
+        }
+
+        // Persist only the server-derived amount in checkout payloads.
+        $validated['urgency_fee'] = $urgencyFee;
+
+        // A repeated submission from the same rendered form must reuse its existing
+        // order instead of creating a second order with the same priority surcharge.
+        $existingCheckout = !empty($validated['booking_request_token'])
+            ? PendingInquiryCheckout::query()
+                ->with(['order', 'inquiry'])
+                ->where('user_id', $request->user()->id)
+                ->where('booking_request_token', $validated['booking_request_token'])
+                ->first()
+            : null;
+
+        if ($existingCheckout) {
+            $existingOrder = $existingCheckout->order;
+            $existingInquiry = $existingCheckout->inquiry;
+
+            if (!$existingOrder || !$existingInquiry) {
+                throw ValidationException::withMessages([
+                    'booking_request_token' => 'This booking submission was already received. Check your service history or orders before submitting again.',
+                ]);
+            }
+
+            if ($existingOrder->payment_method === 'cash' || $existingOrder->payment_status === 'paid') {
+                return redirect()->route('inquiries.show', $existingInquiry)
+                    ->with('success', 'This booking was already submitted. Your existing service request is shown here; no duplicate fee was created.');
+            }
+
+            return redirect()->route('purchases.show', $existingOrder)
+                ->with('success', 'This booking was already submitted. Continue from the existing order to retry payment; no duplicate fee was created.');
+        }
+
+        if (
+            $validated['service_type'] !== 'Installation' &&
+            $urgencyFee > 0 &&
+            empty($validated['payment_method'])
+        ) {
+            throw ValidationException::withMessages([
+                'payment_method' => 'Choose a payment method to pay the ' . $validated['urgency'] . ' service booking fee.',
+            ]);
+        }
+
+        if (
+            $validated['service_type'] !== 'Installation' &&
+            $urgencyFee > 0 &&
+            ($validated['payment_method'] ?? 'cash') !== 'cash' &&
+            !config('services.paymongo.secret_key')
+        ) {
+            throw ValidationException::withMessages([
+                'payment_method' => 'Online payments are not configured. Choose Cash or contact SecureView before submitting this priority booking.',
+            ]);
+        }
 
         $hasLatitude = filled($validated['service_latitude'] ?? null);
         $hasLongitude = filled($validated['service_longitude'] ?? null);
@@ -321,7 +390,28 @@ class InquiryController extends Controller
                 ]);
             }
 
-            return $this->startInstallationPayment($request, $validated, $inquirable, $inventory, $jobNotifications);
+            $cartItem = $request->user()->cart?->items()
+                ->where('purchasable_type', get_class($inquirable))
+                ->where('purchasable_id', $inquirable->id)
+                ->first();
+
+            if (!$cartItem) {
+                throw ValidationException::withMessages([
+                    'item_id' => 'Installation bookings require a product or package already in your cart. Add it from the store, then return to this page.',
+                ]);
+            }
+
+            // The cart is authoritative for quantity; never trust the submitted quantity.
+            $validated['item_quantity'] = (int) $cartItem->quantity;
+
+            return $this->startInstallationPayment(
+                $request,
+                $validated,
+                $inquirable,
+                $inventory,
+                $jobNotifications,
+                $urgencyFee
+            );
         }
 
         do {
@@ -345,6 +435,7 @@ class InquiryController extends Controller
             'google_place_id' => $validated['google_place_id'] ?? null,
             'service_type' => $validated['service_type'],
             'urgency' => $validated['urgency'],
+            'urgency_fee' => $urgencyFee,
             'preferred_date' => $validated['preferred_date'],
             'preferred_time' => $validated['preferred_time'],
             'notes' => $validated['notes'] ?? null,
@@ -352,6 +443,10 @@ class InquiryController extends Controller
         ]);
 
         $jobNotifications->notifyNewInquirySubmitted($inquiry);
+
+        if ($urgencyFee > 0) {
+            return $this->startPriorityServicePayment($request, $validated, $inquiry, $urgencyFee);
+        }
 
         return redirect()->route('inquiries.show', $inquiry)
             ->with('success', 'Your service request has been submitted successfully.')
@@ -367,7 +462,8 @@ class InquiryController extends Controller
         array $validated,
         Product|Package $item,
         InventoryService $inventory,
-        JobNotificationService $jobNotifications
+        JobNotificationService $jobNotifications,
+        float $urgencyFee
     ) {
         $paymentMethod = $validated['payment_method'] ?? 'gcash';
         $secretKey = config('services.paymongo.secret_key');
@@ -387,6 +483,7 @@ class InquiryController extends Controller
         $itemPrice = (float) $item->price;
         $itemSubtotal = $itemPrice * $itemQuantity;
         $totalInstallationFee = $installationFee * $itemQuantity;
+        $totalDue = $itemSubtotal + $totalInstallationFee + $urgencyFee;
         $serviceAddress = trim(implode(', ', array_filter([
             $validated['street_address'],
             $validated['address_details'] ?? null,
@@ -394,7 +491,7 @@ class InquiryController extends Controller
         ])));
 
         [$order, $inquiry] = DB::transaction(function () use (
-            $request, $validated, $item, $paymentMethod, $installationFee, $itemPrice, $itemQuantity, $itemSubtotal, $totalInstallationFee, $serviceAddress
+            $request, $validated, $item, $paymentMethod, $installationFee, $itemPrice, $itemQuantity, $itemSubtotal, $totalInstallationFee, $urgencyFee, $totalDue, $serviceAddress
         ) {
             do {
                 $orderNumber = 'SV-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
@@ -406,7 +503,8 @@ class InquiryController extends Controller
                 'subtotal' => $itemSubtotal,
                 'shipping_fee' => 0,
                 'installation_fee' => $totalInstallationFee,
-                'total' => $itemSubtotal + $totalInstallationFee,
+                'service_priority_fee' => $urgencyFee,
+                'total' => $totalDue,
                 'payment_method' => $paymentMethod,
                 'payment_status' => 'pending',
                 'order_status' => $paymentMethod === 'cash' ? 'pending' : 'awaiting_payment',
@@ -448,6 +546,7 @@ class InquiryController extends Controller
                 'google_place_id' => $validated['google_place_id'] ?? null,
                 'service_type' => 'Installation',
                 'urgency' => $validated['urgency'],
+                'urgency_fee' => $urgencyFee,
                 'preferred_date' => $validated['preferred_date'],
                 'preferred_time' => $validated['preferred_time'],
                 'notes' => $validated['notes'] ?? null,
@@ -458,6 +557,7 @@ class InquiryController extends Controller
                 'user_id' => $request->user()->id,
                 'order_id' => $order->id,
                 'inquiry_id' => $inquiry->id,
+                'booking_request_token' => $validated['booking_request_token'],
                 'payload' => $validated,
                 'status' => 'pending_payment',
             ]);
@@ -489,6 +589,14 @@ class InquiryController extends Controller
                 'amount' => (int) round($installationFee * 100),
                 'currency' => 'PHP',
                 'quantity' => $itemQuantity,
+            ];
+        }
+        if ($urgencyFee > 0) {
+            $lineItems[] = [
+                'name' => ucfirst($validated['urgency']) . ' service booking fee',
+                'amount' => (int) round($urgencyFee * 100),
+                'currency' => 'PHP',
+                'quantity' => 1,
             ];
         }
 
@@ -551,6 +659,177 @@ class InquiryController extends Controller
         }
     }
 
+    private function configuredUrgencyFee(string $urgency): float
+    {
+        if ($urgency === 'normal') {
+            return 0.0;
+        }
+
+        $fees = ServiceBookingFeeSetting::current()->fees();
+
+        return round(max(0, (float) ($fees[$urgency] ?? 0)), 2);
+    }
+
+    /**
+     * Urgent and emergency non-installation bookings do not need a catalog item,
+     * but their configured priority fee is still an order and payment record.
+     * The pending checkout references the existing inquiry so payment-return
+     * and webhook handling can safely finalize it without creating a duplicate.
+     */
+    private function startPriorityServicePayment(
+        Request $request,
+        array $validated,
+        Inquiry $inquiry,
+        float $urgencyFee
+    ) {
+        $paymentMethod = $validated['payment_method'];
+        $serviceAddress = trim(implode(', ', array_filter([
+            $validated['street_address'],
+            $validated['address_details'] ?? null,
+            $validated['city'],
+        ])));
+
+        [$order, $pendingCheckout] = DB::transaction(function () use (
+            $request,
+            $validated,
+            $inquiry,
+            $paymentMethod,
+            $urgencyFee,
+            $serviceAddress
+        ) {
+            do {
+                $orderNumber = 'SV-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
+            } while (Order::query()->where('order_number', $orderNumber)->exists());
+
+            $order = Order::create([
+                'user_id' => $request->user()->id,
+                'order_number' => $orderNumber,
+                'subtotal' => 0,
+                'shipping_fee' => 0,
+                'installation_fee' => 0,
+                'service_priority_fee' => $urgencyFee,
+                'total' => $urgencyFee,
+                'payment_method' => $paymentMethod,
+                'payment_status' => 'pending',
+                'order_status' => $paymentMethod === 'cash' ? 'pending' : 'awaiting_payment',
+                'customer_name' => $validated['customer_name'],
+                'customer_phone' => $validated['customer_phone'],
+                'customer_email' => $validated['customer_email'],
+                'delivery_address' => $serviceAddress,
+                'delivery_address_details' => $validated['address_details'] ?? null,
+                'delivery_city' => $validated['city'],
+                'delivery_latitude' => $validated['service_latitude'] ?? null,
+                'delivery_longitude' => $validated['service_longitude'] ?? null,
+                'notes' => trim('Priority booking fee for ' . $inquiry->inquiry_number . '. ' . ($validated['notes'] ?? '')),
+            ]);
+
+            $pendingCheckout = PendingInquiryCheckout::create([
+                'user_id' => $request->user()->id,
+                'order_id' => $order->id,
+                'inquiry_id' => $inquiry->id,
+                'booking_request_token' => $validated['booking_request_token'],
+                'payload' => $validated,
+                'status' => 'pending_payment',
+            ]);
+
+            return [$order, $pendingCheckout];
+        });
+
+        if ($paymentMethod === 'cash') {
+            return redirect()->route('inquiries.show', $inquiry)
+                ->with('success', 'Your ' . strtolower($inquiry->service_type) . ' request is saved. The ' . $validated['urgency'] . ' booking fee is pending until SecureView confirms receipt of cash.')
+                ->with('serviceNotification', [
+                    'title' => 'Priority service request submitted',
+                    'message' => 'Your ' . $inquiry->inquiry_number . ' request is awaiting review and cash confirmation for its priority booking fee.',
+                    'action_url' => route('inquiries.show', $inquiry),
+                ]);
+        }
+
+        $secretKey = config('services.paymongo.secret_key');
+        if (!$secretKey) {
+            // This is guarded before the inquiry is created; retain this defensive check.
+            $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
+            return back()->withErrors(['payment_method' => 'Online payments are not configured. Choose Cash or contact SecureView.'])->withInput();
+        }
+
+        $lineItems = [[
+            'name' => ucfirst($validated['urgency']) . ' service booking fee — ' . $inquiry->service_type,
+            'amount' => (int) round($urgencyFee * 100),
+            'currency' => 'PHP',
+            'quantity' => 1,
+        ]];
+
+        try {
+            $response = Http::withBasicAuth($secretKey, '')
+                ->acceptJson()
+                ->asJson()
+                ->withHeaders(['Idempotency-Key' => 'secureview-priority-service-' . $order->order_number])
+                ->post(rtrim(config('services.paymongo.base_url'), '/') . '/v2/checkout_sessions', [
+                    'data' => [
+                        'attributes' => [
+                            'line_items' => $lineItems,
+                            'payment_method_types' => [$paymentMethod === 'maya' ? 'paymaya' : $paymentMethod],
+                            'billing' => [
+                                'name' => $order->customer_name,
+                                'email' => $order->customer_email,
+                                'phone' => $order->customer_phone,
+                            ],
+                            'description' => 'SecureView ' . ucfirst($validated['urgency']) . ' Service Booking Fee ' . $order->order_number,
+                            'reference_number' => $order->order_number,
+                            'metadata' => [
+                                'order_id' => (string) $order->id,
+                                'order_number' => $order->order_number,
+                                'booking_type' => 'priority_service_inquiry',
+                                'inquiry_id' => (string) $inquiry->id,
+                            ],
+                            'send_email_receipt' => true,
+                            'show_description' => true,
+                            'show_line_items' => true,
+                            'success_url' => route('checkout.payment.success', ['order' => $order->id], true),
+                            'cancel_url' => route('checkout.payment.cancel', ['order' => $order->id], true),
+                        ],
+                    ],
+                ]);
+
+            if (!$response->successful()) {
+                $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
+                return back()->withErrors([
+                    'payment' => 'Unable to start the priority booking fee payment. Your service request is saved; retry payment from your Orders page.',
+                ])->withInput();
+            }
+
+            $session = $response->json('data');
+            $checkoutSessionId = $session['id'] ?? null;
+            $checkoutUrl = $session['attributes']['checkout_url'] ?? null;
+
+            if (!$checkoutSessionId || !$checkoutUrl) {
+                $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
+                return back()->withErrors([
+                    'payment' => 'PayMongo returned an invalid checkout response. Your service request is saved; retry payment from your Orders page.',
+                ])->withInput();
+            }
+
+            $order->update(['paymongo_checkout_session_id' => $checkoutSessionId]);
+            CustomerNotification::create([
+                'user_id' => $request->user()->id,
+                'type' => 'order',
+                'title' => 'Priority fee payment required',
+                'message' => 'Your ' . $validated['urgency'] . ' service booking fee for ' . $inquiry->inquiry_number . ' is awaiting payment.',
+                'action_url' => route('purchases.show', $order),
+                'related_type' => Order::class,
+                'related_id' => $order->id,
+            ]);
+
+            return Inertia::location($checkoutUrl);
+        } catch (\Throwable $exception) {
+            report($exception);
+            $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
+            return back()->withErrors([
+                'payment' => 'Unable to connect to PayMongo. Your service request is saved; retry payment from your Orders page.',
+            ])->withInput();
+        }
+    }
+
     public function index(Request $request)
     {
         Inquiry::escalateOverdueUrgency();
@@ -567,6 +846,7 @@ class InquiryController extends Controller
                     'item_name' => $inquiry->item_name,
                     'service_type' => $inquiry->service_type,
                     'urgency' => $inquiry->urgency,
+                    'urgency_fee' => (float) $inquiry->urgency_fee,
                     'technician' => $inquiry->technician
                         ? [
                             'name' => $inquiry->technician->name,
@@ -631,6 +911,7 @@ class InquiryController extends Controller
                 'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
                 'urgency' => $inquiry->urgency,
+                'urgency_fee' => (float) $inquiry->urgency_fee,
                 'technician' => $inquiry->technician
                     ? [
                         'name' => $inquiry->technician->name,

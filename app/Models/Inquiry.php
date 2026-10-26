@@ -28,6 +28,7 @@ class Inquiry extends Model
         'google_place_id',
         'service_type',
         'urgency',
+        'urgency_fee',
         'preferred_date',
         'preferred_time',
         'notes',
@@ -36,6 +37,7 @@ class Inquiry extends Model
 
     protected $casts = [
         'preferred_date' => 'date',
+        'urgency_fee' => 'float',
         'reschedule_requested_date' => 'date',
         'reschedule_requested_at' => 'datetime',
         'service_latitude' => 'float',

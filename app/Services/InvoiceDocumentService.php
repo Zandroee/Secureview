@@ -48,6 +48,7 @@ class InvoiceDocumentService
             ])->values()->all(),
             'subtotal' => (float) $order->subtotal,
             'installation_fee' => (float) $order->installation_fee,
+            'service_priority_fee' => (float) $order->service_priority_fee,
             'shipping_fee' => (float) $order->shipping_fee,
             'total' => $total,
             'amount_paid' => $isPaid ? $total : 0.0,

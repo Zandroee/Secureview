@@ -528,6 +528,12 @@ export default function Purchases({ orders = [] }) {
                             ))}
                         </div>
 
+                        {Number(viewingOrder.service_priority_fee ?? 0) > 0 && (
+                            <div className="d-flex justify-content-between align-items-center mt-3 small">
+                                <span className="text-muted">Urgent / emergency booking fee</span>
+                                <span className="fw-semibold">₱{Number(viewingOrder.service_priority_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                        )}
                         <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
                             <span className="small text-muted">
                                 {viewingOrder.items.length} item

@@ -32,6 +32,10 @@ class ScheduleController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:confirmed,in_progress'],
             'technician' => ['nullable', 'integer', 'exists:users,id'],
+            'service_type' => ['nullable', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'urgency' => ['nullable', 'in:normal,urgent,emergency'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $query = Inquiry::with(['user', 'technicians'])
@@ -58,6 +62,22 @@ class ScheduleController extends Controller
             $query->whereHas('technicians', fn ($builder) => $builder->where('users.id', $filters['technician']));
         }
 
+        if (!empty($filters['service_type'])) {
+            $query->where('service_type', $filters['service_type']);
+        }
+
+        if (!empty($filters['urgency'])) {
+            $query->where('urgency', $filters['urgency']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('preferred_date', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('preferred_date', '<=', $filters['date_to']);
+        }
+
         $schedules = $query
             ->orderByRaw("CASE urgency WHEN 'emergency' THEN 1 WHEN 'urgent' THEN 2 ELSE 3 END")
             ->orderBy('preferred_date')
@@ -74,6 +94,7 @@ class ScheduleController extends Controller
                     'service_type' => $inquiry->service_type,
                     'item_name' => $inquiry->item_name,
                     'urgency' => $inquiry->urgency,
+                    'urgency_fee' => (float) $inquiry->urgency_fee,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                     'preferred_time' => $inquiry->preferred_time,
@@ -220,6 +241,10 @@ class ScheduleController extends Controller
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
                 'technician' => $filters['technician'] ?? '',
+                'service_type' => $filters['service_type'] ?? '',
+                'urgency' => $filters['urgency'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
                 'active' => Inquiry::whereIn('status', ['confirmed', 'in_progress'])->count(),
@@ -276,6 +301,7 @@ class ScheduleController extends Controller
                 'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
                 'urgency' => $inquiry->urgency,
+                'urgency_fee' => (float) $inquiry->urgency_fee,
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                 'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                 'preferred_time' => $inquiry->preferred_time,
@@ -299,6 +325,10 @@ class ScheduleController extends Controller
 
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
+            'service_type' => ['nullable', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'urgency' => ['nullable', 'in:normal,urgent,emergency'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $query = Inquiry::query()
@@ -317,6 +347,22 @@ class ScheduleController extends Controller
             });
         }
 
+        if (!empty($filters['service_type'])) {
+            $query->where('service_type', $filters['service_type']);
+        }
+
+        if (!empty($filters['urgency'])) {
+            $query->where('urgency', $filters['urgency']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('preferred_date', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('preferred_date', '<=', $filters['date_to']);
+        }
+
         $services = $query
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
@@ -331,6 +377,7 @@ class ScheduleController extends Controller
                     'service_type' => $inquiry->service_type,
                     'item_name' => $inquiry->item_name,
                     'urgency' => $inquiry->urgency,
+                    'urgency_fee' => (float) $inquiry->urgency_fee,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                     'preferred_time' => $inquiry->preferred_time,
@@ -368,6 +415,10 @@ class ScheduleController extends Controller
             ],
             'filters' => [
                 'search' => $filters['search'] ?? '',
+                'service_type' => $filters['service_type'] ?? '',
+                'urgency' => $filters['urgency'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
         ]);
     }

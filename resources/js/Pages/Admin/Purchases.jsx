@@ -61,6 +61,8 @@ export default function AdminPurchases({
         filters.payment_method ?? ""
     );
     const [attentionFilter, setAttentionFilter] = useState(filters.attention ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
     const [viewingOrder, setViewingOrder] = useState(null);
     const [cancellingOrderId, setCancellingOrderId] = useState(null);
     const [updatingOrderId, setUpdatingOrderId] = useState(null);
@@ -158,6 +160,8 @@ export default function AdminPurchases({
                 order_status: orderStatus,
                 payment_method: paymentMethod,
                 attention: attentionFilter,
+                date_from: dateFrom,
+                date_to: dateTo,
             },
             {
                 preserveState: true,
@@ -174,6 +178,8 @@ export default function AdminPurchases({
             order_status: preset.order_status ?? "",
             payment_method: preset.payment_method ?? "",
             attention: preset.attention ?? "",
+            date_from: "",
+            date_to: "",
         };
 
         setSearch(next.search);
@@ -181,6 +187,8 @@ export default function AdminPurchases({
         setOrderStatus(next.order_status);
         setPaymentMethod(next.payment_method);
         setAttentionFilter(next.attention);
+        setDateFrom("");
+        setDateTo("");
 
         router.get("/admin/purchases", next, {
             preserveState: true,
@@ -195,6 +203,8 @@ export default function AdminPurchases({
         setOrderStatus("");
         setPaymentMethod("");
         setAttentionFilter("");
+        setDateFrom("");
+        setDateTo("");
 
         router.get(
             "/admin/purchases",
@@ -499,6 +509,16 @@ export default function AdminPurchases({
                                     </select>
                                 </div>
 
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">DATE FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">DATE TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
+                                </div>
+
                                 <div className="col-6 col-lg-1 d-grid">
                                     <button
                                         type="submit"
@@ -518,6 +538,9 @@ export default function AdminPurchases({
                                     </button>
                                 </div>
                             </form>
+                            <div className="small text-muted mt-2">
+                                The selected date range also updates the summary cards above.
+                            </div>
                         </div>
 
                         <div
@@ -865,6 +888,18 @@ export default function AdminPurchases({
                                 </span>
                             </div>
 
+                            {Number(viewingOrder.installation_fee ?? 0) > 0 && (
+                                <div className="d-flex justify-content-between mt-1">
+                                    <span className="small text-muted">INSTALLATION FEE</span>
+                                    <span>₱{Number(viewingOrder.installation_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
+                            {Number(viewingOrder.service_priority_fee ?? 0) > 0 && (
+                                <div className="d-flex justify-content-between mt-1">
+                                    <span className="small text-warning-emphasis">URGENT / EMERGENCY BOOKING FEE</span>
+                                    <span className="fw-semibold">₱{Number(viewingOrder.service_priority_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
                             <div className="d-flex justify-content-between mt-1">
                                 <span className="small text-muted">
                                     SHIPPING

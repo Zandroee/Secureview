@@ -189,6 +189,11 @@ function JobCard({ job, open = false, products = [] }) {
                 <div className="col-6">
                     <div className="text-muted">PRIORITY</div>
                     <div><span className={"badge rounded-pill text-capitalize " + priorityClass(job.urgency)}>{job.urgency || "Normal"}</span></div>
+                    {Number(job.urgency_fee ?? 0) > 0 && (
+                        <div className="small text-warning-emphasis fw-semibold mt-1">
+                            Booking fee: ₱{Number(job.urgency_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                    )}
                 </div>
                 {job.payment_status && job.payment_status !== "not_applicable" && (
                     <div className="col-12">
@@ -1011,7 +1016,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                     <td className="ps-3"><div className="fw-bold">{service.service_type}</div><div className="small text-muted">{service.item_name || "General service"}</div><div className="small text-muted">{service.inquiry_number}</div></td>
                                                     <td><div className="fw-semibold">{service.customer_name || "—"}</div><div className="small text-muted">{service.city || "—"}</div></td>
                                                     <td><div className="fw-semibold">{service.preferred_date || "—"}</div><div className="small text-muted">{service.preferred_time || "—"}</div></td>
-                                                    <td><span className={"badge rounded-pill text-capitalize " + (service.urgency === "emergency" ? "text-bg-danger" : service.urgency === "urgent" ? "text-bg-warning" : "text-bg-secondary")}>{service.urgency || "normal"}</span></td>
+                                                    <td><span className={"badge rounded-pill text-capitalize " + (service.urgency === "emergency" ? "text-bg-danger" : service.urgency === "urgent" ? "text-bg-warning" : "text-bg-secondary")}>{service.urgency || "normal"}</span>{Number(service.urgency_fee ?? 0) > 0 && <div className="small text-warning-emphasis mt-1">₱{Number(service.urgency_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}</td>
                                                     <td>{service.service_record ? <div><div className="fw-semibold text-success">Recorded</div><div className="small text-muted">₱{Number(service.service_record.total_income ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div> : <span className="small text-muted">No record saved</span>}</td>
                                                 </tr>
                                             )) : <tr><td colSpan="5" className="text-center py-5"><i className="bi bi-clock-history fs-3 text-muted d-block mb-2" /><div className="fw-semibold">No completed services in your history yet</div><div className="small text-muted">Completed services assigned to you will appear here.</div></td></tr>}
@@ -1171,7 +1176,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                         <div className="small text-muted">{schedule.customer_name || ""}</div>
                                                     </td>
                                                     <td><div className="fw-semibold">{schedule.date}</div><div className="small text-muted">{schedule.time || "Time not set"}</div></td>
-                                                    <td><span className={"badge rounded-pill text-capitalize " + priorityClass(schedule.urgency)}>{schedule.urgency || "normal"}</span></td>
+                                                    <td><span className={"badge rounded-pill text-capitalize " + priorityClass(schedule.urgency)}>{schedule.urgency || "normal"}</span>{Number(schedule.urgency_fee ?? 0) > 0 && <div className="small text-warning-emphasis mt-1">₱{Number(schedule.urgency_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}</td>
                                                     <td><span className={"badge rounded-pill text-capitalize " + statusClass(schedule.status)}>{formatStatus(schedule.status)}</span></td>
                                                     <td><Link href="/technician/services#my-jobs" className="btn btn-sm btn-outline-primary text-nowrap">Open service</Link></td>
                                                 </tr>

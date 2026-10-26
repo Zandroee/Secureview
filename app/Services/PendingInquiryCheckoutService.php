@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 class PendingInquiryCheckoutService
 {
     /**
-     * Finalize an Installation inquiry after the order is confirmed paid.
+     * Finalize a linked service inquiry after the order is confirmed paid.
      *
      * This method is intentionally idempotent so both the payment-return route
      * and a PayMongo webhook can safely call it for the same order.
@@ -32,7 +32,7 @@ class PendingInquiryCheckoutService
 
             if ((int) $pending->user_id !== (int) $order->user_id) {
                 report(new \RuntimeException(
-                    'Pending installation checkout user does not match its order.'
+                    'Pending service checkout user does not match its order.'
                 ));
 
                 return null;
@@ -98,6 +98,7 @@ class PendingInquiryCheckoutService
                 'google_place_id' => $payload['google_place_id'] ?? null,
                 'service_type' => 'Installation',
                 'urgency' => $payload['urgency'],
+                'urgency_fee' => (float) ($payload['urgency_fee'] ?? 0),
                 'preferred_date' => $payload['preferred_date'],
                 'preferred_time' => $payload['preferred_time'],
                 'notes' => $payload['notes'] ?? null,

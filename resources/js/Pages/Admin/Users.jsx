@@ -38,6 +38,9 @@ export default function AdminUsers({
     const userRows = users.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
     const [role, setRole] = useState(filters.role ?? "");
+    const [verification, setVerification] = useState(filters.verification ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
     const [roleValues, setRoleValues] = useState(
         () =>
             Object.fromEntries(
@@ -54,6 +57,9 @@ export default function AdminUsers({
             {
                 search,
                 role,
+                verification,
+                date_from: dateFrom,
+                date_to: dateTo,
             },
             {
                 preserveState: true,
@@ -66,6 +72,9 @@ export default function AdminUsers({
     const clearFilters = () => {
         setSearch("");
         setRole("");
+        setVerification("");
+        setDateFrom("");
+        setDateTo("");
 
         router.get(
             "/admin/users",
@@ -223,6 +232,25 @@ export default function AdminUsers({
                                         </option>
                                         <option value="admin">Admin</option>
                                     </select>
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">EMAIL VERIFICATION</label>
+                                    <select className="form-select" value={verification} onChange={(event) => setVerification(event.target.value)}>
+                                        <option value="">All accounts</option>
+                                        <option value="verified">Verified</option>
+                                        <option value="unverified">Unverified</option>
+                                    </select>
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">DATE FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">DATE TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
                                 </div>
 
                                 <div className="col-sm-3 col-lg-1 d-grid">

@@ -16,6 +16,9 @@ class UserController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'role' => ['nullable', 'in:user,technician,admin'],
+            'verification' => ['nullable', 'in:verified,unverified'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $query = User::query();
@@ -33,6 +36,20 @@ class UserController extends Controller
 
         if (!empty($filters['role'])) {
             $query->where('role', $filters['role']);
+        }
+
+        if (($filters['verification'] ?? null) === 'verified') {
+            $query->whereNotNull('email_verified_at');
+        } elseif (($filters['verification'] ?? null) === 'unverified') {
+            $query->whereNull('email_verified_at');
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
         $users = $query
@@ -59,6 +76,9 @@ class UserController extends Controller
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'role' => $filters['role'] ?? '',
+                'verification' => $filters['verification'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
                 'total' => User::count(),

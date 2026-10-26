@@ -67,7 +67,7 @@ const formatDateLabel = (value) => {
     });
 };
 
-export default function Service({ customer, item, catalogItems = [], cartItems = [], initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
+export default function Service({ customer, item, catalogItems = [], cartItems = [], urgencyFees = { normal: 0, urgent: 0, emergency: 0 }, bookingRequestToken, initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
     const today = new Date();
     const [showDateModal, setShowDateModal] = useState(false);
 
@@ -79,6 +79,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
     const [selectedTime, setSelectedTime] = useState("");
 
     const { data, setData, post, processing, errors } = useForm({
+        booking_request_token: bookingRequestToken ?? "",
         item_type: item?.type ?? "",
         item_id: item?.id ?? "",
         item_quantity: cartItems.find((cartItem) =>
@@ -117,8 +118,11 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
         return () => window.clearInterval(intervalId);
     }, [processing]);
 
-    const selectedCatalogItem =
-        catalogItems.find((candidate) =>
+    const selectedCatalogItem = data.service_type === "Installation"
+        ? cartItems.find((candidate) =>
+            candidate.type === data.item_type && String(candidate.id) === String(data.item_id)
+        ) || null
+        : catalogItems.find((candidate) =>
             candidate.type === data.item_type && String(candidate.id) === String(data.item_id)
         ) || (
             item && item.type === data.item_type && String(item.id) === String(data.item_id)
@@ -126,8 +130,11 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                 : null
         );
     const installationFee = Number(selectedCatalogItem?.installation_fee ?? 0);
-    const selectedItemQuantity = Math.max(1, Number(data.item_quantity ?? 1));
-    const selectedItemTotal = (Number(selectedCatalogItem?.price ?? 0) + installationFee) * selectedItemQuantity;
+    const selectedItemQuantity = Math.max(1, Number(selectedCatalogItem?.quantity ?? data.item_quantity ?? 1));
+    const selectedUrgencyFee = Math.max(0, Number(urgencyFees?.[data.urgency] ?? 0));
+    const requiresPaymentMethod = data.service_type === "Installation" || selectedUrgencyFee > 0;
+    const selectedItemTotal = (Number(selectedCatalogItem?.price ?? 0) + installationFee) * selectedItemQuantity
+        + (data.service_type === "Installation" ? selectedUrgencyFee : 0);
 
     const monthLabel = calendarMonth.toLocaleDateString("en-US", {
         month: "long",
@@ -315,6 +322,28 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
 
                                 {errors.inquiry && <div className="alert alert-danger small">{errors.inquiry}</div>}
                                 {errors.payment && <div className="alert alert-danger small">{errors.payment}</div>}
+
+                                {data.service_type === "Installation" && (
+                                    <div className="alert alert-info d-flex align-items-start gap-2 small mb-3" role="note">
+                                        <i className="bi bi-cart-check fs-5" />
+                                        <div>
+                                            <strong>Installation requires a store item in your cart.</strong>
+                                            <div>Add a product or package from the store to your cart, then select it in the Cart panel before submitting this booking.</div>
+                                            <div className="d-flex gap-3 mt-2">
+                                                <a href="/products" className="fw-semibold">Browse products</a>
+                                                <a href="/packages" className="fw-semibold">Browse packages</a>
+                                                <a href="/cart" className="fw-semibold">View cart</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedUrgencyFee > 0 && data.urgency !== "normal" && (
+                                    <div className="alert alert-warning small mb-3" role="status">
+                                        <strong>{data.urgency === "emergency" ? "Emergency" : "Urgent"} booking fee: ₱{selectedUrgencyFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.</strong>
+                                        {" "}This one-time fee is calculated by SecureView and is not based on a price sent by your browser.
+                                    </div>
+                                )}
 
                                 <form onSubmit={submit}>
                                     <div className="mb-3">
@@ -663,7 +692,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                 )}
                                             </div>
 
-                                            {item && (
+                                            {item && data.service_type !== "Installation" && (
                                                 <div className="col-12">
                                                     <label className="form-label small fw-semibold mb-1">
                                                         Selected Item
@@ -712,7 +741,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                 </div>
                                             )}
 
-                                            {data.service_type === "Installation" && (
+                                            {requiresPaymentMethod && (
                                                 <div className="col-12">
                                                     <label className="form-label small fw-semibold mb-1">Payment Method *</label>
                                                     <select
@@ -730,7 +759,10 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                     <div className="form-text">
                                                         {data.payment_method === "cash"
                                                             ? "Your service request will be saved immediately. Payment remains pending until SecureView confirms receipt of cash."
-                                                            : "You will be redirected to PayMongo. Your service request is saved immediately and remains visible in Service History while payment is pending."}
+                                                            : "You will be redirected to PayMongo to pay the amount shown. Your service request remains subject to availability and review while payment is pending."}
+                                                        {data.service_type !== "Installation" && selectedUrgencyFee > 0
+                                                            ? " This payment is the one-time " + data.urgency + " service booking fee; repair or other labor charges are handled separately."
+                                                            : ""}
                                                     </div>
                                                 </div>
                                             )}
@@ -828,6 +860,11 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                                 ? "₱" + (installationFee * selectedItemQuantity).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                                                                 : "Free"}
                                                         </div>
+                                                        {selectedUrgencyFee > 0 && data.urgency !== "normal" && (
+                                                            <div className="small text-warning-emphasis fw-semibold">
+                                                                {data.urgency === "emergency" ? "Emergency" : "Urgent"} service fee: ₱{selectedUrgencyFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </div>
+                                                        )}
                                                         <div className="d-flex justify-content-between align-items-center border-top mt-2 pt-2">
                                                             <span className="small fw-bold">Total due</span>
                                                             <span className="fw-bold text-primary">₱{selectedItemTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -936,6 +973,15 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                     <span>Service</span>
                                     <span>{data.service_type}</span>
                                 </div>
+                                {data.service_type !== "Installation" && selectedUrgencyFee > 0 && (
+                                    <div className="border rounded-3 p-3 mb-3 bg-warning-subtle">
+                                        <div className="d-flex justify-content-between align-items-center gap-3">
+                                            <span className="small fw-semibold">{data.urgency === "emergency" ? "Emergency" : "Urgent"} booking fee</span>
+                                            <span className="fw-bold text-nowrap">₱{selectedUrgencyFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="small text-muted mt-1">Charged once per booking. This fee is separate from any additional labor, parts, or materials agreed for the service.</div>
+                                    </div>
+                                )}
 
                                 <div
                                     className="inquiry-why-card rounded-3 p-3"

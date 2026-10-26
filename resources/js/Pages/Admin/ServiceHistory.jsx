@@ -8,18 +8,26 @@ import { useState } from "react";
 export default function ServiceHistory({ services = [], filters = {}, serviceIncomeSummary = {} }) {
     const serviceRows = services.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
+    const [serviceType, setServiceType] = useState(filters.service_type ?? "");
+    const [urgency, setUrgency] = useState(filters.urgency ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
 
     const applySearch = (event) => {
         event.preventDefault();
         router.get(
             "/admin/service-history",
-            { search },
+            { search, service_type: serviceType, urgency, date_from: dateFrom, date_to: dateTo },
             { preserveState: true, preserveScroll: true, replace: true }
         );
     };
 
     const clearSearch = () => {
         setSearch("");
+        setServiceType("");
+        setUrgency("");
+        setDateFrom("");
+        setDateTo("");
         router.get("/admin/service-history", {}, {
             preserveState: true,
             preserveScroll: true,
@@ -98,6 +106,35 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                         value={search}
                                         onChange={(event) => setSearch(event.target.value)}
                                     />
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="service-history-type" className="form-label small fw-semibold mb-1">SERVICE TYPE</label>
+                                    <select id="service-history-type" className="form-select" value={serviceType} onChange={(event) => setServiceType(event.target.value)}>
+                                        <option value="">All service types</option>
+                                        <option value="Installation">Installation</option>
+                                        <option value="Site Inspection">Site Inspection</option>
+                                        <option value="Maintenance">Maintenance</option>
+                                        <option value="Repair">Repair</option>
+                                        <option value="Consultation">Consultation</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="service-history-urgency" className="form-label small fw-semibold mb-1">PRIORITY</label>
+                                    <select id="service-history-urgency" className="form-select" value={urgency} onChange={(event) => setUrgency(event.target.value)}>
+                                        <option value="">All priorities</option>
+                                        <option value="emergency">Emergency</option>
+                                        <option value="urgent">Urgent</option>
+                                        <option value="normal">Normal</option>
+                                    </select>
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="service-history-date-from" className="form-label small fw-semibold mb-1">DATE FROM</label>
+                                    <input id="service-history-date-from" type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="service-history-date-to" className="form-label small fw-semibold mb-1">DATE TO</label>
+                                    <input id="service-history-date-to" type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
                                 </div>
                                 <div className="col-md-3 d-flex gap-2">
                                     <button type="submit" className="btn btn-primary fw-bold flex-grow-1">

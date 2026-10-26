@@ -296,6 +296,7 @@ export default function AdminProducts({
     const [search, setSearch] = useState(filters.search ?? "");
     const [category, setCategory] = useState(filters.category ?? "");
     const [brand, setBrand] = useState(filters.brand ?? "");
+    const [stockStatus, setStockStatus] = useState(filters.stock_status ?? "");
     const [stockValues, setStockValues] = useState(
         () =>
             Object.fromEntries(
@@ -411,6 +412,7 @@ export default function AdminProducts({
                 search,
                 category,
                 brand,
+                stock_status: stockStatus,
             },
             {
                 preserveState: true,
@@ -424,6 +426,7 @@ export default function AdminProducts({
         setSearch("");
         setCategory("");
         setBrand("");
+        setStockStatus("");
 
         router.get(
             "/admin/products",
@@ -617,6 +620,16 @@ export default function AdminProducts({
                                     <select className="form-select" value={brand} onChange={(event) => setBrand(event.target.value)}>
                                         <option value="">All brands</option>
                                         {brandOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+                                    </select>
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">STOCK</label>
+                                    <select className="form-select" value={stockStatus} onChange={(event) => setStockStatus(event.target.value)}>
+                                        <option value="">All stock levels</option>
+                                        <option value="in_stock">In stock (&gt; 5)</option>
+                                        <option value="low_stock">Low stock (1–5)</option>
+                                        <option value="out_of_stock">Out of stock</option>
                                     </select>
                                 </div>
 

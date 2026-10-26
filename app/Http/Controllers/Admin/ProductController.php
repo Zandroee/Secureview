@@ -23,6 +23,7 @@ class ProductController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
             'brand' => ['nullable', 'string', 'max:120'],
+            'stock_status' => ['nullable', 'in:in_stock,low_stock,out_of_stock'],
         ]);
 
         $query = Product::query()
@@ -45,6 +46,14 @@ class ProductController extends Controller
 
         if (!empty($filters['brand'])) {
             $query->where('brand', $filters['brand']);
+        }
+
+        if (($filters['stock_status'] ?? null) === 'in_stock') {
+            $query->where('stock_quantity', '>', 5);
+        } elseif (($filters['stock_status'] ?? null) === 'low_stock') {
+            $query->whereBetween('stock_quantity', [1, 5]);
+        } elseif (($filters['stock_status'] ?? null) === 'out_of_stock') {
+            $query->where('stock_quantity', '<=', 0);
         }
 
         $products = $query
@@ -130,6 +139,7 @@ class ProductController extends Controller
                 'search' => $filters['search'] ?? '',
                 'category' => $filters['category'] ?? '',
                 'brand' => $filters['brand'] ?? '',
+                'stock_status' => $filters['stock_status'] ?? '',
             ],
             'success' => $request->session()->get('success'),
         ]);

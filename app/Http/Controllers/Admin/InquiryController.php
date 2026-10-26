@@ -7,6 +7,7 @@ use App\Models\BlockedBookingDate;
 use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
+use App\Models\ServiceBookingFeeSetting;
 use App\Models\User;
 use App\Services\AdminActivityLogger;
 use App\Services\JobNotificationService;
@@ -31,6 +32,9 @@ class InquiryController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:pending,confirmed,in_progress,completed,cancelled'],
             'urgency' => ['nullable', 'in:normal,urgent,emergency'],
+            'service_type' => ['nullable', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         // Active jobs belong on Schedules; completed jobs belong in Service History.
@@ -55,6 +59,18 @@ class InquiryController extends Controller
 
         if (!empty($filters['urgency'])) {
             $query->where('urgency', $filters['urgency']);
+        }
+
+        if (!empty($filters['service_type'])) {
+            $query->where('service_type', $filters['service_type']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('preferred_date', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('preferred_date', '<=', $filters['date_to']);
         }
 
         $inquiries = $query
@@ -85,6 +101,7 @@ class InquiryController extends Controller
                     ])->values(),
                     'service_type' => $inquiry->service_type,
                     'urgency' => $inquiry->urgency,
+                    'urgency_fee' => (float) $inquiry->urgency_fee,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                     'preferred_time' => $inquiry->preferred_time,
@@ -115,12 +132,40 @@ class InquiryController extends Controller
             'blockedBookingTimeSlots' => $bookingAvailability['blockedBookingTimeSlots'],
             'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
             'todayDate' => today()->toDateString(),
+            'bookingFees' => ServiceBookingFeeSetting::current()->fees(),
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
                 'urgency' => $filters['urgency'] ?? '',
+                'service_type' => $filters['service_type'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
         ]);
+    }
+
+    public function updateBookingFees(Request $request)
+    {
+        $validated = $request->validate([
+            'urgent_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
+            'emergency_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
+        ]);
+
+        $settings = ServiceBookingFeeSetting::current();
+
+        if (!$settings->exists) {
+            throw ValidationException::withMessages([
+                'urgent_fee' => 'Service fee settings are unavailable until the database migrations have been run.',
+            ]);
+        }
+
+        $settings->urgent_fee = round((float) $validated['urgent_fee'], 2);
+        $settings->emergency_fee = round((float) $validated['emergency_fee'], 2);
+        $settings->save();
+
+        return redirect()
+            ->route('admin.inquiries.index')
+            ->with('success', 'Service booking fees saved. Changes apply to new service requests; existing requests keep their saved fees.');
     }
 
     public function show(Inquiry $inquiry)
@@ -168,6 +213,7 @@ class InquiryController extends Controller
                 'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
                 'urgency' => $inquiry->urgency,
+                'urgency_fee' => (float) $inquiry->urgency_fee,
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                 'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                 'preferred_time' => $inquiry->preferred_time,

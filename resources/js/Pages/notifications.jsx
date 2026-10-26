@@ -24,13 +24,18 @@ function iconBackground(type) {
     return "#f2f2f4";
 }
 
-export default function Notifications({ notifications: paginator = {}, unreadCount: totalUnreadCount = 0 }) {
+export default function Notifications({ notifications: paginator = {}, unreadCount: totalUnreadCount = 0, filters = {}, notificationTypes = [] }) {
     const { props } = usePage();
     const notifications = Array.isArray(paginator) ? paginator : (paginator.data ?? []);
     const currentPage = paginator.current_page ?? 1;
     const totalPages = paginator.last_page ?? 1;
     const totalNotifications = paginator.total ?? notifications.length;
     const [working, setWorking] = useState(false);
+    const [search, setSearch] = useState(filters.search ?? "");
+    const [type, setType] = useState(filters.type ?? "");
+    const [readStatus, setReadStatus] = useState(filters.read_status ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
     const [selectedIds, setSelectedIds] = useState([]);
     const [announcementTitle, setAnnouncementTitle] = useState("");
     const [announcementMessage, setAnnouncementMessage] = useState("");
@@ -38,6 +43,37 @@ export default function Notifications({ notifications: paginator = {}, unreadCou
     const isAdmin = props.auth?.user?.role === "admin" || props.auth?.user?.is_admin === true;
 
     const unreadCount = Number(totalUnreadCount) || 0;
+    const hasActiveFilters = Boolean(search.trim() || type || readStatus || dateFrom || dateTo);
+
+    const applyFilters = (event) => {
+        event.preventDefault();
+        setSelectedIds([]);
+        router.get("/notifications", {
+            search,
+            type,
+            read_status: readStatus,
+            date_from: dateFrom,
+            date_to: dateTo,
+        }, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    };
+
+    const clearFilters = () => {
+        setSearch("");
+        setType("");
+        setReadStatus("");
+        setDateFrom("");
+        setDateTo("");
+        setSelectedIds([]);
+        router.get("/notifications", {}, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    };
 
     const visibleIds = notifications.map((notification) => String(notification.id));
     const safeSelectedIds = Array.isArray(selectedIds) ? selectedIds : [];
@@ -274,6 +310,46 @@ export default function Notifications({ notifications: paginator = {}, unreadCou
                             </form>
                         )}
 
+                        <form className="border rounded-3 p-3 mb-3" onSubmit={applyFilters}>
+                            <div className="row g-2 align-items-end">
+                                <div className="col-12 col-lg-4">
+                                    <label htmlFor="notification-search" className="form-label small fw-semibold mb-1">SEARCH</label>
+                                    <input id="notification-search" type="search" className="form-control" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Title or message" maxLength={120} />
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="notification-type" className="form-label small fw-semibold mb-1">TYPE</label>
+                                    <select id="notification-type" className="form-select" value={type} onChange={(event) => setType(event.target.value)}>
+                                        <option value="">All types</option>
+                                        {notificationTypes.map((notificationType) => (
+                                            <option key={notificationType} value={notificationType}>
+                                                {String(notificationType).replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="notification-read-status" className="form-label small fw-semibold mb-1">READ STATUS</label>
+                                    <select id="notification-read-status" className="form-select" value={readStatus} onChange={(event) => setReadStatus(event.target.value)}>
+                                        <option value="">All statuses</option>
+                                        <option value="unread">Unread</option>
+                                        <option value="read">Read</option>
+                                    </select>
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="notification-date-from" className="form-label small fw-semibold mb-1">DATE FROM</label>
+                                    <input id="notification-date-from" type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="notification-date-to" className="form-label small fw-semibold mb-1">DATE TO</label>
+                                    <input id="notification-date-to" type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
+                                </div>
+                                <div className="col-12 d-flex justify-content-end gap-2">
+                                    <button type="submit" className="btn btn-primary btn-sm fw-semibold">FILTER NOTIFICATIONS</button>
+                                    <button type="button" className="btn btn-outline-secondary btn-sm fw-semibold" onClick={clearFilters}>CLEAR FILTERS</button>
+                                </div>
+                            </div>
+                        </form>
+
                         {notifications.length === 0 ? (
                             <div
                                 className="notification-empty border rounded-3 p-5 text-center"
@@ -297,12 +373,19 @@ export default function Notifications({ notifications: paginator = {}, unreadCou
                                     className="fw-bold mt-3 mb-2"
                                     style={{ fontFamily: "Outfit, sans-serif" }}
                                 >
-                                    NO NOTIFICATIONS
+                                    {hasActiveFilters ? "NO MATCHING NOTIFICATIONS" : "NO NOTIFICATIONS"}
                                 </h5>
 
                                 <p className="small text-muted mb-0">
-                                    Important updates about your orders and inquiries will appear here.
+                                    {hasActiveFilters
+                                        ? "Try changing the search or clearing your filters to see more notifications."
+                                        : "Important updates about your orders and inquiries will appear here."}
                                 </p>
+                                {hasActiveFilters && (
+                                    <button type="button" className="btn btn-outline-primary btn-sm mt-3" onClick={clearFilters}>
+                                        Clear filters
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <>

@@ -105,6 +105,10 @@ export default function AdminSchedules({
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
     const [technician, setTechnician] = useState(filters.technician ?? "");
+    const [serviceType, setServiceType] = useState(filters.service_type ?? "");
+    const [urgency, setUrgency] = useState(filters.urgency ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
     const [bookingDate, setBookingDate] = useState("");
     const [bookingType, setBookingType] = useState("full_date");
     const [bookingTime, setBookingTime] = useState("");
@@ -137,6 +141,10 @@ export default function AdminSchedules({
                 search,
                 status,
                 technician,
+                service_type: serviceType,
+                urgency,
+                date_from: dateFrom,
+                date_to: dateTo,
             },
             {
                 preserveState: true,
@@ -150,6 +158,10 @@ export default function AdminSchedules({
         setSearch("");
         setStatus("");
         setTechnician("");
+        setServiceType("");
+        setUrgency("");
+        setDateFrom("");
+        setDateTo("");
 
         router.get(
             "/admin/schedules",
@@ -645,6 +657,39 @@ export default function AdminSchedules({
                                     </select>
                                 </div>
 
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">SERVICE TYPE</label>
+                                    <select className="form-select" value={serviceType} onChange={(event) => setServiceType(event.target.value)}>
+                                        <option value="">All service types</option>
+                                        <option value="Installation">Installation</option>
+                                        <option value="Site Inspection">Site Inspection</option>
+                                        <option value="Maintenance">Maintenance</option>
+                                        <option value="Repair">Repair</option>
+                                        <option value="Consultation">Consultation</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">PRIORITY</label>
+                                    <select className="form-select" value={urgency} onChange={(event) => setUrgency(event.target.value)}>
+                                        <option value="">All priorities</option>
+                                        <option value="emergency">Emergency</option>
+                                        <option value="urgent">Urgent</option>
+                                        <option value="normal">Normal</option>
+                                    </select>
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">DATE FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">DATE TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
+                                </div>
+
                                 <div className="col-sm-6 col-lg-1 d-grid">
                                     <button
                                         type="submit"
@@ -713,6 +758,11 @@ export default function AdminSchedules({
                                                         >
                                                             {schedule.urgency}
                                                         </span>
+                                                        {Number(schedule.urgency_fee ?? 0) > 0 && (
+                                                            <div className="small text-warning-emphasis fw-semibold mt-1">
+                                                                ₱{Number(schedule.urgency_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </div>
+                                                        )}
                                                     </td>
 
                                                     <td>

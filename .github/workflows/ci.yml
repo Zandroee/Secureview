@@ -50,11 +50,35 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
+      - name: Report npm audit details (informational)
+        run: |
+          npm audit --json > npm-audit.json || true
+          node <<'NODE'
+          const fs = require('fs');
+          const audit = JSON.parse(fs.readFileSync('npm-audit.json', 'utf8'));
+          const summary = audit.metadata?.vulnerabilities ?? {};
+          console.log('npm audit summary:', JSON.stringify(summary));
+          for (const [name, vuln] of Object.entries(audit.vulnerabilities ?? {})) {
+            console.log(
+              `PACKAGE: ${name} | SEVERITY: ${vuln.severity} | DIRECT: ${vuln.isDirect} | RANGE: ${vuln.range} | FIX: ${JSON.stringify(vuln.fixAvailable)}`
+            );
+            for (const issue of vuln.via ?? []) {
+              if (typeof issue === 'object') {
+                console.log(`  ADVISORY: ${issue.title} | ${issue.url} | RANGE: ${issue.range}`);
+              }
+            }
+          }
+          NODE
+
       - name: Build Vite assets
         run: npm run build
 
       - name: Run Laravel feature and unit tests
-        run: php artisan test
+        run: |
+          # Laravel's env bootstrap reads the root .env on each test app boot.
+          # CI injects its configuration as environment variables, so an empty file is sufficient.
+          touch .env
+          php artisan test
 
       - name: Upload production Vite assets for Hostinger
         if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
@@ -74,6 +98,8 @@ jobs:
           cp config/filesystems.php hostinger-release/config/filesystems.php
           cp config/app.php hostinger-release/config/app.php
           cp app/Http/Controllers/Admin/WarrantyController.php hostinger-release/app/Http/Controllers/Admin/WarrantyController.php
+          cp app/Http/Controllers/Admin/InventoryAdjustmentController.php hostinger-release/app/Http/Controllers/Admin/InventoryAdjustmentController.php
+          cp app/Http/Controllers/Admin/UserController.php hostinger-release/app/Http/Controllers/Admin/UserController.php
           cp app/Http/Controllers/Admin/ProductController.php hostinger-release/app/Http/Controllers/Admin/ProductController.php
           cp app/Http/Controllers/Admin/PackageController.php hostinger-release/app/Http/Controllers/Admin/PackageController.php
           cp app/Http/Controllers/Admin/DashboardController.php hostinger-release/app/Http/Controllers/Admin/DashboardController.php
@@ -99,9 +125,12 @@ jobs:
           cp app/Services/EmailVerificationCodeService.php hostinger-release/app/Services/EmailVerificationCodeService.php
           cp app/Mail/EmailVerificationCodeMail.php hostinger-release/app/Mail/EmailVerificationCodeMail.php
           cp app/Models/User.php hostinger-release/app/Models/User.php
+          cp app/Models/Order.php hostinger-release/app/Models/Order.php
+          cp app/Models/PendingInquiryCheckout.php hostinger-release/app/Models/PendingInquiryCheckout.php
           cp app/Models/Product.php hostinger-release/app/Models/Product.php
           cp app/Models/Package.php hostinger-release/app/Models/Package.php
           cp app/Models/Inquiry.php hostinger-release/app/Models/Inquiry.php
+          cp app/Models/ServiceBookingFeeSetting.php hostinger-release/app/Models/ServiceBookingFeeSetting.php
           cp app/Models/ServiceRecord.php hostinger-release/app/Models/ServiceRecord.php
           cp app/Models/ServiceRecordItem.php hostinger-release/app/Models/ServiceRecordItem.php
           cp app/Models/Review.php hostinger-release/app/Models/Review.php
@@ -115,12 +144,15 @@ jobs:
           cp app/Http/Middleware/HandleInertiaRequests.php hostinger-release/app/Http/Middleware/HandleInertiaRequests.php
           cp app/Services/SingleLoginSessionService.php hostinger-release/app/Services/SingleLoginSessionService.php
           cp app/Services/InventoryService.php hostinger-release/app/Services/InventoryService.php
+          cp app/Services/InvoiceDocumentService.php hostinger-release/app/Services/InvoiceDocumentService.php
           cp app/Services/JobNotificationService.php hostinger-release/app/Services/JobNotificationService.php
           cp app/Services/PendingInquiryCheckoutService.php hostinger-release/app/Services/PendingInquiryCheckoutService.php
           cp app/Services/OrderCancellationService.php hostinger-release/app/Services/OrderCancellationService.php
           cp routes/console.php hostinger-release/routes/console.php
           cp database/migrations/2026_10_23_230000_create_service_records_tables.php hostinger-release/database/migrations/2026_10_23_230000_create_service_records_tables.php
           cp database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php hostinger-release/database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php
+          cp database/migrations/2026_10_25_060000_add_booking_priority_fees_to_orders_and_inquiries.php hostinger-release/database/migrations/2026_10_25_060000_add_booking_priority_fees_to_orders_and_inquiries.php
+          cp database/migrations/2026_10_25_070000_create_service_booking_fee_settings_table.php hostinger-release/database/migrations/2026_10_25_070000_create_service_booking_fee_settings_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php
