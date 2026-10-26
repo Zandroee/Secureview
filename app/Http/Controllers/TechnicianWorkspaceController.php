@@ -71,9 +71,17 @@ class TechnicianWorkspaceController extends Controller
             ->all();
 
         $openJobs = Inquiry::query()
-            ->with(['technicians:id,name,email', 'pendingCheckout.order'])
+            ->with(['technicians:id,name,email'])
             ->whereIn('status', ['pending', 'confirmed'])
             ->whereDate('preferred_date', '>=', today())
+            // Only list jobs that can currently be claimed. Unassigned technicians
+            // should not receive order/payment data for checkouts awaiting payment.
+            ->whereDoesntHave('pendingCheckout', function ($checkoutQuery) {
+                $checkoutQuery->where('status', 'pending_payment')
+                    ->whereHas('order', fn ($orderQuery) => $orderQuery
+                        ->where('payment_status', '!=', 'paid')
+                        ->whereNull('paid_at'));
+            })
             ->where(function ($query) use ($technician) {
                 $query->whereNull('technician_id')
                     ->orWhere('technician_id', '!=', $technician->id);
@@ -91,7 +99,7 @@ class TechnicianWorkspaceController extends Controller
                     && count($this->assignedTechnicianIds($inquiry)) < self::MAX_TECHNICIANS_PER_JOB
                     && !in_array($inquiry->preferred_date?->format('Y-m-d') . '|' . $inquiry->preferred_time, $busySlots, true);
             })
-            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, true, false))
+            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, false, false, false))
             ->values();
 
         $inventory = Product::query()
@@ -111,6 +119,7 @@ class TechnicianWorkspaceController extends Controller
             ->values();
 
         $recentNotifications = $technician->customerNotifications()
+            ->where('type', '!=', 'new_order')
             ->latest('id')
             ->limit(50)
             ->get(['id', 'type', 'title', 'message', 'read_at', 'created_at'])
@@ -125,6 +134,7 @@ class TechnicianWorkspaceController extends Controller
             ->values();
 
         $unreadNotificationCount = $technician->customerNotifications()
+            ->where('type', '!=', 'new_order')
             ->whereNull('read_at')
             ->count();
 
@@ -720,7 +730,12 @@ class TechnicianWorkspaceController extends Controller
         }
     }
 
-    private function jobData(Inquiry $inquiry, bool $includeCustomerDetails, bool $includePreciseLocation = true): array
+    private function jobData(
+        Inquiry $inquiry,
+        bool $includeCustomerDetails,
+        bool $includePreciseLocation = true,
+        bool $includePaymentStatus = true
+    ): array
     {
         $assignedTechnicians = $inquiry->technicians;
         if (
@@ -751,8 +766,11 @@ class TechnicianWorkspaceController extends Controller
             'service_longitude' => $includeCustomerDetails && $includePreciseLocation ? $inquiry->service_longitude : null,
             'google_place_id' => $includeCustomerDetails && $includePreciseLocation ? $inquiry->google_place_id : null,
             'status' => $inquiry->status,
-            'payment_status' => $inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable',
-            'payment_method' => $inquiry->pendingCheckout?->order?->payment_method,
+            // Keep the payment state needed to prevent assigned technicians from
+            // starting unpaid work, but never expose the payment method.
+            'payment_status' => $includePaymentStatus
+                ? ($inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable')
+                : null,
             'service_record' => $inquiry->serviceRecord ? [
                 'id' => $inquiry->serviceRecord->id,
                 'work_summary' => $inquiry->serviceRecord->work_summary,
