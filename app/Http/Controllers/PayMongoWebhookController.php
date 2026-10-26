@@ -73,7 +73,18 @@ class PayMongoWebhookController extends Controller
             ], 400);
         }
 
-        $event = $payload['data']['type'] ?? null;
+        // PayMongo's current event envelope stores the event type and resource
+        // inside data.attributes. Retain support for the older envelope during
+        // transition, but prioritize the documented current payload format.
+        $eventEnvelope = $payload['data']['attributes'] ?? null;
+
+        if (is_array($eventEnvelope)) {
+            $event = $eventEnvelope['type'] ?? null;
+            $session = $eventEnvelope['data'] ?? [];
+        } else {
+            $event = $payload['data']['type'] ?? null;
+            $session = $payload['data']['data'] ?? [];
+        }
 
         if ($event !== 'checkout_session.payment.paid') {
             return response()->json([
@@ -81,8 +92,16 @@ class PayMongoWebhookController extends Controller
             ]);
         }
 
-        $sessionId = $payload['data']['data']['id'] ?? null;
-        $attributes = $payload['data']['data']['attributes'] ?? [];
+        if (!is_array($session)) {
+            $session = [];
+        }
+
+        $sessionId = $session['id'] ?? null;
+        $attributes = $session['attributes'] ?? [];
+        if (!is_array($attributes)) {
+            $attributes = [];
+        }
+
         $referenceNumber = $attributes['reference_number'] ?? null;
 
         $order = null;
