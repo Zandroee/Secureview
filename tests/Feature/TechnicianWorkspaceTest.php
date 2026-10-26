@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\InventoryAdjustment;
+use App\Models\Order;
+use App\Models\PendingInquiryCheckout;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\JobNotificationService;
@@ -296,6 +298,51 @@ class TechnicianWorkspaceTest extends TestCase
                 ->where('jobs.0.customer_name', $customer->name)
                 ->where('jobs.0.customer_phone', '09171234567')
                 ->missing('jobs.0.payment_method'));
+    }
+
+    public function test_unassigned_jobs_with_unpaid_checkouts_are_not_exposed_as_available_to_technicians(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $inquiry = $this->makeInquiry($customer, today()->addDays(4)->toDateString(), 'pending');
+
+        $order = Order::create([
+            'user_id' => $customer->id,
+            'order_number' => 'SV-UNPAID-JOB-' . strtoupper(bin2hex(random_bytes(3))),
+            'subtotal' => 1500,
+            'shipping_fee' => 0,
+            'installation_fee' => 0,
+            'total' => 1500,
+            'payment_method' => 'gcash',
+            'payment_status' => 'pending',
+            'order_status' => 'awaiting_payment',
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'delivery_address' => '123 Test Street, Taguig',
+        ]);
+
+        PendingInquiryCheckout::create([
+            'user_id' => $customer->id,
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'payload' => [],
+            'status' => 'pending_payment',
+        ]);
+
+        $this->actingAs($technician)
+            ->get(route('technician.available-jobs'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->has('openJobs', 0)
+            );
+
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'status' => 'pending_payment',
+        ]);
     }
 
     public function test_legacy_technician_id_assignment_is_visible_and_actionable_without_a_pivot_row(): void
