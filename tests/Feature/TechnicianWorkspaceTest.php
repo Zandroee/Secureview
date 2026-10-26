@@ -270,7 +270,7 @@ class TechnicianWorkspaceTest extends TestCase
                 ->where('openJobs.0.google_place_id', null)
                 ->where('openJobs.0.service_latitude', null)
                 ->where('openJobs.0.service_longitude', null)
-                ->where('openJobs.0.notes', null));
+                ->missing('openJobs.0.notes'));
 
         $this->actingAs($technician)
             ->post(route('technician.jobs.claim', $inquiry))
