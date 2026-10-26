@@ -21,8 +21,10 @@ class NotificationController extends Controller
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
-        // Scope every filter and result to the signed-in account.
-        $notificationsQuery = $request->user()->customerNotifications();
+        // Scope every filter and result to the signed-in account. Historical order
+        // notifications are hidden from technicians because product order/payment
+        // administration is outside their role.
+        $notificationsQuery = $this->visibleNotificationsFor($request->user());
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -68,7 +70,7 @@ class NotificationController extends Controller
 
         return Inertia::render('notifications', [
             'notifications' => $notifications,
-            'unreadCount' => $request->user()->customerNotifications()->whereNull('read_at')->count(),
+            'unreadCount' => $this->visibleNotificationsFor($request->user())->whereNull('read_at')->count(),
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'type' => $filters['type'] ?? '',
@@ -76,13 +78,29 @@ class NotificationController extends Controller
                 'date_from' => $filters['date_from'] ?? '',
                 'date_to' => $filters['date_to'] ?? '',
             ],
-            'notificationTypes' => $request->user()->customerNotifications()
+            'notificationTypes' => $this->visibleNotificationsFor($request->user())
                 ->select('type')
                 ->distinct()
                 ->orderBy('type')
                 ->pluck('type')
                 ->values(),
         ]);
+    }
+
+
+    /**
+     * Hide historical product-order notifications from technician accounts.
+     * New order notifications are now delivered to administrators only.
+     */
+    private function visibleNotificationsFor(User $user)
+    {
+        $query = $user->customerNotifications();
+
+        if ($user->role === 'technician') {
+            $query->where('type', '!=', 'new_order');
+        }
+
+        return $query;
     }
 
     public function storeAnnouncement(Request $request)
@@ -190,7 +208,7 @@ class NotificationController extends Controller
 
     private function redirectToValidNotificationPage(Request $request, string $message)
     {
-        $total = $request->user()->customerNotifications()->count();
+        $total = $this->visibleNotificationsFor($request->user())->count();
         $requestedPage = max(1, (int) $request->input('page', $request->query('page', 1)));
         $lastPage = max(1, (int) ceil($total / self::NOTIFICATIONS_PER_PAGE));
         $page = min($requestedPage, $lastPage);
@@ -257,8 +275,7 @@ class NotificationController extends Controller
 
     public function markAllAsRead(Request $request)
     {
-        $request->user()
-            ->customerNotifications()
+        $this->visibleNotificationsFor($request->user())
             ->whereNull('read_at')
             ->update([
                 'read_at' => now(),
