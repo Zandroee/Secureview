@@ -87,6 +87,23 @@ class PurchaseController extends Controller
                 ->where('created_at', '<=', now()->subHours(48));
         }
 
+        // The date range scopes the summary cards as well as the order list.
+        // Other list filters deliberately do not distort overall payment totals.
+        $summaryOrderQuery = Order::query();
+
+        if (!empty($filters['date_from'])) {
+            $summaryOrderQuery->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $summaryOrderQuery->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
+        $summaryUnpaidOrderQuery = (clone $summaryOrderQuery)
+            ->whereNull('paid_at')
+            ->whereIn('payment_status', ['pending', 'failed'])
+            ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed']);
+
         $orders = $query
             ->paginate(12)
             ->withQueryString()
@@ -119,26 +136,26 @@ class PurchaseController extends Controller
                 'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
-                'total_orders' => Order::count(),
-                'paid_orders' => Order::where('payment_status', 'paid')->count(),
-                'pending_payments' => (clone $unpaidOrderQuery)->where('payment_status', 'pending')->count(),
-                'pending_online_payments' => (clone $unpaidOrderQuery)
+                'total_orders' => (clone $summaryOrderQuery)->count(),
+                'paid_orders' => (clone $summaryOrderQuery)->where('payment_status', 'paid')->count(),
+                'pending_payments' => (clone $summaryUnpaidOrderQuery)->where('payment_status', 'pending')->count(),
+                'pending_online_payments' => (clone $summaryUnpaidOrderQuery)
                     ->where('payment_status', 'pending')
                     ->where('order_status', 'awaiting_payment')
                     ->whereIn('payment_method', ['gcash', 'card', 'maya'])
                     ->count(),
-                'failed_payments' => (clone $unpaidOrderQuery)
+                'failed_payments' => (clone $summaryUnpaidOrderQuery)
                     ->where(fn ($builder) => $builder->where('payment_status', 'failed')->orWhere('order_status', 'payment_failed'))
                     ->count(),
-                'cash_awaiting_confirmation' => (clone $unpaidOrderQuery)
+                'cash_awaiting_confirmation' => (clone $summaryUnpaidOrderQuery)
                     ->where('payment_method', 'cash')
                     ->where('payment_status', 'pending')
                     ->where('order_status', 'pending')
                     ->count(),
-                'stale_unpaid_orders' => (clone $unpaidOrderQuery)
+                'stale_unpaid_orders' => (clone $summaryUnpaidOrderQuery)
                     ->where('created_at', '<=', now()->subHours(48))
                     ->count(),
-                'revenue' => (float) Order::where('payment_status', 'paid')->sum('total'),
+                'revenue' => (float) (clone $summaryOrderQuery)->where('payment_status', 'paid')->sum('total'),
             ],
         ]);
     }
@@ -189,6 +206,18 @@ class PurchaseController extends Controller
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
+        // Keep archive summaries consistent with the selected date window.
+        $historySummaryQuery = Order::query()
+            ->whereIn('order_status', ['completed', 'cancelled']);
+
+        if (!empty($filters['date_from'])) {
+            $historySummaryQuery->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $historySummaryQuery->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
         $orders = $query->paginate(12)->withQueryString()
             ->through(fn (Order $order) => $this->formatOrder($order, $invoiceProfileReady));
 
@@ -203,9 +232,12 @@ class PurchaseController extends Controller
                 'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
-                'completed_orders' => Order::query()->where('order_status', 'completed')->count(),
-                'cancelled_orders' => Order::query()->where('order_status', 'cancelled')->count(),
-                'completed_paid_revenue' => (float) Order::query()->where('order_status', 'completed')->where('payment_status', 'paid')->sum('total'),
+                'completed_orders' => (clone $historySummaryQuery)->where('order_status', 'completed')->count(),
+                'cancelled_orders' => (clone $historySummaryQuery)->where('order_status', 'cancelled')->count(),
+                'completed_paid_revenue' => (float) (clone $historySummaryQuery)
+                    ->where('order_status', 'completed')
+                    ->where('payment_status', 'paid')
+                    ->sum('total'),
             ],
         ]);
     }
