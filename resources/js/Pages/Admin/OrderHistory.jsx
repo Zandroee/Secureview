@@ -145,11 +145,11 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                         <option value="maya">Maya</option>
                                     </select>
                                 </div>
-                                <div className="col-sm-6 col-lg-2">
+                                <div className="col-sm-6 col-lg-1">
                                     <label className="form-label small fw-semibold" htmlFor="order-history-date-from">DATE FROM</label>
                                     <input id="order-history-date-from" type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
                                 </div>
-                                <div className="col-sm-6 col-lg-2">
+                                <div className="col-sm-6 col-lg-1">
                                     <label className="form-label small fw-semibold" htmlFor="order-history-date-to">DATE TO</label>
                                     <input id="order-history-date-to" type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
                                 </div>
@@ -169,7 +169,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                 <span className="badge rounded-pill bg-secondary-subtle text-secondary px-3 py-2">{orders.total ?? rows.length} records</span>
                             </div>
                             <div className="table-responsive">
-                                <table className="table table-hover align-middle mb-0" style={{ minWidth: "1120px", tableLayout: "fixed" }}>
+                                <table className="table table-hover align-middle mb-0" style={{ width: "100%", minWidth: "1120px", tableLayout: "fixed" }}>
                                     <thead className="table-light">
                                         <tr>
                                             <th className="ps-3" style={{ width: "17%" }}>ORDER</th>
