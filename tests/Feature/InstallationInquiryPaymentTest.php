@@ -300,14 +300,23 @@ class InstallationInquiryPaymentTest extends TestCase
 
         $rawBody = json_encode([
             'data' => [
-                'type' => 'checkout_session.payment.paid',
-                'data' => [
-                    'id' => 'cs_installation_webhook_test',
-                    'type' => 'checkout_session',
-                    'attributes' => [
-                        'reference_number' => $order->order_number,
-                        'payments' => [
-                            ['id' => 'pay_installation_webhook_test'],
+                'id' => 'evt_installation_webhook_test',
+                'type' => 'event',
+                'attributes' => [
+                    'type' => 'checkout_session.payment.paid',
+                    'livemode' => false,
+                    'data' => [
+                        'id' => 'cs_installation_webhook_test',
+                        'type' => 'checkout_session',
+                        'attributes' => [
+                            'reference_number' => $order->order_number,
+                            'payments' => [
+                                [
+                                    'id' => 'pay_installation_webhook_test',
+                                    'type' => 'payment',
+                                    'attributes' => ['status' => 'paid'],
+                                ],
+                            ],
                         ],
                     ],
                 ],
