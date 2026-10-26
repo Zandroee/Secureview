@@ -8,6 +8,7 @@ use App\Models\PendingInquiryCheckout;
 use App\Services\PendingInquiryCheckoutService;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PayMongoWebhookController extends Controller
 {
@@ -112,58 +113,110 @@ class PayMongoWebhookController extends Controller
         }
 
         if ($order->payment_status === 'paid') {
-            // The browser return may not have happened. Retry finalization from
-            // this idempotent webhook when payment was already marked paid.
-            if (PendingInquiryCheckout::query()->where('order_id', $order->id)->exists()) {
-                app(PendingInquiryCheckoutService::class)->completePaidOrder($order);
-            }
-
-            return response()->json([
-                'received' => true,
-            ]);
+            return $this->finalizePaidOrder($order, $inventory, false)
+                ?? response()->json(['received' => true]);
         }
 
         $paymentId = data_get($attributes, 'payments.0.id');
 
-        $order->update([
-            'payment_status' => 'paid',
-            'order_status' => 'processing',
-            'paymongo_payment_id' => $paymentId,
-            'paid_at' => now(),
-        ]);
+        // Serialize the payment transition. Only the request that first moves
+        // this order to paid may clear the existing cart; concurrent duplicate
+        // deliveries must not erase items added after that first request.
+        $transition = DB::transaction(function () use ($order, $paymentId) {
+            $lockedOrder = Order::query()
+                ->lockForUpdate()
+                ->findOrFail($order->id);
 
-        try {
-            $inventory->deductForOrder($order);
-        } catch (\Throwable $exception) {
-            report($exception);
+            if ($lockedOrder->order_status === 'cancelled') {
+                return [
+                    'order' => $lockedOrder,
+                    'cancelled' => true,
+                    'clear_cart' => false,
+                ];
+            }
+
+            if ($lockedOrder->payment_status === 'paid') {
+                return [
+                    'order' => $lockedOrder,
+                    'cancelled' => false,
+                    'clear_cart' => false,
+                ];
+            }
+
+            $lockedOrder->update([
+                'payment_status' => 'paid',
+                'order_status' => 'processing',
+                'paymongo_payment_id' => $paymentId,
+                'paid_at' => now(),
+            ]);
+
+            return [
+                'order' => $lockedOrder->fresh(),
+                'cancelled' => false,
+                'clear_cart' => true,
+            ];
+        });
+
+        if ($transition['cancelled']) {
+            return response()->json(['received' => true]);
         }
 
-        CustomerNotification::create([
-            'user_id' => $order->user_id,
-            'type' => 'payment_paid',
-            'title' => 'Payment successful',
-            'message' => 'Payment for order ' . $order->order_number . ' was successful.',
-            'action_url' => route('purchases.show', $order),
-            'related_type' => Order::class,
-            'related_id' => $order->id,
-        ]);
+        return $this->finalizePaidOrder(
+            $transition['order'],
+            $inventory,
+            $transition['clear_cart']
+        ) ?? response()->json(['received' => true]);
+    }
+
+    /**
+     * Finalize a payment in an idempotent way.
+     *
+     * Keep the confirmed payment state even if inventory is temporarily unable
+     * to be deducted. Returning a non-2xx response lets PayMongo retry; repeated
+     * deliveries safely retry inventory while the order's marker prevents a
+     * second deduction after a successful attempt.
+     */
+    private function finalizePaidOrder(Order $order, InventoryService $inventory, bool $clearCart)
+    {
+        CustomerNotification::firstOrCreate(
+            ['dedupe_key' => 'payment-paid:order:' . $order->id],
+            [
+                'user_id' => $order->user_id,
+                'type' => 'payment_paid',
+                'title' => 'Payment successful',
+                'message' => 'Payment for order ' . $order->order_number . ' was successful.',
+                'action_url' => route('purchases.show', $order),
+                'related_type' => Order::class,
+                'related_id' => $order->id,
+            ]
+        );
 
         $isInstallationCheckout = PendingInquiryCheckout::query()
             ->where('order_id', $order->id)
             ->exists();
 
         if ($isInstallationCheckout) {
-            // Complete installation inquiries even when the customer never
-            // returns to the hosted-checkout success URL.
+            // Finalize the service request even if inventory reconciliation needs
+            // another webhook delivery; the payment itself has been confirmed.
             app(PendingInquiryCheckoutService::class)->completePaidOrder($order);
-        } else {
-            // Ordinary product checkout clears the purchase cart; installation
-            // bookings must not delete unrelated items from that cart.
+        } elseif ($clearCart) {
+            // Clear the cart only on the first transition to paid. A duplicate
+            // webhook must not remove new items the customer added afterward.
             $order->user?->cart?->items()->delete();
         }
 
-        return response()->json([
-            'received' => true,
-        ]);
+        try {
+            // InventoryService locks the order and checks stock_deducted_at,
+            // making this safe for repeated or concurrent webhook delivery.
+            $inventory->deductForOrder($order);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Payment is confirmed, but inventory processing failed. The event can be retried.',
+            ], 500);
+        }
+
+        return null;
     }
 }
