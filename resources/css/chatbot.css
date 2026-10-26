@@ -307,3 +307,74 @@ html[data-bs-theme="dark"] .sv-chat-error {
     }
 }
 
+
+
+/* Phase B: keep the floating chat within phone safe areas and improve text contrast. */
+.sv-chat-typing {
+    color: #475569;
+}
+
+.sv-chat-suggestions > span {
+    color: #4b5563;
+}
+
+.sv-chat-privacy {
+    color: #596579;
+    font-size: .72rem;
+    line-height: 1.4;
+}
+
+.sv-chat-launcher:focus-visible,
+.sv-chat-close:focus-visible,
+.sv-chat-suggestions button:focus-visible,
+.sv-chat-form input:focus-visible,
+.sv-chat-form button:focus-visible {
+    outline: 3px solid #1d4ed8;
+    outline-offset: 3px;
+}
+
+html[data-bs-theme="dark"] .sv-chat-launcher:focus-visible,
+html[data-bs-theme="dark"] .sv-chat-close:focus-visible,
+html[data-bs-theme="dark"] .sv-chat-suggestions button:focus-visible,
+html[data-bs-theme="dark"] .sv-chat-form input:focus-visible,
+html[data-bs-theme="dark"] .sv-chat-form button:focus-visible {
+    outline-color: #67e8f9;
+}
+
+@media (max-width: 575.98px) {
+    .secureview-chatbot {
+        right: max(12px, env(safe-area-inset-right, 0px));
+        bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    }
+
+    .sv-chat-launcher {
+        width: 48px;
+        min-width: 48px;
+        min-height: 48px;
+        padding: 0;
+    }
+
+    .sv-chat-launcher > span {
+        display: none;
+    }
+
+    .sv-chat-panel {
+        right: 0;
+        bottom: 60px;
+        width: min(420px, calc(100vw - 24px));
+        height: min(560px, calc(100dvh - 104px - env(safe-area-inset-top, 0px)));
+        min-height: min(260px, calc(100dvh - 120px));
+        max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px));
+        border-radius: 16px;
+    }
+
+    .sv-chat-header,
+    .sv-chat-messages {
+        padding: 12px;
+    }
+
+    .sv-chat-privacy {
+        padding-right: 10px;
+        padding-left: 10px;
+    }
+}
