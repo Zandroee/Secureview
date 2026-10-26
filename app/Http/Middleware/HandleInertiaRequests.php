@@ -44,11 +44,16 @@ class HandleInertiaRequests extends Middleware
 
         if ($user) {
             $cartCount = $user->cart?->items()->sum('quantity') ?? 0;
-            $notificationCount = $user->customerNotifications()
+            $visibleNotifications = $user->customerNotifications();
+            if ($user->role === 'technician') {
+                $visibleNotifications->where('type', '!=', 'new_order');
+            }
+
+            $notificationCount = (clone $visibleNotifications)
                 ->whereNull('read_at')
                 ->count();
 
-            $latestNotification = $user->customerNotifications()
+            $latestNotification = (clone $visibleNotifications)
                 ->whereNull('read_at')
                 ->latest('id')
                 ->first(['id', 'title', 'message', 'action_url']);
