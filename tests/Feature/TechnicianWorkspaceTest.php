@@ -259,8 +259,10 @@ class TechnicianWorkspaceTest extends TestCase
                 ->component('Technician/Workspace')
                 ->where('openJobs.0.id', $inquiry->id)
                 ->where('openJobs.0.status', 'pending')
-                ->where('openJobs.0.customer_name', $customer->name)
-                ->where('openJobs.0.customer_phone', '09171234567')
+                ->missing('openJobs.0.customer_name')
+                ->missing('openJobs.0.customer_phone')
+                ->missing('openJobs.0.payment_status')
+                ->missing('openJobs.0.payment_method')
                 ->where('openJobs.0.street_address', null)
                 ->where('openJobs.0.address_details', null)
                 ->where('openJobs.0.google_place_id', null)
@@ -290,7 +292,10 @@ class TechnicianWorkspaceTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Technician/Workspace')
                 ->where('jobs.0.id', $inquiry->id)
-                ->where('jobs.0.status', 'pending'));
+                ->where('jobs.0.status', 'pending')
+                ->where('jobs.0.customer_name', $customer->name)
+                ->where('jobs.0.customer_phone', '09171234567')
+                ->missing('jobs.0.payment_method'));
     }
 
     public function test_legacy_technician_id_assignment_is_visible_and_actionable_without_a_pivot_row(): void
@@ -428,6 +433,21 @@ class TechnicianWorkspaceTest extends TestCase
         $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
             'quantity_change' => -5,
             'reason' => 'Invalid reduction',
+        ])->assertSessionHasErrors('quantity_change');
+
+        $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
+            'quantity_change' => -100001,
+            'reason' => 'Excessive negative adjustment',
+        ])->assertSessionHasErrors('quantity_change');
+
+        $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
+            'quantity_change' => 100001,
+            'reason' => 'Excessive positive adjustment',
+        ])->assertSessionHasErrors('quantity_change');
+
+        $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
+            'quantity_change' => 0,
+            'reason' => 'No change',
         ])->assertSessionHasErrors('quantity_change');
 
         $this->assertSame(1, (int) $product->fresh()->stock_quantity);
