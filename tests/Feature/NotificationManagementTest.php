@@ -105,6 +105,41 @@ class NotificationManagementTest extends TestCase
         ]);
     }
 
+    public function test_technicians_do_not_see_historical_order_payment_notifications(): void
+    {
+        $technician = User::factory()->create([
+            'role' => 'technician',
+            'email_verified_at' => now(),
+        ]);
+
+        CustomerNotification::create([
+            'user_id' => $technician->id,
+            'type' => 'new_order',
+            'title' => 'New customer order placed',
+            'message' => 'Order SV-PRIVATE-001. Total: ₱1,500.00. Payment method: GCash. Payment status: Pending.',
+        ]);
+
+        $serviceNotification = CustomerNotification::create([
+            'user_id' => $technician->id,
+            'type' => 'job_upcoming',
+            'title' => 'You have an upcoming service',
+            'message' => 'Service TEST-001 is scheduled tomorrow.',
+        ]);
+
+        $this->actingAs($technician)
+            ->get(route('notifications.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('notifications')
+                ->has('notifications.data', 1)
+                ->where('notifications.data.0.id', $serviceNotification->id)
+                ->where('unreadCount', 1)
+                ->where('notificationCount', 1)
+                ->where('latestNotification.id', $serviceNotification->id)
+                ->where('notificationTypes', ['job_upcoming'])
+            );
+    }
+
     private function makeNotification(User $user, string $title): CustomerNotification
     {
         return CustomerNotification::create([
