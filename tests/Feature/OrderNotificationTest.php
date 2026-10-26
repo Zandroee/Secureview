@@ -13,7 +13,7 @@ class OrderNotificationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_new_order_notifies_all_admins_and_technicians(): void
+    public function test_new_order_notifies_admins_without_notifying_technicians(): void
     {
         $admin = User::factory()->create([
             'role' => 'admin',
@@ -63,14 +63,12 @@ class OrderNotificationTest extends TestCase
             'type' => 'new_order',
             'related_id' => $order->id,
         ]);
-        $this->assertDatabaseHas('customer_notifications', [
+        $this->assertDatabaseMissing('customer_notifications', [
             'user_id' => $technician->id,
             'type' => 'new_order',
-            'title' => 'New customer order placed',
-            'related_type' => Order::class,
             'related_id' => $order->id,
         ]);
-        $this->assertDatabaseHas('customer_notifications', [
+        $this->assertDatabaseMissing('customer_notifications', [
             'user_id' => $secondTechnician->id,
             'type' => 'new_order',
             'related_id' => $order->id,
@@ -84,20 +82,12 @@ class OrderNotificationTest extends TestCase
         $this->assertStringContainsString($customer->name, $adminNotification->message);
         $this->assertStringContainsString('₱1,500.00', $adminNotification->message);
 
-        $technicianNotification = CustomerNotification::query()
-            ->where('user_id', $technician->id)
-            ->where('related_id', $order->id)
-            ->firstOrFail();
-        $this->assertSame(route('technician.dashboard'), $technicianNotification->action_url);
-        $this->assertStringNotContainsString($customer->email, $technicianNotification->message);
-        $this->assertStringNotContainsString('09171234567', $technicianNotification->message);
-
         $this->assertDatabaseMissing('customer_notifications', [
             'user_id' => $customer->id,
             'type' => 'new_order',
             'related_id' => $order->id,
         ]);
-        $this->assertSame(4, CustomerNotification::query()->where('related_id', $order->id)->count());
+        $this->assertSame(2, CustomerNotification::query()->where('related_id', $order->id)->count());
     }
 
     public function test_new_order_notification_service_deduplicates_per_recipient(): void
@@ -133,8 +123,8 @@ class OrderNotificationTest extends TestCase
         $service = app(OrderNotificationService::class);
 
         $this->assertSame(0, $service->notifyNewOrderPlaced($order));
-        $this->assertSame(2, CustomerNotification::query()->where('related_id', $order->id)->count());
+        $this->assertSame(1, CustomerNotification::query()->where('related_id', $order->id)->count());
         $this->assertSame(1, CustomerNotification::query()->where('user_id', $admin->id)->where('related_id', $order->id)->count());
-        $this->assertSame(1, CustomerNotification::query()->where('user_id', $technician->id)->where('related_id', $order->id)->count());
+        $this->assertSame(0, CustomerNotification::query()->where('user_id', $technician->id)->where('related_id', $order->id)->count());
     }
 }
