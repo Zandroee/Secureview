@@ -3,7 +3,7 @@ import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import AdminPagination from "../../Components/Admin/AdminPagination";
 import catalogImageUrl from "../../Components/catalogImageUrl";
-import { router, useForm } from "@inertiajs/react";
+import { Head, router, useForm } from "@inertiajs/react";
 import { useEffect, useState } from "react";
 
 function stockClass(quantity) {
@@ -464,7 +464,8 @@ export default function AdminProducts({
     };
 
     return (
-        <div>
+        <div className="admin-page admin-products-page">
+            <Head title="Product Inventory | SecureView Admin" />
             <Navbar />
 
             <div className="container-fluid">
@@ -474,6 +475,8 @@ export default function AdminProducts({
                     </aside>
 
                     <main
+                        id="main-content"
+                        aria-labelledby="admin-products-title"
                         className="col-md-9 col-lg-10 p-3 p-md-4"
                         style={{
                             backgroundColor: "#f5f6f8",
@@ -487,7 +490,7 @@ export default function AdminProducts({
                                     SECUREVIEW ADMIN
                                 </div>
 
-                                <h1 className="fw-bold mb-1">
+                                <h1 id="admin-products-title" className="fw-bold mb-1">
                                     PRODUCT INVENTORY
                                 </h1>
 
@@ -571,17 +574,24 @@ export default function AdminProducts({
                                     "0 3px 12px rgba(0,0,0,0.05)",
                             }}
                         >
-                            <form
-                                className="row g-2 align-items-end"
-                                onSubmit={applyFilters}
-                            >
-                                <div className="col-lg-4">
-                                    <label className="form-label small fw-semibold mb-1">
+                            <details className="admin-product-filter-disclosure">
+                                <summary className="admin-product-filter-summary">
+                                    <span className="fw-semibold"><i className="bi bi-funnel me-2" />Filter products</span>
+                                    <span className="small text-muted">Search, category, brand and stock</span>
+                                    <i className="bi bi-chevron-down ms-auto" aria-hidden="true" />
+                                </summary>
+                                <form
+                                    className="row g-2 align-items-end admin-product-filter-form"
+                                    onSubmit={applyFilters}
+                                >
+                                <div className="col-12 col-lg-3">
+                                    <label className="form-label small fw-semibold mb-1" htmlFor="admin-products-search">
                                         SEARCH
                                     </label>
 
                                     <input
-                                        type="text"
+                                        id="admin-products-search"
+                                        type="search"
                                         className="form-control"
                                         placeholder="Product name, brand, or category"
                                         value={search}
@@ -592,11 +602,12 @@ export default function AdminProducts({
                                 </div>
 
                                 <div className="col-sm-6 col-lg-2">
-                                    <label className="form-label small fw-semibold mb-1">
+                                    <label className="form-label small fw-semibold mb-1" htmlFor="admin-products-category">
                                         CATEGORY
                                     </label>
 
                                     <select
+                                        id="admin-products-category"
                                         className="form-select"
                                         value={category}
                                         onChange={(event) =>
@@ -616,16 +627,16 @@ export default function AdminProducts({
                                 </div>
 
                                 <div className="col-sm-6 col-lg-2">
-                                    <label className="form-label small fw-semibold mb-1">BRAND</label>
-                                    <select className="form-select" value={brand} onChange={(event) => setBrand(event.target.value)}>
+                                    <label className="form-label small fw-semibold mb-1" htmlFor="admin-products-brand">BRAND</label>
+                                    <select id="admin-products-brand" className="form-select" value={brand} onChange={(event) => setBrand(event.target.value)}>
                                         <option value="">All brands</option>
                                         {brandOptions.map((item) => <option key={item} value={item}>{item}</option>)}
                                     </select>
                                 </div>
 
                                 <div className="col-sm-6 col-lg-2">
-                                    <label className="form-label small fw-semibold mb-1">STOCK</label>
-                                    <select className="form-select" value={stockStatus} onChange={(event) => setStockStatus(event.target.value)}>
+                                    <label className="form-label small fw-semibold mb-1" htmlFor="admin-products-stock">STOCK</label>
+                                    <select id="admin-products-stock" className="form-select" value={stockStatus} onChange={(event) => setStockStatus(event.target.value)}>
                                         <option value="">All stock levels</option>
                                         <option value="in_stock">In stock (&gt; 5)</option>
                                         <option value="low_stock">Low stock (1–5)</option>
@@ -633,25 +644,22 @@ export default function AdminProducts({
                                     </select>
                                 </div>
 
-                                <div className="col-sm-6 col-lg-2 d-grid">
-                                    <button
-                                        type="submit"
-                                        className="btn btn-primary fw-bold"
-                                    >
-                                        FILTER
-                                    </button>
+                                <div className="col-12 col-lg-3">
+                                    <div className="d-flex gap-2">
+                                        <button type="submit" className="btn btn-primary fw-bold flex-grow-1">
+                                            FILTER
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary fw-bold flex-grow-1"
+                                            onClick={clearFilters}
+                                        >
+                                            CLEAR
+                                        </button>
+                                    </div>
                                 </div>
-
-                                <div className="col-sm-6 col-lg-2 d-grid">
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-primary fw-bold"
-                                        onClick={clearFilters}
-                                    >
-                                        CLEAR
-                                    </button>
-                                </div>
-                            </form>
+                                </form>
+                            </details>
                         </div>
 
                         <div
@@ -661,7 +669,119 @@ export default function AdminProducts({
                                     "0 3px 12px rgba(0,0,0,0.05)",
                             }}
                         >
-                            <div className="table-responsive">
+                            <div className="admin-product-mobile-list d-md-none p-3">
+                                {(products.data ?? []).length === 0 ? (
+                                    <div className="text-center text-muted py-5">
+                                        <i className="bi bi-camera-video fs-2 d-block mb-2" />
+                                        No products found. Add a product to get started.
+                                    </div>
+                                ) : (products.data ?? []).map((product) => {
+                                    const value = Number(stockValues[product.id] ?? 0);
+                                    const primaryImage = product.image || product.images?.[0] || null;
+                                    const specifications = Array.isArray(product.specifications)
+                                        ? product.specifications.filter(Boolean)
+                                        : [];
+
+                                    return (
+                                        <article className="admin-product-mobile-card" key={product.id} aria-labelledby={"admin-product-mobile-title-" + product.id}>
+                                            <div className="d-flex gap-3 align-items-start">
+                                                {primaryImage ? (
+                                                    <img
+                                                        src={imageSource(primaryImage)}
+                                                        alt=""
+                                                        loading="lazy"
+                                                        className="admin-product-mobile-image"
+                                                    />
+                                                ) : (
+                                                    <div className="admin-product-mobile-image admin-product-mobile-image-placeholder" aria-hidden="true">
+                                                        <i className="bi bi-camera-video fs-4" />
+                                                    </div>
+                                                )}
+                                                <div className="flex-grow-1 min-w-0">
+                                                    <h2 className="h6 fw-bold mb-1" id={"admin-product-mobile-title-" + product.id}>{product.name}</h2>
+                                                    <div className="small text-muted">Product #{product.id}</div>
+                                                    <div className="d-flex flex-wrap gap-1 mt-2">
+                                                        <span className="badge text-bg-light border">{product.category || "Uncategorized"}</span>
+                                                        {product.brand && <span className="badge text-bg-light border">{product.brand}</span>}
+                                                        {product.badge && <span className="badge bg-primary-subtle text-primary">{product.badge}</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="admin-product-mobile-details">
+                                                <div>
+                                                    <span className="admin-product-mobile-label">Price</span>
+                                                    <strong>{money(product.price)}</strong>
+                                                    <span className="small text-muted d-block">Installation: {Number(product.installation_fee ?? 0) > 0 ? money(product.installation_fee) : "Free"}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="admin-product-mobile-label">Visibility</span>
+                                                    {product.is_featured ? (
+                                                        <span className="badge bg-primary-subtle text-primary"><i className="bi bi-star-fill me-1" />Featured</span>
+                                                    ) : (
+                                                        <span className="small">Standard</span>
+                                                    )}
+                                                    <span className="small text-muted d-block mt-1">{product.reviews_count ?? 0} review(s)</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="border-top pt-3 mt-3">
+                                                <div className="admin-product-mobile-label mb-2">Specifications</div>
+                                                {specifications.length ? (
+                                                    <ul className="admin-product-mobile-specs mb-3">
+                                                        {specifications.slice(0, 3).map((specification, index) => <li key={index}>{specification}</li>)}
+                                                        {specifications.length > 3 && <li className="text-muted">+{specifications.length - 3} more</li>}
+                                                    </ul>
+                                                ) : (
+                                                    <p className="small text-muted mb-3">No specifications listed.</p>
+                                                )}
+                                            </div>
+
+                                            <div className="admin-product-mobile-stock">
+                                                <label className="form-label small fw-semibold mb-1" htmlFor={"admin-product-stock-" + product.id}>Available stock</label>
+                                                <div className="d-flex align-items-center gap-2">
+                                                    <input
+                                                        id={"admin-product-stock-" + product.id}
+                                                        type="number"
+                                                        min="0"
+                                                        step="1"
+                                                        className="form-control form-control-sm"
+                                                        value={stockValues[product.id] ?? 0}
+                                                        aria-label={"Stock quantity for " + product.name}
+                                                        onChange={(event) => updateValue(product.id, event.target.value)}
+                                                    />
+                                                    <span className={"badge rounded-pill px-3 py-2 " + stockClass(value)}>{value.toLocaleString()}</span>
+                                                </div>
+                                                <div className="small text-muted mt-1">{stockLabel(value)}</div>
+                                            </div>
+
+                                            {!product.can_delete && (
+                                                <div className="small text-warning-emphasis mt-2"><i className="bi bi-lock-fill me-1" />This product is referenced by catalog items.</div>
+                                            )}
+
+                                            <div className="admin-product-mobile-actions">
+                                                <button type="button" className="btn btn-outline-primary btn-sm fw-bold" onClick={() => openEditProduct(product)}>
+                                                    <i className="bi bi-pencil-square me-1" /> Edit
+                                                </button>
+                                                <button type="button" className="btn btn-primary btn-sm fw-bold" onClick={() => updateStock(product)} disabled={savingId === product.id}>
+                                                    <i className="bi bi-save me-1" />{savingId === product.id ? "Saving…" : "Save stock"}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-danger btn-sm fw-bold"
+                                                    onClick={() => deleteProduct(product)}
+                                                    disabled={!product.can_delete}
+                                                    title={product.can_delete ? "Delete this product; historical order snapshots are retained" : "Clear package components, carts and reviews before deleting catalog items"}
+                                                >
+                                                    <i className="bi bi-trash3 me-1" /> Delete
+                                                </button>
+                                            </div>
+                                        </article>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="table-responsive d-none d-md-block">
                                 <table className="table table-hover align-middle mb-0">
                                     <thead className="table-light">
                                         <tr>

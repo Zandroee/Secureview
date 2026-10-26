@@ -2,7 +2,7 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import AdminPagination from "../../Components/Admin/AdminPagination";
-import { Link, router } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
 const peso = (value) => "₱" + Number(value ?? 0).toLocaleString("en-PH", {
@@ -72,17 +72,18 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
 
     return (
         <div className="admin-page order-history-page">
+            <Head title="Orders History | SecureView Admin" />
             <Navbar />
             <div className="container-fluid">
                 <div className="row">
                     <aside className="col-md-3 col-lg-2 px-0">
                         <Sidebar active="order-history" />
                     </aside>
-                    <main className="col-md-9 col-lg-10 p-3 p-md-4" style={{ background: "#f5f6f8", minHeight: "75vh", fontFamily: "Outfit, sans-serif" }}>
+                    <main id="main-content" aria-labelledby="order-history-title" className="col-md-9 col-lg-10 p-3 p-md-4" style={{ background: "#f5f6f8", minHeight: "75vh", fontFamily: "Outfit, sans-serif" }}>
                         <div className="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3 mb-4">
                             <div>
                                 <div className="small text-primary fw-bold">SECUREVIEW ADMIN</div>
-                                <h1 className="fw-bold mb-1">ORDERS HISTORY</h1>
+                                <h1 id="order-history-title" className="fw-bold mb-1">ORDERS HISTORY</h1>
                                 <p className="text-secondary mb-0">Completed and cancelled orders are archived here for reference and audit.</p>
                             </div>
                             <Link href="/admin/purchases" className="btn btn-outline-primary fw-bold">
@@ -112,7 +113,13 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                         </div>
 
                         <section className="bg-white border rounded-4 p-3 mb-3">
-                            <form className="row g-2 align-items-end" onSubmit={applyFilters}>
+                            <details className="admin-order-history-filter-disclosure">
+                                <summary className="admin-product-filter-summary">
+                                    <span className="fw-semibold"><i className="bi bi-funnel me-2" />Filter order history</span>
+                                    <span className="small text-muted">Search, status, payment and date range</span>
+                                    <i className="bi bi-chevron-down ms-auto" aria-hidden="true" />
+                                </summary>
+                                <form className="row g-2 align-items-end admin-product-filter-form" onSubmit={applyFilters}>
                                 <div className="col-12 col-lg-4">
                                     <label className="form-label small fw-semibold" htmlFor="order-history-search">SEARCH ORDER HISTORY</label>
                                     <input id="order-history-search" type="search" className="form-control" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Order number, customer, email, or phone" />
@@ -157,7 +164,8 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                     <button type="submit" className="btn btn-primary fw-bold">FILTER ORDERS</button>
                                     <button type="button" className="btn btn-outline-secondary fw-bold" onClick={clearFilters}>CLEAR FILTERS</button>
                                 </div>
-                            </form>
+                                </form>
+                            </details>
                             <div className="small text-muted mt-2">
                                 The selected date range also updates the summary cards above.
                             </div>
@@ -168,7 +176,45 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                 <h2 className="h6 fw-bold mb-0">Archived orders</h2>
                                 <span className="badge rounded-pill bg-secondary-subtle text-secondary px-3 py-2">{orders.total ?? rows.length} records</span>
                             </div>
-                            <div className="table-responsive">
+                            <div className="admin-order-history-mobile-list d-md-none p-3">
+                                {rows.length ? rows.map((order) => (
+                                    <article className="admin-order-history-mobile-card" key={order.id} aria-labelledby={"order-history-mobile-title-" + order.id}>
+                                        <div className="d-flex align-items-start justify-content-between gap-2">
+                                            <div className="min-w-0">
+                                                <h2 id={"order-history-mobile-title-" + order.id} className="h6 fw-bold mb-1">{order.order_number}</h2>
+                                                <div className="small text-muted">{order.items?.length ?? 0} {(order.items?.length ?? 0) === 1 ? "item" : "items"}</div>
+                                            </div>
+                                            <span className={"badge rounded-pill text-capitalize flex-shrink-0 " + statusClass(order.order_status)}>{statusLabel(order.order_status)}</span>
+                                        </div>
+                                        <div className="border-top mt-3 pt-3">
+                                            <div className="small fw-semibold">{order.customer_name || "Customer"}</div>
+                                            <div className="small text-secondary text-break">{order.customer_email}</div>
+                                        </div>
+                                        <div className="admin-order-history-mobile-details">
+                                            <div>
+                                                <span className="admin-product-mobile-label">Total</span>
+                                                <strong className="text-primary">{peso(order.total)}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="admin-product-mobile-label">Payment</span>
+                                                <div className="fw-semibold">{paymentLabel(order.payment_method)}</div>
+                                                <span className={"badge rounded-pill " + paymentStatusClass(order.payment_status)}>{statusLabel(order.payment_status)}</span>
+                                            </div>
+                                        </div>
+                                        <div className="small text-muted mb-3"><i className="bi bi-calendar3 me-1" />{order.created_at || order.updated_at || "Date unavailable"}</div>
+                                        <Link href={"/admin/purchases?search=" + encodeURIComponent(order.order_number) + "&order_status=" + encodeURIComponent(order.order_status) + "&view=" + order.id} className="btn btn-outline-primary fw-semibold w-100">
+                                            <i className="bi bi-eye me-2" />View order
+                                        </Link>
+                                    </article>
+                                )) : (
+                                    <div className="text-center py-5">
+                                        <i className="bi bi-archive fs-3 d-block text-secondary mb-2" />
+                                        <div className="fw-semibold">No archived orders found</div>
+                                        <div className="small text-secondary">Completed and cancelled orders will appear here.</div>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="table-responsive d-none d-md-block">
                                 <table className="table table-hover align-middle mb-0" style={{ width: "100%", minWidth: "1120px", tableLayout: "fixed" }}>
                                     <thead className="table-light">
                                         <tr>

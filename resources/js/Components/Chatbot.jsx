@@ -72,6 +72,23 @@ export default function Chatbot() {
     const [error, setError] = useState("");
     const messageListRef = useRef(null);
     const inputRef = useRef(null);
+    const launcherRef = useRef(null);
+
+    useEffect(() => {
+        if (!isOpen) return undefined;
+
+        inputRef.current?.focus();
+
+        const handleKeyDown = (event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            setIsOpen(false);
+            window.requestAnimationFrame(() => launcherRef.current?.focus());
+        };
+
+        document.addEventListener("keydown", handleKeyDown);
+        return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen && messageListRef.current) {
@@ -113,19 +130,28 @@ export default function Chatbot() {
     return (
         <div className="secureview-chatbot">
             {isOpen && (
-                <section className="sv-chat-panel" aria-label="SecureView AI chat">
+                <section
+                    id="secureview-chat-panel"
+                    className="sv-chat-panel"
+                    role="dialog"
+                    aria-modal="false"
+                    aria-labelledby="secureview-chat-title"
+                >
                     <header className="sv-chat-header">
                         <div className="sv-chat-avatar" aria-hidden="true">
                             <i className="bi bi-chat-dots-fill" />
                         </div>
                         <div className="sv-chat-heading">
-                            <strong>SecureView Assistant</strong>
+                            <strong id="secureview-chat-title">SecureView Assistant</strong>
                             <span><span className="sv-chat-status-dot" /> Online help</span>
                         </div>
                         <button
                             type="button"
                             className="sv-chat-close"
-                            onClick={() => setIsOpen(false)}
+                            onClick={() => {
+                                setIsOpen(false);
+                                window.requestAnimationFrame(() => launcherRef.current?.focus());
+                            }}
                             aria-label="Close chat"
                         >
                             <i className="bi bi-x-lg" />
@@ -194,10 +220,12 @@ export default function Chatbot() {
 
             <button
                 type="button"
+                ref={launcherRef}
                 className="sv-chat-launcher"
                 onClick={() => setIsOpen((open) => !open)}
                 aria-label={isOpen ? "Close SecureView chat" : "Chat with SecureView"}
                 aria-expanded={isOpen}
+                aria-controls="secureview-chat-panel"
             >
                 <i className={isOpen ? "bi bi-x-lg" : "bi bi-chat-dots-fill"} />
                 {!isOpen && <span>Ask us</span>}
