@@ -158,6 +158,9 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                     <button type="button" className="btn btn-outline-secondary fw-bold" onClick={clearFilters}>CLEAR FILTERS</button>
                                 </div>
                             </form>
+                            <div className="small text-muted mt-2">
+                                The selected date range also updates the summary cards above.
+                            </div>
                         </section>
 
                         <section className="bg-white border rounded-4 overflow-hidden">
@@ -166,15 +169,15 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                 <span className="badge rounded-pill bg-secondary-subtle text-secondary px-3 py-2">{orders.total ?? rows.length} records</span>
                             </div>
                             <div className="table-responsive">
-                                <table className="table table-hover align-middle mb-0" style={{ minWidth: "1040px", tableLayout: "fixed" }}>
+                                <table className="table table-hover align-middle mb-0" style={{ minWidth: "1120px", tableLayout: "fixed" }}>
                                     <thead className="table-light">
                                         <tr>
-                                            <th className="ps-3" style={{ width: "18%" }}>ORDER</th>
-                                            <th style={{ width: "19%" }}>CUSTOMER</th>
-                                            <th className="text-end pe-3" style={{ width: "13%" }}>TOTAL</th>
-                                            <th className="border-start ps-3" style={{ width: "15%" }}>PAYMENT</th>
-                                            <th style={{ width: "14%" }}>ORDER STATUS</th>
-                                            <th style={{ width: "12%" }}>DATE</th>
+                                            <th className="ps-3" style={{ width: "17%" }}>ORDER</th>
+                                            <th style={{ width: "18%" }}>CUSTOMER</th>
+                                            <th className="text-end pe-4" style={{ width: "15%" }}>TOTAL</th>
+                                            <th className="border-start ps-4" style={{ width: "18%" }}>PAYMENT</th>
+                                            <th style={{ width: "13%" }}>ORDER STATUS</th>
+                                            <th style={{ width: "10%" }}>DATE</th>
                                             <th className="text-end pe-3" style={{ width: "9%" }}>ACTION</th>
                                         </tr>
                                     </thead>
@@ -189,8 +192,8 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                                     <div className="fw-semibold">{order.customer_name}</div>
                                                     <div className="small text-secondary text-break">{order.customer_email}</div>
                                                 </td>
-                                                <td className="text-end fw-bold text-primary text-nowrap pe-3">{peso(order.total)}</td>
-                                                <td className="border-start ps-3">
+                                                <td className="text-end fw-bold text-primary text-nowrap pe-4">{peso(order.total)}</td>
+                                                <td className="border-start ps-4">
                                                     <div className="small fw-semibold text-break">{paymentLabel(order.payment_method)}</div>
                                                     <span className={"badge rounded-pill " + paymentStatusClass(order.payment_status)}>{statusLabel(order.payment_status)}</span>
                                                 </td>
