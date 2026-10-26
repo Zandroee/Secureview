@@ -148,6 +148,7 @@ jobs:
           cp app/Services/JobNotificationService.php hostinger-release/app/Services/JobNotificationService.php
           cp app/Services/PendingInquiryCheckoutService.php hostinger-release/app/Services/PendingInquiryCheckoutService.php
           cp app/Services/OrderCancellationService.php hostinger-release/app/Services/OrderCancellationService.php
+          cp app/Services/OrderNotificationService.php hostinger-release/app/Services/OrderNotificationService.php
           cp routes/console.php hostinger-release/routes/console.php
           cp database/migrations/2026_10_23_230000_create_service_records_tables.php hostinger-release/database/migrations/2026_10_23_230000_create_service_records_tables.php
           cp database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php hostinger-release/database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php
