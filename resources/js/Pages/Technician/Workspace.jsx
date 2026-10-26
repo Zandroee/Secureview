@@ -216,16 +216,18 @@ function JobCard({ job, open = false, products = [] }) {
                 </div>
             )}
 
-            {job.customer_name && (
+            {open ? (
+                <div className="border-top pt-3 mb-3">
+                    <div className="small text-muted fw-semibold mb-2">CUSTOMER DETAILS</div>
+                    <div className="small text-muted">
+                        Customer contact information and the exact service location become available after you join this service.
+                    </div>
+                </div>
+            ) : job.customer_name && (
                 <div className="border-top pt-3 mb-3">
                     <div className="small text-muted fw-semibold mb-2">CUSTOMER DETAILS</div>
                     <div className="fw-semibold">{job.customer_name}</div>
                     {job.customer_phone && <div className="small"><a href={"tel:" + job.customer_phone}>{job.customer_phone}</a></div>}
-                    {open && !job.street_address && (
-                        <div className="small text-muted mt-1">
-                            Exact street address, entrance instructions, and navigation become available after you join this service.
-                        </div>
-                    )}
                     {job.street_address && <div className="small text-muted mt-1">{job.street_address}, {job.city}</div>}
                     {job.address_details && <div className="small text-muted mt-1"><span className="fw-semibold">Entrance details:</span> {job.address_details}</div>}
                     {(job.google_place_id || job.service_latitude !== null && job.service_latitude !== undefined || job.street_address) && (
@@ -526,17 +528,54 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
 
     const adjustStock = (event, product) => {
         event.preventDefault();
-        setStockErrors({});
+
+        const rawChange = String(stockChanges[product.id]?.change ?? "").trim();
+        const quantityChange = Number(rawChange);
+        const currentStock = Math.max(0, Number(product.stock_quantity ?? 0));
+        const reason = String(stockChanges[product.id]?.reason ?? "").trim();
+
+        let quantityError = "";
+        if (!rawChange) {
+            quantityError = "Enter a stock adjustment amount.";
+        } else if (!Number.isSafeInteger(quantityChange) || quantityChange === 0) {
+            quantityError = "Enter a non-zero whole number.";
+        } else if (quantityChange < -100000 || quantityChange > 100000) {
+            quantityError = "An adjustment must be between -100,000 and 100,000 units.";
+        } else if (quantityChange < -currentStock) {
+            quantityError = "Stock cannot be reduced below zero. Current stock is " + currentStock + " units.";
+        }
+
+        let reasonError = "";
+        if (reason.length < 3) {
+            reasonError = "Enter a reason with at least 3 characters.";
+        } else if (reason.length > 255) {
+            reasonError = "The reason cannot exceed 255 characters.";
+        }
+
+        if (quantityError || reasonError) {
+            setStockErrors((current) => ({
+                ...current,
+                [product.id]: {
+                    ...(current[product.id] ?? {}),
+                    quantity_change: quantityError || undefined,
+                    reason: reasonError || undefined,
+                },
+            }));
+            return;
+        }
+
+        setStockErrors((current) => ({ ...current, [product.id]: {} }));
         setSavingProduct(product.id);
 
         router.patch("/technician/inventory/" + product.id, {
-            quantity_change: stockChanges[product.id]?.change ?? "",
-            reason: stockChanges[product.id]?.reason ?? "",
+            quantity_change: quantityChange,
+            reason,
         }, {
             preserveScroll: true,
             onError: (errors) => setStockErrors((current) => ({ ...current, [product.id]: errors })),
             onSuccess: () => {
                 setStockChanges((current) => ({ ...current, [product.id]: { change: "", reason: "" } }));
+                setStockErrors((current) => ({ ...current, [product.id]: {} }));
             },
             onFinish: () => setSavingProduct(null),
         });
@@ -546,6 +585,11 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
         setStockChanges((current) => ({
             ...current,
             [productId]: { ...(current[productId] ?? {}), [field]: value },
+        }));
+        const errorKey = field === "change" ? "quantity_change" : field;
+        setStockErrors((current) => ({
+            ...current,
+            [productId]: { ...(current[productId] ?? {}), [errorKey]: undefined },
         }));
     };
 
@@ -1111,9 +1155,13 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                                                         className={"form-control " + (stockErrors[product.id]?.quantity_change ? "is-invalid" : "")}
                                                                                         type="number"
                                                                                         step="1"
+                                                                                        min={Math.max(-100000, -Number(product.stock_quantity ?? 0))}
+                                                                                        max={100000}
                                                                                         value={stockChanges[product.id]?.change ?? ""}
                                                                                         placeholder="+5 or -2"
                                                                                         aria-label={"Stock adjustment for " + product.name}
+                                                                                        aria-invalid={Boolean(stockErrors[product.id]?.quantity_change)}
+                                                                                        aria-describedby={stockErrors[product.id]?.quantity_change ? "stock-adjustment-error-" + product.id : undefined}
                                                                                         onChange={(event) => updateStockField(product.id, "change", event.target.value)}
                                                                                     />
                                                                                 </td>
@@ -1126,7 +1174,7 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
                                                                                         onChange={(event) => updateStockField(product.id, "reason", event.target.value)}
                                                                                     />
                                                                                     {stockErrors[product.id]?.reason && <div className="small text-danger mt-1">{stockErrors[product.id].reason}</div>}
-                                                                                    {stockErrors[product.id]?.quantity_change && <div className="small text-danger mt-1">{stockErrors[product.id].quantity_change}</div>}
+                                                                                    {stockErrors[product.id]?.quantity_change && <div id={"stock-adjustment-error-" + product.id} className="small text-danger mt-1" role="alert">{stockErrors[product.id].quantity_change}</div>}
                                                                                 </td>
                                                                                 <td className="text-end pe-3">
                                                                                     <button type="button" className="btn btn-primary fw-semibold text-nowrap" disabled={savingProduct === product.id} onClick={(event) => adjustStock(event, product)}>
