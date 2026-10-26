@@ -767,10 +767,8 @@ class TechnicianWorkspaceController extends Controller
             'google_place_id' => $includeCustomerDetails && $includePreciseLocation ? $inquiry->google_place_id : null,
             'status' => $inquiry->status,
             // Keep the payment state needed to prevent assigned technicians from
-            // starting unpaid work, but never expose the payment method.
-            'payment_status' => $includePaymentStatus
-                ? ($inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable')
-                : null,
+            // starting unpaid work, but never expose the payment method. The field
+            // is added only for assigned work so open jobs disclose no order state.
             'service_record' => $inquiry->serviceRecord ? [
                 'id' => $inquiry->serviceRecord->id,
                 'work_summary' => $inquiry->serviceRecord->work_summary,
@@ -793,6 +791,10 @@ class TechnicianWorkspaceController extends Controller
                     'name' => $user->name,
                 ])->values(),
         ];
+
+        if ($includePaymentStatus) {
+            $data['payment_status'] = $inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable';
+        }
 
         if ($includeCustomerDetails) {
             $data['customer_name'] = $inquiry->customer_name;
