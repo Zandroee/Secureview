@@ -8,6 +8,7 @@ use App\Models\PendingInquiryCheckout;
 use App\Services\PendingInquiryCheckoutService;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PayMongoWebhookController extends Controller
 {
@@ -118,15 +119,53 @@ class PayMongoWebhookController extends Controller
 
         $paymentId = data_get($attributes, 'payments.0.id');
 
-        $order->update([
-            'payment_status' => 'paid',
-            'order_status' => 'processing',
-            'paymongo_payment_id' => $paymentId,
-            'paid_at' => now(),
-        ]);
+        // Serialize the payment transition. Only the request that first moves
+        // this order to paid may clear the existing cart; concurrent duplicate
+        // deliveries must not erase items added after that first request.
+        $transition = DB::transaction(function () use ($order, $paymentId) {
+            $lockedOrder = Order::query()
+                ->lockForUpdate()
+                ->findOrFail($order->id);
 
-        return $this->finalizePaidOrder($order, $inventory, true)
-            ?? response()->json(['received' => true]);
+            if ($lockedOrder->order_status === 'cancelled') {
+                return [
+                    'order' => $lockedOrder,
+                    'cancelled' => true,
+                    'clear_cart' => false,
+                ];
+            }
+
+            if ($lockedOrder->payment_status === 'paid') {
+                return [
+                    'order' => $lockedOrder,
+                    'cancelled' => false,
+                    'clear_cart' => false,
+                ];
+            }
+
+            $lockedOrder->update([
+                'payment_status' => 'paid',
+                'order_status' => 'processing',
+                'paymongo_payment_id' => $paymentId,
+                'paid_at' => now(),
+            ]);
+
+            return [
+                'order' => $lockedOrder->fresh(),
+                'cancelled' => false,
+                'clear_cart' => true,
+            ];
+        });
+
+        if ($transition['cancelled']) {
+            return response()->json(['received' => true]);
+        }
+
+        return $this->finalizePaidOrder(
+            $transition['order'],
+            $inventory,
+            $transition['clear_cart']
+        ) ?? response()->json(['received' => true]);
     }
 
     /**
