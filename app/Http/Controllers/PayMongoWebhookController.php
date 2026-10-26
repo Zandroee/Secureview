@@ -112,15 +112,8 @@ class PayMongoWebhookController extends Controller
         }
 
         if ($order->payment_status === 'paid') {
-            // The browser return may not have happened. Retry finalization from
-            // this idempotent webhook when payment was already marked paid.
-            if (PendingInquiryCheckout::query()->where('order_id', $order->id)->exists()) {
-                app(PendingInquiryCheckoutService::class)->completePaidOrder($order);
-            }
-
-            return response()->json([
-                'received' => true,
-            ]);
+            return $this->finalizePaidOrder($order, $inventory)
+                ?? response()->json(['received' => true]);
         }
 
         $paymentId = data_get($attributes, 'payments.0.id');
@@ -132,38 +125,58 @@ class PayMongoWebhookController extends Controller
             'paid_at' => now(),
         ]);
 
-        try {
-            $inventory->deductForOrder($order);
-        } catch (\Throwable $exception) {
-            report($exception);
-        }
+        return $this->finalizePaidOrder($order, $inventory)
+            ?? response()->json(['received' => true]);
+    }
 
-        CustomerNotification::create([
-            'user_id' => $order->user_id,
-            'type' => 'payment_paid',
-            'title' => 'Payment successful',
-            'message' => 'Payment for order ' . $order->order_number . ' was successful.',
-            'action_url' => route('purchases.show', $order),
-            'related_type' => Order::class,
-            'related_id' => $order->id,
-        ]);
+    /**
+     * Finalize a payment in an idempotent way.
+     *
+     * Keep the confirmed payment state even if inventory is temporarily unable
+     * to be deducted. Returning a non-2xx response lets PayMongo retry; repeated
+     * deliveries safely retry inventory while the order's marker prevents a
+     * second deduction after a successful attempt.
+     */
+    private function finalizePaidOrder(Order $order, InventoryService $inventory)
+    {
+        CustomerNotification::firstOrCreate(
+            ['dedupe_key' => 'payment-paid:order:' . $order->id],
+            [
+                'user_id' => $order->user_id,
+                'type' => 'payment_paid',
+                'title' => 'Payment successful',
+                'message' => 'Payment for order ' . $order->order_number . ' was successful.',
+                'action_url' => route('purchases.show', $order),
+                'related_type' => Order::class,
+                'related_id' => $order->id,
+            ]
+        );
 
         $isInstallationCheckout = PendingInquiryCheckout::query()
             ->where('order_id', $order->id)
             ->exists();
 
         if ($isInstallationCheckout) {
-            // Complete installation inquiries even when the customer never
-            // returns to the hosted-checkout success URL.
+            // Finalize the service request even if inventory reconciliation needs
+            // another webhook delivery; the payment itself has been confirmed.
             app(PendingInquiryCheckoutService::class)->completePaidOrder($order);
         } else {
-            // Ordinary product checkout clears the purchase cart; installation
-            // bookings must not delete unrelated items from that cart.
+            // Clear the cart only for ordinary product checkout. Installation
+            // orders must not delete unrelated items from the customer's cart.
             $order->user?->cart?->items()->delete();
         }
 
-        return response()->json([
-            'received' => true,
-        ]);
+        try {
+            // InventoryService locks the order and checks stock_deducted_at,
+            // making this safe for repeated or concurrent webhook delivery.
+            $inventory->deductForOrder($order);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => 'Payment is confirmed, but inventory processing failed. The event can be retried.',
+            ], 500);
+        }
+
+        return null;
     }
-}

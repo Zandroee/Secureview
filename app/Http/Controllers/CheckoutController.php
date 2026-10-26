@@ -634,15 +634,18 @@ class CheckoutController extends Controller
                             ->where('order_id', $order->id)
                             ->exists();
 
-                        CustomerNotification::create([
-                            'user_id' => $request->user()->id,
-                            'type' => 'payment_paid',
-                            'title' => 'Payment successful',
-                            'message' => 'Payment for order ' . $order->order_number . ' was successful.',
-                            'action_url' => route('purchases.show', $order),
-                            'related_type' => Order::class,
-                            'related_id' => $order->id,
-                        ]);
+                        CustomerNotification::firstOrCreate(
+                            ['dedupe_key' => 'payment-paid:order:' . $order->id],
+                            [
+                                'user_id' => $request->user()->id,
+                                'type' => 'payment_paid',
+                                'title' => 'Payment successful',
+                                'message' => 'Payment for order ' . $order->order_number . ' was successful.',
+                                'action_url' => route('purchases.show', $order),
+                                'related_type' => Order::class,
+                                'related_id' => $order->id,
+                            ]
+                        );
 
                         $buyNowOrderIds = array_map(
                             'intval',
@@ -663,6 +666,19 @@ class CheckoutController extends Controller
         }
 
         $order->refresh();
+
+        // A previous webhook or browser return may have confirmed payment while
+        // inventory deduction failed. Retry here whenever the order lacks the
+        // idempotency marker; InventoryService prevents a second deduction.
+        if ($order->payment_status === 'paid' && !$order->stock_deducted_at) {
+            try {
+                $inventory->deductForOrder($order);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+
+            $order->refresh();
+        }
 
         if ($order->payment_status === 'paid') {
             $buyNowOrderIds = array_map(
