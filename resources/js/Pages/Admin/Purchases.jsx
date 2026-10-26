@@ -538,6 +538,9 @@ export default function AdminPurchases({
                                     </button>
                                 </div>
                             </form>
+                            <div className="small text-muted mt-2">
+                                The selected date range also updates the summary cards above.
+                            </div>
                         </div>
 
                         <div
