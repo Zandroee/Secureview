@@ -157,14 +157,23 @@ class PayMongoWebhookReliabilityTest extends TestCase
     {
         $rawBody = json_encode([
             'data' => [
-                'type' => 'checkout_session.payment.paid',
-                'data' => [
-                    'id' => $order->paymongo_checkout_session_id,
-                    'type' => 'checkout_session',
-                    'attributes' => [
-                        'reference_number' => $order->order_number,
-                        'payments' => [
-                            ['id' => 'pay_phase_c_' . $order->id],
+                'id' => 'evt_phase_c_' . $order->id,
+                'type' => 'event',
+                'attributes' => [
+                    'type' => 'checkout_session.payment.paid',
+                    'livemode' => false,
+                    'data' => [
+                        'id' => $order->paymongo_checkout_session_id,
+                        'type' => 'checkout_session',
+                        'attributes' => [
+                            'reference_number' => $order->order_number,
+                            'payments' => [
+                                [
+                                    'id' => 'pay_phase_c_' . $order->id,
+                                    'type' => 'payment',
+                                    'attributes' => ['status' => 'paid'],
+                                ],
+                            ],
                         ],
                     ],
                 ],
