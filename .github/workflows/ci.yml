@@ -50,6 +50,26 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
+      - name: Report npm audit details (informational)
+        run: |
+          npm audit --json > npm-audit.json || true
+          node <<'NODE'
+          const fs = require('fs');
+          const audit = JSON.parse(fs.readFileSync('npm-audit.json', 'utf8'));
+          const summary = audit.metadata?.vulnerabilities ?? {};
+          console.log('npm audit summary:', JSON.stringify(summary));
+          for (const [name, vuln] of Object.entries(audit.vulnerabilities ?? {})) {
+            console.log(
+              `PACKAGE: ${name} | SEVERITY: ${vuln.severity} | DIRECT: ${vuln.isDirect} | RANGE: ${vuln.range} | FIX: ${JSON.stringify(vuln.fixAvailable)}`
+            );
+            for (const issue of vuln.via ?? []) {
+              if (typeof issue === 'object') {
+                console.log(`  ADVISORY: ${issue.title} | ${issue.url} | RANGE: ${issue.range}`);
+              }
+            }
+          }
+          NODE
+
       - name: Build Vite assets
         run: npm run build
 
