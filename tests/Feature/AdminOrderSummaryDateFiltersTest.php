@@ -77,7 +77,7 @@ class AdminOrderSummaryDateFiltersTest extends TestCase
         string $orderStatus,
         string $paymentStatus,
         float $total,
-        \Illuminate\Support\Carbon|\Carbon\Carbon $createdAt
+        \Illuminate\Support\Carbon $createdAt
     ): Order {
         $order = Order::create([
             'user_id' => $customer->id,
