@@ -3,6 +3,8 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="SecureView Portal for CCTV products, service scheduling, order management, and customer support.">
+        <title inertia>SecureView Portal</title>
 
         <script>
             (() => {
