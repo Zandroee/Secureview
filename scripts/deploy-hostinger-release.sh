@@ -27,7 +27,7 @@ fail() {
 [[ -d "$PUBLIC_DIR" ]] || fail "Web root was not found at $PUBLIC_DIR"
 [[ "${SECUREVIEW_DB_BACKUP_CONFIRMED:-}" == "YES" ]] || fail "Confirm a recent, verified Hostinger database backup first, then rerun with SECUREVIEW_DB_BACKUP_CONFIRMED=YES."
 
-for command_name in sha256sum unzip find grep curl cmp awk; do
+for command_name in sha256sum unzip find grep curl cmp awk mktemp; do
     command -v "$command_name" >/dev/null 2>&1 || fail "Required command is missing: $command_name"
 done
 command -v "$PHP_BIN" >/dev/null 2>&1 || fail "PHP CLI was not found: $PHP_BIN"
@@ -51,7 +51,9 @@ unzip -t "$ZIP_PATH" >/dev/null || fail "Release ZIP integrity check failed."
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_ROOT="$APP_DIR/storage/app/deploy-backups/$STAMP"
 STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/secureview-release.XXXXXX")"
+FILE_LIST="$(mktemp "${TMPDIR:-/tmp}/secureview-release-files.XXXXXX")"
 cleanup() {
+    rm -f "$FILE_LIST"
     rm -rf "$STAGE_DIR"
 }
 trap cleanup EXIT
@@ -59,9 +61,15 @@ trap cleanup EXIT
 unzip -q "$ZIP_PATH" -d "$STAGE_DIR"
 [[ -f "$STAGE_DIR/build/manifest.json" ]] || fail "Release is missing build/manifest.json."
 [[ -f "$STAGE_DIR/app/Http/Controllers/InquiryController.php" ]] || fail "Release is missing an expected application controller."
+[[ -f "$STAGE_DIR/app/Http/Controllers/Admin/VoucherController.php" ]] || fail "Release is missing the voucher administration controller."
+[[ -f "$STAGE_DIR/app/Services/VoucherService.php" ]] || fail "Release is missing the voucher validation service."
+[[ -f "$STAGE_DIR/app/Services/PayMongoLineItemBuilder.php" ]] || fail "Release is missing the discounted payment line-item builder."
 [[ -f "$STAGE_DIR/database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php" ]] || fail "Release is missing the cancelled-payment-status migration."
+[[ -f "$STAGE_DIR/database/migrations/2026_10_27_000001_create_vouchers_and_add_order_discounts.php" ]] || fail "Release is missing the voucher/order-discount migration."
 
 mkdir -p "$BACKUP_ROOT/files" "$BACKUP_ROOT/app-public" "$BACKUP_ROOT/web-public"
+
+find "$STAGE_DIR" -type f -print0 > "$FILE_LIST"
 
 echo "=== 3. Back up files that will be replaced ==="
 while IFS= read -r -d '' staged_file; do
@@ -82,7 +90,7 @@ while IFS= read -r -d '' staged_file; do
         mkdir -p "$(dirname "$backup_target")"
         cp -a "$target" "$backup_target"
     fi
-done < <(find "$STAGE_DIR" -type f -print0)
+done < "$FILE_LIST"
 
 ENV_HASH_BEFORE="$(sha256sum "$APP_DIR/.env" | awk '{print $1}')"
 if [[ -e "$APP_DIR/public/build" ]]; then
@@ -104,7 +112,7 @@ while IFS= read -r -d '' staged_file; do
     target="$APP_DIR/$relative_path"
     mkdir -p "$(dirname "$target")"
     cp -a "$staged_file" "$target"
-done < <(find "$STAGE_DIR" -type f -print0)
+done < "$FILE_LIST"
 
 mkdir -p "$APP_DIR/public/build" "$PUBLIC_DIR/build"
 cp -a "$STAGE_DIR/build/." "$APP_DIR/public/build/"
@@ -116,7 +124,7 @@ cmp -s "$APP_DIR/public/build/manifest.json" "$PUBLIC_DIR/build/manifest.json" |
 
 echo "=== 5. Inspect migrations and apply only outstanding migrations ==="
 cd "$APP_DIR"
-"$PHP_BIN" artisan about
+"$PHP_BIN" artisan --version
 "$PHP_BIN" artisan migrate:status
 "$PHP_BIN" artisan migrate --force
 "$PHP_BIN" artisan optimize:clear

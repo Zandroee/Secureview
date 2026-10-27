@@ -51,6 +51,12 @@ const menuGroups = [
             icon: "bi-bag-check",
         },
         {
+            label: "Promotions & Vouchers",
+            href: "/admin/vouchers",
+            key: "vouchers",
+            icon: "bi-ticket-perforated",
+        },
+        {
             label: "Orders History",
             href: "/admin/order-history",
             key: "order-history",

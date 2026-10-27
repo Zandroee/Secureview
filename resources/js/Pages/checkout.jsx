@@ -1,7 +1,8 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
-import { Link, useForm } from "@inertiajs/react";
+import { Link, router, useForm, usePage } from "@inertiajs/react";
 import ServiceLocationPicker from "../Components/GoogleMaps/ServiceLocation";
+import { useState } from "react";
 
 const paymentMethods = [
     {
@@ -51,6 +52,11 @@ export default function Checkout({
     orderNumber,
     paymentMethod,
 }) {
+    const { props: pageProps } = usePage();
+    const pageErrors = pageProps.errors ?? {};
+    const [voucherCode, setVoucherCode] = useState(String(cart?.voucher?.code ?? ""));
+    const [voucherProcessing, setVoucherProcessing] = useState(false);
+
     const { data, setData, post, processing, errors } = useForm({
         customer_name: customer?.name ?? "",
         customer_phone: customer?.phone ?? "",
@@ -67,6 +73,7 @@ export default function Checkout({
     const items = cart?.items ?? [];
     const subtotal = Number(cart?.subtotal ?? 0);
     const shippingFee = Number(cart?.shipping_fee ?? 0);
+    const discountAmount = Number(cart?.discount_amount ?? 0);
     const total = Number(cart?.total ?? 0);
 
     const totalQuantity = items.reduce(
@@ -666,6 +673,65 @@ export default function Checkout({
                                     ))}
                                 </div>
 
+                                <div className="rounded-3 p-3 mt-3 border bg-light" aria-label="Voucher code">
+                                    <div className="fw-bold small mb-2">
+                                        <i className="bi bi-ticket-perforated text-primary me-2" aria-hidden="true"></i>
+                                        DISCOUNT PROMO / VOUCHER
+                                    </div>
+                                    <form
+                                        className="d-flex gap-2"
+                                        onSubmit={(event) => {
+                                            event.preventDefault();
+                                            setVoucherProcessing(true);
+                                            router.post("/checkout/voucher", { code: voucherCode }, {
+                                                preserveScroll: true,
+                                                onFinish: () => setVoucherProcessing(false),
+                                            });
+                                        }}
+                                    >
+                                        <input
+                                            type="text"
+                                            className={"form-control text-uppercase" + (pageErrors.voucher ? " is-invalid" : "")}
+                                            value={voucherCode}
+                                            onChange={(event) => setVoucherCode(event.target.value.toUpperCase())}
+                                            maxLength={50}
+                                            placeholder="Enter voucher code"
+                                            aria-label="Voucher code"
+                                            autoComplete="off"
+                                        />
+                                        <button type="submit" className="btn btn-primary fw-semibold flex-shrink-0" disabled={voucherProcessing}>
+                                            {voucherProcessing ? "Checking..." : "Apply"}
+                                        </button>
+                                    </form>
+                                    {pageErrors.voucher && <div className="small text-danger mt-2" role="alert">{pageErrors.voucher}</div>}
+                                    {pageErrors.cart && <div className="small text-danger mt-2" role="alert">{pageErrors.cart}</div>}
+                                    {pageProps.flash?.success && <div className="small text-success mt-2" role="status">{pageProps.flash.success}</div>}
+                                    {cart?.voucher && (
+                                        <div className="d-flex justify-content-between align-items-start gap-2 mt-3">
+                                            <div className="small">
+                                                <div className="fw-bold text-success"><i className="bi bi-check-circle-fill me-1" aria-hidden="true"></i>{cart.voucher.code} applied</div>
+                                                <div className="text-muted">{cart.voucher.name}</div>
+                                                {cart.voucher.description && <div className="text-muted">{cart.voucher.description}</div>}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="btn btn-link btn-sm p-0 text-danger"
+                                                disabled={voucherProcessing}
+                                                onClick={() => {
+                                                    setVoucherProcessing(true);
+                                                    setVoucherCode("");
+                                                    router.post("/checkout/voucher", { code: "" }, {
+                                                        preserveScroll: true,
+                                                        onFinish: () => setVoucherProcessing(false),
+                                                    });
+                                                }}
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="rounded-3 p-3 mt-3 checkout-order-summary">
                                     <div className="d-flex justify-content-between mb-2">
                                         <span className="text-muted small">
@@ -686,6 +752,15 @@ export default function Checkout({
                                             ₱{subtotal.toLocaleString()}
                                         </span>
                                     </div>
+
+                                    {discountAmount > 0 && (
+                                        <div className="d-flex justify-content-between mb-2 text-success">
+                                            <span className="small">
+                                                Voucher discount{cart?.voucher?.code ? " (" + cart.voucher.code + ")" : ""}
+                                            </span>
+                                            <span className="fw-semibold small">−₱{discountAmount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
 
                                     <div className="d-flex justify-content-between mb-3">
                                         <span className="text-muted small">

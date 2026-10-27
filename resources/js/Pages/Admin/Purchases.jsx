@@ -887,6 +887,12 @@ export default function AdminPurchases({
                                     ).toLocaleString()}
                                 </span>
                             </div>
+                            {Number(viewingOrder.discount_amount ?? 0) > 0 && (
+                                <div className="d-flex justify-content-between mt-2 text-success">
+                                    <span className="small">VOUCHER DISCOUNT{viewingOrder.voucher_code ? " (" + viewingOrder.voucher_code + ")" : ""}</span>
+                                    <span className="fw-semibold">−₱{Number(viewingOrder.discount_amount).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
 
                             {Number(viewingOrder.installation_fee ?? 0) > 0 && (
                                 <div className="d-flex justify-content-between mt-1">
