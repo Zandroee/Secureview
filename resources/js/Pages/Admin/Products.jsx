@@ -440,12 +440,20 @@ export default function AdminProducts({
     };
 
     const updateStock = (product) => {
+        const rawQuantity = String(stockValues[product.id] ?? "").trim();
+        const quantity = Number(rawQuantity);
+
+        if (!rawQuantity || !Number.isSafeInteger(quantity) || quantity < 0 || quantity > 100000) {
+            window.alert("Enter a whole-number stock quantity from 0 to 100,000.");
+            return;
+        }
+
         setSavingId(product.id);
 
         router.patch(
             "/admin/products/" + product.id + "/stock",
             {
-                stock_quantity: Number(stockValues[product.id] ?? 0),
+                stock_quantity: quantity,
             },
             {
                 preserveScroll: true,
@@ -744,6 +752,7 @@ export default function AdminProducts({
                                                         id={"admin-product-stock-" + product.id}
                                                         type="number"
                                                         min="0"
+                                                        max="100000"
                                                         step="1"
                                                         className="form-control form-control-sm"
                                                         value={stockValues[product.id] ?? 0}
@@ -865,6 +874,7 @@ export default function AdminProducts({
                                                             <input
                                                                 type="number"
                                                                 min="0"
+                                                                max="100000"
                                                                 step="1"
                                                                 className="form-control form-control-sm mb-2"
                                                                 aria-label={"Stock quantity for " + product.name}
@@ -1062,6 +1072,7 @@ export default function AdminProducts({
                                                 value={productForm.data.stock_quantity}
                                                 onChange={(event) => productForm.setData("stock_quantity", event.target.value === "" ? "" : Math.max(0, Number(event.target.value)))}
                                                 min="0"
+                                                max="100000"
                                                 step="1"
                                                 required
                                             />
