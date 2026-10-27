@@ -197,7 +197,7 @@ class TechnicianWorkspaceTest extends TestCase
                 ->has('serviceHistory.data', 1)
                 ->where('serviceHistory.data.0.customer_name', $customer->name)
                 ->missing('serviceHistory.data.0.customer_phone')
-                ->missing('serviceHistory.data.0.street_address')
+                ->where('serviceHistory.data.0.street_address', null)
                 ->missing('serviceHistory.data.0.payment_status')
             );
     }
@@ -317,7 +317,7 @@ class TechnicianWorkspaceTest extends TestCase
                 ->where('jobs.0.id', $inquiry->id)
                 ->where('jobs.0.status', 'pending')
                 ->where('jobs.0.customer_name', $customer->name)
-                ->where('jobs.0.customer_phone', '09171234567')
+                ->missing('jobs.0.customer_phone')
                 ->missing('jobs.0.payment_method'));
     }
 
