@@ -32,8 +32,12 @@ class VoucherController extends Controller
                 'discount_value' => (float) $voucher->discount_value,
                 'minimum_subtotal' => (float) $voucher->minimum_subtotal,
                 'maximum_discount' => $voucher->maximum_discount === null ? null : (float) $voucher->maximum_discount,
-                'starts_at' => $voucher->starts_at?->format('Y-m-d\\TH:i'),
-                'expires_at' => $voucher->expires_at?->format('Y-m-d\\TH:i'),
+                'starts_at' => $voucher->starts_at !== null
+                    ? Carbon::parse($voucher->starts_at, config('app.timezone', 'UTC'))->format('Y-m-d\\TH:i')
+                    : null,
+                'expires_at' => $voucher->expires_at !== null
+                    ? Carbon::parse($voucher->expires_at, config('app.timezone', 'UTC'))->format('Y-m-d\\TH:i')
+                    : null,
                 'usage_limit' => $voucher->usage_limit,
                 'per_user_limit' => $voucher->per_user_limit,
                 'is_active' => (bool) $voucher->is_active,
@@ -97,14 +101,27 @@ class VoucherController extends Controller
             'is_active' => ['required', 'boolean'],
         ]);
 
-        if (
-            !empty($data['starts_at']) &&
-            !empty($data['expires_at']) &&
-            Carbon::parse($data['expires_at'])->lt(Carbon::parse($data['starts_at']))
-        ) {
+        $timezone = config('app.timezone', 'UTC');
+        $startsAt = filled($data['starts_at'] ?? null)
+            ? Carbon::parse($data['starts_at'], $timezone)
+            : null;
+        $expiresAt = filled($data['expires_at'] ?? null)
+            ? Carbon::parse($data['expires_at'], $timezone)
+            : null;
+
+        if ($startsAt && $expiresAt && $expiresAt->lt($startsAt)) {
             throw ValidationException::withMessages([
                 'expires_at' => 'The expiration must be after the start date.',
             ]);
+        }
+
+        // HTML datetime-local values represent wall-clock time in the app timezone.
+        // Store normalized Y-m-d H:i:s strings in DATETIME columns (no timezone shift).
+        foreach (['starts_at', 'expires_at'] as $field) {
+            $value = $data[$field] ?? null;
+            $data[$field] = filled($value)
+                ? Carbon::parse($value, $timezone)->format('Y-m-d H:i:s')
+                : null;
         }
 
         if ($data['discount_type'] === 'fixed') {
