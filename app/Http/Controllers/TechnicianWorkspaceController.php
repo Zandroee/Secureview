@@ -686,6 +686,10 @@ class TechnicianWorkspaceController extends Controller
                 throw ValidationException::withMessages(['quantity_change' => 'Stock cannot be reduced below zero.']);
             }
 
+            if ($next > 100000) {
+                throw ValidationException::withMessages(['quantity_change' => 'Stock cannot exceed 100,000 units.']);
+            }
+
             $lockedProduct->update(['stock_quantity' => $next]);
 
             InventoryAdjustment::create([
