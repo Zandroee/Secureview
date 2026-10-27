@@ -17,8 +17,6 @@ class Voucher extends Model
         'discount_value' => 'float',
         'minimum_subtotal' => 'float',
         'maximum_discount' => 'float',
-        'starts_at' => 'datetime',
-        'expires_at' => 'datetime',
         'usage_limit' => 'integer',
         'per_user_limit' => 'integer',
         'is_active' => 'boolean',
