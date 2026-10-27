@@ -368,6 +368,12 @@ export default function Invoice({ invoice }) {
                                 <span className="text-muted">Items subtotal</span>
                                 <span>{peso(invoice.subtotal)}</span>
                             </div>
+                            {Number(invoice.discount_amount) > 0 && (
+                                <div className="d-flex justify-content-between py-2 text-success">
+                                    <span className="text-muted">Voucher discount{invoice.voucher_code ? " (" + invoice.voucher_code + ")" : ""}</span>
+                                    <span>−{peso(invoice.discount_amount)}</span>
+                                </div>
+                            )}
                             {Number(invoice.installation_fee) > 0 && (
                                 <div className="d-flex justify-content-between py-2">
                                     <span className="text-muted">Installation fee</span>
