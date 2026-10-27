@@ -207,9 +207,33 @@ class AdminProductManagementTest extends TestCase
             ]))
             ->assertSessionHasErrors(['price', 'stock_quantity']);
 
+        $this->actingAs($admin)
+            ->post(route('admin.products.store'), $this->validProduct([
+                'stock_quantity' => 100001,
+            ]))
+            ->assertSessionHasErrors(['stock_quantity']);
+
         $this->assertDatabaseCount('products', 0);
     }
 
+
+    public function test_product_category_whitespace_is_normalized_when_created(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.products.store'), $this->validProduct([
+                'name' => 'Category Normalization Camera',
+                'category' => "  IP   Cameras  ",
+            ]))
+            ->assertRedirect(route('admin.products.index'));
+
+        $product = Product::query()
+            ->where('name', 'Category Normalization Camera')
+            ->firstOrFail();
+
+        $this->assertSame('IP Cameras', $product->category);
+    }
 
     public function test_admin_cannot_delete_a_product_referenced_by_a_cart(): void
     {

@@ -44,7 +44,7 @@ class TechnicianWorkspaceController extends Controller
             ->orderByDesc('updated_at')
             ->paginate(12)
             ->withQueryString()
-            ->through(fn (Inquiry $inquiry) => $this->jobData($inquiry, true));
+            ->through(fn (Inquiry $inquiry) => $this->jobData($inquiry, true, false, false, false));
 
         $jobs = $this->assignedInquiryQuery($technician)
             ->with(['technicians:id,name,email', 'technician:id,name,email', 'serviceRecord.items', 'pendingCheckout.order'])
@@ -55,7 +55,13 @@ class TechnicianWorkspaceController extends Controller
             ->orderByRaw("CASE WHEN status != 'completed' THEN preferred_date END ASC")
             ->limit(100)
             ->get()
-            ->map(fn (Inquiry $inquiry) => $this->jobData($inquiry, true))
+            ->map(fn (Inquiry $inquiry) => $this->jobData(
+                $inquiry,
+                true,
+                in_array($inquiry->status, ['confirmed', 'in_progress'], true),
+                true,
+                in_array($inquiry->status, ['confirmed', 'in_progress'], true)
+            ))
             ->values();
 
         // Include both current team assignments and legacy technician_id assignments.
@@ -686,6 +692,10 @@ class TechnicianWorkspaceController extends Controller
                 throw ValidationException::withMessages(['quantity_change' => 'Stock cannot be reduced below zero.']);
             }
 
+            if ($next > 100000) {
+                throw ValidationException::withMessages(['quantity_change' => 'Stock cannot exceed 100,000 units.']);
+            }
+
             $lockedProduct->update(['stock_quantity' => $next]);
 
             InventoryAdjustment::create([
@@ -734,7 +744,8 @@ class TechnicianWorkspaceController extends Controller
         Inquiry $inquiry,
         bool $includeCustomerDetails,
         bool $includePreciseLocation = true,
-        bool $includePaymentStatus = true
+        bool $includePaymentStatus = true,
+        bool $includeCustomerContact = true
     ): array
     {
         $assignedTechnicians = $inquiry->technicians;
@@ -798,7 +809,9 @@ class TechnicianWorkspaceController extends Controller
 
         if ($includeCustomerDetails) {
             $data['customer_name'] = $inquiry->customer_name;
-            $data['customer_phone'] = $inquiry->customer_phone;
+            if ($includeCustomerContact) {
+                $data['customer_phone'] = $inquiry->customer_phone;
+            }
             // Notes may contain access instructions or sensitive location details.
             $data['notes'] = $includePreciseLocation ? $inquiry->notes : null;
         }

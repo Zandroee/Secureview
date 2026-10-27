@@ -181,6 +181,27 @@ class TechnicianWorkspaceTest extends TestCase
                 ->has('scheduleData', 1));
     }
 
+    public function test_technician_service_history_hides_customer_contact_and_exact_location(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $customer = User::factory()->create(['role' => 'user']);
+        $inquiry = $this->makeInquiry($customer, today()->subDays(3)->toDateString(), 'completed');
+        $inquiry->update(['technician_id' => $technician->id]);
+        $inquiry->technicians()->attach($technician->id, ['assigned_by' => $admin->id]);
+
+        $this->actingAs($technician)
+            ->get(route('technician.service-history'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('serviceHistory.data', 1)
+                ->where('serviceHistory.data.0.customer_name', $customer->name)
+                ->missing('serviceHistory.data.0.customer_phone')
+                ->where('serviceHistory.data.0.street_address', null)
+                ->missing('serviceHistory.data.0.payment_status')
+            );
+    }
+
     public function test_admin_announcement_is_delivered_to_technician_notifications(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -296,7 +317,7 @@ class TechnicianWorkspaceTest extends TestCase
                 ->where('jobs.0.id', $inquiry->id)
                 ->where('jobs.0.status', 'pending')
                 ->where('jobs.0.customer_name', $customer->name)
-                ->where('jobs.0.customer_phone', '09171234567')
+                ->missing('jobs.0.customer_phone')
                 ->missing('jobs.0.payment_method'));
     }
 
@@ -490,6 +511,11 @@ class TechnicianWorkspaceTest extends TestCase
         $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
             'quantity_change' => 100001,
             'reason' => 'Excessive positive adjustment',
+        ])->assertSessionHasErrors('quantity_change');
+
+        $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
+            'quantity_change' => 100000,
+            'reason' => 'Resulting stock would exceed maximum',
         ])->assertSessionHasErrors('quantity_change');
 
         $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [

@@ -13,7 +13,24 @@ function searchableValues(value) {
 }
 
 function normalize(value) {
-    return String(value ?? "").trim().toLocaleLowerCase();
+    return String(value ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
+function distinctDisplayValues(values) {
+    const options = new Map();
+
+    values.forEach((value) => {
+        const display = String(value ?? "").trim().replace(/\s+/g, " ");
+        const key = normalize(display);
+        if (key && !options.has(key)) options.set(key, display);
+    });
+
+    return [...options.values()].sort((a, b) => a.localeCompare(b));
+}
+
+function isMobileFiltersViewport() {
+    return typeof window !== "undefined"
+        && window.matchMedia("(max-width: 991.98px)").matches;
 }
 
 function money(value) {
@@ -34,6 +51,21 @@ export default function Products({ products = [] }) {
     const [availability, setAvailability] = useState("all");
     const [sortBy, setSortBy] = useState("recommended");
     const [currentPage, setCurrentPage] = useState(1);
+    const [isMobileFilterLayout, setIsMobileFilterLayout] = useState(isMobileFiltersViewport);
+    const [filtersOpen, setFiltersOpen] = useState(() => !isMobileFiltersViewport());
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia("(max-width: 991.98px)");
+        const synchronizeFilterLayout = () => {
+            const isMobile = mediaQuery.matches;
+            setIsMobileFilterLayout(isMobile);
+            setFiltersOpen(!isMobile);
+        };
+
+        synchronizeFilterLayout();
+        mediaQuery.addEventListener("change", synchronizeFilterLayout);
+        return () => mediaQuery.removeEventListener("change", synchronizeFilterLayout);
+    }, []);
 
     useEffect(() => {
         setSearch(searchFromUrl);
@@ -41,14 +73,12 @@ export default function Products({ products = [] }) {
     }, [searchFromUrl]);
 
     const productCategories = useMemo(
-        () => [...new Set(products.map((product) => String(product.category ?? "").trim()).filter(Boolean))]
-            .sort((a, b) => a.localeCompare(b)),
+        () => distinctDisplayValues(products.map((product) => product.category)),
         [products]
     );
 
     const productBrands = useMemo(
-        () => [...new Set(products.map((product) => String(product.brand ?? "").trim()).filter(Boolean))]
-            .sort((a, b) => a.localeCompare(b)),
+        () => distinctDisplayValues(products.map((product) => product.brand)),
         [products]
     );
 
@@ -181,12 +211,24 @@ export default function Products({ products = [] }) {
                             <div className="card-body p-3 p-xl-4">
                                 <div className="d-flex justify-content-between align-items-center gap-2 mb-3">
                                     <h2 className="products-filter-title h5 mb-0">Filters</h2>
-                                    <button type="button" className="btn btn-link btn-sm p-0 text-decoration-none" onClick={resetFilters} disabled={activeFilters.length === 0 && sortBy === "recommended"}>
-                                        Reset all
-                                    </button>
+                                    <div className="d-flex align-items-center gap-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-secondary btn-sm d-lg-none"
+                                            onClick={() => setFiltersOpen((open) => !open)}
+                                            aria-expanded={filtersOpen}
+                                            aria-controls="product-filter-controls"
+                                        >
+                                            {filtersOpen ? "Hide filters" : `Show filters${activeFilters.length ? ` (${activeFilters.length})` : ""}`}
+                                        </button>
+                                        <button type="button" className="btn btn-link btn-sm p-0 text-decoration-none" onClick={resetFilters} disabled={activeFilters.length === 0 && sortBy === "recommended"}>
+                                            Reset all
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div className="mb-4">
+                                <div id="product-filter-controls" hidden={isMobileFilterLayout && !filtersOpen}>
+                                    <div className="mb-4">
                                     <h3 className="h6 fw-bold mb-2">Category</h3>
                                     {productCategories.length ? productCategories.map((item) => (
                                         <div className="form-check mb-1" key={item}>
@@ -257,9 +299,10 @@ export default function Products({ products = [] }) {
                                     </select>
                                 </div>
 
-                                <button type="button" className="btn btn-primary w-100 fw-semibold" onClick={resetFilters} disabled={activeFilters.length === 0 && sortBy === "recommended"}>
-                                    <i className="bi bi-arrow-counterclockwise me-2" />Reset filters
-                                </button>
+                                    <button type="button" className="btn btn-primary w-100 fw-semibold" onClick={resetFilters} disabled={activeFilters.length === 0 && sortBy === "recommended"}>
+                                        <i className="bi bi-arrow-counterclockwise me-2" />Reset filters
+                                    </button>
+                                </div>
                             </div>
                         </section>
                     </aside>

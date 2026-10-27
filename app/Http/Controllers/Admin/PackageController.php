@@ -453,7 +453,7 @@ class PackageController extends Controller
         return [
             'name' => $validated['name'],
             'brand' => filled($validated['brand'] ?? null) ? trim($validated['brand']) : null,
-            'category' => $validated['category'],
+            'category' => trim(preg_replace('/\\s+/u', ' ', $validated['category']) ?? ''),
             'warranty' => $validated['warranty'],
             'price' => $validated['price'],
             'installation_fee' => filled($validated['installation_fee'] ?? null) ? (float) $validated['installation_fee'] : null,

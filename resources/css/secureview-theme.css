@@ -2532,6 +2532,7 @@ html[data-bs-theme="dark"] .review-form-panel .fw-bold {
 
 .secureview-chatbot :where(button, input):focus-visible,
 .admin-product-filter-summary:focus-visible,
+.catalog-listing-main :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
 .admin-page :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
     outline: 3px solid #1d4ed8;
     outline-offset: 3px;
@@ -2539,6 +2540,7 @@ html[data-bs-theme="dark"] .review-form-panel .fw-bold {
 
 html[data-bs-theme="dark"] .secureview-chatbot :where(button, input):focus-visible,
 html[data-bs-theme="dark"] .admin-product-filter-summary:focus-visible,
+html[data-bs-theme="dark"] .catalog-listing-main :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
 html[data-bs-theme="dark"] .admin-page :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
     outline-color: #67e8f9;
 }
@@ -2609,5 +2611,14 @@ html[data-bs-theme="dark"] .admin-order-history-mobile-card {
 @media (prefers-reduced-motion: reduce) {
     .admin-product-filter-summary > i:last-child {
         transition: none !important;
+    }
+}
+
+
+/* Reserve space for the fixed chat launcher so it is less likely to cover
+   the final catalog action, pagination, or footer links on narrow screens. */
+@media (max-width: 575.98px) {
+    body {
+        padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
     }
 }

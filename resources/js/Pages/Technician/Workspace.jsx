@@ -543,6 +543,8 @@ export default function TechnicianWorkspace({ jobs = [], openJobs = [], inventor
             quantityError = "An adjustment must be between -100,000 and 100,000 units.";
         } else if (quantityChange < -currentStock) {
             quantityError = "Stock cannot be reduced below zero. Current stock is " + currentStock + " units.";
+        } else if (quantityChange > 100000 - currentStock) {
+            quantityError = "Stock cannot exceed 100,000 units.";
         }
 
         let reasonError = "";

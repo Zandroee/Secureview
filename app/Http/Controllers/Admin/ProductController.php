@@ -307,7 +307,7 @@ class ProductController extends Controller
         AdminActivityLogger $activityLogger
     ) {
         $validated = $request->validate([
-            'stock_quantity' => ['required', 'integer', 'min:0'],
+            'stock_quantity' => ['required', 'integer', 'min:0', 'max:100000'],
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -365,7 +365,7 @@ class ProductController extends Controller
             'warranty' => ['required', 'string', 'max:120'],
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
             'installation_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
-            'stock_quantity' => ['required', 'integer', 'min:0'],
+            'stock_quantity' => ['required', 'integer', 'min:0', 'max:100000'],
             'stock_reason' => ['nullable', 'string', 'max:255'],
             'badge' => ['nullable', 'string', 'max:80'],
             'image' => ['nullable', 'string', 'max:2048'],
@@ -392,7 +392,7 @@ class ProductController extends Controller
         return [
             'name' => trim($validated['name']),
             'brand' => filled($validated['brand'] ?? null) ? trim($validated['brand']) : null,
-            'category' => trim($validated['category']),
+            'category' => trim(preg_replace('/\\s+/u', ' ', $validated['category']) ?? ''),
             'warranty' => trim($validated['warranty']),
             'price' => $validated['price'],
             'installation_fee' => filled($validated['installation_fee'] ?? null) ? (float) $validated['installation_fee'] : null,

@@ -69,6 +69,7 @@ export default function ProductCard({
                             alt={name}
                             className="w-100 h-100 secureview-catalog-card-image"
                             loading="lazy"
+                            decoding="async"
                             onError={() => setFailedImageUrl(imageUrl)}
                             style={{
                                 objectFit: "contain",
