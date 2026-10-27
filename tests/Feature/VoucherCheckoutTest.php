@@ -41,7 +41,7 @@ class VoucherCheckoutTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
-        $this->assertSame($voucher->id, $order->voucher_id);
+        $this->assertEquals($voucher->id, $order->voucher_id);
         $this->assertSame('SAVE10', $order->voucher_code);
         $this->assertEquals(500, $order->subtotal);
         $this->assertEquals(40, $order->discount_amount);
