@@ -11,8 +11,11 @@ class Order extends Model
 {
     protected $fillable = [
         'user_id',
+        'voucher_id',
+        'voucher_code',
         'order_number',
         'subtotal',
+        'discount_amount',
         'shipping_fee',
         'installation_fee',
         'service_priority_fee',
@@ -38,6 +41,7 @@ class Order extends Model
 
     protected $casts = [
         'subtotal' => 'float',
+        'discount_amount' => 'float',
         'shipping_fee' => 'float',
         'installation_fee' => 'float',
         'service_priority_fee' => 'float',
@@ -47,6 +51,11 @@ class Order extends Model
         'delivery_latitude' => 'float',
         'delivery_longitude' => 'float',
     ];
+
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(Voucher::class);
+    }
 
     public function user(): BelongsTo
     {
