@@ -493,6 +493,11 @@ class TechnicianWorkspaceTest extends TestCase
         ])->assertSessionHasErrors('quantity_change');
 
         $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
+            'quantity_change' => 100000,
+            'reason' => 'Resulting stock would exceed maximum',
+        ])->assertSessionHasErrors('quantity_change');
+
+        $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
             'quantity_change' => 0,
             'reason' => 'No change',
         ])->assertSessionHasErrors('quantity_change');
