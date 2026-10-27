@@ -9,6 +9,9 @@ use App\Models\PendingInquiryCheckout;
 use App\Models\Product;
 use App\Models\Package;
 use App\Services\InventoryService;
+use App\Services\VoucherService;
+use App\Services\PayMongoLineItemBuilder;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -91,6 +94,90 @@ class CheckoutController extends Controller
         ];
     }
 
+
+    private function currentCheckoutSubtotal(Request $request): float
+    {
+        if ($request->session()->has('buy_now')) {
+            $buyNow = $this->selectedBuyNowItem($request);
+            if (!$buyNow || isset($buyNow['error'])) {
+                throw ValidationException::withMessages([
+                    'cart' => $buyNow['error'] ?? 'Your Buy Now selection is no longer available.',
+                ]);
+            }
+            return round((float) $buyNow['purchasable']->price * (int) $buyNow['quantity'], 2);
+        }
+
+        $cart = $request->user()->cart;
+        if (!$cart) {
+            throw ValidationException::withMessages(['cart' => 'Your cart is empty.']);
+        }
+        $cart->load('items.purchasable');
+        if ($cart->items->isEmpty()) {
+            throw ValidationException::withMessages(['cart' => 'Your cart is empty.']);
+        }
+
+        $subtotal = 0.0;
+        foreach ($cart->items as $cartItem) {
+            if (!$cartItem->purchasable) {
+                throw ValidationException::withMessages([
+                    'cart' => 'An item in your cart is no longer available.',
+                ]);
+            }
+            $subtotal += (float) $cartItem->purchasable->price * (int) $cartItem->quantity;
+        }
+        return round($subtotal, 2);
+    }
+
+    private function checkoutVoucherQuote(Request $request, float $subtotal): array
+    {
+        $code = trim((string) $request->session()->get('checkout_voucher_code', ''));
+        if ($code === '') {
+            return ['voucher' => null, 'discount_amount' => 0.0];
+        }
+
+        try {
+            $quote = app(VoucherService::class)->quote($code, $request->user(), $subtotal);
+        } catch (ValidationException $exception) {
+            $request->session()->forget('checkout_voucher_code');
+            throw $exception;
+        }
+
+        return [
+            'voucher' => [
+                'id' => $quote['voucher']->id,
+                'code' => $quote['voucher']->code,
+                'name' => $quote['voucher']->name,
+                'description' => $quote['voucher']->description,
+            ],
+            'discount_amount' => (float) $quote['discount_amount'],
+        ];
+    }
+
+    public function applyVoucher(Request $request, VoucherService $vouchers)
+    {
+        $validated = $request->validate([
+            'code' => ['nullable', 'string', 'max:50'],
+        ]);
+        $code = strtoupper(trim((string) ($validated['code'] ?? '')));
+
+        if ($code === '') {
+            $request->session()->forget('checkout_voucher_code');
+            return redirect()->route('checkout')->with('success', 'Voucher removed.');
+        }
+
+        // A failed replacement must not silently leave a previously valid code active.
+        $request->session()->forget('checkout_voucher_code');
+        try {
+            $subtotal = $this->currentCheckoutSubtotal($request);
+            $vouchers->quote($code, $request->user(), $subtotal);
+        } catch (ValidationException $exception) {
+            return redirect()->route('checkout')->withErrors($exception->errors());
+        }
+
+        $request->session()->put('checkout_voucher_code', $code);
+        return redirect()->route('checkout')->with('success', 'Voucher ' . $code . ' applied.');
+    }
+
     public function index(Request $request, InventoryService $inventory)
     {
         $orderNumber = $request->session()->get('orderNumber');
@@ -156,6 +243,12 @@ class CheckoutController extends Controller
             $subtotal = $items->sum('subtotal');
             $shippingFee = 0;
 
+            try {
+                $voucherQuote = $this->checkoutVoucherQuote($request, (float) $subtotal);
+            } catch (ValidationException $exception) {
+                return redirect()->route('checkout')->withErrors($exception->errors());
+            }
+
             return Inertia::render('checkout', [
                 'customer' => [
                     'name' => $request->user()->name,
@@ -165,8 +258,10 @@ class CheckoutController extends Controller
                 'cart' => [
                     'items' => $items,
                     'subtotal' => (float) $subtotal,
+                    'discount_amount' => (float) $voucherQuote['discount_amount'],
+                    'voucher' => $voucherQuote['voucher'],
                     'shipping_fee' => (float) $shippingFee,
-                    'total' => (float) ($subtotal + $shippingFee),
+                    'total' => (float) round($subtotal + $shippingFee - (float) $voucherQuote['discount_amount'], 2),
                 ],
                 'success' => false,
                 'orderNumber' => null,
@@ -198,9 +293,9 @@ class CheckoutController extends Controller
                 'type' => $purchasable instanceof \App\Models\Package ? 'package' : 'product',
                 'name' => $purchasable?->name,
                 'image' => $purchasable?->image,
-                'price' => (float) $item->price,
+                'price' => (float) ($purchasable?->price ?? $item->price),
                 'quantity' => (int) $item->quantity,
-                'subtotal' => (float) $item->price * (int) $item->quantity,
+                'subtotal' => (float) ($purchasable?->price ?? $item->price) * (int) $item->quantity,
                 'available_stock' => $purchasable
                     ? $inventory->getAvailableStock($purchasable)
                     : 0,
@@ -209,6 +304,12 @@ class CheckoutController extends Controller
 
         $subtotal = $items->sum('subtotal');
         $shippingFee = 0;
+
+        try {
+            $voucherQuote = $this->checkoutVoucherQuote($request, (float) $subtotal);
+        } catch (ValidationException $exception) {
+            return redirect()->route('checkout')->withErrors($exception->errors());
+        }
 
         return Inertia::render('checkout', [
             'customer' => [
@@ -219,8 +320,10 @@ class CheckoutController extends Controller
             'cart' => [
                 'items' => $items,
                 'subtotal' => (float) $subtotal,
+                'discount_amount' => (float) $voucherQuote['discount_amount'],
+                'voucher' => $voucherQuote['voucher'],
                 'shipping_fee' => (float) $shippingFee,
-                'total' => (float) ($subtotal + $shippingFee),
+                'total' => (float) round($subtotal + $shippingFee - (float) $voucherQuote['discount_amount'], 2),
             ],
             'success' => false,
             'orderNumber' => null,
@@ -228,7 +331,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function store(Request $request, InventoryService $inventory)
+    public function store(Request $request, InventoryService $inventory, VoucherService $vouchers)
     {
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
@@ -348,7 +451,7 @@ class CheckoutController extends Controller
             }
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $checkoutItems, $deliveryDetails, $deliveryCity) {
+        $order = DB::transaction(function () use ($request, $validated, $checkoutItems, $deliveryDetails, $deliveryCity, $vouchers) {
             $subtotal = 0;
 
             foreach ($checkoutItems as $checkoutItem) {
@@ -365,6 +468,13 @@ class CheckoutController extends Controller
             }
 
             $shippingFee = 0;
+            $voucherCode = trim((string) $request->session()->get('checkout_voucher_code', ''));
+            $voucherQuote = $voucherCode !== ''
+                ? $vouchers->quote($voucherCode, $request->user(), (float) $subtotal, true)
+                : null;
+            $voucher = $voucherQuote['voucher'] ?? null;
+            $discountAmount = (float) ($voucherQuote['discount_amount'] ?? 0);
+            $total = round($subtotal + $shippingFee - $discountAmount, 2);
 
             do {
                 $orderNumber = 'SV-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
@@ -372,10 +482,13 @@ class CheckoutController extends Controller
 
             $order = Order::create([
                 'user_id' => $request->user()->id,
+                'voucher_id' => $voucher?->id,
+                'voucher_code' => $voucher?->code,
                 'order_number' => $orderNumber,
                 'subtotal' => $subtotal,
+                'discount_amount' => $discountAmount,
                 'shipping_fee' => $shippingFee,
-                'total' => $subtotal + $shippingFee,
+                'total' => $total,
                 'payment_method' => $validated['payment_method'],
                 'payment_status' => 'pending',
                 'order_status' => $validated['payment_method'] === 'cash'
@@ -410,6 +523,10 @@ class CheckoutController extends Controller
 
             return $order;
         });
+
+        // The committed order stores its own code and discount snapshot. Clear the
+        // session so a retry or a second order cannot inherit this voucher.
+        $request->session()->forget('checkout_voucher_code');
 
         if ($validated['payment_method'] === 'cash') {
             try {
@@ -455,14 +572,16 @@ class CheckoutController extends Controller
                 'maya' => 'paymaya',
             };
 
-            $lineItems = $order->items->map(function ($item) {
-                return [
-                    'name' => $item->name,
-                    'amount' => (int) round($item->price * 100),
-                    'currency' => 'PHP',
-                    'quantity' => (int) $item->quantity,
-                ];
-            })->values()->all();
+            $lineItems = (float) $order->discount_amount > 0
+                ? app(PayMongoLineItemBuilder::class)->buildDiscounted($order)
+                : $order->items->map(function ($item) {
+                    return [
+                        'name' => $item->name,
+                        'amount' => (int) round($item->price * 100),
+                        'currency' => 'PHP',
+                        'quantity' => (int) $item->quantity,
+                    ];
+                })->values()->all();
 
             $response = Http::withBasicAuth(
                 config('services.paymongo.secret_key'),
