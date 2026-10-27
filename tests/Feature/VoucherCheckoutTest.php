@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Voucher;
 use App\Services\PayMongoLineItemBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class VoucherCheckoutTest extends TestCase
@@ -77,7 +78,7 @@ class VoucherCheckoutTest extends TestCase
 
         $voucher->update([
             'minimum_subtotal' => 0,
-            'expires_at' => now()->subMinute(),
+            'expires_at' => now()->subMinute()->format('Y-m-d H:i:s'),
         ]);
 
         $this->post(route('checkout.voucher'), ['code' => 'MIN600'])
@@ -167,6 +168,88 @@ class VoucherCheckoutTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.vouchers.index'))
             ->assertOk();
+    }
+
+    public function test_voucher_schedule_uses_manila_local_wall_clock_time(): void
+    {
+        $originalTimezone = config('app.timezone');
+        config(['app.timezone' => 'Asia/Manila']);
+        Carbon::setTestNow(Carbon::parse('2026-10-27 15:24:00', 'Asia/Manila'));
+
+        try {
+            $customer = $this->customer();
+            $product = $this->product('Scheduled CCTV Camera', 500, 5);
+            $this->addCartItem($customer, $product, 1);
+
+            $voucher = Voucher::create([
+                'code' => 'SCHEDULED',
+                'name' => 'Manila scheduled voucher',
+                'discount_type' => 'percentage',
+                'discount_value' => 10,
+                'minimum_subtotal' => 0,
+                'starts_at' => '2026-10-27 15:25:00',
+                'expires_at' => '2026-10-27 16:00:00',
+                'is_active' => true,
+            ]);
+
+            $this->actingAs($customer)
+                ->post(route('checkout.voucher'), ['code' => 'SCHEDULED'])
+                ->assertRedirect(route('checkout'))
+                ->assertSessionHasErrors('voucher');
+
+            // At 15:24 Manila time, a 15:21 start must be accepted. This catches
+            // the previous eight-hour TIMESTAMP interpretation bug.
+            $voucher->update(['starts_at' => '2026-10-27 15:21:00']);
+
+            $this->post(route('checkout.voucher'), ['code' => 'SCHEDULED'])
+                ->assertRedirect(route('checkout'))
+                ->assertSessionHasNoErrors()
+                ->assertSessionHas('checkout_voucher_code', 'SCHEDULED');
+        } finally {
+            Carbon::setTestNow();
+            config(['app.timezone' => $originalTimezone]);
+        }
+    }
+
+    public function test_admin_datetime_local_voucher_schedule_is_saved_as_manila_wall_clock_time(): void
+    {
+        $originalTimezone = config('app.timezone');
+        config(['app.timezone' => 'Asia/Manila']);
+        Carbon::setTestNow(Carbon::parse('2026-10-27 15:24:00', 'Asia/Manila'));
+
+        try {
+            $admin = User::factory()->create([
+                'role' => 'admin',
+                'email_verified_at' => now(),
+            ]);
+
+            $this->actingAs($admin)
+                ->post(route('admin.vouchers.store'), [
+                    'code' => 'FUTURE10',
+                    'name' => 'Future promotion',
+                    'description' => '',
+                    'discount_type' => 'percentage',
+                    'discount_value' => 10,
+                    'minimum_subtotal' => 0,
+                    'maximum_discount' => 100,
+                    'starts_at' => '2026-10-27T15:30',
+                    'expires_at' => '2026-10-27T16:30',
+                    'usage_limit' => '',
+                    'per_user_limit' => '',
+                    'is_active' => true,
+                ])
+                ->assertRedirect()
+                ->assertSessionHasNoErrors();
+
+            $this->assertDatabaseHas('vouchers', [
+                'code' => 'FUTURE10',
+                'starts_at' => '2026-10-27 15:30:00',
+                'expires_at' => '2026-10-27 16:30:00',
+            ]);
+        } finally {
+            Carbon::setTestNow();
+            config(['app.timezone' => $originalTimezone]);
+        }
     }
 
     private function customer(): User
