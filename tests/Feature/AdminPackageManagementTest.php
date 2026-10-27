@@ -86,6 +86,31 @@ class AdminPackageManagementTest extends TestCase
         $this->assertSame(1, $log->new_values['items_count']);
     }
 
+    public function test_package_category_whitespace_is_normalized_when_created(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Category Normalization Camera', 20);
+
+        $this->actingAs($admin)
+            ->post(route('admin.packages.store'), [
+                'name' => 'Category Normalization Kit',
+                'category' => "  CCTV   System  ",
+                'warranty' => '1 year',
+                'price' => '12999.00',
+                'is_featured' => false,
+                'items' => [
+                    ['product_id' => $product->id, 'quantity' => 1],
+                ],
+            ])
+            ->assertRedirect(route('admin.packages.index'));
+
+        $package = Package::query()
+            ->where('name', 'Category Normalization Kit')
+            ->firstOrFail();
+
+        $this->assertSame('CCTV System', $package->category);
+    }
+
     public function test_admin_can_update_package_metadata_and_bundle_components(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
