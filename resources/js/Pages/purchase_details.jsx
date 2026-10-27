@@ -468,9 +468,15 @@ export default function PurchaseDetails({ order }) {
                                         Subtotal
                                     </span>
                                     <span className="fw-semibold">
-                                        ₱{Number(order.subtotal).toLocaleString()}
+                                        ₱{Number(order.subtotal).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </span>
                                 </div>
+                                {Number(order.discount_amount ?? 0) > 0 && (
+                                    <div className="d-flex justify-content-between mb-2 text-success">
+                                        <span className="text-muted">Voucher discount{order.voucher_code ? " (" + order.voucher_code + ")" : ""}</span>
+                                        <span className="fw-semibold">−₱{Number(order.discount_amount).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                )}
 
                                 {Number(order.installation_fee ?? 0) > 0 && (
                                     <div className="d-flex justify-content-between mb-2">
