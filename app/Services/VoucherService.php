@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Order;
 use App\Models\User;
 use App\Models\Voucher;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 class VoucherService
@@ -35,11 +36,21 @@ class VoucherService
             $this->reject('That voucher is currently inactive.');
         }
 
-        $now = now();
-        if ($voucher->starts_at && $now->lt($voucher->starts_at)) {
+        // These columns intentionally store Manila-local wall-clock values (DATETIME),
+        // because the admin form uses datetime-local and promotions are scheduled in app time.
+        $timezone = config('app.timezone', 'UTC');
+        $now = now($timezone);
+        $startsAt = $voucher->starts_at !== null
+            ? Carbon::parse($voucher->starts_at, $timezone)
+            : null;
+        $expiresAt = $voucher->expires_at !== null
+            ? Carbon::parse($voucher->expires_at, $timezone)
+            : null;
+
+        if ($startsAt && $now->lt($startsAt)) {
             $this->reject('That voucher is not available yet.');
         }
-        if ($voucher->expires_at && $now->gt($voucher->expires_at)) {
+        if ($expiresAt && $now->gt($expiresAt)) {
             $this->reject('That voucher has expired.');
         }
 
