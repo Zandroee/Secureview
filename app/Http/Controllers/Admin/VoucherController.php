@@ -18,7 +18,7 @@ class VoucherController extends Controller
     {
         $vouchers = Voucher::query()
             ->withCount([
-                'orders as uses_count' => fn ($query) => $query->whereNotIn('order_status', ['cancelled', 'payment_failed']),
+                'orders as uses_count' => fn ($query) => $query->where('order_status', '!=', 'cancelled'),
             ])
             ->orderByDesc('id')
             ->limit(200)

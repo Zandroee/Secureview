@@ -51,10 +51,11 @@ class VoucherService
             );
         }
 
-        // Pending orders reserve a use; cancelled and failed orders release it.
+        // Pending/failed orders reserve a use because their stored discounted total can be retried.
+        // Only cancelled orders release that reserved use.
         $activeOrders = Order::query()
             ->where('voucher_id', $voucher->id)
-            ->whereNotIn('order_status', ['cancelled', 'payment_failed']);
+            ->where('order_status', '!=', 'cancelled');
 
         if ($voucher->usage_limit !== null && (clone $activeOrders)->count() >= $voucher->usage_limit) {
             $this->reject('This voucher has reached its total-use limit.');
