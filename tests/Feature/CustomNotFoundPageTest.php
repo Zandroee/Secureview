@@ -13,7 +13,7 @@ class CustomNotFoundPageTest extends TestCase
     {
         $this->get('/this-secureview-page-does-not-exist')
             ->assertNotFound()
-            ->assertSee('We couldn\'t find that page.')
+            ->assertSee("We couldn't find that page.", false)
             ->assertSee('Browse Products')
             ->assertSee('Browse Packages')
             ->assertSee('View Services')
