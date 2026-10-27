@@ -6,6 +6,7 @@ use App\Models\CustomerNotification;
 use App\Models\Order;
 use App\Models\PendingInquiryCheckout;
 use App\Services\InventoryService;
+use App\Services\PayMongoLineItemBuilder;
 use App\Services\OrderCancellationService;
 use App\Services\PendingInquiryCheckoutService;
 use Illuminate\Http\Request;
@@ -156,7 +157,7 @@ class PurchaseController extends Controller
             && in_array($order->order_status, ['pending', 'awaiting_payment', 'payment_failed'], true);
     }
 
-    public function pay(Request $request, Order $order, InventoryService $inventory)
+    public function pay(Request $request, Order $order, InventoryService $inventory, PayMongoLineItemBuilder $payMongoLineItems)
     {
         if ($order->user_id !== $request->user()->id) {
             abort(404);
@@ -325,14 +326,16 @@ class PurchaseController extends Controller
                 && (float) $order->service_priority_fee > 0
                 && $order->items->isEmpty();
 
-            $lineItems = $order->items->map(function ($item) {
-                return [
-                    'name' => $item->name,
-                    'amount' => (int) round($item->price * 100),
-                    'currency' => 'PHP',
-                    'quantity' => (int) $item->quantity,
-                ];
-            })->values()->all();
+            $lineItems = (float) $order->discount_amount > 0
+                ? $payMongoLineItems->buildDiscounted($order)
+                : $order->items->map(function ($item) {
+                    return [
+                        'name' => $item->name,
+                        'amount' => (int) round($item->price * 100),
+                        'currency' => 'PHP',
+                        'quantity' => (int) $item->quantity,
+                    ];
+                })->values()->all();
 
             if ($isInstallationBooking && (float) $order->installation_fee > 0) {
                 $installationItem = $order->items->first();
