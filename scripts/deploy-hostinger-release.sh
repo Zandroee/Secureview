@@ -112,7 +112,7 @@ while IFS= read -r -d '' staged_file; do
     target="$APP_DIR/$relative_path"
     mkdir -p "$(dirname "$target")"
     cp -a "$staged_file" "$target"
-done < <(find "$STAGE_DIR" -type f -print0)
+done < "$FILE_LIST"
 
 mkdir -p "$APP_DIR/public/build" "$PUBLIC_DIR/build"
 cp -a "$STAGE_DIR/build/." "$APP_DIR/public/build/"
