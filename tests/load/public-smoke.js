@@ -3,7 +3,7 @@ import { check, sleep } from 'k6';
 
 // Defaults to local Laravel. Set BASE_URL explicitly for a staging environment.
 // Do not point this script at production without authorization and a maintenance window.
-const baseUrl = (__ENV.BASE_URL || 'http://127.0.0.1:8000').replace(/\\/+$/, '');
+const baseUrl = (__ENV.BASE_URL || 'http://127.0.0.1:8000').replace(/\/+$/, '');
 
 export const options = {
     stages: [
