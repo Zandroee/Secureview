@@ -591,7 +591,7 @@ class AdminProductManagementTest extends TestCase
 
         $this->assertDatabaseHas('products', [
             'id' => $product->id,
-            'price' => '1000.00',
+            'price' => '2500.00',
             'sale_price' => null,
         ]);
     }
