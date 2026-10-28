@@ -73,6 +73,9 @@ class PackageController extends Controller
                     'category' => $package->category,
                     'warranty' => $package->warranty,
                     'price' => (float) $package->price,
+                    'sale_price' => $package->sale_price === null ? null : (float) $package->sale_price,
+                    'sale_starts_at' => $package->sale_starts_at,
+                    'sale_ends_at' => $package->sale_ends_at,
                     'installation_fee' => $package->installation_fee === null ? null : (float) $package->installation_fee,
                     'badge' => $package->badge,
                     'image' => $package->image,
@@ -424,6 +427,9 @@ class PackageController extends Controller
             'category' => ['required', 'string', 'max:120'],
             'warranty' => ['required', 'string', 'max:120'],
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'sale_price' => ['nullable', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'sale_starts_at' => ['nullable', 'date'],
+            'sale_ends_at' => ['nullable', 'date'],
             'installation_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'badge' => ['nullable', 'string', 'max:80'],
             'image' => ['nullable', 'string', 'max:2048'],
@@ -444,6 +450,26 @@ class PackageController extends Controller
 
     private function packageFields(array $validated): array
     {
+        $timezone = config('app.timezone', 'UTC');
+        $salePrice = filled($validated['sale_price'] ?? null) ? (float) $validated['sale_price'] : null;
+        $saleStartsAt = filled($validated['sale_starts_at'] ?? null)
+            ? \Illuminate\Support\Carbon::parse($validated['sale_starts_at'], $timezone)
+            : null;
+        $saleEndsAt = filled($validated['sale_ends_at'] ?? null)
+            ? \Illuminate\Support\Carbon::parse($validated['sale_ends_at'], $timezone)
+            : null;
+
+        if ($salePrice !== null && $salePrice >= (float) $validated['price']) {
+            throw ValidationException::withMessages([
+                'sale_price' => 'The sale price must be lower than the regular price.',
+            ]);
+        }
+        if ($saleStartsAt && $saleEndsAt && $saleEndsAt->lessThanOrEqualTo($saleStartsAt)) {
+            throw ValidationException::withMessages([
+                'sale_ends_at' => 'The sale end must be after the start date.',
+            ]);
+        }
+
         $specifications = collect($validated['specifications'] ?? [])
             ->map(fn ($value) => trim($value))
             ->filter(fn ($value) => $value !== '')
@@ -456,6 +482,9 @@ class PackageController extends Controller
             'category' => trim(preg_replace('/\\s+/u', ' ', $validated['category']) ?? ''),
             'warranty' => $validated['warranty'],
             'price' => $validated['price'],
+            'sale_price' => $salePrice,
+            'sale_starts_at' => $saleStartsAt?->format('Y-m-d H:i:s'),
+            'sale_ends_at' => $saleEndsAt?->format('Y-m-d H:i:s'),
             'installation_fee' => filled($validated['installation_fee'] ?? null) ? (float) $validated['installation_fee'] : null,
             'badge' => $validated['badge'] ?? null,
             'image' => $validated['image'] ?? null,

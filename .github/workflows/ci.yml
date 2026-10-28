@@ -109,6 +109,7 @@ jobs:
           cp app/Http/Controllers/Admin/ScheduleController.php hostinger-release/app/Http/Controllers/Admin/ScheduleController.php
           cp app/Http/Controllers/Admin/InquiryController.php hostinger-release/app/Http/Controllers/Admin/InquiryController.php
           cp app/Http/Controllers/CheckoutController.php hostinger-release/app/Http/Controllers/CheckoutController.php
+          cp app/Http/Controllers/CartController.php hostinger-release/app/Http/Controllers/CartController.php
           cp app/Http/Controllers/PayMongoWebhookController.php hostinger-release/app/Http/Controllers/PayMongoWebhookController.php
           cp app/Http/Controllers/InquiryController.php hostinger-release/app/Http/Controllers/InquiryController.php
           cp app/Http/Controllers/AuthController.php hostinger-release/app/Http/Controllers/AuthController.php
@@ -163,6 +164,7 @@ jobs:
           cp database/migrations/2026_10_25_070000_create_service_booking_fee_settings_table.php hostinger-release/database/migrations/2026_10_25_070000_create_service_booking_fee_settings_table.php
           cp database/migrations/2026_10_27_000001_create_vouchers_and_add_order_discounts.php hostinger-release/database/migrations/2026_10_27_000001_create_vouchers_and_add_order_discounts.php
           cp database/migrations/2026_10_27_000002_change_voucher_schedule_fields_to_local_datetime.php hostinger-release/database/migrations/2026_10_27_000002_change_voucher_schedule_fields_to_local_datetime.php
+          cp database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php hostinger-release/database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php

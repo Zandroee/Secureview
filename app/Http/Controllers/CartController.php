@@ -32,7 +32,10 @@ class CartController extends Controller
             return [
                 'id' => $item->id,
                 'quantity' => $item->quantity,
-                'price' => (float) $item->price,
+                'price' => $purchasable ? $purchasable->effectivePrice() : (float) $item->price,
+                'original_price' => $purchasable ? (float) $purchasable->price : (float) $item->price,
+                'sale_active' => $purchasable ? $purchasable->isOnSale() : false,
+                'sale_discount_percent' => $purchasable ? $purchasable->saleDiscountPercent() : 0,
                 'type' => $purchasable instanceof Package ? 'package' : 'product',
                 'name' => $purchasable?->name,
                 'image' => $purchasable?->image,
@@ -86,7 +89,7 @@ class CartController extends Controller
         if ($item) {
             $item->update([
                 'quantity' => $newQuantity,
-                'price' => $purchasable->price,
+                'price' => $purchasable->effectivePrice(),
             ]);
         } else {
             $cart->items()->create([

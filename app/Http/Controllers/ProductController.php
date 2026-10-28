@@ -11,7 +11,14 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::withCount('reviews')->get();
+        $products = Product::withCount('reviews')->get()->map(function (Product $product) {
+            $product->setAttribute('original_price', (float) $product->price);
+            $product->setAttribute('sale_active', $product->isOnSale());
+            $product->setAttribute('sale_discount_percent', $product->saleDiscountPercent());
+            $product->setAttribute('price', $product->effectivePrice());
+
+            return $product;
+        });
 
         return Inertia::render('products', [
             'products' => $products,
@@ -21,6 +28,10 @@ class ProductController extends Controller
     public function show(Request $request, $id)
     {
         $product = Product::findOrFail($id);
+        $product->setAttribute('original_price', (float) $product->price);
+        $product->setAttribute('sale_active', $product->isOnSale());
+        $product->setAttribute('sale_discount_percent', $product->saleDiscountPercent());
+        $product->setAttribute('price', $product->effectivePrice());
         $reviews = $product->reviews()->with('user')->latest()->get();
         $userId = $request->user()?->id;
 

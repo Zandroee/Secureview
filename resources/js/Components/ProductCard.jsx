@@ -6,6 +6,9 @@ export default function ProductCard({
     brand = "",
     image,
     price,
+    originalPrice = null,
+    saleActive = false,
+    saleDiscountPercent = 0,
     badge,
     specifications = [],
     inclusions = [],
@@ -166,9 +169,17 @@ export default function ProductCard({
                     <div className="d-flex justify-content-between align-items-end gap-3 mb-3">
                         <div className="min-w-0">
                             <div className="small text-muted mb-1" style={{ fontSize: "0.72rem", letterSpacing: "0.06em" }}>PRICE</div>
-                            <div className="fw-bold text-primary text-nowrap" style={{ fontSize: isPackage ? "1.5rem" : "1.42rem", lineHeight: 1.1 }}>
+                            {saleActive && (
+                                <span className="badge bg-danger mb-1">{Number(saleDiscountPercent)}% OFF</span>
+                            )}
+                            <div className={"fw-bold text-nowrap " + (saleActive ? "text-danger" : "text-primary")} style={{ fontSize: isPackage ? "1.5rem" : "1.42rem", lineHeight: 1.1 }}>
                                 ₱{Number(price || 0).toLocaleString("en-PH")}
                             </div>
+                            {saleActive && originalPrice != null && (
+                                <div className="small text-muted text-decoration-line-through">
+                                    ₱{Number(originalPrice).toLocaleString("en-PH")}
+                                </div>
+                            )}
                         </div>
                         <div className="text-end flex-shrink-0">
                             <div className="d-flex align-items-center justify-content-end gap-1 mb-1" aria-label={"Rating " + ratingValue.toFixed(1) + " out of 5"}>

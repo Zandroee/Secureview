@@ -364,6 +364,9 @@ class ProductController extends Controller
             'category' => ['required', 'string', 'max:120'],
             'warranty' => ['required', 'string', 'max:120'],
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'sale_price' => ['nullable', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'sale_starts_at' => ['nullable', 'date'],
+            'sale_ends_at' => ['nullable', 'date'],
             'installation_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'stock_quantity' => ['required', 'integer', 'min:0', 'max:100000'],
             'stock_reason' => ['nullable', 'string', 'max:255'],
@@ -383,6 +386,26 @@ class ProductController extends Controller
 
     private function productFields(array $validated): array
     {
+        $timezone = config('app.timezone', 'UTC');
+        $salePrice = filled($validated['sale_price'] ?? null) ? (float) $validated['sale_price'] : null;
+        $saleStartsAt = filled($validated['sale_starts_at'] ?? null)
+            ? \Illuminate\Support\Carbon::parse($validated['sale_starts_at'], $timezone)
+            : null;
+        $saleEndsAt = filled($validated['sale_ends_at'] ?? null)
+            ? \Illuminate\Support\Carbon::parse($validated['sale_ends_at'], $timezone)
+            : null;
+
+        if ($salePrice !== null && $salePrice >= (float) $validated['price']) {
+            throw ValidationException::withMessages([
+                'sale_price' => 'The sale price must be lower than the regular price.',
+            ]);
+        }
+        if ($saleStartsAt && $saleEndsAt && $saleEndsAt->lessThanOrEqualTo($saleStartsAt)) {
+            throw ValidationException::withMessages([
+                'sale_ends_at' => 'The sale end must be after the start date.',
+            ]);
+        }
+
         $specifications = collect($validated['specifications'] ?? [])
             ->map(fn ($value) => trim((string) $value))
             ->filter(fn ($value) => $value !== '')
@@ -395,6 +418,9 @@ class ProductController extends Controller
             'category' => trim(preg_replace('/\\s+/u', ' ', $validated['category']) ?? ''),
             'warranty' => trim($validated['warranty']),
             'price' => $validated['price'],
+            'sale_price' => $salePrice,
+            'sale_starts_at' => $saleStartsAt?->format('Y-m-d H:i:s'),
+            'sale_ends_at' => $saleEndsAt?->format('Y-m-d H:i:s'),
             'installation_fee' => filled($validated['installation_fee'] ?? null) ? (float) $validated['installation_fee'] : null,
             'stock_quantity' => (int) $validated['stock_quantity'],
             'badge' => filled($validated['badge'] ?? null) ? trim($validated['badge']) : null,
@@ -498,6 +524,9 @@ class ProductController extends Controller
             'category' => $product->category,
             'warranty' => $product->warranty,
             'price' => (float) $product->price,
+            'sale_price' => $product->sale_price === null ? null : (float) $product->sale_price,
+            'sale_starts_at' => $product->sale_starts_at,
+            'sale_ends_at' => $product->sale_ends_at,
             'installation_fee' => $product->installation_fee === null ? null : (float) $product->installation_fee,
             'stock_quantity' => (int) $product->stock_quantity,
             'badge' => $product->badge,

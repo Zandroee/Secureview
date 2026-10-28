@@ -14,6 +14,9 @@ class Package extends Model
         'category',
         'warranty',
         'price',
+        'sale_price',
+        'sale_starts_at',
+        'sale_ends_at',
         'installation_fee',
         'badge',
         'image',
@@ -28,8 +31,35 @@ class Package extends Model
         'images' => 'array',
         'rating' => 'float',
         'installation_fee' => 'float',
+        'sale_price' => 'float',
         'is_featured' => 'boolean',
     ];
+
+    public function isOnSale(): bool
+    {
+        if ($this->sale_price === null || (float) $this->sale_price <= 0 || (float) $this->sale_price >= (float) $this->price) {
+            return false;
+        }
+
+        $now = now(config('app.timezone', 'UTC'));
+        $startsAt = $this->sale_starts_at ? \Illuminate\Support\Carbon::parse($this->sale_starts_at, config('app.timezone', 'UTC')) : null;
+        $endsAt = $this->sale_ends_at ? \Illuminate\Support\Carbon::parse($this->sale_ends_at, config('app.timezone', 'UTC')) : null;
+
+        return (!$startsAt || $now->greaterThanOrEqualTo($startsAt))
+            && (!$endsAt || $now->lessThan($endsAt));
+    }
+
+    public function effectivePrice(): float
+    {
+        return $this->isOnSale() ? round((float) $this->sale_price, 2) : round((float) $this->price, 2);
+    }
+
+    public function saleDiscountPercent(): int
+    {
+        return $this->isOnSale()
+            ? (int) round((1 - ((float) $this->sale_price / (float) $this->price)) * 100)
+            : 0;
+    }
 
     public function packageItems(): HasMany
     {

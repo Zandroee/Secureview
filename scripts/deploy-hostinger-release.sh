@@ -67,6 +67,8 @@ unzip -q "$ZIP_PATH" -d "$STAGE_DIR"
 [[ -f "$STAGE_DIR/database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php" ]] || fail "Release is missing the cancelled-payment-status migration."
 [[ -f "$STAGE_DIR/database/migrations/2026_10_27_000001_create_vouchers_and_add_order_discounts.php" ]] || fail "Release is missing the voucher/order-discount migration."
 [[ -f "$STAGE_DIR/database/migrations/2026_10_27_000002_change_voucher_schedule_fields_to_local_datetime.php" ]] || fail "Release is missing the voucher schedule timezone migration."
+[[ -f "$STAGE_DIR/database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php" ]] || fail "Release is missing the product/package promo sales migration."
+[[ -f "$STAGE_DIR/app/Http/Controllers/CartController.php" ]] || fail "Release is missing the promo-aware cart controller."
 
 mkdir -p "$BACKUP_ROOT/files" "$BACKUP_ROOT/app-public" "$BACKUP_ROOT/web-public"
 
