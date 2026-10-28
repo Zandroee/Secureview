@@ -461,7 +461,7 @@ class CheckoutController extends Controller
                     abort(422, 'An item in your checkout is no longer available.');
                 }
 
-                $price = (float) $purchasable->price;
+                $price = (float) $purchasable->effectivePrice();
                 $quantity = (int) $checkoutItem['quantity'];
 
                 $subtotal += $price * $quantity;
