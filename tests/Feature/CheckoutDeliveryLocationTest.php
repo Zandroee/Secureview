@@ -258,4 +258,84 @@ class CheckoutDeliveryLocationTest extends TestCase
                 ->where('cart.subtotal', 2500));
     }
 
+
+    public function test_checkout_uses_active_promo_sale_price_and_preserves_order_price_snapshot(): void
+    {
+        config(['app.timezone' => 'Asia/Manila']);
+        \\Illuminate\\Support\\Carbon::setTestNow(
+            \\Illuminate\\Support\\Carbon::parse('2026-10-28 18:30:00', 'Asia/Manila')
+        );
+
+        try {
+            $customer = User::factory()->create([
+                'role' => 'user',
+                'email_verified_at' => now(),
+                'phone' => '09171234567',
+            ]);
+
+            $product = Product::create([
+                'name' => 'Promo Sale Checkout Camera',
+                'category' => 'CCTV',
+                'warranty' => '1 year',
+                'price' => 1000,
+                'sale_price' => 750,
+                'sale_starts_at' => '2026-10-28 18:00:00',
+                'sale_ends_at' => '2026-10-28 19:00:00',
+                'stock_quantity' => 5,
+                'badge' => null,
+                'image' => null,
+                'specifications' => [],
+                'rating' => 0,
+                'is_featured' => false,
+            ]);
+
+            $cart = Cart::create(['user_id' => $customer->id]);
+            $cart->items()->create([
+                'purchasable_type' => Product::class,
+                'purchasable_id' => $product->id,
+                'quantity' => 2,
+                'price' => 1000,
+            ]);
+
+            $this->actingAs($customer)
+                ->get(route('checkout'))
+                ->assertOk()
+                ->assertInertia(fn (\\Inertia\\Testing\\AssertableInertia $page) => $page
+                    ->component('checkout')
+                    ->where('cart.items.0.price', 750)
+                    ->where('cart.items.0.subtotal', 1500)
+                    ->where('cart.subtotal', 1500)
+                    ->where('cart.total', 1500));
+
+            $this->actingAs($customer)
+                ->post(route('checkout.store'), [
+                    'customer_name' => $customer->name,
+                    'customer_phone' => '09171234567',
+                    'customer_email' => $customer->email,
+                    'delivery_street_address' => '123 Sample Street',
+                    'delivery_city' => 'Taguig, Metro Manila',
+                    'payment_method' => 'cash',
+                    'notes' => '',
+                ])
+                ->assertRedirect(route('checkout'))
+                ->assertSessionHasNoErrors();
+
+            $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
+
+            $this->assertEquals(1500, $order->subtotal);
+            $this->assertEquals(1500, $order->total);
+            $this->assertDatabaseHas('order_items', [
+                'order_id' => $order->id,
+                'purchasable_type' => Product::class,
+                'purchasable_id' => $product->id,
+                'price' => '750.00',
+                'quantity' => 2,
+                'subtotal' => '1500.00',
+            ]);
+            $this->assertEquals(1000, $product->fresh()->price);
+        } finally {
+            \\Illuminate\\Support\\Carbon::setTestNow();
+        }
+    }
+
 }
