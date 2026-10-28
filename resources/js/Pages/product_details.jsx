@@ -300,10 +300,16 @@ export default function ProductDetails({ product, reviews = [], canReview = fals
                                 <strong>Warranty: {product.warranty}</strong>
                             </div>
 
-                            <div className="d-flex align-items-center gap-3 mb-2">
-                                <h2 className="text-primary fw-bold mb-0">
+                            <div className="d-flex align-items-center gap-3 mb-2 flex-wrap">
+                                <h2 className={(product.sale_active ? "text-danger" : "text-primary") + " fw-bold mb-0"}>
                                     ₱{Number(product.price).toLocaleString()}
                                 </h2>
+                                {product.sale_active && (
+                                    <>
+                                        <span className="badge bg-danger">{Number(product.sale_discount_percent)}% OFF</span>
+                                        <span className="text-muted text-decoration-line-through">₱{Number(product.original_price).toLocaleString()}</span>
+                                    </>
+                                )}
 
                                 <span className="text-warning fw-bold">
                                     {Number(product.rating || 0).toFixed(1)} <Stars rating={product.rating} />
