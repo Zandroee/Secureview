@@ -262,8 +262,8 @@ class CheckoutDeliveryLocationTest extends TestCase
     public function test_checkout_uses_active_promo_sale_price_and_preserves_order_price_snapshot(): void
     {
         config(['app.timezone' => 'Asia/Manila']);
-        \\Illuminate\\Support\\Carbon::setTestNow(
-            \\Illuminate\\Support\\Carbon::parse('2026-10-28 18:30:00', 'Asia/Manila')
+        \Illuminate\Support\Carbon::setTestNow(
+            \Illuminate\Support\Carbon::parse('2026-10-28 18:30:00', 'Asia/Manila')
         );
 
         try {
@@ -300,7 +300,7 @@ class CheckoutDeliveryLocationTest extends TestCase
             $this->actingAs($customer)
                 ->get(route('checkout'))
                 ->assertOk()
-                ->assertInertia(fn (\\Inertia\\Testing\\AssertableInertia $page) => $page
+                ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
                     ->component('checkout')
                     ->where('cart.items.0.price', 750)
                     ->where('cart.items.0.subtotal', 1500)
@@ -334,7 +334,7 @@ class CheckoutDeliveryLocationTest extends TestCase
             ]);
             $this->assertEquals(1000, $product->fresh()->price);
         } finally {
-            \\Illuminate\\Support\\Carbon::setTestNow();
+            \Illuminate\Support\Carbon::setTestNow();
         }
     }
 
