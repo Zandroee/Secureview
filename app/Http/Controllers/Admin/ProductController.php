@@ -412,10 +412,10 @@ class ProductController extends Controller
             $timezone = config('app.timezone', 'UTC');
             $salePrice = filled($validated['sale_price'] ?? null) ? (float) $validated['sale_price'] : null;
             $saleStartsAt = filled($validated['sale_starts_at'] ?? null)
-                ? \\Illuminate\\Support\\Carbon::parse($validated['sale_starts_at'], $timezone)
+                ? \Illuminate\Support\Carbon::parse($validated['sale_starts_at'], $timezone)
                 : null;
             $saleEndsAt = filled($validated['sale_ends_at'] ?? null)
-                ? \\Illuminate\\Support\\Carbon::parse($validated['sale_ends_at'], $timezone)
+                ? \Illuminate\Support\Carbon::parse($validated['sale_ends_at'], $timezone)
                 : null;
 
             if ($salePrice !== null && $salePrice >= (float) $validated['price']) {
