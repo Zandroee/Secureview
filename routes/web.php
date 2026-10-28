@@ -34,6 +34,7 @@ use App\Http\Controllers\Admin\WarrantyController as AdminWarrantyController;
 use App\Http\Controllers\Admin\InvoiceSettingsController as AdminInvoiceSettingsController;
 use App\Http\Controllers\Admin\InvoiceIssuanceController as AdminInvoiceIssuanceController;
 use App\Http\Controllers\Admin\VoucherController as AdminVoucherController;
+use App\Http\Controllers\Admin\PromoSaleController as AdminPromoSaleController;
 use App\Http\Controllers\WarrantyClaimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -264,6 +265,8 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::post('/admin/vouchers', [AdminVoucherController::class, 'store'])->name('admin.vouchers.store');
     Route::patch('/admin/vouchers/{voucher}', [AdminVoucherController::class, 'update'])->name('admin.vouchers.update');
     Route::delete('/admin/vouchers/{voucher}', [AdminVoucherController::class, 'destroy'])->name('admin.vouchers.destroy');
+    Route::patch('/admin/promotions/products/{product}/sale', [AdminPromoSaleController::class, 'updateProduct'])->name('admin.promotions.products.sale.update');
+    Route::patch('/admin/promotions/packages/{package}/sale', [AdminPromoSaleController::class, 'updatePackage'])->name('admin.promotions.packages.sale.update');
 
     Route::get('/admin/transactions', [AdminTransactionController::class, 'index'])
         ->name('admin.transactions.index');
