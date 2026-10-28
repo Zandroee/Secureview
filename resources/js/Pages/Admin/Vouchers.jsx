@@ -67,15 +67,40 @@ function voucherState(voucher) {
     return { label: "Active", className: "text-bg-success" };
 }
 
-export default function Vouchers({ vouchers = [] }) {
+function promoSaleState(item) {
+    const regular = Number(item.price ?? 0);
+    const sale = Number(item.sale_price ?? 0);
+    if (!sale || sale <= 0 || sale >= regular) {
+        return { label: "No sale", className: "text-bg-secondary" };
+    }
+
+    const now = Date.now();
+    const startsAt = item.sale_starts_at ? new Date(item.sale_starts_at).getTime() : null;
+    const endsAt = item.sale_ends_at ? new Date(item.sale_ends_at).getTime() : null;
+    if (startsAt && Number.isFinite(startsAt) && startsAt > now) {
+        return { label: "Scheduled", className: "text-bg-info" };
+    }
+    if (endsAt && Number.isFinite(endsAt) && endsAt <= now) {
+        return { label: "Ended", className: "text-bg-warning" };
+    }
+    return { label: "Active", className: "text-bg-success" };
+}
+
+export default function Vouchers({ vouchers = [], saleProducts = [], salePackages = [] }) {
     const { props } = usePage();
     const errors = props.errors ?? {};
     const [form, setForm] = useState({ ...emptyForm });
     const [editingId, setEditingId] = useState(null);
     const [saving, setSaving] = useState(false);
     const [actionId, setActionId] = useState(null);
+    const [saleType, setSaleType] = useState("products");
+    const [saleSearch, setSaleSearch] = useState("");
+    const [editingSale, setEditingSale] = useState(null);
+    const [saleForm, setSaleForm] = useState({ sale_price: "", sale_starts_at: "", sale_ends_at: "" });
+    const [savingSale, setSavingSale] = useState(false);
 
     const update = (name, value) => setForm((current) => ({ ...current, [name]: value }));
+    const updateSale = (name, value) => setSaleForm((current) => ({ ...current, [name]: value }));
     const reset = () => {
         setForm({ ...emptyForm });
         setEditingId(null);
@@ -148,6 +173,34 @@ export default function Vouchers({ vouchers = [] }) {
         });
     };
 
+    const startSaleEdit = (type, item) => {
+        setEditingSale({ type, item });
+        setSaleForm({
+            sale_price: item.sale_price == null ? "" : String(item.sale_price),
+            sale_starts_at: item.sale_starts_at ?? "",
+            sale_ends_at: item.sale_ends_at ?? "",
+        });
+    };
+
+    const submitSale = (event) => {
+        event.preventDefault();
+        if (!editingSale) return;
+        setSavingSale(true);
+        router.patch("/admin/promotions/" + editingSale.type + "/" + editingSale.item.id + "/sale", saleForm, {
+            preserveScroll: true,
+            onSuccess: () => setEditingSale(null),
+            onFinish: () => setSavingSale(false),
+        });
+    };
+
+    const currentSaleItems = saleType === "products" ? saleProducts : salePackages;
+    const filteredSaleItems = currentSaleItems.filter((item) => {
+        const search = saleSearch.trim().toLowerCase();
+        if (!search) return true;
+        return [item.name, item.brand, item.category]
+            .some((value) => String(value ?? "").toLowerCase().includes(search));
+    });
+
     return (
         <div>
             <Navbar />
@@ -168,6 +221,77 @@ export default function Vouchers({ vouchers = [] }) {
 
                         {props.flash?.success && <div className="alert alert-success" role="status">{props.flash.success}</div>}
                         {fieldError(errors, "voucher") && <div className="alert alert-danger" role="alert">{fieldError(errors, "voucher")}</div>}
+
+                        <section className="card border-0 shadow-sm mb-4" aria-labelledby="promo-sales-title">
+                            <div className="card-header bg-white py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                <div>
+                                    <h2 className="h5 fw-bold mb-1" id="promo-sales-title">Promo Sales</h2>
+                                    <p className="small text-muted mb-0">Manage automatic discounts for individual products and packages. These run separately from voucher codes.</p>
+                                </div>
+                                <div className="btn-group flex-shrink-0" role="group" aria-label="Choose catalog type">
+                                    <button type="button" className={"btn btn-sm " + (saleType === "products" ? "btn-primary" : "btn-outline-primary")} onClick={() => setSaleType("products")}>
+                                        Products <span className="badge text-bg-light ms-1">{saleProducts.length}</span>
+                                    </button>
+                                    <button type="button" className={"btn btn-sm " + (saleType === "packages" ? "btn-primary" : "btn-outline-primary")} onClick={() => setSaleType("packages")}>
+                                        Packages <span className="badge text-bg-light ms-1">{salePackages.length}</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="card-body">
+                                <div className="row g-3 align-items-center mb-3">
+                                    <div className="col-12 col-lg">
+                                        <div className="small text-muted">A sale activates automatically at its start time and ends at its scheduled end time. Leave the sale price blank to remove a sale.</div>
+                                    </div>
+                                    <div className="col-12 col-lg-4">
+                                        <input type="search" className="form-control" value={saleSearch} onChange={(event) => setSaleSearch(event.target.value)} placeholder={"Search " + saleType + " by name, brand, or category"} aria-label={"Search " + saleType} />
+                                    </div>
+                                </div>
+                                <div className="table-responsive" style={{ maxHeight: "520px", overflowY: "auto" }}>
+                                    <table className="table table-hover align-middle mb-0">
+                                        <thead className="table-light" style={{ position: "sticky", top: 0, zIndex: 1 }}>
+                                            <tr><th>Catalog item</th><th>Regular price</th><th>Promo price</th><th>Schedule / status</th><th className="text-end">Action</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredSaleItems.length === 0 && (
+                                                <tr><td colSpan={5} className="text-center text-muted py-4">
+                                                    {currentSaleItems.length === 0 ? "No " + saleType + " have been added yet." : "No matching items found."}
+                                                </td></tr>
+                                            )}
+                                            {filteredSaleItems.map((item) => {
+                                                const state = promoSaleState(item);
+                                                return (
+                                                    <tr key={item.id}>
+                                                        <td style={{ minWidth: "190px" }}>
+                                                            <div className="fw-semibold">{item.name}</div>
+                                                            <div className="small text-muted">{[item.brand, item.category].filter(Boolean).join(" · ") || (saleType === "products" ? "Product" : "Package")}</div>
+                                                        </td>
+                                                        <td className="text-nowrap">{money(item.price)}</td>
+                                                        <td className="text-nowrap">
+                                                            {item.sale_price != null ? <span className="fw-bold text-danger">{money(item.sale_price)}</span> : <span className="text-muted">—</span>}
+                                                        </td>
+                                                        <td style={{ minWidth: "190px" }}>
+                                                            <span className={"badge " + state.className}>{state.label}</span>
+                                                            {item.sale_price != null && (
+                                                                <div className="small text-muted mt-1">
+                                                                    {item.sale_starts_at ? "From " + item.sale_starts_at.replace("T", " ") : "Starts immediately"}
+                                                                    {" · "}
+                                                                    {item.sale_ends_at ? "Until " + item.sale_ends_at.replace("T", " ") : "No end date"}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="text-end text-nowrap">
+                                                            <button type="button" className="btn btn-sm btn-outline-primary fw-semibold" onClick={() => startSaleEdit(saleType, item)}>
+                                                                {item.sale_price != null ? "Edit sale" : "Set sale"}
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </section>
 
                         <div className="card border-0 shadow-sm mb-4">
                             <div className="card-header bg-white border-bottom py-3">
@@ -297,6 +421,40 @@ export default function Vouchers({ vouchers = [] }) {
                                 Up to 200 recent vouchers are shown. Vouchers attached to orders cannot be deleted, preserving order history; deactivate them instead.
                             </div>
                         </div>
+                        {editingSale && (
+                            <div className="modal d-block" role="dialog" aria-modal="true" aria-labelledby="promo-sale-editor-title"
+                                style={{ backgroundColor: "rgba(15, 23, 42, 0.45)", zIndex: 1050 }}
+                                onClick={(event) => { if (event.target === event.currentTarget && !savingSale) setEditingSale(null); }}>
+                                <div className="modal-dialog modal-dialog-centered" role="document" onClick={(event) => event.stopPropagation()}>
+                                    <div className="modal-content border-0 shadow">
+                                        <form onSubmit={submitSale}>
+                                            <div className="modal-header">
+                                                <div>
+                                                    <h2 className="modal-title fs-5 fw-bold" id="promo-sale-editor-title">{editingSale.item.sale_price != null ? "Edit promo sale" : "Schedule promo sale"}</h2>
+                                                    <div className="small text-muted mt-1">{editingSale.item.name} · Regular price {money(editingSale.item.price)}</div>
+                                                </div>
+                                                <button type="button" className="btn-close" aria-label="Close" onClick={() => !savingSale && setEditingSale(null)} disabled={savingSale} />
+                                            </div>
+                                            <div className="modal-body">
+                                                <Field label="Promo sale price (₱)" name="sale_price" value={saleForm.sale_price} onChange={updateSale}
+                                                    error={fieldError(errors, "sale_price")} type="number" min="0.01" max="99999999.99" step="0.01"
+                                                    placeholder="Leave blank to remove the sale" help="Must be lower than the regular price." />
+                                                <Field label="Sale starts at (optional)" name="sale_starts_at" value={saleForm.sale_starts_at} onChange={updateSale}
+                                                    error={fieldError(errors, "sale_starts_at")} type="datetime-local" />
+                                                <Field label="Sale ends at (optional)" name="sale_ends_at" value={saleForm.sale_ends_at} onChange={updateSale}
+                                                    error={fieldError(errors, "sale_ends_at")} type="datetime-local" />
+                                                <p className="small text-muted mb-0">Times use the SecureView application timezone. The discounted price is applied automatically at checkout while the sale is active.</p>
+                                            </div>
+                                            <div className="modal-footer">
+                                                <button type="button" className="btn btn-outline-secondary" onClick={() => setEditingSale(null)} disabled={savingSale}>Cancel</button>
+                                                <button type="submit" className="btn btn-primary fw-bold" disabled={savingSale}>{savingSale ? "SAVING..." : "SAVE SALE"}</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                     </main>
                 </div>
             </div>
