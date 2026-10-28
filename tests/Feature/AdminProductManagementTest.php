@@ -549,4 +549,51 @@ class AdminProductManagementTest extends TestCase
             'is_featured' => false,
         ]);
     }
+
+    public function test_admin_can_schedule_a_product_promo_sale_in_manila_time(): void
+    {
+        config(['app.timezone' => 'Asia/Manila']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Scheduled Sale Camera', 1000);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.products.update', $product), $this->validProduct([
+                'price' => '1000.00',
+                'sale_price' => '750.00',
+                'sale_starts_at' => '2026-10-29T10:30',
+                'sale_ends_at' => '2026-10-30T18:00',
+            ]))
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'price' => '1000.00',
+            'sale_price' => '750.00',
+            'sale_starts_at' => '2026-10-29 10:30:00',
+            'sale_ends_at' => '2026-10-30 18:00:00',
+        ]);
+    }
+
+    public function test_product_promo_sale_price_must_be_below_regular_price(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Invalid Sale Camera', 1000);
+
+        $this->actingAs($admin)
+            ->from(route('admin.products.index'))
+            ->patch(route('admin.products.update', $product), $this->validProduct([
+                'price' => '1000.00',
+                'sale_price' => '1000.00',
+            ]))
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHasErrors('sale_price');
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'price' => '1000.00',
+            'sale_price' => null,
+        ]);
+    }
+
 }
