@@ -477,4 +477,41 @@ class AdminPackageManagementTest extends TestCase
             'is_featured' => false,
         ]);
     }
+
+    public function test_admin_can_schedule_a_package_promo_sale_in_manila_time(): void
+    {
+        config(['app.timezone' => 'Asia/Manila']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Promo Package Camera', 2500);
+        $package = $this->createPackage('Scheduled Promo Package');
+
+        $this->actingAs($admin)
+            ->patch(route('admin.packages.update', $package), [
+                'name' => 'Scheduled Promo Package',
+                'category' => 'CCTV',
+                'warranty' => '1 year',
+                'price' => '5000.00',
+                'sale_price' => '4250.00',
+                'sale_starts_at' => '2026-10-29T10:30',
+                'sale_ends_at' => '2026-10-30T18:00',
+                'badge' => null,
+                'image' => null,
+                'specifications' => [],
+                'is_featured' => false,
+                'items' => [
+                    ['product_id' => $product->id, 'quantity' => 1],
+                ],
+            ])
+            ->assertRedirect(route('admin.packages.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('packages', [
+            'id' => $package->id,
+            'price' => '5000.00',
+            'sale_price' => '4250.00',
+            'sale_starts_at' => '2026-10-29 10:30:00',
+            'sale_ends_at' => '2026-10-30 18:00:00',
+        ]);
+    }
+
 }
