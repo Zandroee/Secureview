@@ -15,10 +15,11 @@ class PackageController extends Controller
         $packages = Package::withCount('reviews')->with('packageItems.product')
             ->get()
             ->map(function (Package $package) use ($inventory) {
-                $package->setAttribute(
-                    'available_stock',
-                    $inventory->getAvailableStock($package)
-                );
+                $package->setAttribute('available_stock', $inventory->getAvailableStock($package));
+                $package->setAttribute('original_price', (float) $package->price);
+                $package->setAttribute('sale_active', $package->isOnSale());
+                $package->setAttribute('sale_discount_percent', $package->saleDiscountPercent());
+                $package->setAttribute('price', $package->effectivePrice());
 
                 return $package;
             });
@@ -31,10 +32,11 @@ class PackageController extends Controller
     public function show(Request $request, $id, InventoryService $inventory)
     {
         $package = Package::with('packageItems.product')->findOrFail($id);
-        $package->setAttribute(
-            'available_stock',
-            $inventory->getAvailableStock($package)
-        );
+        $package->setAttribute('available_stock', $inventory->getAvailableStock($package));
+        $package->setAttribute('original_price', (float) $package->price);
+        $package->setAttribute('sale_active', $package->isOnSale());
+        $package->setAttribute('sale_discount_percent', $package->saleDiscountPercent());
+        $package->setAttribute('price', $package->effectivePrice());
         $reviews = $package->reviews()->with('user')->latest()->get();
         $userId = $request->user()?->id;
 
