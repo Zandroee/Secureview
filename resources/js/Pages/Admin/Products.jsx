@@ -45,9 +45,6 @@ function emptyProduct() {
         category: "",
         warranty: "1 year",
         price: "",
-        sale_price: "",
-        sale_starts_at: "",
-        sale_ends_at: "",
         installation_fee: "",
         stock_quantity: 0,
         stock_reason: "",
@@ -331,9 +328,6 @@ export default function AdminProducts({
             category: product.category ?? "",
             warranty: product.warranty ?? "1 year",
             price: String(product.price ?? ""),
-            sale_price: product.sale_price == null ? "" : String(product.sale_price),
-            sale_starts_at: String(product.sale_starts_at ?? "").replace(" ", "T").slice(0, 16),
-            sale_ends_at: String(product.sale_ends_at ?? "").replace(" ", "T").slice(0, 16),
             installation_fee: product.installation_fee == null ? "" : String(product.installation_fee),
             stock_quantity: Number(product.stock_quantity ?? 0),
             stock_reason: "",
@@ -1050,31 +1044,6 @@ export default function AdminProducts({
                                                 required
                                             />
                                             <FieldError message={productForm.errors.price} />
-                                        </div>
-
-                                        <div className="col-md-4">
-                                            <label className="form-label fw-semibold">Promo Sale Price (₱)</label>
-                                            <input type="number" min="0.01" step="0.01" max="99999999.99"
-                                                className={"form-control " + (productForm.errors.sale_price ? "is-invalid" : "")}
-                                                value={productForm.data.sale_price}
-                                                onChange={(event) => productForm.setData("sale_price", event.target.value)}
-                                                placeholder="Leave blank for no sale" />
-                                            <div className="form-text">Must be lower than the regular price.</div>
-                                            <FieldError message={productForm.errors.sale_price} />
-                                        </div>
-                                        <div className="col-md-6">
-                                            <label className="form-label fw-semibold">Sale Starts At <span className="text-muted fw-normal">(optional)</span></label>
-                                            <input type="datetime-local" className={"form-control " + (productForm.errors.sale_starts_at ? "is-invalid" : "")}
-                                                value={productForm.data.sale_starts_at}
-                                                onChange={(event) => productForm.setData("sale_starts_at", event.target.value)} />
-                                            <FieldError message={productForm.errors.sale_starts_at} />
-                                        </div>
-                                        <div className="col-md-6">
-                                            <label className="form-label fw-semibold">Sale Ends At <span className="text-muted fw-normal">(optional)</span></label>
-                                            <input type="datetime-local" className={"form-control " + (productForm.errors.sale_ends_at ? "is-invalid" : "")}
-                                                value={productForm.data.sale_ends_at}
-                                                onChange={(event) => productForm.setData("sale_ends_at", event.target.value)} />
-                                            <FieldError message={productForm.errors.sale_ends_at} />
                                         </div>
 
                                         <div className="col-md-4">
