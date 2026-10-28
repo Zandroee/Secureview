@@ -46,7 +46,7 @@ class Package extends Model
         $endsAt = $this->sale_ends_at ? \Illuminate\Support\Carbon::parse($this->sale_ends_at, config('app.timezone', 'UTC')) : null;
 
         return (!$startsAt || $now->greaterThanOrEqualTo($startsAt))
-            && (!$endsAt || $now->lessThanOrEqualTo($endsAt));
+            && (!$endsAt || $now->lessThan($endsAt));
     }
 
     public function effectivePrice(): float
