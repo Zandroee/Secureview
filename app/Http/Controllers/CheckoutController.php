@@ -236,7 +236,7 @@ class CheckoutController extends Controller
                 'image' => $purchasable->image,
                 'price' => (float) $purchasable->effectivePrice(),
                 'quantity' => $quantity,
-                'subtotal' => (float) $purchasable->price * $quantity,
+                'subtotal' => (float) $purchasable->effectivePrice() * $quantity,
                 'available_stock' => $inventory->getAvailableStock($purchasable),
             ]]);
 
@@ -295,7 +295,7 @@ class CheckoutController extends Controller
                 'image' => $purchasable?->image,
                 'price' => (float) ($purchasable?->effectivePrice() ?? $item->price),
                 'quantity' => (int) $item->quantity,
-                'subtotal' => (float) ($purchasable?->price ?? $item->price) * (int) $item->quantity,
+                'subtotal' => (float) ($purchasable?->effectivePrice() ?? $item->price) * (int) $item->quantity,
                 'available_stock' => $purchasable
                     ? $inventory->getAvailableStock($purchasable)
                     : 0,
