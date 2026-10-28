@@ -450,47 +450,54 @@ class PackageController extends Controller
 
     private function packageFields(array $validated): array
     {
-        $timezone = config('app.timezone', 'UTC');
-        $salePrice = filled($validated['sale_price'] ?? null) ? (float) $validated['sale_price'] : null;
-        $saleStartsAt = filled($validated['sale_starts_at'] ?? null)
-            ? \Illuminate\Support\Carbon::parse($validated['sale_starts_at'], $timezone)
-            : null;
-        $saleEndsAt = filled($validated['sale_ends_at'] ?? null)
-            ? \Illuminate\Support\Carbon::parse($validated['sale_ends_at'], $timezone)
-            : null;
-
-        if ($salePrice !== null && $salePrice >= (float) $validated['price']) {
-            throw ValidationException::withMessages([
-                'sale_price' => 'The sale price must be lower than the regular price.',
-            ]);
-        }
-        if ($saleStartsAt && $saleEndsAt && $saleEndsAt->lessThanOrEqualTo($saleStartsAt)) {
-            throw ValidationException::withMessages([
-                'sale_ends_at' => 'The sale end must be after the start date.',
-            ]);
-        }
-
         $specifications = collect($validated['specifications'] ?? [])
             ->map(fn ($value) => trim($value))
             ->filter(fn ($value) => $value !== '')
             ->values()
             ->all();
 
-        return [
+        $fields = [
             'name' => $validated['name'],
             'brand' => filled($validated['brand'] ?? null) ? trim($validated['brand']) : null,
             'category' => trim(preg_replace('/\\s+/u', ' ', $validated['category']) ?? ''),
             'warranty' => $validated['warranty'],
             'price' => $validated['price'],
-            'sale_price' => $salePrice,
-            'sale_starts_at' => $saleStartsAt?->format('Y-m-d H:i:s'),
-            'sale_ends_at' => $saleEndsAt?->format('Y-m-d H:i:s'),
             'installation_fee' => filled($validated['installation_fee'] ?? null) ? (float) $validated['installation_fee'] : null,
             'badge' => $validated['badge'] ?? null,
             'image' => $validated['image'] ?? null,
             'specifications' => $specifications ?: null,
             'is_featured' => (bool) $validated['is_featured'],
         ];
+
+        // Promo sales are managed in Promotions & Vouchers. Preserve existing sale
+        // settings when the normal package editor does not submit those fields.
+        if (array_intersect(['sale_price', 'sale_starts_at', 'sale_ends_at'], array_keys($validated))) {
+            $timezone = config('app.timezone', 'UTC');
+            $salePrice = filled($validated['sale_price'] ?? null) ? (float) $validated['sale_price'] : null;
+            $saleStartsAt = filled($validated['sale_starts_at'] ?? null)
+                ? \\Illuminate\\Support\\Carbon::parse($validated['sale_starts_at'], $timezone)
+                : null;
+            $saleEndsAt = filled($validated['sale_ends_at'] ?? null)
+                ? \\Illuminate\\Support\\Carbon::parse($validated['sale_ends_at'], $timezone)
+                : null;
+
+            if ($salePrice !== null && $salePrice >= (float) $validated['price']) {
+                throw ValidationException::withMessages([
+                    'sale_price' => 'The sale price must be lower than the regular price.',
+                ]);
+            }
+            if ($saleStartsAt && $saleEndsAt && $saleEndsAt->lessThanOrEqualTo($saleStartsAt)) {
+                throw ValidationException::withMessages([
+                    'sale_ends_at' => 'The sale end must be after the start date.',
+                ]);
+            }
+
+            $fields['sale_price'] = $salePrice;
+            $fields['sale_starts_at'] = $saleStartsAt?->format('Y-m-d H:i:s');
+            $fields['sale_ends_at'] = $saleEndsAt?->format('Y-m-d H:i:s');
+        }
+
+        return $fields;
     }
 
     private function replaceItems(Package $package, array $items): void
