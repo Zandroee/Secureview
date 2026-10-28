@@ -507,7 +507,7 @@ class CheckoutController extends Controller
 
             foreach ($checkoutItems as $checkoutItem) {
                 $purchasable = $checkoutItem['purchasable'];
-                $price = (float) $purchasable->price;
+                $price = (float) $purchasable->effectivePrice();
                 $quantity = (int) $checkoutItem['quantity'];
 
                 $order->items()->create([
