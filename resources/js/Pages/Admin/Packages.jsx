@@ -13,6 +13,9 @@ function emptyPackage() {
         category: "",
         warranty: "1 year",
         price: "",
+        sale_price: "",
+        sale_starts_at: "",
+        sale_ends_at: "",
         installation_fee: "",
         badge: "",
         image: "",
@@ -368,6 +371,9 @@ export default function AdminPackages({
             category: item.category ?? "",
             warranty: item.warranty ?? "",
             price: String(item.price ?? ""),
+            sale_price: item.sale_price == null ? "" : String(item.sale_price),
+            sale_starts_at: String(item.sale_starts_at ?? "").replace(" ", "T").slice(0, 16),
+            sale_ends_at: String(item.sale_ends_at ?? "").replace(" ", "T").slice(0, 16),
             installation_fee: item.installation_fee == null ? "" : String(item.installation_fee),
             badge: item.badge ?? "",
             image: item.image ?? "",
@@ -888,6 +894,31 @@ export default function AdminPackages({
                                                 Selected product total: {money(componentSubtotal(data.items, products))}. Changes to components automatically recalculate this value.
                                             </div>
                                             <ErrorText message={errors.price} />
+                                        </div>
+
+                                        <div className="col-md-4">
+                                            <label className="form-label fw-semibold">PROMO SALE PRICE (₱)</label>
+                                            <input type="number" min="0.01" step="0.01" max="99999999.99"
+                                                className={"form-control " + (errors.sale_price ? "is-invalid" : "")}
+                                                value={data.sale_price}
+                                                onChange={(event) => setData("sale_price", event.target.value)}
+                                                placeholder="Leave blank for no sale" />
+                                            <div className="form-text">Must be lower than the regular package price.</div>
+                                            <ErrorText message={errors.sale_price} />
+                                        </div>
+                                        <div className="col-md-6">
+                                            <label className="form-label fw-semibold">SALE STARTS AT <span className="text-muted fw-normal">(OPTIONAL)</span></label>
+                                            <input type="datetime-local" className={"form-control " + (errors.sale_starts_at ? "is-invalid" : "")}
+                                                value={data.sale_starts_at}
+                                                onChange={(event) => setData("sale_starts_at", event.target.value)} />
+                                            <ErrorText message={errors.sale_starts_at} />
+                                        </div>
+                                        <div className="col-md-6">
+                                            <label className="form-label fw-semibold">SALE ENDS AT <span className="text-muted fw-normal">(OPTIONAL)</span></label>
+                                            <input type="datetime-local" className={"form-control " + (errors.sale_ends_at ? "is-invalid" : "")}
+                                                value={data.sale_ends_at}
+                                                onChange={(event) => setData("sale_ends_at", event.target.value)} />
+                                            <ErrorText message={errors.sale_ends_at} />
                                         </div>
 
                                         <div className="col-md-4">
