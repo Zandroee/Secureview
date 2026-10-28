@@ -104,7 +104,7 @@ class CheckoutController extends Controller
                     'cart' => $buyNow['error'] ?? 'Your Buy Now selection is no longer available.',
                 ]);
             }
-            return round((float) $buyNow['purchasable']->price * (int) $buyNow['quantity'], 2);
+            return round((float) $buyNow['purchasable']->effectivePrice() * (int) $buyNow['quantity'], 2);
         }
 
         $cart = $request->user()->cart;
@@ -123,7 +123,7 @@ class CheckoutController extends Controller
                     'cart' => 'An item in your cart is no longer available.',
                 ]);
             }
-            $subtotal += (float) $cartItem->purchasable->price * (int) $cartItem->quantity;
+            $subtotal += (float) $cartItem->purchasable->effectivePrice() * (int) $cartItem->quantity;
         }
         return round($subtotal, 2);
     }
@@ -234,7 +234,7 @@ class CheckoutController extends Controller
                 'type' => $buyNow['item_type'],
                 'name' => $purchasable->name,
                 'image' => $purchasable->image,
-                'price' => (float) $purchasable->price,
+                'price' => (float) $purchasable->effectivePrice(),
                 'quantity' => $quantity,
                 'subtotal' => (float) $purchasable->price * $quantity,
                 'available_stock' => $inventory->getAvailableStock($purchasable),
@@ -293,7 +293,7 @@ class CheckoutController extends Controller
                 'type' => $purchasable instanceof \App\Models\Package ? 'package' : 'product',
                 'name' => $purchasable?->name,
                 'image' => $purchasable?->image,
-                'price' => (float) ($purchasable?->price ?? $item->price),
+                'price' => (float) ($purchasable?->effectivePrice() ?? $item->price),
                 'quantity' => (int) $item->quantity,
                 'subtotal' => (float) ($purchasable?->price ?? $item->price) * (int) $item->quantity,
                 'available_stock' => $purchasable
