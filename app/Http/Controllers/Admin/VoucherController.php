@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Package;
+use App\Models\Product;
 use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -45,7 +47,43 @@ class VoucherController extends Controller
                 'created_at' => $voucher->created_at?->format('M d, Y'),
             ]);
 
-        return Inertia::render('Admin/Vouchers', ['vouchers' => $vouchers]);
+        $saleProducts = Product::query()->orderBy('name')->get()->map(fn (Product $product) => [
+            'id' => $product->id,
+            'name' => $product->name,
+            'brand' => $product->brand,
+            'category' => $product->category,
+            'price' => (float) $product->price,
+            'sale_price' => $product->sale_price === null ? null : (float) $product->sale_price,
+            'sale_starts_at' => $product->sale_starts_at !== null
+                ? Carbon::parse($product->sale_starts_at, config('app.timezone', 'UTC'))->format('Y-m-d\\TH:i')
+                : null,
+            'sale_ends_at' => $product->sale_ends_at !== null
+                ? Carbon::parse($product->sale_ends_at, config('app.timezone', 'UTC'))->format('Y-m-d\\TH:i')
+                : null,
+            'sale_active' => $product->isOnSale(),
+        ])->values();
+
+        $salePackages = Package::query()->orderBy('name')->get()->map(fn (Package $package) => [
+            'id' => $package->id,
+            'name' => $package->name,
+            'brand' => $package->brand,
+            'category' => $package->category,
+            'price' => (float) $package->price,
+            'sale_price' => $package->sale_price === null ? null : (float) $package->sale_price,
+            'sale_starts_at' => $package->sale_starts_at !== null
+                ? Carbon::parse($package->sale_starts_at, config('app.timezone', 'UTC'))->format('Y-m-d\\TH:i')
+                : null,
+            'sale_ends_at' => $package->sale_ends_at !== null
+                ? Carbon::parse($package->sale_ends_at, config('app.timezone', 'UTC'))->format('Y-m-d\\TH:i')
+                : null,
+            'sale_active' => $package->isOnSale(),
+        ])->values();
+
+        return Inertia::render('Admin/Vouchers', [
+            'vouchers' => $vouchers,
+            'saleProducts' => $saleProducts,
+            'salePackages' => $salePackages,
+        ]);
     }
 
     public function store(Request $request)
