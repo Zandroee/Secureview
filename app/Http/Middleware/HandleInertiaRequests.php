@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\CustomerNotification;
+use Closure;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -16,6 +17,27 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
+
+    /**
+     * Prevent authenticated page payloads from being restored from browser or
+     * intermediary caches after logout.
+     */
+    public function handle(Request $request, Closure $next)
+    {
+        $isAuthenticated = $request->user() !== null;
+        $response = parent::handle($request, $next);
+
+        if ($isAuthenticated) {
+            $response->headers->set(
+                'Cache-Control',
+                'private, no-store, no-cache, must-revalidate, max-age=0'
+            );
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', '0');
+        }
+
+        return $response;
+    }
 
     /**
      * Determines the current asset version.
