@@ -123,16 +123,12 @@ class SecurityHardeningTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->withHeaders([
-                'X-Inertia' => 'true',
-                'X-Requested-With' => 'XMLHttpRequest',
-            ])
             ->get('/dashboard')
             ->assertOk()
             ->assertHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0')
             ->assertHeader('Pragma', 'no-cache')
             ->assertHeader('Expires', '0')
-            ->assertJsonPath('encryptHistory', true);
+            ->assertViewHas('page', fn (array $page) => ($page['encryptHistory'] ?? false) === true);
     }
 
     public function test_logout_clears_inertia_history_and_blocks_return_to_admin_pages(): void
@@ -146,11 +142,12 @@ class SecurityHardeningTest extends TestCase
             ->get('/dashboard')
             ->assertOk();
 
-        $this->post('/logout')->assertRedirect('/');
+        $logoutResponse = $this->post('/logout');
+
+        $logoutResponse->assertRedirect('/');
+        $logoutResponse->assertSessionHas('inertia.clear_history', true);
 
         $this->assertGuest();
-        $this->assertSessionHas('inertia.clear_history', true);
-
         $this->get('/dashboard')->assertRedirect('/login');
     }
 
