@@ -336,18 +336,13 @@ code,
 }
 
 
-/* Keep the navigation above ordinary page content so its search panel can
-   cover booking-form copy instead of letting positioned fields paint through it. */
-.navbar {
-    position: relative;
-    z-index: 1040;
-}
-
 /* Global navbar search: match the rounded catalog-search style from Products
-   and Packages while giving the results panel enough space to be useful. */
+   and Packages while giving the results panel enough space to be useful.
+   Keep the stacking context on the search control, not the whole navbar, so
+   Bootstrap's mobile off-canvas drawer retains its native overlay ordering. */
 .navbar-navigation-search {
     position: relative;
-    z-index: 1041;
+    z-index: 1050;
     width: clamp(230px, 22vw, 350px);
     min-width: 205px;
     flex: 0 1 clamp(230px, 22vw, 350px);
@@ -397,7 +392,7 @@ code,
 
 .navbar-search-dropdown {
     position: absolute;
-    z-index: 1042;
+    z-index: 1051;
     background-color: var(--bs-body-bg);
     color: var(--bs-body-color);
     top: calc(100% + 10px);
