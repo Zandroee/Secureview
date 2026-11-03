@@ -37,6 +37,21 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($request->ip());
         });
 
+        // Autocomplete can make one request for each settled search phrase.
+        // Bound each browser session separately, with a higher IP-wide ceiling
+        // to retain abuse protection without penalizing visitors behind shared networks.
+        RateLimiter::for('catalog-search', function (Request $request): array {
+            $sessionId = $request->hasSession()
+                ? $request->session()->getId()
+                : 'no-session';
+            $ip = (string) ($request->ip() ?? 'unknown');
+
+            return [
+                Limit::perMinute(180)->by('catalog-search:session:' . $sessionId),
+                Limit::perMinute(1200)->by('catalog-search:ip:' . $ip),
+            ];
+        });
+
         Order::observe(OrderObserver::class);
     }
 }
