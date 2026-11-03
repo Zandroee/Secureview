@@ -113,7 +113,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                 preserveState: true,
                 preserveScroll: true,
             });
-        }, 15000);
+        }, 30000);
 
         return () => window.clearInterval(intervalId);
     }, [processing]);
