@@ -596,7 +596,7 @@ export default function Navbar() {
                     setCatalogSearchLoading(false);
                 }
             }
-        }, 220);
+        }, 450);
 
         return () => {
             window.clearTimeout(timer);
@@ -634,7 +634,7 @@ export default function Navbar() {
             });
         };
 
-        const interval = window.setInterval(pollNotifications, 10000);
+        const interval = window.setInterval(pollNotifications, 30000);
         return () => window.clearInterval(interval);
     }, [isLoggedIn, url, notificationPopupsEnabled]);
 
