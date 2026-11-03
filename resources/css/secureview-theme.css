@@ -336,11 +336,18 @@ code,
 }
 
 
+/* Keep the navigation above ordinary page content so its search panel can
+   cover booking-form copy instead of letting positioned fields paint through it. */
+.navbar {
+    position: relative;
+    z-index: 1040;
+}
+
 /* Global navbar search: match the rounded catalog-search style from Products
    and Packages while giving the results panel enough space to be useful. */
 .navbar-navigation-search {
     position: relative;
-    z-index: 1;
+    z-index: 1041;
     width: clamp(230px, 22vw, 350px);
     min-width: 205px;
     flex: 0 1 clamp(230px, 22vw, 350px);
@@ -390,7 +397,9 @@ code,
 
 .navbar-search-dropdown {
     position: absolute;
-    z-index: 2;
+    z-index: 1042;
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
     top: calc(100% + 10px);
     right: 0;
     width: min(480px, calc(100vw - 2rem));
