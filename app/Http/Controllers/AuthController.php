@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Log;
 
@@ -167,6 +168,10 @@ class AuthController extends Controller
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        // Rotate Inertia's history encryption key so cached authenticated
+        // pages cannot be restored after the user signs out.
+        Inertia::clearHistory();
 
         return redirect($this->safePublicLogoutDestination($request));
     }

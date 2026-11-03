@@ -176,7 +176,7 @@ Route::post('/reset-password', function (Request $request) {
         ]);
 })->middleware(['guest', 'throttle:5,1'])->name('password.update');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'inertia.encrypt'])->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::patch('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile.update');
     Route::patch('/settings/preferences', [SettingsController::class, 'updatePreferences'])->name('settings.preferences.update');
@@ -219,7 +219,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 });
 
-Route::middleware(['auth', 'verified', 'technician'])->prefix('technician')->name('technician.')->group(function () {
+Route::middleware(['auth', 'verified', 'technician', 'inertia.encrypt'])->prefix('technician')->name('technician.')->group(function () {
     Route::get('/dashboard', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'dashboard')->name('dashboard');
     Route::get('/services', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'services')->name('services');
     Route::get('/available-jobs', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'available-jobs')->name('available-jobs');
@@ -235,7 +235,7 @@ Route::middleware(['auth', 'verified', 'technician'])->prefix('technician')->nam
     Route::patch('/inventory/{product}', [TechnicianWorkspaceController::class, 'adjustStock'])->name('inventory.adjust');
 });
 
-Route::middleware(['auth', 'verified', 'admin'])->group(function () {
+Route::middleware(['auth', 'verified', 'admin', 'inertia.encrypt'])->group(function () {
     Route::post('/admin/announcements', [NotificationController::class, 'storeAnnouncement'])
         ->name('admin.announcements.store');
     Route::post('/admin/catalog-options', [AdminCatalogOptionController::class, 'store'])

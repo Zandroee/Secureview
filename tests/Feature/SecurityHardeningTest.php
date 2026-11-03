@@ -115,6 +115,43 @@ class SecurityHardeningTest extends TestCase
         $this->assertStringContainsString('Sign in', $html);
     }
 
+    public function test_authenticated_admin_pages_encrypt_history_and_disable_browser_caching(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'max-age=0, must-revalidate, no-cache, no-store, private')
+            ->assertHeader('Pragma', 'no-cache')
+            ->assertHeader('Expires', '0')
+            ->assertViewHas('page', fn (array $page) => ($page['encryptHistory'] ?? false) === true);
+    }
+
+    public function test_logout_clears_inertia_history_and_blocks_return_to_admin_pages(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/dashboard')
+            ->assertOk();
+
+        $logoutResponse = $this->post('/logout');
+
+        $logoutResponse->assertRedirect('/');
+        $logoutResponse->assertSessionHas('inertia.clear_history', true);
+
+        $this->assertGuest();
+        $this->get('/dashboard')->assertRedirect('/login');
+    }
+
+
     public function test_web_responses_include_baseline_security_headers(): void
     {
         $this->get('/')
