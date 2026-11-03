@@ -91,6 +91,30 @@ class SecurityHardeningTest extends TestCase
             ->assertStatus(429);
     }
 
+    public function test_catalog_search_suggestions_return_a_public_json_payload(): void
+    {
+        $this->getJson(route('search.suggestions', ['q' => 'camera']))
+            ->assertOk()
+            ->assertJsonStructure([
+                'products',
+                'packages',
+            ]);
+    }
+
+    public function test_session_lifetime_defaults_to_eight_hours(): void
+    {
+        $this->assertSame(480, (int) config('session.lifetime'));
+    }
+
+    public function test_expired_session_recovery_page_is_available(): void
+    {
+        $html = view('errors.419')->render();
+
+        $this->assertStringContainsString('Your session has expired', $html);
+        $this->assertStringContainsString('Return to previous page', $html);
+        $this->assertStringContainsString('Sign in', $html);
+    }
+
     public function test_web_responses_include_baseline_security_headers(): void
     {
         $this->get('/')

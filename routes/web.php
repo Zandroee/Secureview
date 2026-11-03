@@ -46,7 +46,7 @@ use Illuminate\Support\Str;
 Route::get('/', [LandingController::class, 'index']);
 
 Route::get('/search/suggestions', [SearchController::class, 'suggestions'])
-    ->middleware('throttle:60,1')
+    ->middleware('throttle:catalog-search')
     ->name('search.suggestions');
 
 Route::get('/products', [ProductController::class, 'index']);
