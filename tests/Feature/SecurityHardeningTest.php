@@ -125,7 +125,7 @@ class SecurityHardeningTest extends TestCase
         $this->actingAs($admin)
             ->get('/dashboard')
             ->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0')
+            ->assertHeader('Cache-Control', 'max-age=0, must-revalidate, no-cache, no-store, private')
             ->assertHeader('Pragma', 'no-cache')
             ->assertHeader('Expires', '0')
             ->assertViewHas('page', fn (array $page) => ($page['encryptHistory'] ?? false) === true);
