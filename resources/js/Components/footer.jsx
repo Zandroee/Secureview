@@ -8,7 +8,7 @@ export default function Footer() {
                     <div className="col-md-4 mb-md-0">
                         <Link href="/" className="netmax-footer-logo-wrap" aria-label="Netmax Trading home">
                             <img
-                                src="/images/netmax-logo.png"
+                                src="/images/netmax-logo.webp"
                                 alt="Netmax Trading"
                                 className="netmax-footer-logo"
                                 loading="lazy"
