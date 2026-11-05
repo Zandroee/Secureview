@@ -86,7 +86,8 @@ unzip -q "$ZIP_PATH" -d "$STAGE_DIR"
 [[ -f "$STAGE_DIR/app/Models/SupportConversation.php" ]] || fail "Release is missing the support conversation model."
 [[ -f "$STAGE_DIR/app/Models/SupportMessage.php" ]] || fail "Release is missing the support message model."
 [[ -f "$STAGE_DIR/database/migrations/2026_11_05_000001_create_support_conversations_tables.php" ]] || fail "Release is missing the support conversation migration."
-[[ -f "$STAGE_DIR/public/images/netmax-logo.webp" ]] || fail "Release is missing the verified Netmax Trading WebP logo."
+[[ -f "$STAGE_DIR/public/images/netmax-logo.webp" ]] || fail "Release is missing the Netmax Trading source logo."
+[[ -f "$STAGE_DIR/public/images/netmax-logo-dark.png" ]] || fail "Release is missing the transparent dark-theme Netmax Trading logo."
 [[ -f "$STAGE_DIR/public/images/netmax-favicon.png" ]] || fail "Release is missing the Netmax Trading favicon."
 
 mkdir -p "$BACKUP_ROOT/files" "$BACKUP_ROOT/app-public" "$BACKUP_ROOT/web-public"
@@ -103,7 +104,7 @@ while IFS= read -r -d '' staged_file; do
             ;;
         public/*)
             case "$relative_path" in
-                public/images/netmax-logo.png|public/images/netmax-logo.jpg|public/images/netmax-logo.webp|public/images/netmax-favicon.png) ;;
+                public/images/netmax-logo.png|public/images/netmax-logo.jpg|public/images/netmax-logo.webp|public/images/netmax-logo-dark.png|public/images/netmax-favicon.png) ;;
                 *) fail "Refusing to overlay unapproved public path: $relative_path" ;;
             esac
             ;;
