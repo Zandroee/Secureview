@@ -23,7 +23,7 @@ class EmailVerificationCodeMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your SecureView email verification code'
+            subject: 'Your Netmax Trading email verification code'
         );
     }
 

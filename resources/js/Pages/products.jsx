@@ -370,8 +370,6 @@ export default function Products({ products = [] }) {
                                             badge={product.badge}
                                             specifications={product.specifications}
                                             rating={product.rating}
-                                            available={Number(product.stock_quantity) > 0}
-                                            stockCount={product.stock_quantity}
                                             href={`/products/${product.id}`}
                                         />
                                     </div>
