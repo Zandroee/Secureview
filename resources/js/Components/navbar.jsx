@@ -675,7 +675,7 @@ export default function Navbar() {
                     }}
                 >
                     <img
-                        src="/images/netmax-logo.png"
+                        src="/images/netmax-logo.webp"
                         alt="Netmax Trading"
                         className="netmax-navbar-logo"
                     />
