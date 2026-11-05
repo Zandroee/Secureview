@@ -23,7 +23,7 @@
             })();
         </script>
 
-        <link rel="icon" type="image/png" href="{{ Vite::asset('resources/images/netmax-favicon.png') }}">
+        <link rel="icon" type="image/png" href="/images/netmax-favicon.png">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
