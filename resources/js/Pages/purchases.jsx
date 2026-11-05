@@ -124,7 +124,7 @@ export default function Purchases({ orders = [] }) {
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <div>
                                         <div className="small text-primary fw-bold">
-                                            SECUREVIEW
+                                            NETMAX TRADING
                                         </div>
 
                                         <h2

@@ -371,7 +371,8 @@ export default function Products({ products = [] }) {
                                             specifications={product.specifications}
                                             rating={product.rating}
                                             available={Number(product.stock_quantity) > 0}
-                                            onDetails={() => router.visit(`/products/${product.id}`)}
+                                            stockCount={product.stock_quantity}
+                                            href={`/products/${product.id}`}
                                         />
                                     </div>
                                 ))}

@@ -130,7 +130,7 @@ export default function Checkout({
                             </div>
 
                             <div className="small text-uppercase fw-bold text-primary mb-2">
-                                SecureView
+                                Netmax Trading
                             </div>
 
                             <h1
@@ -213,7 +213,7 @@ export default function Checkout({
                                 <div className="d-flex justify-content-between align-items-center mb-4">
                                     <div>
                                         <div className="small text-uppercase fw-bold text-primary mb-1">
-                                            SecureView
+                                            Netmax Trading
                                         </div>
 
                                         <h1

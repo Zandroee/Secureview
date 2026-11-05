@@ -58,7 +58,7 @@ export default function Services() {
                         <div className="row justify-content-center text-center">
                             <div className="col-lg-8">
                                 <div className="small fw-bold mb-2">
-                                    SECUREVIEW
+                                    NETMAX TRADING
                                 </div>
 
                                 <h1 className="fw-bold display-5 mb-3">

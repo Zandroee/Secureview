@@ -156,7 +156,7 @@ class TransactionController extends Controller
                 'payment_status_after' => $event->payment_status_after,
                 'order_status_before' => $event->order_status_before,
                 'order_status_after' => $event->order_status_after,
-                'actor_name' => $event->actor?->name ?? 'SecureView system',
+                'actor_name' => $event->actor?->name ?? 'Netmax Trading system',
                 'created_at' => $event->created_at?->format('M d, Y h:i A'),
             ])->values(),
         ];

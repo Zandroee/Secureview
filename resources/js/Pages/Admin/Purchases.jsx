@@ -116,7 +116,7 @@ export default function AdminPurchases({
     const runOrderAction = (order, action) => {
         const confirmation = action === "confirm-cash-payment"
             ? "Confirm that cash has actually been received for order " + order.order_number + "? This will mark the payment as paid and move the order to Processing."
-            : "Confirm that order " + order.order_number + " has been fulfilled? This will mark it Completed. SecureView does not track shipments.";
+            : "Confirm that order " + order.order_number + " has been fulfilled? This will mark it Completed. Netmax Trading does not track shipments.";
 
         if (!window.confirm(confirmation)) {
             return;
@@ -237,7 +237,7 @@ export default function AdminPurchases({
                     >
                         <div className="mb-4">
                             <div className="small text-primary fw-bold">
-                                SECUREVIEW ADMIN
+                                NETMAX TRADING ADMIN
                             </div>
 
                             <h1 className="fw-bold mb-1">
@@ -263,7 +263,7 @@ export default function AdminPurchases({
                         )}
 
                         <div className="small text-muted mb-3">
-                            SecureView does not currently have shipment tracking. “Delivered” is not offered as an action; it will only appear in the dashboard if a legacy delivered order already exists.
+                            Netmax Trading does not currently have shipment tracking. “Delivered” is not offered as an action; it will only appear in the dashboard if a legacy delivered order already exists.
                         </div>
 
                         <div className="row g-3 mb-3">
@@ -870,7 +870,7 @@ export default function AdminPurchases({
                                 </div>
                             ) : (
                                 <div className="small text-muted">
-                                    No earlier event history is available for this order. SecureView cannot reconstruct status changes that happened before timeline logging was enabled.
+                                    No earlier event history is available for this order. Netmax Trading cannot reconstruct status changes that happened before timeline logging was enabled.
                                 </div>
                             )}
                         </div>

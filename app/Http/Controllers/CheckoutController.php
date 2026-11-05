@@ -604,7 +604,7 @@ class CheckoutController extends Controller
                                     'email' => $order->customer_email,
                                     'phone' => $order->customer_phone,
                                 ],
-                                'description' => 'SecureView Order ' . $order->order_number,
+                                'description' => 'Netmax Trading Order ' . $order->order_number,
                                 'reference_number' => $order->order_number,
                                 'metadata' => [
                                     'order_id' => (string) $order->id,

@@ -85,7 +85,7 @@ export default function PurchaseDetails({ order }) {
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                         <div>
                             <div className="small text-uppercase fw-bold text-primary mb-1">
-                                SecureView
+                                Netmax Trading
                             </div>
 
                             <h1
@@ -356,7 +356,7 @@ export default function PurchaseDetails({ order }) {
                                     <h4 className="fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>
                                         ORDER & PAYMENT HISTORY
                                     </h4>
-                                    <span className="small text-muted">Payment and order changes recorded by SecureView.</span>
+                                    <span className="small text-muted">Payment and order changes recorded by Netmax Trading.</span>
                                 </div>
                                 {order.timeline?.length ? (
                                     <div className="d-flex flex-column gap-3">
@@ -381,7 +381,7 @@ export default function PurchaseDetails({ order }) {
                                     </div>
                                 ) : (
                                     <div className="small text-muted">
-                                        Event history begins when SecureView records new order activity. Earlier status changes cannot be reconstructed for older orders.
+                                        Event history begins when Netmax Trading records new order activity. Earlier status changes cannot be reconstructed for older orders.
                                     </div>
                                 )}
                             </div>
@@ -532,7 +532,7 @@ export default function PurchaseDetails({ order }) {
 
                                     <div className="small text-muted">
                                         {order.payment_method === "cash"
-                                            ? "Cash payment is still marked pending until SecureView confirms it. Delivery tracking is not currently available in the site."
+                                            ? "Cash payment is still marked pending until Netmax Trading confirms it. Delivery tracking is not currently available in the site."
                                             : "Online payment is confirmed only after PayMongo reports a successful payment."}
                                     </div>
                                 </div>

@@ -121,7 +121,7 @@ class InvoiceSettingsController extends Controller
         return InvoiceSetting::query()->firstOrCreate(
             ['id' => 1],
             [
-                'business_name' => config('invoice.business_name', 'SecureView'),
+                'business_name' => config('invoice.business_name', 'Netmax Trading'),
                 'registered_name' => config('invoice.registered_name'),
                 'address' => config('invoice.address'),
                 'email' => config('invoice.email'),

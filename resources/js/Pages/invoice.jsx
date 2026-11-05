@@ -218,7 +218,7 @@ export default function Invoice({ invoice }) {
             <main className="container py-4 py-md-5">
                 <div className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4 no-print">
                     <div>
-                        <div className="small text-uppercase fw-bold text-primary mb-1">SecureView</div>
+                        <div className="small text-uppercase fw-bold text-primary mb-1">Netmax Trading</div>
                         <h1 className="h3 fw-bold mb-1" style={{ fontFamily: "Outfit, sans-serif" }}>
                             INVOICE
                         </h1>
@@ -272,7 +272,7 @@ export default function Invoice({ invoice }) {
                                 </div>
                                 <div>
                                     <div className="h4 fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>
-                                        {business.name || "SecureView"}
+                                        {business.name || "Netmax Trading"}
                                     </div>
                                     <div className="text-muted small">ORDER INVOICE</div>
                                 </div>
@@ -409,12 +409,12 @@ export default function Invoice({ invoice }) {
 
                     <div className="invoice-disclaimer">
                         <div className="fw-semibold mb-1">
-                            {invoice.is_recorded ? "Saved SecureView internal invoice record" : "SecureView order document"}
+                            {invoice.is_recorded ? "Saved Netmax Trading internal invoice record" : "Netmax Trading order document"}
                         </div>
                         This document is an internal order document, not a BIR-registered tax invoice.
                         {invoice.is_recorded
                             ? " The saved version preserves the order, customer, item, and seller details as recorded on " + (invoice.record_issued_at || "the saved date") + ". Its internal reference is not a BIR-authorized invoice serial number."
-                            : " It reflects the order and payment details currently stored in SecureView."}
+                            : " It reflects the order and payment details currently stored in Netmax Trading."}
                         {" "}No VAT, withholding tax, or other tax amount is calculated by this document. The authorized BIR serial-number series is not consumed by saving an internal record. Confirm applicable tax treatment, required invoice information, and electronic-invoicing obligations with your accountant before using an invoice for tax purposes.
                     </div>
                     <div className="small text-muted mt-3 invoice-print-note">

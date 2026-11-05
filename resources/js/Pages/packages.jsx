@@ -390,7 +390,8 @@ export default function Packages({ packages = [] }) {
                                                 .filter((item) => item.name)}
                                             rating={pkg.rating}
                                             available={Number(pkg.available_stock) > 0}
-                                            onDetails={() => router.visit(`/packages/${pkg.id}`)}
+                                            stockCount={pkg.available_stock}
+                                            href={`/packages/${pkg.id}`}
                                         />
                                     </div>
                                 ))}

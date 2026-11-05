@@ -271,7 +271,7 @@ export default function Navbar() {
         <form
             className="navbar-navigation-search"
             role="search"
-            aria-label="SecureView search"
+            aria-label="Netmax Trading search"
             onSubmit={handleNavigationSearchSubmit}
             onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget)) {
@@ -613,6 +613,7 @@ export default function Navbar() {
             if (document.visibilityState !== "visible") return;
 
             const only = ["notificationCount", "latestNotification"];
+            if (isAdmin) only.push("supportConversationCount");
             if (url.startsWith("/notifications")) only.push("notifications");
 
             router.reload({
@@ -673,7 +674,11 @@ export default function Navbar() {
                         fontFamily: "Outfit, sans-serif",
                     }}
                 >
-                    SECUREVIEW
+                    <img
+                        src="/images/netmax-logo.png"
+                        alt="Netmax Trading"
+                        className="netmax-navbar-logo"
+                    />
                 </Link>
 
 
@@ -1252,7 +1257,7 @@ export default function Navbar() {
                                                 <i className="bi bi-person-fill" aria-hidden="true"></i>
                                             </div>
                                             <div className="navbar-account-profile-copy">
-                                                <strong title={user?.name}>{user?.name || "SecureView Account"}</strong>
+                                                <strong title={user?.name}>{user?.name || "Netmax Trading Account"}</strong>
                                                 <span title={user?.email}>{user?.email || "Signed-in account"}</span>
                                                 <span className="navbar-account-role">
                                                     {isAdmin ? "Administrator" : isTechnician ? "Technician" : "Customer"}

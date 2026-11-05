@@ -153,7 +153,7 @@ export default function AdminInquiryDetails({
                         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                             <div>
                                 <div className="small text-primary fw-bold">
-                                    SECUREVIEW ADMIN
+                                    NETMAX TRADING ADMIN
                                 </div>
 
                                 <h1 className="fw-bold mb-1">
@@ -440,7 +440,7 @@ export default function AdminInquiryDetails({
 
                                     <div className="small text-muted mt-4">
                                         Status and technician assignment changes
-                                        notify the customer in SecureView.
+                                        notify the customer in Netmax Trading.
                                     </div>
                                 </div>
                             </div>

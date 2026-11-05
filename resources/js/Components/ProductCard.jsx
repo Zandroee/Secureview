@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "@inertiajs/react";
 import catalogImageUrl from "./catalogImageUrl";
 
 export default function ProductCard({
@@ -15,7 +16,8 @@ export default function ProductCard({
     rating = 0,
     reviewsCount = 0,
     available = true,
-    onDetails,
+    stockCount = 0,
+    href = "#",
     variant = "product",
 }) {
     const [isHovered, setIsHovered] = useState(false);
@@ -29,6 +31,7 @@ export default function ProductCard({
     const showImage = Boolean(imageUrl) && failedImageUrl !== imageUrl;
     const ratingValue = Number.isFinite(Number(rating)) ? Math.max(0, Math.min(5, Number(rating))) : 0;
     const totalReviews = Number.isFinite(Number(reviewsCount)) ? Math.max(0, Number(reviewsCount)) : 0;
+    const stockQuantity = Math.max(0, Number(stockCount) || 0);
     const visibleSpecifications = safeSpecifications.slice(0, 3);
     const visibleInclusions = safeInclusions.slice(0, 3);
 
@@ -41,6 +44,7 @@ export default function ProductCard({
         overflow: "hidden",
         background: "var(--sv-catalog-card-bg)",
         color: "var(--sv-catalog-card-text)",
+        textDecoration: "none",
         transform: isHovered ? "translateY(-4px)" : "translateY(0)",
         boxShadow: isHovered ? "0 16px 34px rgba(19, 43, 79, 0.13)" : "0 4px 14px rgba(19, 43, 79, 0.045)",
         opacity: available ? 1 : 0.74,
@@ -60,7 +64,7 @@ export default function ProductCard({
     );
 
     return (
-        <div className="card secureview-catalog-card" style={cardStyle} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+        <Link href={href} aria-label={"View details for " + name} className="card secureview-catalog-card text-decoration-none" style={cardStyle} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
             <div className="position-relative" style={{ padding: "12px 12px 0" }}>
                 <div
                     className="position-relative overflow-hidden rounded-3 secureview-catalog-card-image-frame"
@@ -196,17 +200,21 @@ export default function ProductCard({
                         </div>
                     </div>
 
-                    <button
-                        type="button"
+                    <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
+                        <span className={"secureview-catalog-stock " + (stockQuantity > 0 ? "is-in-stock" : "is-out-of-stock")}>
+                            <i className={"bi " + (stockQuantity > 0 ? "bi-check-circle-fill" : "bi-x-circle-fill")} aria-hidden="true" />
+                            {stockQuantity > 0 ? stockQuantity.toLocaleString("en-PH") + " IN STOCK" : "OUT OF STOCK"}
+                        </span>
+                        <span className="small fw-semibold text-primary">View details <i className="bi bi-arrow-up-right ms-1" aria-hidden="true" /></span>
+                    </div>
+                    <span
                         className="btn btn-primary fw-bold w-100 py-2"
                         style={{ borderRadius: "10px", letterSpacing: "0.02em", boxShadow: "0 4px 10px rgba(13, 110, 253, 0.15)" }}
-                        onClick={onDetails}
-                        disabled={!available}
                     >
-                        {available ? "VIEW DETAILS" : "UNAVAILABLE"}
-                    </button>
+                        EXPLORE {isPackage ? "PACKAGE" : "PRODUCT"}
+                    </span>
                 </div>
             </div>
-        </div>
+        </Link>
     );
 }
