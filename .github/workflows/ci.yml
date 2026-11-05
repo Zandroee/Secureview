@@ -95,9 +95,9 @@ jobs:
       - name: Assemble Hostinger release bundle
         if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
         run: |
-          test -s public/images/netmax-logo.png
-          echo "7b9b570ad544bf27348cb717cb29663daff43cef39ca58eb9f4b0d6139c21a4b  public/images/netmax-logo.png" | sha256sum --check
-          php -r '$header = file_get_contents("public/images/netmax-logo.png", false, null, 0, 26); if (strlen($header) !== 26 || substr($header, 0, 8) !== "\x89PNG\r\n\x1a\n" || ord($header[25]) !== 6) { fwrite(STDERR, "Netmax logo must be an RGBA PNG with transparency.\n"); exit(1); }'
+          test -s public/images/netmax-logo.webp
+          echo "b583c81a7c36c572b44f1602bb78c25551233298b49e926f9d16196c800d9753  public/images/netmax-logo.webp" | sha256sum --check
+          php -r '$data = file_get_contents("public/images/netmax-logo.webp"); $image = getimagesize("public/images/netmax-logo.webp"); $vp8x = strpos($data, "VP8X"); $hasAlpha = ($vp8x !== false && (ord($data[$vp8x + 8]) & 0x10) !== 0) || strpos($data, "ALPH") !== false; if (!$image || $image[2] !== IMAGETYPE_WEBP || !$hasAlpha) { fwrite(STDERR, "Netmax Trading logo must be a transparent WebP image.\n"); exit(1); }'
           mkdir -p hostinger-release/build hostinger-release/public/images hostinger-release/config hostinger-release/app/Providers hostinger-release/app/Console/Commands hostinger-release/app/Http/Controllers/Admin hostinger-release/app/Http/Controllers hostinger-release/app/Http/Middleware hostinger-release/app/Services hostinger-release/app/Mail hostinger-release/app/Models hostinger-release/database/migrations hostinger-release/database/seeders hostinger-release/resources/views/emails hostinger-release/resources/views/errors hostinger-release/bootstrap hostinger-release/routes
           cp -a public/build/. hostinger-release/build/
           cp config/services.php hostinger-release/config/services.php
@@ -162,7 +162,7 @@ jobs:
           cp database/migrations/2026_10_23_210000_backfill_explicit_catalog_brands.php hostinger-release/database/migrations/2026_10_23_210000_backfill_explicit_catalog_brands.php
           cp database/seeders/CatalogExpansionSeeder.php hostinger-release/database/seeders/CatalogExpansionSeeder.php
           cp resources/views/app.blade.php hostinger-release/resources/views/app.blade.php
-          cp public/images/netmax-logo.png hostinger-release/public/images/netmax-logo.png
+          cp public/images/netmax-logo.webp hostinger-release/public/images/netmax-logo.webp
           cp public/images/netmax-favicon.png hostinger-release/public/images/netmax-favicon.png
           cp resources/views/errors/404.blade.php hostinger-release/resources/views/errors/404.blade.php
           cp resources/views/errors/419.blade.php hostinger-release/resources/views/errors/419.blade.php
