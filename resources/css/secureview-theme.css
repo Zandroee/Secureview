@@ -2819,10 +2819,10 @@ html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
 .navbar-brand:has(.netmax-navbar-logo) {
     display: inline-flex;
     align-items: center;
-    padding: 4px 10px;
-    border-radius: 11px;
-    background: #fff;
-    box-shadow: 0 2px 9px rgba(7, 32, 77, .1);
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
 .netmax-footer-logo-wrap {
@@ -2830,9 +2830,9 @@ html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
     max-width: 100%;
     align-items: center;
     justify-content: center;
-    padding: 12px 15px;
-    border-radius: 12px;
-    background: #fff;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
 }
 
 .netmax-footer-logo {
@@ -2841,6 +2841,7 @@ html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
     max-height: 110px;
     height: auto;
     object-fit: contain;
+    filter: drop-shadow(0 1px 1px rgba(255, 255, 255, .16));
 }
 
 @media (max-width: 575.98px) {
