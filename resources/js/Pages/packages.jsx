@@ -183,6 +183,18 @@ export default function Packages({ packages = [] }) {
         ...(minPrice !== "" ? [{ key: "minPrice", label: "From " + money(minPrice), remove: () => setMinPrice("") }] : []),
         ...(maxPrice !== "" ? [{ key: "maxPrice", label: "Up to " + money(maxPrice), remove: () => setMaxPrice("") }] : []),
         ...(rating !== "" ? [{ key: "rating", label: rating + "+ stars", remove: () => setRating("") }] : []),
+        ...(sortBy !== "recommended" ? [{
+            key: "sort",
+            label: "Sort: " + ({
+                name_asc: "Name A to Z",
+                name_desc: "Name Z to A",
+                price_asc: "Price low to high",
+                price_desc: "Price high to low",
+                rating_desc: "Highest rated",
+                stock_desc: "Most available",
+            }[sortBy] || "Recommended"),
+            remove: () => setSortBy("recommended"),
+        }] : []),
         ...(availability !== "all" ? [{
             key: "availability",
             label: availability === "in_stock" ? "In stock" : "Out of stock",
@@ -218,7 +230,7 @@ export default function Packages({ packages = [] }) {
                 </div>
 
                 <div className="row g-4 align-items-start">
-                    <aside className="col-12 col-lg-3 col-xl-2">
+                    <aside className="col-12 col-lg-3 col-xl-2 order-lg-2">
                         <section className="products-filter-card card shadow-none" style={{ borderRadius: "12px" }}>
                             <div className="card-body p-3 p-xl-4">
                                 <div className="d-flex justify-content-between align-items-center gap-2 mb-3">
@@ -240,6 +252,25 @@ export default function Packages({ packages = [] }) {
                                 </div>
 
                                 <div id="package-filter-controls" hidden={isMobileFilterLayout && !filtersOpen}>
+                                    <div className="mb-4">
+                                        <label htmlFor="package-sort" className="form-label h6 fw-bold mb-2">Sort by</label>
+                                        <select
+                                            id="package-sort"
+                                            className="form-select"
+                                            value={sortBy}
+                                            onChange={(event) => { setSortBy(event.target.value); setCurrentPage(1); }}
+                                        >
+                                    <option value="recommended">Recommended</option>
+                                    <option value="name_asc">Name: A to Z</option>
+                                    <option value="name_desc">Name: Z to A</option>
+                                    <option value="price_asc">Price: Low to high</option>
+                                    <option value="price_desc">Price: High to low</option>
+                                    <option value="rating_desc">Highest rated</option>
+                                    <option value="stock_desc">Most available</option>
+                                        </select>
+                                    </div>
+
+
                                     <div className="mb-4">
                                     <h3 className="h6 fw-bold mb-2">Category</h3>
                                     {packageCategories.length ? packageCategories.map((item) => (
@@ -319,7 +350,7 @@ export default function Packages({ packages = [] }) {
                         </section>
                     </aside>
 
-                    <section className="col-12 col-lg-9 col-xl-10" aria-labelledby="packages-heading">
+                    <section className="col-12 col-lg-9 col-xl-10 order-lg-1" aria-labelledby="packages-heading">
                         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-3">
                             <div>
                                 <h1 id="packages-heading" className="products-page-title mb-1">Browse Packages</h1>
@@ -344,24 +375,12 @@ export default function Packages({ packages = [] }) {
                             </div>
                         )}
 
-                        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 border-bottom pb-3 mb-4">
+                        <div className="border-bottom pb-3 mb-4">
                             <span className="small text-muted">
                                 {filteredPackages.length === 0
                                     ? "No matching packages"
                                     : `Showing ${startIndex + 1}–${Math.min(startIndex + packagesPerPage, filteredPackages.length)} of ${filteredPackages.length}`}
                             </span>
-                            <div className="d-flex align-items-center gap-2">
-                                <label htmlFor="package-sort" className="small text-muted text-nowrap">Sort by</label>
-                                <select id="package-sort" className="form-select form-select-sm" style={{ minWidth: "185px" }} value={sortBy} onChange={(event) => { setSortBy(event.target.value); setCurrentPage(1); }}>
-                                    <option value="recommended">Recommended</option>
-                                    <option value="name_asc">Name: A to Z</option>
-                                    <option value="name_desc">Name: Z to A</option>
-                                    <option value="price_asc">Price: Low to high</option>
-                                    <option value="price_desc">Price: High to low</option>
-                                    <option value="rating_desc">Highest rated</option>
-                                    <option value="stock_desc">Most available</option>
-                                </select>
-                            </div>
                         </div>
 
                         {minPrice !== "" && maxPrice !== "" && Number(minPrice) > Number(maxPrice) ? (

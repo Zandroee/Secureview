@@ -5,7 +5,6 @@ import '../css/secureview-theme.css';
 
 import './bootstrap';
 import Chatbot from './Components/Chatbot';
-import netmaxFavicon from '../images/netmax-favicon.png';
 
 import { createInertiaApp, router } from '@inertiajs/react';
 import { applyUserTheme } from './theme';
@@ -22,11 +21,6 @@ createInertiaApp({
 
     setup({ el, App, props }) {
         installTableSorting();
-
-        const faviconLink = document.querySelector('link[rel="icon"]');
-        if (faviconLink) {
-            faviconLink.href = netmaxFavicon;
-        }
 
         // Prefer the user's persisted setting from the initial Inertia page props.
         // The Blade root template applies an early theme to prevent first-paint flashing,

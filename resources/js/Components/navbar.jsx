@@ -1,7 +1,6 @@
 import { Link, router, usePage } from "@inertiajs/react";
 import { Offcanvas } from "bootstrap";
 import { useEffect, useRef, useState } from "react";
-import netmaxLogo from "../../images/netmax-logo.png";
 
 export default function Navbar() {
     const { url, props } = usePage();
@@ -676,7 +675,7 @@ export default function Navbar() {
                     }}
                 >
                     <img
-                        src={netmaxLogo}
+                        src="/images/netmax-logo.webp"
                         alt="Netmax Trading"
                         className="netmax-navbar-logo"
                     />
