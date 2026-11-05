@@ -50,7 +50,7 @@ export default function WarrantyClaims({ claims = [], eligibleItems = [] }) {
                     <div className="row g-3 align-items-start">
                         <div className="col-12">
                             <div className="bg-white border rounded-3 p-3 p-md-4 mb-3">
-                                <div className="small text-primary fw-bold">SECUREVIEW</div>
+                                <div className="small text-primary fw-bold">NETMAX TRADING</div>
                                 <h1 className="h3 fw-bold mb-1" style={{ fontFamily: "Outfit, sans-serif" }}>
                                     WARRANTY CLAIMS
                                 </h1>
@@ -148,7 +148,7 @@ export default function WarrantyClaims({ claims = [], eligibleItems = [] }) {
                             <section className="bg-white border rounded-3">
                                 <div className="p-3 p-md-4 border-bottom">
                                     <h2 className="h5 fw-bold mb-1">My warranty requests</h2>
-                                    <p className="small text-muted mb-0">Review updates, service decisions, and notes from SecureView.</p>
+                                    <p className="small text-muted mb-0">Review updates, service decisions, and notes from Netmax Trading.</p>
                                 </div>
 
                                 {claimRows.length === 0 ? (
@@ -177,7 +177,7 @@ export default function WarrantyClaims({ claims = [], eligibleItems = [] }) {
                                                 </div>
                                                 {claim.admin_notes && (
                                                     <div className="mt-3 p-3 rounded-3 bg-light border-start border-3 border-primary">
-                                                        <div className="small fw-bold mb-1">SECUREVIEW UPDATE</div>
+                                                        <div className="small fw-bold mb-1">NETMAX TRADING UPDATE</div>
                                                         <div className="small">{claim.admin_notes}</div>
                                                     </div>
                                                 )}

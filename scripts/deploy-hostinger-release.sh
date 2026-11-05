@@ -77,6 +77,13 @@ unzip -q "$ZIP_PATH" -d "$STAGE_DIR"
 [[ -f "$STAGE_DIR/database/migrations/2026_10_27_000002_change_voucher_schedule_fields_to_local_datetime.php" ]] || fail "Release is missing the voucher schedule timezone migration."
 [[ -f "$STAGE_DIR/database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php" ]] || fail "Release is missing the product/package promo sales migration."
 [[ -f "$STAGE_DIR/app/Http/Controllers/CartController.php" ]] || fail "Release is missing the promo-aware cart controller."
+[[ -f "$STAGE_DIR/app/Http/Controllers/CustomerSupportConversationController.php" ]] || fail "Release is missing the customer support conversation controller."
+[[ -f "$STAGE_DIR/app/Http/Controllers/Admin/CustomerConversationsController.php" ]] || fail "Release is missing the admin customer conversation controller."
+[[ -f "$STAGE_DIR/app/Models/SupportConversation.php" ]] || fail "Release is missing the support conversation model."
+[[ -f "$STAGE_DIR/app/Models/SupportMessage.php" ]] || fail "Release is missing the support message model."
+[[ -f "$STAGE_DIR/database/migrations/2026_11_05_000001_create_support_conversations_tables.php" ]] || fail "Release is missing the support conversation migration."
+[[ -f "$STAGE_DIR/public/images/netmax-logo.png" ]] || fail "Release is missing the Netmax Trading logo."
+[[ -f "$STAGE_DIR/public/images/netmax-favicon.png" ]] || fail "Release is missing the Netmax Trading favicon."
 
 mkdir -p "$BACKUP_ROOT/files" "$BACKUP_ROOT/app-public" "$BACKUP_ROOT/web-public"
 
@@ -87,14 +94,32 @@ while IFS= read -r -d '' staged_file; do
     relative_path="${staged_file#"$STAGE_DIR"/}"
     case "$relative_path" in
         build/*) continue ;;
-        .env|.env/*|vendor/*|storage/*|public/*)
+        .env|.env/*|vendor/*|storage/*)
             fail "Refusing to overlay protected path: $relative_path"
+            ;;
+        public/*)
+            case "$relative_path" in
+                public/images/netmax-logo.png|public/images/netmax-favicon.png) ;;
+                *) fail "Refusing to overlay unapproved public path: $relative_path" ;;
+            esac
             ;;
     esac
 
     target="$APP_DIR/$relative_path"
     if [[ -L "$target" ]]; then
         fail "Refusing to replace a symlinked application file: $target"
+    fi
+    if [[ "$relative_path" == public/images/* ]]; then
+        [[ ! -L "$APP_DIR/public/images" && ! -L "$PUBLIC_DIR/images" ]] || fail "Refusing to write through a symlinked images directory."
+        web_target="$PUBLIC_DIR/${relative_path#public/}"
+        if [[ -L "$web_target" ]]; then
+            fail "Refusing to replace a symlinked web-root asset: $web_target"
+        fi
+        if [[ -e "$web_target" ]]; then
+            web_backup="$BACKUP_ROOT/web-public/${relative_path#public/}"
+            mkdir -p "$(dirname "$web_backup")"
+            cp -a "$web_target" "$web_backup"
+        fi
     fi
     if [[ -e "$target" ]]; then
         backup_target="$BACKUP_ROOT/files/$relative_path"
@@ -118,6 +143,17 @@ while IFS= read -r -d '' staged_file; do
     relative_path="${staged_file#"$STAGE_DIR"/}"
     case "$relative_path" in
         build/*) continue ;;
+        public/images/*)
+            target="$APP_DIR/$relative_path"
+            web_target="$PUBLIC_DIR/${relative_path#public/}"
+            [[ ! -L "$APP_DIR/public/images" && ! -L "$PUBLIC_DIR/images" ]] || fail "Refusing to write through a symlinked images directory."
+            [[ ! -L "$target" && ! -L "$web_target" ]] || fail "Refusing to replace a symlinked logo or favicon."
+            mkdir -p "$(dirname "$target")" "$(dirname "$web_target")"
+            cp -a "$staged_file" "$target"
+            cp -a "$staged_file" "$web_target"
+            cmp -s "$target" "$web_target" || fail "App and web-root image copies do not match: $relative_path"
+            continue
+            ;;
     esac
 
     target="$APP_DIR/$relative_path"

@@ -6,8 +6,8 @@ import { useState } from "react";
 
 const faqItems = [
     {
-        question: "What can I find on SecureView?",
-        answer: "SecureView is the online platform for Netmax Trading's CCTV products, packages, and related services. Browse the catalog to compare the available items and their listed details.",
+        question: "What can I find on Netmax Trading?",
+        answer: "Netmax Trading is the online platform for Netmax Trading's CCTV products, packages, and related services. Browse the catalog to compare the available items and their listed details.",
     },
     {
         question: "What services can I request?",
@@ -56,7 +56,7 @@ export default function About() {
                                 alt="CCTV security camera installation"
                             />
                             <div className="about-hero-copy position-absolute top-50 start-50 translate-middle text-center">
-                                <p className="about-hero-eyebrow text-uppercase fw-bold mb-2">Netmax Trading · SecureView</p>
+                                <p className="about-hero-eyebrow text-uppercase fw-bold mb-2">Netmax Trading · Netmax Trading</p>
                                 <h1 className="display-3 fw-bold mb-2">ABOUT US</h1>
                                 <p className="about-hero-subtitle mb-0">Who are we?</p>
                             </div>
@@ -100,7 +100,7 @@ export default function About() {
                 <div className="container">
                     <div className="why-line"></div>
                     <div className="text-center mb-4 mb-lg-5">
-                        <p className="about-section-kicker text-uppercase fw-bold mb-2">The SecureView difference</p>
+                        <p className="about-section-kicker text-uppercase fw-bold mb-2">The Netmax Trading difference</p>
                         <h2 className="fw-bold text-primary mb-0 about-benefits-heading">WHY CHOOSE US?</h2>
                     </div>
 

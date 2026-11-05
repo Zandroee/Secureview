@@ -55,7 +55,8 @@ class ChatbotTest extends TestCase
             ],
         ])
             ->assertStatus(503)
-            ->assertJsonPath('message', 'The AI assistant is not configured yet. Please contact Netmax Trading or submit a service request through the Services page.');
+            ->assertJsonPath('message', 'The AI assistant is not configured yet. You can request a conversation with our team below, or submit a service request through the Services page.')
+            ->assertJsonPath('handoff_suggested', true);
 
         Http::assertNothingSent();
     }
@@ -70,7 +71,8 @@ class ChatbotTest extends TestCase
             ],
         ])
             ->assertOk()
-            ->assertJsonPath('message', "To request an installation or another service, open the Services page (/services) and submit the service request form (/inquiry). You can choose a preferred time slot; our team will confirm the appointment.");
+            ->assertJsonPath('message', "To request an installation or another service, open the Services page (/services) and submit the service request form (/inquiry). You can choose a preferred time slot; our team will confirm the appointment.")
+            ->assertJsonPath('handoff_suggested', false);
 
         Http::assertNothingSent();
     }
@@ -134,6 +136,34 @@ class ChatbotTest extends TestCase
         ])
             ->assertStatus(504)
             ->assertJsonPath('message', 'The AI assistant took too long to connect or respond. Please try again shortly. If this keeps happening, check your internet connection and Google AI API availability.');
+    }
+
+    public function test_uncertain_gemini_answer_suggests_human_support(): void
+    {
+        config([
+            'services.gemini.key' => 'test-gemini-key',
+            'services.gemini.model' => 'gemini-2.5-flash',
+        ]);
+
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    [
+                        'content' => [
+                            'parts' => [['text' => "I'm not sure about that setup. A team member can help confirm it."]],
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->postJson('/chatbot/message', [
+            'messages' => [
+                ['role' => 'user', 'content' => 'Can this particular recorder support my existing camera system?'],
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('handoff_suggested', true);
     }
 
 }

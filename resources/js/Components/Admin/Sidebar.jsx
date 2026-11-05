@@ -19,6 +19,12 @@ const menuGroups = [
             icon: "bi-chat-left-text",
         },
         {
+            label: "Customer Conversations",
+            href: "/admin/customer-conversations",
+            key: "customer-conversations",
+            icon: "bi-chat-square-text",
+        },
+        {
             label: "Scheduled Services",
             href: "/admin/schedules",
             key: "schedules",
@@ -102,6 +108,7 @@ const menuGroups = [
 export default function Sidebar({ active = "dashboard" }) {
     const { props } = usePage();
     const user = props.auth?.user;
+    const supportConversationCount = Number(props.supportConversationCount || 0);
 
     const getMobileSidebar = () => document.getElementById("adminSidebarOffcanvas");
 
@@ -249,13 +256,18 @@ export default function Sidebar({ active = "dashboard" }) {
                                     href={item.href}
                                     aria-current={isActive ? "page" : undefined}
                                     className={
-                                        "btn text-start rounded-2 fw-semibold " +
+                                        "btn text-start rounded-2 fw-semibold d-flex align-items-center " +
                                         (isActive ? "btn-primary" : "btn-light")
                                     }
                                     onClick={(event) => handleNavigationClick(event, item.href, mobile)}
                                 >
                                     <i className={"bi " + item.icon + " me-2"}></i>
-                                    {item.label}
+                                    <span className="flex-grow-1">{item.label}</span>
+                                    {item.key === "customer-conversations" && supportConversationCount > 0 && (
+                                        <span className={"badge rounded-pill " + (isActive ? "text-bg-light text-primary" : "text-bg-primary")}>
+                                            {supportConversationCount > 99 ? "99+" : supportConversationCount}
+                                        </span>
+                                    )}
                                 </Link>
                             );
                         })}
@@ -288,7 +300,7 @@ export default function Sidebar({ active = "dashboard" }) {
             >
                 <div className="offcanvas-header border-bottom">
                     <h2 className="offcanvas-title h5 fw-bold mb-0" id="adminSidebarOffcanvasLabel">
-                        SecureView Admin
+                        Netmax Trading Admin
                     </h2>
                     <button
                         type="button"

@@ -296,7 +296,7 @@ export default function AdminSchedules({
                     >
                         <div className="mb-4">
                             <div className="small text-primary fw-bold">
-                                SECUREVIEW ADMIN
+                                NETMAX TRADING ADMIN
                             </div>
 
                             <h1 className="fw-bold mb-1">

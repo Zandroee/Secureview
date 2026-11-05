@@ -473,7 +473,7 @@ export default function AdminProducts({
 
     return (
         <div className="admin-page admin-products-page">
-            <Head title="Product Inventory | SecureView Admin" />
+            <Head title="Product Inventory | Netmax Trading Admin" />
             <Navbar />
 
             <div className="container-fluid">
@@ -495,7 +495,7 @@ export default function AdminProducts({
                         <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                             <div>
                                 <div className="small text-primary fw-bold">
-                                    SECUREVIEW ADMIN
+                                    NETMAX TRADING ADMIN
                                 </div>
 
                                 <h1 id="admin-products-title" className="fw-bold mb-1">

@@ -55,7 +55,7 @@ export default function ForgotPassword({ status = "" }) {
                         fontSize: "clamp(2rem, 4vw, 3rem)",
                     }}
                 >
-                    SECUREVIEW
+                    NETMAX TRADING
                 </h1>
 
                 <div

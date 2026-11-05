@@ -94,8 +94,8 @@ class PurchaseController extends Controller
                     'order_status_before' => $event->order_status_before,
                     'order_status_after' => $event->order_status_after,
                     'actor_label' => $event->actor?->role === 'admin'
-                        ? 'SecureView'
-                        : ($event->actor?->name ?? 'SecureView system'),
+                        ? 'Netmax Trading'
+                        : ($event->actor?->name ?? 'Netmax Trading system'),
                     'created_at' => $event->created_at?->format('M d, Y h:i A'),
                 ])->values(),
                 'can_cancel' => $this->canCancel($order),
@@ -242,7 +242,7 @@ class PurchaseController extends Controller
 
                 if (!$existingResponse->successful()) {
                     return back()->withErrors([
-                        'payment' => 'We could not verify the existing checkout session. To prevent a duplicate payment, no replacement checkout was created. Please retry shortly or contact SecureView support.',
+                        'payment' => 'We could not verify the existing checkout session. To prevent a duplicate payment, no replacement checkout was created. Please retry shortly or contact Netmax Trading support.',
                     ]);
                 }
 
@@ -308,7 +308,7 @@ class PurchaseController extends Controller
 
                 if ($existingStatus !== 'expired') {
                     return back()->withErrors([
-                        'payment' => 'The existing checkout is not confirmed expired. No replacement checkout was created, to avoid a possible duplicate payment. Please refresh your order or contact SecureView support.',
+                        'payment' => 'The existing checkout is not confirmed expired. No replacement checkout was created, to avoid a possible duplicate payment. Please refresh your order or contact Netmax Trading support.',
                     ]);
                 }
             }
@@ -379,10 +379,10 @@ class PurchaseController extends Controller
                         : 'secureview-retry-' . $order->id . '-initial'));
 
             $checkoutDescription = $isInstallationBooking
-                ? 'SecureView Installation Booking ' . $order->order_number
+                ? 'Netmax Trading Installation Booking ' . $order->order_number
                 : ($isPriorityServiceFeeOnly
-                    ? 'SecureView ' . ucfirst($linkedInquiry->urgency) . ' Service Booking Fee ' . $order->order_number
-                    : 'SecureView Order ' . $order->order_number);
+                    ? 'Netmax Trading ' . ucfirst($linkedInquiry->urgency) . ' Service Booking Fee ' . $order->order_number
+                    : 'Netmax Trading Order ' . $order->order_number);
 
             $checkoutMetadata = [
                 'order_id' => (string) $order->id,

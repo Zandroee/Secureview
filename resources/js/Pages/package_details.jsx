@@ -292,11 +292,9 @@ export default function PackageDetails({ package: packageData, reviews = [], can
 
                             <div className="d-flex flex-wrap align-items-center justify-content-start gap-2 gap-md-3 mb-3" style={{ fontSize: "0.95rem", lineHeight: "1.5" }}>
                                 <strong>Category: {packageData.category}</strong>
-                                <span className="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2 py-2">
-                                    Installation: {Number(packageData.installation_fee ?? 0) > 0
-                                        ? "₱" + Number(packageData.installation_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                                        : "Free"}
-                                </span>
+                                <strong>Installation: {Number(packageData.installation_fee ?? 0) > 0
+                                    ? "₱" + Number(packageData.installation_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                    : "Free"}</strong>
                                 <strong>Warranty: {packageData.warranty}</strong>
                             </div>
 
@@ -318,15 +316,12 @@ export default function PackageDetails({ package: packageData, reviews = [], can
 
                             </div>
 
-                            <div
-                                className={
-                                    "small fw-semibold mb-2 " +
-                                    (availableStock > 0 ? "text-success" : "text-danger")
-                                }
-                            >
-                                {availableStock > 0
-                                    ? `${availableStock.toLocaleString()} IN STOCK`
-                                    : "OUT OF STOCK"}
+                            <div className={"catalog-detail-stock mb-3 " + (availableStock > 0 ? "is-in-stock" : "is-out-of-stock")} role="status">
+                                <i className={"bi " + (availableStock > 0 ? "bi-check-circle-fill" : "bi-x-circle-fill")} aria-hidden="true" />
+                                <span>
+                                    <strong>{availableStock > 0 ? availableStock.toLocaleString() : "0"} {availableStock > 0 ? "IN STOCK" : "OUT OF STOCK"}</strong>
+                                    <small>{availableStock > 0 ? "Ready to order" : "This item is currently unavailable"}</small>
+                                </span>
                             </div>
 
                             <div className="fw-bold mb-3">
@@ -345,10 +340,10 @@ export default function PackageDetails({ package: packageData, reviews = [], can
                                 </button>
                             </div>
 
-                            <div className="d-flex gap-2">
+                            <div className="d-flex flex-column flex-sm-row gap-2 catalog-detail-actions">
                                 <button
                                     type="button"
-                                    className="btn btn-primary fw-bold"
+                                    className="btn fw-bold catalog-buy-now-btn"
                                     onClick={handleBuyNow}
                                     disabled={availableStock < amount || availableStock === 0}
                                 >
@@ -358,12 +353,12 @@ export default function PackageDetails({ package: packageData, reviews = [], can
 
                                 <button
                                     type="button"
-                                    className="btn btn-outline-primary fw-bold"
+                                    className="btn fw-bold catalog-add-to-cart-btn"
                                     onClick={handleAddToCart}
                                     disabled={availableStock < amount || availableStock === 0}
                                 >
                                     <i className="bi bi-cart3 me-2"></i>
-                                    Add To Cart
+                                    Add to Cart
                                 </button>
                             </div>
 

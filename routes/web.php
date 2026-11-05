@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ChatbotController;
+use App\Http\Controllers\CustomerSupportConversationController;
+use App\Http\Controllers\Admin\CustomerConversationsController as AdminCustomerConversationsController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\SearchController;
@@ -66,6 +68,19 @@ Route::get('/about', function () {
 Route::post('/chatbot/message', [ChatbotController::class, 'reply'])
     ->middleware('throttle:10,1')
     ->name('chatbot.reply');
+
+Route::get('/chatbot/conversation', [CustomerSupportConversationController::class, 'current'])
+    ->middleware('throttle:30,1')
+    ->name('chatbot.conversation.current');
+Route::post('/chatbot/handoff', [CustomerSupportConversationController::class, 'start'])
+    ->middleware('throttle:5,1')
+    ->name('chatbot.conversation.handoff');
+Route::get('/chatbot/conversations/{conversation}', [CustomerSupportConversationController::class, 'show'])
+    ->middleware('throttle:60,1')
+    ->name('chatbot.conversation.show');
+Route::post('/chatbot/conversations/{conversation}/messages', [CustomerSupportConversationController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('chatbot.conversation.messages.store');
 
 Route::get('/login', function () {
     return Inertia::render('login');
@@ -245,6 +260,17 @@ Route::middleware(['auth', 'verified', 'admin', 'inertia.encrypt'])->group(funct
         ->name('admin.catalog-options.destroy');
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/admin/customer-conversations', [AdminCustomerConversationsController::class, 'index'])
+        ->name('admin.customer-conversations.index');
+    Route::get('/admin/customer-conversations/list', [AdminCustomerConversationsController::class, 'list'])
+        ->name('admin.customer-conversations.list');
+    Route::get('/admin/customer-conversations/{conversation}', [AdminCustomerConversationsController::class, 'show'])
+        ->name('admin.customer-conversations.show');
+    Route::post('/admin/customer-conversations/{conversation}/messages', [AdminCustomerConversationsController::class, 'reply'])
+        ->name('admin.customer-conversations.reply');
+    Route::patch('/admin/customer-conversations/{conversation}/status', [AdminCustomerConversationsController::class, 'updateStatus'])
+        ->name('admin.customer-conversations.status');
 
     Route::get('/admin/activity-logs', [AdminActivityLogController::class, 'index'])
         ->name('admin.activity-logs.index');

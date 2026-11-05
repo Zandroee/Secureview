@@ -131,7 +131,7 @@ export default function AdminTransactions({
                     >
                         <div className="mb-4">
                             <div className="small text-primary fw-bold">
-                                SECUREVIEW ADMIN
+                                NETMAX TRADING ADMIN
                             </div>
 
                             <h1 className="fw-bold mb-1">
@@ -667,7 +667,7 @@ export default function AdminTransactions({
                                 </div>
                             ) : (
                                 <div className="small text-muted">
-                                    No earlier event history is available for this order. SecureView cannot reconstruct status changes from before timeline logging was enabled.
+                                    No earlier event history is available for this order. Netmax Trading cannot reconstruct status changes from before timeline logging was enabled.
                                 </div>
                             )}
                         </div>

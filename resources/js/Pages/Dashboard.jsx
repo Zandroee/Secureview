@@ -88,7 +88,7 @@ export default function Dashboard({
                                 <div className="d-flex justify-content-between align-items-center mb-4">
                                     <div>
                                         <div className="small text-primary fw-bold">
-                                            SECUREVIEW ADMIN
+                                            NETMAX TRADING ADMIN
                                         </div>
                                         <h1 className="fw-bold text-primary mb-0">
                                             Dashboard

@@ -124,7 +124,7 @@ export default function Settings({ settings = {} }) {
             >
                 <div className="container py-4 py-lg-5">
                     <div className="mb-4">
-                        <div className="small text-primary fw-bold">SECUREVIEW ACCOUNT</div>
+                        <div className="small text-primary fw-bold">NETMAX TRADING ACCOUNT</div>
                         <h1 className="fw-bold mb-1" style={{ fontFamily: "Outfit, sans-serif" }}>
                             SETTINGS
                         </h1>
@@ -277,7 +277,7 @@ export default function Settings({ settings = {} }) {
                                     </div>
                                     <div>
                                         <h2 className="h5 fw-bold mb-1">Appearance</h2>
-                                        <p className="small text-muted mb-0">Choose the look of SecureView across pages and devices where you sign in.</p>
+                                        <p className="small text-muted mb-0">Choose the look of Netmax Trading across pages and devices where you sign in.</p>
                                     </div>
                                 </div>
 
@@ -351,7 +351,7 @@ export default function Settings({ settings = {} }) {
 
                         <div className="col-12">
                             <div className="small text-muted text-center py-2">
-                                Settings are saved to your SecureView account. Your email address stays unchanged unless a verified email-change flow is added.
+                                Settings are saved to your Netmax Trading account. Your email address stays unchanged unless a verified email-change flow is added.
                             </div>
                         </div>
                     </div>

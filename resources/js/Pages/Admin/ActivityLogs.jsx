@@ -138,7 +138,7 @@ export default function AdminActivityLogs({
                         <div className="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
                             <div>
                                 <div className="small text-primary fw-bold">
-                                    SECUREVIEW ADMIN
+                                    NETMAX TRADING ADMIN
                                 </div>
                                 <h1 className="fw-bold mb-1">ADMIN ACTIVITY LOGS</h1>
                                 <div className="small text-muted">

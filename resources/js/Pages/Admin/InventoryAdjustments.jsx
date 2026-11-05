@@ -29,7 +29,7 @@ export default function AdminInventoryAdjustments({ adjustments = [], filters = 
                     <aside className="col-md-3 col-lg-2 px-0"><Sidebar active="inventory-adjustments" /></aside>
                     <main className="col-md-9 col-lg-10 p-3 p-md-4" style={{ backgroundColor: "#f5f6f8", minHeight: "75vh", fontFamily: "Outfit, sans-serif" }}>
                         <div className="mb-4">
-                            <div className="small text-primary fw-bold">SECUREVIEW ADMIN</div>
+                            <div className="small text-primary fw-bold">NETMAX TRADING ADMIN</div>
                             <h1 className="fw-bold mb-1">INVENTORY ADJUSTMENT HISTORY</h1>
                             <p className="text-muted mb-0">Audit stock changes made by administrators and technicians.</p>
                         </div>

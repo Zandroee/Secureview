@@ -322,7 +322,7 @@ class InquiryController extends Controller
             !config('services.paymongo.secret_key')
         ) {
             throw ValidationException::withMessages([
-                'payment_method' => 'Online payments are not configured. Choose Cash or contact SecureView before submitting this priority booking.',
+                'payment_method' => 'Online payments are not configured. Choose Cash or contact Netmax Trading before submitting this priority booking.',
             ]);
         }
 
@@ -569,7 +569,7 @@ class InquiryController extends Controller
 
         if ($paymentMethod === 'cash') {
             return redirect()->route('inquiries.show', $inquiry)
-                ->with('success', 'Your installation service has been booked. Payment is pending until SecureView confirms receipt of cash.')
+                ->with('success', 'Your installation service has been booked. Payment is pending until Netmax Trading confirms receipt of cash.')
                 ->with('serviceNotification', [
                     'title' => 'Installation service booked',
                     'message' => 'Your service ' . $inquiry->inquiry_number . ' is saved and awaiting payment confirmation.',
@@ -615,7 +615,7 @@ class InquiryController extends Controller
                                 'email' => $order->customer_email,
                                 'phone' => $order->customer_phone,
                             ],
-                            'description' => 'SecureView Installation Booking ' . $order->order_number,
+                            'description' => 'Netmax Trading Installation Booking ' . $order->order_number,
                             'reference_number' => $order->order_number,
                             'metadata' => [
                                 'order_id' => (string) $order->id,
@@ -737,7 +737,7 @@ class InquiryController extends Controller
 
         if ($paymentMethod === 'cash') {
             return redirect()->route('inquiries.show', $inquiry)
-                ->with('success', 'Your ' . strtolower($inquiry->service_type) . ' request is saved. The ' . $validated['urgency'] . ' booking fee is pending until SecureView confirms receipt of cash.')
+                ->with('success', 'Your ' . strtolower($inquiry->service_type) . ' request is saved. The ' . $validated['urgency'] . ' booking fee is pending until Netmax Trading confirms receipt of cash.')
                 ->with('serviceNotification', [
                     'title' => 'Priority service request submitted',
                     'message' => 'Your ' . $inquiry->inquiry_number . ' request is awaiting review and cash confirmation for its priority booking fee.',
@@ -749,7 +749,7 @@ class InquiryController extends Controller
         if (!$secretKey) {
             // This is guarded before the inquiry is created; retain this defensive check.
             $order->update(['payment_status' => 'failed', 'order_status' => 'payment_failed']);
-            return back()->withErrors(['payment_method' => 'Online payments are not configured. Choose Cash or contact SecureView.'])->withInput();
+            return back()->withErrors(['payment_method' => 'Online payments are not configured. Choose Cash or contact Netmax Trading.'])->withInput();
         }
 
         $lineItems = [[
@@ -774,7 +774,7 @@ class InquiryController extends Controller
                                 'email' => $order->customer_email,
                                 'phone' => $order->customer_phone,
                             ],
-                            'description' => 'SecureView ' . ucfirst($validated['urgency']) . ' Service Booking Fee ' . $order->order_number,
+                            'description' => 'Netmax Trading ' . ucfirst($validated['urgency']) . ' Service Booking Fee ' . $order->order_number,
                             'reference_number' => $order->order_number,
                             'metadata' => [
                                 'order_id' => (string) $order->id,

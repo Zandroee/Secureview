@@ -80,7 +80,7 @@ export default function InvoiceSettings({ settings = {}, profile_ready: profileR
 
                         {props.flash?.success && <div className="alert alert-success">{props.flash.success}</div>}
                         <div className="alert alert-warning">
-                            These settings prepare the invoice profile only. They do not register SecureView with the BIR, authorize a serial-number series, calculate taxes, or enable BIR electronic transmission. Enter only details confirmed by the business's registration documents and accountant.
+                            These settings prepare the invoice profile only. They do not register Netmax Trading with the BIR, authorize a serial-number series, calculate taxes, or enable BIR electronic transmission. Enter only details confirmed by the business's registration documents and accountant.
                         </div>
 
                         <div className="row g-3 mb-4">

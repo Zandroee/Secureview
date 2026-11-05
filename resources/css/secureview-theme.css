@@ -2626,3 +2626,229 @@ html[data-bs-theme="dark"] .admin-order-history-mobile-card {
         padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
     }
 }
+
+
+/* Netmax Trading catalog conversion and stock visibility */
+.secureview-catalog-card {
+    cursor: pointer;
+    color: var(--sv-catalog-card-text);
+}
+
+.secureview-catalog-card:hover,
+.secureview-catalog-card:focus-visible {
+    border-color: #8bbdff !important;
+    outline: none;
+    box-shadow: 0 16px 34px rgba(19, 43, 79, .16) !important;
+}
+
+.secureview-catalog-card:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, .45);
+    outline-offset: 3px;
+}
+
+.secureview-catalog-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 9px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .035em;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.secureview-catalog-stock.is-in-stock {
+    border-color: #a7e4c2;
+    background: #eafaf1;
+    color: #087443;
+}
+
+.secureview-catalog-stock.is-out-of-stock {
+    border-color: #f2b9bd;
+    background: #fff0f1;
+    color: #b42332;
+}
+
+.catalog-detail-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 10px 14px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+}
+
+.catalog-detail-stock > i {
+    font-size: 1.35rem;
+    flex: 0 0 auto;
+}
+
+.catalog-detail-stock > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.catalog-detail-stock strong {
+    font-size: .88rem;
+    letter-spacing: .045em;
+}
+
+.catalog-detail-stock small {
+    font-size: .73rem;
+    opacity: .82;
+}
+
+.catalog-detail-stock.is-in-stock {
+    border-color: #9ddfba;
+    background: linear-gradient(135deg, #eafaf1 0%, #f7fdf9 100%);
+    color: #087443;
+}
+
+.catalog-detail-stock.is-out-of-stock {
+    border-color: #efb0b6;
+    background: linear-gradient(135deg, #fff0f1 0%, #fff8f8 100%);
+    color: #b42332;
+}
+
+.catalog-detail-actions > button {
+    flex: 1 1 0;
+    min-height: 50px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: .96rem;
+    letter-spacing: .01em;
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.catalog-buy-now-btn {
+    border: 1px solid #0756c7;
+    background: linear-gradient(135deg, #087cff 0%, #0756c7 100%);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(7, 86, 199, .25);
+}
+
+.catalog-buy-now-btn:hover:not(:disabled) {
+    border-color: #063e97;
+    background: linear-gradient(135deg, #0870eb 0%, #063e97 100%);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(7, 86, 199, .32);
+}
+
+.catalog-add-to-cart-btn {
+    border: 1.5px solid #0b65d8;
+    background: #eef6ff;
+    color: #0756c7;
+    box-shadow: 0 5px 14px rgba(7, 86, 199, .08);
+}
+
+.catalog-add-to-cart-btn:hover:not(:disabled) {
+    border-color: #0756c7;
+    background: #dcecff;
+    color: #063e97;
+    transform: translateY(-2px);
+    box-shadow: 0 9px 19px rgba(7, 86, 199, .16);
+}
+
+.catalog-buy-now-btn:disabled,
+.catalog-add-to-cart-btn:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+    transform: none;
+    box-shadow: none;
+}
+
+html[data-bs-theme="dark"] .catalog-detail-stock.is-in-stock {
+    border-color: #166744;
+    background: #102d22;
+    color: #8be0b2;
+}
+
+html[data-bs-theme="dark"] .catalog-detail-stock.is-out-of-stock {
+    border-color: #8b303b;
+    background: #351c21;
+    color: #ffb5bd;
+}
+
+html[data-bs-theme="dark"] .secureview-catalog-stock.is-in-stock {
+    border-color: #166744;
+    background: #102d22;
+    color: #8be0b2;
+}
+
+html[data-bs-theme="dark"] .secureview-catalog-stock.is-out-of-stock {
+    border-color: #8b303b;
+    background: #351c21;
+    color: #ffb5bd;
+}
+
+html[data-bs-theme="dark"] .catalog-add-to-cart-btn {
+    border-color: #3b82f6;
+    background: #122b4a;
+    color: #bfdbfe;
+}
+
+html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
+    border-color: #60a5fa;
+    background: #193d67;
+    color: #eff6ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .catalog-detail-actions > button {
+        transition: none;
+    }
+}
+
+
+/* Netmax Trading company identity */
+.netmax-navbar-logo {
+    display: block;
+    width: clamp(160px, 17vw, 240px);
+    height: auto;
+    max-height: 54px;
+    object-fit: contain;
+}
+
+.navbar-brand:has(.netmax-navbar-logo) {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 11px;
+    border-radius: 11px;
+    background: #fff;
+    box-shadow: 0 2px 9px rgba(7, 32, 77, .1);
+}
+
+.netmax-footer-logo-wrap {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 15px;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.netmax-footer-logo {
+    display: block;
+    width: min(100%, 300px);
+    max-height: 105px;
+    object-fit: contain;
+}
+
+@media (max-width: 575.98px) {
+    .netmax-navbar-logo {
+        width: clamp(145px, 47vw, 195px);
+        max-height: 43px;
+    }
+
+    .netmax-footer-logo-wrap {
+        padding: 10px 12px;
+    }
+}

@@ -73,6 +73,9 @@ jobs:
       - name: Build Vite assets
         run: npm run build
 
+      - name: Validate Hostinger deployment script syntax
+        run: bash -n scripts/deploy-hostinger-release.sh
+
       - name: Run Laravel feature and unit tests
         run: |
           # Laravel's env bootstrap reads the root .env on each test app boot.
@@ -92,12 +95,13 @@ jobs:
       - name: Assemble Hostinger release bundle
         if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
         run: |
-          mkdir -p hostinger-release/build hostinger-release/config hostinger-release/app/Providers hostinger-release/app/Console/Commands hostinger-release/app/Http/Controllers/Admin hostinger-release/app/Http/Controllers hostinger-release/app/Http/Middleware hostinger-release/app/Services hostinger-release/app/Mail hostinger-release/app/Models hostinger-release/database/migrations hostinger-release/database/seeders hostinger-release/resources/views/emails hostinger-release/resources/views/errors hostinger-release/bootstrap hostinger-release/routes
+          mkdir -p hostinger-release/build hostinger-release/public/images hostinger-release/config hostinger-release/app/Providers hostinger-release/app/Console/Commands hostinger-release/app/Http/Controllers/Admin hostinger-release/app/Http/Controllers hostinger-release/app/Http/Middleware hostinger-release/app/Services hostinger-release/app/Mail hostinger-release/app/Models hostinger-release/database/migrations hostinger-release/database/seeders hostinger-release/resources/views/emails hostinger-release/resources/views/errors hostinger-release/bootstrap hostinger-release/routes
           cp -a public/build/. hostinger-release/build/
           cp config/services.php hostinger-release/config/services.php
           cp config/filesystems.php hostinger-release/config/filesystems.php
           cp config/app.php hostinger-release/config/app.php
           cp config/session.php hostinger-release/config/session.php
+          cp config/invoice.php hostinger-release/config/invoice.php
           cp app/Http/Controllers/Admin/WarrantyController.php hostinger-release/app/Http/Controllers/Admin/WarrantyController.php
           cp app/Http/Controllers/Admin/InventoryAdjustmentController.php hostinger-release/app/Http/Controllers/Admin/InventoryAdjustmentController.php
           cp app/Http/Controllers/Admin/UserController.php hostinger-release/app/Http/Controllers/Admin/UserController.php
@@ -108,6 +112,9 @@ jobs:
           cp app/Http/Controllers/Admin/PurchaseController.php hostinger-release/app/Http/Controllers/Admin/PurchaseController.php
           cp app/Http/Controllers/Admin/VoucherController.php hostinger-release/app/Http/Controllers/Admin/VoucherController.php
           cp app/Http/Controllers/Admin/PromoSaleController.php hostinger-release/app/Http/Controllers/Admin/PromoSaleController.php
+          cp app/Http/Controllers/Admin/CustomerConversationsController.php hostinger-release/app/Http/Controllers/Admin/CustomerConversationsController.php
+          cp app/Http/Controllers/Admin/InvoiceSettingsController.php hostinger-release/app/Http/Controllers/Admin/InvoiceSettingsController.php
+          cp app/Http/Controllers/Admin/TransactionController.php hostinger-release/app/Http/Controllers/Admin/TransactionController.php
           cp app/Http/Controllers/Admin/ScheduleController.php hostinger-release/app/Http/Controllers/Admin/ScheduleController.php
           cp app/Http/Controllers/Admin/InquiryController.php hostinger-release/app/Http/Controllers/Admin/InquiryController.php
           cp app/Http/Controllers/CheckoutController.php hostinger-release/app/Http/Controllers/CheckoutController.php
@@ -128,9 +135,12 @@ jobs:
           cp app/Http/Controllers/ReviewController.php hostinger-release/app/Http/Controllers/ReviewController.php
           cp app/Console/Commands/ClearProductPackageReferences.php hostinger-release/app/Console/Commands/ClearProductPackageReferences.php
           cp app/Http/Controllers/ChatbotController.php hostinger-release/app/Http/Controllers/ChatbotController.php
+          cp app/Http/Controllers/CustomerSupportConversationController.php hostinger-release/app/Http/Controllers/CustomerSupportConversationController.php
           cp app/Services/EmailVerificationCodeService.php hostinger-release/app/Services/EmailVerificationCodeService.php
           cp app/Mail/EmailVerificationCodeMail.php hostinger-release/app/Mail/EmailVerificationCodeMail.php
           cp app/Models/User.php hostinger-release/app/Models/User.php
+          cp app/Models/SupportConversation.php hostinger-release/app/Models/SupportConversation.php
+          cp app/Models/SupportMessage.php hostinger-release/app/Models/SupportMessage.php
           cp app/Models/Order.php hostinger-release/app/Models/Order.php
           cp app/Models/Voucher.php hostinger-release/app/Models/Voucher.php
           cp app/Models/PendingInquiryCheckout.php hostinger-release/app/Models/PendingInquiryCheckout.php
@@ -147,6 +157,8 @@ jobs:
           cp database/migrations/2026_10_23_210000_backfill_explicit_catalog_brands.php hostinger-release/database/migrations/2026_10_23_210000_backfill_explicit_catalog_brands.php
           cp database/seeders/CatalogExpansionSeeder.php hostinger-release/database/seeders/CatalogExpansionSeeder.php
           cp resources/views/app.blade.php hostinger-release/resources/views/app.blade.php
+          cp public/images/netmax-logo.png hostinger-release/public/images/netmax-logo.png
+          cp public/images/netmax-favicon.png hostinger-release/public/images/netmax-favicon.png
           cp resources/views/errors/404.blade.php hostinger-release/resources/views/errors/404.blade.php
           cp resources/views/errors/419.blade.php hostinger-release/resources/views/errors/419.blade.php
           cp resources/views/emails/email-verification-code.blade.php hostinger-release/resources/views/emails/email-verification-code.blade.php
@@ -170,6 +182,7 @@ jobs:
           cp database/migrations/2026_10_27_000001_create_vouchers_and_add_order_discounts.php hostinger-release/database/migrations/2026_10_27_000001_create_vouchers_and_add_order_discounts.php
           cp database/migrations/2026_10_27_000002_change_voucher_schedule_fields_to_local_datetime.php hostinger-release/database/migrations/2026_10_27_000002_change_voucher_schedule_fields_to_local_datetime.php
           cp database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php hostinger-release/database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php
+          cp database/migrations/2026_11_05_000001_create_support_conversations_tables.php hostinger-release/database/migrations/2026_11_05_000001_create_support_conversations_tables.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php

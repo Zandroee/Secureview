@@ -115,14 +115,14 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                 >
                     <p className="mb-3">
                         Please read these Terms and Conditions carefully before
-                        creating a SecureView account and using our products and
+                        creating a Netmax Trading account and using our products and
                         services.
                     </p>
 
                     <section className="mb-4">
                         <h3 className="h6 fw-bold">1. Acceptance of Terms</h3>
                         <p className="mb-0">
-                            By creating a SecureView account, placing an order,
+                            By creating a Netmax Trading account, placing an order,
                             or requesting a service, you agree to follow these
                             Terms and Conditions. You must read the terms and
                             provide your acceptance before completing
@@ -178,7 +178,7 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                             Service requests such as installation, inspection,
                             maintenance, repair, and consultation are subject
                             to review, scheduling, and technician availability.
-                            SecureView may contact the customer when additional
+                            Netmax Trading may contact the customer when additional
                             information is needed.
                         </p>
                     </section>
@@ -196,7 +196,7 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                     <section className="mb-4">
                         <h3 className="h6 fw-bold">8. Changes to These Terms</h3>
                         <p className="mb-0">
-                            SecureView may update these Terms and Conditions when
+                            Netmax Trading may update these Terms and Conditions when
                             necessary. A new version may require users to review
                             and accept the updated terms before continuing to
                             use affected features.
@@ -207,7 +207,7 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                         <h3 className="h6 fw-bold">9. Contact and Support</h3>
                         <p className="mb-0">
                             For questions about an order, service request, or
-                            these Terms and Conditions, contact SecureView
+                            these Terms and Conditions, contact Netmax Trading
                             through the available support channels on the
                             website.
                         </p>

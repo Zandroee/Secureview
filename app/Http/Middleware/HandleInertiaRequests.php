@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\CustomerNotification;
+use App\Models\SupportConversation;
 use Closure;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -63,8 +64,17 @@ class HandleInertiaRequests extends Middleware
         $cartCount = 0;
         $notificationCount = 0;
         $latestNotification = null;
+        $supportConversationCount = 0;
 
         if ($user) {
+            if ($user->role === 'admin') {
+                $supportConversationCount = SupportConversation::query()
+                    ->whereIn('status', ['waiting', 'active'])
+                    ->whereHas('messages', fn ($query) => $query
+                        ->where('sender_type', 'customer')
+                        ->whereNull('read_at'))
+                    ->count();
+            }
             $cartCount = $user->cart?->items()->sum('quantity') ?? 0;
             $visibleNotifications = $user->customerNotifications();
             if ($user->role === 'technician') {
@@ -88,6 +98,7 @@ class HandleInertiaRequests extends Middleware
             'cartCount' => $cartCount,
             'notificationCount' => $notificationCount,
             'latestNotification' => $latestNotification,
+            'supportConversationCount' => $supportConversationCount,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'serviceNotification' => fn () => $request->session()->get('serviceNotification'),

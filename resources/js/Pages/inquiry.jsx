@@ -296,7 +296,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <div>
                                         <div className="small text-uppercase fw-bold text-primary">
-                                            SecureView
+                                            Netmax Trading
                                         </div>
 
                                         <h1
@@ -341,7 +341,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                 {selectedUrgencyFee > 0 && data.urgency !== "normal" && (
                                     <div className="alert alert-warning small mb-3" role="status">
                                         <strong>{data.urgency === "emergency" ? "Emergency" : "Urgent"} booking fee: ₱{selectedUrgencyFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.</strong>
-                                        {" "}This one-time fee is calculated by SecureView and is not based on a price sent by your browser.
+                                        {" "}This one-time fee is calculated by Netmax Trading and is not based on a price sent by your browser.
                                     </div>
                                 )}
 
@@ -758,7 +758,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                     {errors.payment_method && <div className="invalid-feedback">{errors.payment_method}</div>}
                                                     <div className="form-text">
                                                         {data.payment_method === "cash"
-                                                            ? "Your service request will be saved immediately. Payment remains pending until SecureView confirms receipt of cash."
+                                                            ? "Your service request will be saved immediately. Payment remains pending until Netmax Trading confirms receipt of cash."
                                                             : "You will be redirected to PayMongo to pay the amount shown. Your service request remains subject to availability and review while payment is pending."}
                                                         {data.service_type !== "Installation" && selectedUrgencyFee > 0
                                                             ? " This payment is the one-time " + data.urgency + " service booking fee; repair or other labor charges are handled separately."

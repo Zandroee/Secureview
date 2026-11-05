@@ -378,3 +378,142 @@ html[data-bs-theme="dark"] .sv-chat-form button:focus-visible {
         padding-left: 10px;
     }
 }
+
+
+/* Netmax Trading live-support handoff */
+.sv-chat-launcher {
+    background: linear-gradient(135deg, #087cff 0%, #073b9b 100%);
+    border-color: rgba(255, 255, 255, .82);
+    box-shadow: 0 12px 30px rgba(7, 79, 190, .3);
+}
+
+.sv-chat-launcher:hover {
+    background: linear-gradient(135deg, #1689ff 0%, #0644ad 100%);
+    box-shadow: 0 15px 34px rgba(7, 79, 190, .4);
+}
+
+.sv-chat-header {
+    background: linear-gradient(120deg, #0756c7 0%, #082f73 100%);
+}
+
+.sv-chat-status-waiting {
+    background: #fbbf24;
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, .16);
+}
+
+.sv-chat-handoff-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 13px;
+    border: 1px solid #bfd7ff;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #eff6ff 0%, #ffffff 100%);
+    color: #17345f;
+}
+
+.sv-chat-handoff-card > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sv-chat-handoff-card strong {
+    font-size: .87rem;
+}
+
+.sv-chat-handoff-card span {
+    color: #52657e;
+    font-size: .78rem;
+    line-height: 1.45;
+}
+
+.sv-chat-handoff-button {
+    align-self: flex-start;
+    min-height: 38px;
+    padding: 8px 13px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #087cff 0%, #0756c7 100%);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 700;
+    box-shadow: 0 5px 13px rgba(7, 79, 190, .2);
+}
+
+.sv-chat-handoff-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0668df 0%, #073b9b 100%);
+    transform: translateY(-1px);
+}
+
+.sv-chat-handoff-button:disabled {
+    cursor: wait;
+    opacity: .65;
+}
+
+.sv-chat-row-admin {
+    justify-content: flex-start;
+}
+
+.sv-chat-bubble-admin {
+    border-color: #bfd7ff;
+    border-radius: 14px 14px 14px 4px;
+    background: #eef5ff;
+    color: #18345d;
+}
+
+.sv-chat-sender-name {
+    display: block;
+    margin-bottom: 4px;
+    color: #0756c7;
+    font-size: .72rem;
+}
+
+.sv-chat-support-notice {
+    padding: 10px 12px;
+    border: 1px solid #c7d7ee;
+    border-radius: 10px;
+    background: #edf4ff;
+    color: #25456f;
+    font-size: .78rem;
+    line-height: 1.45;
+}
+
+.sv-chat-support-notice button {
+    display: block;
+    margin-top: 7px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #0756c7;
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+html[data-bs-theme="dark"] .sv-chat-handoff-card,
+html[data-bs-theme="dark"] .sv-chat-bubble-admin,
+html[data-bs-theme="dark"] .sv-chat-support-notice {
+    border-color: #1e5797;
+    background: #102b4f;
+    color: #e5f0ff;
+}
+
+html[data-bs-theme="dark"] .sv-chat-handoff-card span {
+    color: #b7cce8;
+}
+
+html[data-bs-theme="dark"] .sv-chat-sender-name,
+html[data-bs-theme="dark"] .sv-chat-support-notice button {
+    color: #93c5fd;
+}
+
+html[data-bs-theme="dark"] .sv-chat-header {
+    background: linear-gradient(120deg, #0756c7 0%, #082f73 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sv-chat-launcher,
+    .sv-chat-handoff-button {
+        transition: none;
+    }
+}
