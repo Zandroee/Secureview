@@ -56,7 +56,6 @@ export default function About() {
                                 alt="CCTV security camera installation"
                             />
                             <div className="about-hero-copy position-absolute top-50 start-50 translate-middle text-center">
-                                <p className="about-hero-eyebrow text-uppercase fw-bold mb-2">Netmax Trading · Netmax Trading</p>
                                 <h1 className="display-3 fw-bold mb-2">ABOUT US</h1>
                                 <p className="about-hero-subtitle mb-0">Who are we?</p>
                             </div>
@@ -206,6 +205,14 @@ export default function About() {
                                     <Link href="/inquiry" className="btn btn-primary fw-bold px-4">
                                         REQUEST A SERVICE
                                     </Link>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-primary fw-bold px-4"
+                                        onClick={() => window.dispatchEvent(new Event("netmax:open-chat"))}
+                                    >
+                                        <i className="bi bi-chat-dots-fill me-2" aria-hidden="true" />
+                                        CHAT WITH US
+                                    </button>
                                 </div>
                             </div>
                         </div>

@@ -114,6 +114,12 @@ export default function Chatbot() {
     }, [applySupportResponse]);
 
     useEffect(() => {
+        const openChat = () => setIsOpen(true);
+        window.addEventListener("netmax:open-chat", openChat);
+        return () => window.removeEventListener("netmax:open-chat", openChat);
+    }, []);
+
+    useEffect(() => {
         if (!isOpen) return undefined;
 
         inputRef.current?.focus();

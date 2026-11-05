@@ -138,10 +138,12 @@ jobs:
           cp app/Http/Controllers/CustomerSupportConversationController.php hostinger-release/app/Http/Controllers/CustomerSupportConversationController.php
           cp app/Services/EmailVerificationCodeService.php hostinger-release/app/Services/EmailVerificationCodeService.php
           cp app/Mail/EmailVerificationCodeMail.php hostinger-release/app/Mail/EmailVerificationCodeMail.php
+          cp app/Mail/PendingPaymentReminderMail.php hostinger-release/app/Mail/PendingPaymentReminderMail.php
           cp app/Models/User.php hostinger-release/app/Models/User.php
           cp app/Models/SupportConversation.php hostinger-release/app/Models/SupportConversation.php
           cp app/Models/SupportMessage.php hostinger-release/app/Models/SupportMessage.php
           cp app/Models/Order.php hostinger-release/app/Models/Order.php
+          cp app/Models/OrderEvent.php hostinger-release/app/Models/OrderEvent.php
           cp app/Models/Voucher.php hostinger-release/app/Models/Voucher.php
           cp app/Models/PendingInquiryCheckout.php hostinger-release/app/Models/PendingInquiryCheckout.php
           cp app/Models/Product.php hostinger-release/app/Models/Product.php
@@ -162,6 +164,7 @@ jobs:
           cp resources/views/errors/404.blade.php hostinger-release/resources/views/errors/404.blade.php
           cp resources/views/errors/419.blade.php hostinger-release/resources/views/errors/419.blade.php
           cp resources/views/emails/email-verification-code.blade.php hostinger-release/resources/views/emails/email-verification-code.blade.php
+          cp resources/views/emails/pending-payment-reminder.blade.php hostinger-release/resources/views/emails/pending-payment-reminder.blade.php
           cp app/Providers/AppServiceProvider.php hostinger-release/app/Providers/AppServiceProvider.php
           cp app/Http/Middleware/EnforceSingleLoginSession.php hostinger-release/app/Http/Middleware/EnforceSingleLoginSession.php
           cp app/Http/Middleware/HandleInertiaRequests.php hostinger-release/app/Http/Middleware/HandleInertiaRequests.php

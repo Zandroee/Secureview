@@ -51,6 +51,8 @@ return [
         // Host administrators may override this only by setting the hour-based
         // value explicitly; the legacy *_DAYS setting is no longer used.
         'unpaid_order_expiry_hours' => max(1, (int) env('SECUREVIEW_UNPAID_ORDER_EXPIRY_HOURS', 48)),
+        // Send one payment reminder before the automatic unpaid-order expiry deadline.
+        'unpaid_order_reminder_after_hours' => max(1, (int) env('SECUREVIEW_UNPAID_ORDER_REMINDER_AFTER_HOURS', 24)),
 
         // Proposed default priority surcharges (PHP, charged once per booking).
         // Confirm the business amounts before configuring these on production.

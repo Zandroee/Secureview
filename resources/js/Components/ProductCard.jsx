@@ -15,8 +15,6 @@ export default function ProductCard({
     inclusions = [],
     rating = 0,
     reviewsCount = 0,
-    available = true,
-    stockCount = 0,
     href = "#",
     variant = "product",
 }) {
@@ -31,7 +29,6 @@ export default function ProductCard({
     const showImage = Boolean(imageUrl) && failedImageUrl !== imageUrl;
     const ratingValue = Number.isFinite(Number(rating)) ? Math.max(0, Math.min(5, Number(rating))) : 0;
     const totalReviews = Number.isFinite(Number(reviewsCount)) ? Math.max(0, Number(reviewsCount)) : 0;
-    const stockQuantity = Math.max(0, Number(stockCount) || 0);
     const visibleSpecifications = safeSpecifications.slice(0, 3);
     const visibleInclusions = safeInclusions.slice(0, 3);
 
@@ -47,7 +44,7 @@ export default function ProductCard({
         textDecoration: "none",
         transform: isHovered ? "translateY(-4px)" : "translateY(0)",
         boxShadow: isHovered ? "0 16px 34px rgba(19, 43, 79, 0.13)" : "0 4px 14px rgba(19, 43, 79, 0.045)",
-        opacity: available ? 1 : 0.74,
+        opacity: 1,
         transition: "transform 0.22s ease, box-shadow 0.22s ease",
     };
 
@@ -88,7 +85,7 @@ export default function ProductCard({
                     ) : imageFallback}
                 </div>
 
-                {badge && available && (
+                {badge && (
                     <span
                         className="position-absolute top-0 end-0 badge text-primary border m-3 px-3 py-2"
                         style={{ backgroundColor: "rgba(255,255,255,0.95)", borderColor: "#dbe7fb", borderRadius: "999px", fontWeight: 700 }}
@@ -97,14 +94,6 @@ export default function ProductCard({
                     </span>
                 )}
 
-                {!available && (
-                    <div
-                        className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
-                        style={{ backgroundColor: "rgba(246,248,251,0.54)", paddingTop: "12px" }}
-                    >
-                        <span className="badge bg-secondary px-3 py-2" style={{ borderRadius: "999px" }}>OUT OF STOCK</span>
-                    </div>
-                )}
             </div>
 
             <div className="card-body d-flex flex-column" style={{ flex: 1, padding: "16px 17px 17px", fontFamily: "Outfit, sans-serif" }}>
@@ -200,18 +189,11 @@ export default function ProductCard({
                         </div>
                     </div>
 
-                    <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
-                        <span className={"secureview-catalog-stock " + (stockQuantity > 0 ? "is-in-stock" : "is-out-of-stock")}>
-                            <i className={"bi " + (stockQuantity > 0 ? "bi-check-circle-fill" : "bi-x-circle-fill")} aria-hidden="true" />
-                            {stockQuantity > 0 ? stockQuantity.toLocaleString("en-PH") + " IN STOCK" : "OUT OF STOCK"}
-                        </span>
-                        <span className="small fw-semibold text-primary">View details <i className="bi bi-arrow-up-right ms-1" aria-hidden="true" /></span>
-                    </div>
                     <span
                         className="btn btn-primary fw-bold w-100 py-2"
                         style={{ borderRadius: "10px", letterSpacing: "0.02em", boxShadow: "0 4px 10px rgba(13, 110, 253, 0.15)" }}
                     >
-                        EXPLORE {isPackage ? "PACKAGE" : "PRODUCT"}
+                        VIEW DETAILS
                     </span>
                 </div>
             </div>
