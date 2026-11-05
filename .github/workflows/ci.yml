@@ -73,6 +73,9 @@ jobs:
       - name: Build Vite assets
         run: npm run build
 
+      - name: Validate Hostinger deployment script syntax
+        run: bash -n scripts/deploy-hostinger-release.sh
+
       - name: Run Laravel feature and unit tests
         run: |
           # Laravel's env bootstrap reads the root .env on each test app boot.
