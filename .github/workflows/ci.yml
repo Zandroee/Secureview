@@ -73,8 +73,10 @@ jobs:
       - name: Build Vite assets
         run: npm run build
 
-      - name: Validate Hostinger deployment script syntax
-        run: bash -n scripts/deploy-hostinger-release.sh
+      - name: Validate Hostinger and logo preparation script syntax
+        run: |
+          bash -n scripts/deploy-hostinger-release.sh
+          php -l scripts/prepare-netmax-dark-logo.php
 
       - name: Run Laravel feature and unit tests
         run: |
@@ -98,8 +100,9 @@ jobs:
           mkdir -p public/images
           cat deploy-assets/netmax-logo.webp.b64.part-* | base64 --decode > public/images/netmax-logo.webp
           test -s public/images/netmax-logo.webp
-          echo "46767c74c4795fea846cd355c32e199852ca3fdc110f1524a3064e57a535e3dd  public/images/netmax-logo.webp" | sha256sum --check
-          php -r '$image = getimagesize("public/images/netmax-logo.webp"); if (!$image || $image[2] !== IMAGETYPE_WEBP) { fwrite(STDERR, "Invalid Netmax Trading WebP logo.\n"); exit(1); }'
+          php -r '$image = getimagesize("public/images/netmax-logo.webp"); if (!$image || $image[2] !== IMAGETYPE_WEBP) { fwrite(STDERR, "Invalid Netmax Trading source logo.\n"); exit(1); }'
+          php scripts/prepare-netmax-dark-logo.php public/images/netmax-logo.webp public/images/netmax-logo-dark.png
+          php -r '$image = getimagesize("public/images/netmax-logo-dark.png"); if (!$image || $image[2] !== IMAGETYPE_PNG) { fwrite(STDERR, "Invalid transparent Netmax Trading logo.\n"); exit(1); } $im = imagecreatefrompng("public/images/netmax-logo-dark.png"); if (!$im) { fwrite(STDERR, "Cannot decode transparent Netmax Trading logo.\n"); exit(1); } $rgba = imagecolorsforindex($im, imagecolorat($im, 0, 0)); if (($rgba["alpha"] ?? 0) < 120) { fwrite(STDERR, "Netmax logo background is not transparent.\n"); exit(1); } echo "PASS: Netmax logo has transparent background.\\n";'
           mkdir -p hostinger-release/build hostinger-release/public/images hostinger-release/config hostinger-release/app/Providers hostinger-release/app/Console/Commands hostinger-release/app/Http/Controllers/Admin hostinger-release/app/Http/Controllers hostinger-release/app/Http/Middleware hostinger-release/app/Services hostinger-release/app/Mail hostinger-release/app/Models hostinger-release/database/migrations hostinger-release/database/seeders hostinger-release/resources/views/emails hostinger-release/resources/views/errors hostinger-release/bootstrap hostinger-release/routes
           cp -a public/build/. hostinger-release/build/
           cp config/services.php hostinger-release/config/services.php
@@ -166,6 +169,7 @@ jobs:
           cp resources/views/app.blade.php hostinger-release/resources/views/app.blade.php
           cp public/images/netmax-logo.png hostinger-release/public/images/netmax-logo.png
           cp public/images/netmax-logo.webp hostinger-release/public/images/netmax-logo.webp
+          cp public/images/netmax-logo-dark.png hostinger-release/public/images/netmax-logo-dark.png
           cp public/images/netmax-favicon.png hostinger-release/public/images/netmax-favicon.png
           cp resources/views/errors/404.blade.php hostinger-release/resources/views/errors/404.blade.php
           cp resources/views/errors/419.blade.php hostinger-release/resources/views/errors/419.blade.php
