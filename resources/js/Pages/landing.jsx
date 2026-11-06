@@ -5,6 +5,7 @@ import ProductCard from "../Components/ProductCard";
 
 import { Link } from "@inertiajs/react";
 import { useState } from "react";
+import "../../css/landing.css";
 
 function FeaturedNavigation({ currentPage, totalPages, onPrevious, onNext }) {
     if (totalPages <= 1) return null;
@@ -41,22 +42,23 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
         <>
             <Navbar />
 
-            <header className="bg-primary text-white">
+            <header className="netmax-home-hero">
                 <div className="container-fluid px-0">
-                    <div className="row g-0">
-                        <div className="col-lg-6">
-                            <img src="/images/cctv-cameras.jpg" alt="CCTV Cameras" className="img-fluid w-100" style={{ height: "600px", objectFit: "cover", objectPosition: "center" }} />
-                        </div>
-
-                        <div className="col-lg-6 d-flex align-items-center">
-                            <div className="w-100 text-center px-4 px-md-5 py-5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                                <h1 className="display-3 fw-bold mb-4">Secure your home or your business</h1>
-                                <p className="display-6 mb-5">Secure them with our optimal CCTV packages offers just for you!</p>
-
-                                <div className="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                                    <a href="#featured-packages" className="btn btn-light text-primary fw-bold fs-5 px-5 py-2">VIEW PACKAGES</a>
-                                    <Link href="/products" className="btn btn-outline-light fw-bold fs-5 px-5 py-2">BROWSE CAMERAS</Link>
+                    <div className="row g-0 align-items-stretch">
+                        <div className="col-lg-6 order-2 order-lg-1 d-flex align-items-center">
+                            <div className="netmax-home-hero-copy">
+                                <p className="netmax-home-hero-kicker">NETMAX TRADING · COMPUTER & CCTV</p>
+                                <h1>Reliable CCTV for your home or business</h1>
+                                <p className="netmax-home-hero-description">Quality cameras, professional installation, and dependable after-sales support.</p>
+                                <div className="netmax-home-hero-actions">
+                                    <a href="#featured-packages" className="btn btn-primary fw-bold">VIEW PACKAGES</a>
+                                    <Link href="/products" className="btn btn-outline-primary fw-bold">BROWSE CAMERAS</Link>
                                 </div>
+                            </div>
+                        </div>
+                        <div className="col-lg-6 order-1 order-lg-2">
+                            <div className="netmax-home-hero-media">
+                                <img src="/images/homepage-hero.jpg" alt="Outdoor security camera overlooking a street" fetchPriority="high" decoding="async" />
                             </div>
                         </div>
                     </div>
