@@ -21,6 +21,7 @@ class SettingsController extends Controller
                 'phone' => $request->user()->phone,
                 'preferred_theme' => $request->user()->preferred_theme ?? 'system',
                 'notification_popups_enabled' => (bool) ($request->user()->notification_popups_enabled ?? true),
+                'newsletter_opt_in' => (bool) ($request->user()->newsletter_opt_in ?? false),
             ],
         ]);
     }
@@ -51,12 +52,29 @@ class SettingsController extends Controller
         $validated = $request->validate([
             'preferred_theme' => ['required', Rule::in(['system', 'light', 'dark'])],
             'notification_popups_enabled' => ['required', 'boolean'],
+            'newsletter_opt_in' => ['sometimes', 'boolean'],
         ]);
 
-        $request->user()->update([
+        $user = $request->user();
+        $changes = [
             'preferred_theme' => $validated['preferred_theme'],
             'notification_popups_enabled' => (bool) $validated['notification_popups_enabled'],
-        ]);
+        ];
+
+        if (array_key_exists('newsletter_opt_in', $validated)) {
+            $wantsNewsletter = (bool) $validated['newsletter_opt_in'];
+            $wasSubscribed = (bool) $user->newsletter_opt_in;
+
+            $changes['newsletter_opt_in'] = $wantsNewsletter;
+            if ($wantsNewsletter && !$wasSubscribed) {
+                $changes['newsletter_opted_in_at'] = now();
+                $changes['newsletter_opted_out_at'] = null;
+            } elseif (!$wantsNewsletter && $wasSubscribed) {
+                $changes['newsletter_opted_out_at'] = now();
+            }
+        }
+
+        $user->update($changes);
 
         return back()->with('success', 'Appearance and notification preferences saved.');
     }
