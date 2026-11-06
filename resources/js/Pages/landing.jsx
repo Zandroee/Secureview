@@ -52,10 +52,10 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
                             Reliable CCTV cameras, complete security packages, and installation support for homes and businesses.
                         </p>
                         <div className="home-hero-actions">
-                            <a href="#featured-packages" className="btn home-hero-button home-hero-button-primary">
+                            <a href="#featured-packages" className="home-hero-button home-hero-button-primary">
                                 VIEW PACKAGES
                             </a>
-                            <Link href="/products" className="btn home-hero-button home-hero-button-outline">
+                            <Link href="/products" className="home-hero-button home-hero-button-outline">
                                 BROWSE CAMERAS
                             </Link>
                         </div>
