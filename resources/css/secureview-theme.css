@@ -1924,12 +1924,7 @@ html[data-bs-theme="dark"] .container-fluid > .row > main.col-md-9.col-lg-10 .ta
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: linear-gradient(
-        90deg,
-        rgba(5, 12, 24, .48) 0%,
-        rgba(5, 12, 24, .16) 48%,
-        rgba(5, 12, 24, .44) 100%
-    );
+    background: rgba(5, 12, 24, .32);
 }
 
 .about-hero-copy {
@@ -1986,9 +1981,9 @@ html[data-bs-theme="dark"] .container-fluid > .row > main.col-md-9.col-lg-10 .ta
     display: block;
     width: 100%;
     max-height: 410px;
-    object-fit: contain;
+    object-fit: cover;
     object-position: center;
-    background: #fff;
+    background: #dbe5f0;
     border: 1px solid rgba(148, 163, 184, .28);
     box-shadow: 0 14px 34px rgba(15, 23, 42, .12);
 }
@@ -2821,8 +2816,8 @@ html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
     align-items: center;
     padding: 4px 10px;
     border-radius: 11px;
-    background: #fff;
-    box-shadow: 0 2px 9px rgba(7, 32, 77, .1);
+    background: transparent;
+    box-shadow: none;
 }
 
 .netmax-footer-logo-wrap {
@@ -2830,9 +2825,9 @@ html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
     max-width: 100%;
     align-items: center;
     justify-content: center;
-    padding: 12px 15px;
-    border-radius: 12px;
-    background: #fff;
+    padding: 12px 0;
+    border-radius: 0;
+    background: transparent;
 }
 
 .netmax-footer-logo {
