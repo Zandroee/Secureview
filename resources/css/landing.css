@@ -24,8 +24,17 @@
 }
 
 
-/* Homepage hero: editorial split layout with a focused image and restrained typography. */
+/* Homepage hero: editorial split layout with theme-aware colors and independent CTA styling. */
 .home-hero {
+    --hero-panel: #111c2d;
+    --hero-title: #ffffff;
+    --hero-eyebrow: #8dbaff;
+    --hero-copy: #c5d0df;
+    --hero-accent: #75aaff;
+    --hero-outline-border: rgba(205, 219, 239, 0.55);
+    --hero-outline-text: #eef4fc;
+    --hero-outline-hover: rgba(255, 255, 255, 0.08);
+
     display: grid;
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
     grid-template-rows: minmax(0, 1fr);
@@ -36,9 +45,33 @@
     overflow: hidden;
     border: 0;
     border-radius: 0;
-    background: #111c2d;
-    color: #fff;
+    background: var(--hero-panel);
+    color: var(--hero-title);
     box-shadow: none;
+}
+
+/* The public site follows the guest's browser preference; the hero must follow
+   the same resolved Bootstrap theme rather than remaining dark unconditionally. */
+html[data-bs-theme="light"] .home-hero {
+    --hero-panel: #f3f6fb;
+    --hero-title: #14243a;
+    --hero-eyebrow: #1768d8;
+    --hero-copy: #536278;
+    --hero-accent: #1768d8;
+    --hero-outline-border: rgba(20, 36, 58, 0.42);
+    --hero-outline-text: #14243a;
+    --hero-outline-hover: rgba(20, 36, 58, 0.07);
+}
+
+html[data-bs-theme="dark"] .home-hero {
+    --hero-panel: #111c2d;
+    --hero-title: #ffffff;
+    --hero-eyebrow: #8dbaff;
+    --hero-copy: #c5d0df;
+    --hero-accent: #75aaff;
+    --hero-outline-border: rgba(205, 219, 239, 0.55);
+    --hero-outline-text: #eef4fc;
+    --hero-outline-hover: rgba(255, 255, 255, 0.08);
 }
 
 .home-hero-content {
@@ -64,7 +97,7 @@
     align-items: center;
     gap: 0.65rem;
     margin: 0 0 1.1rem;
-    color: #8dbaff;
+    color: var(--hero-eyebrow);
     font-family: "Outfit", sans-serif;
     font-size: 0.76rem;
     font-weight: 700;
@@ -85,7 +118,7 @@
 .home-hero-copy h1 {
     max-width: 12ch;
     margin: 0 0 1rem;
-    color: #fff;
+    color: var(--hero-title);
     font-size: clamp(2.55rem, 3.65vw, 4.15rem);
     font-weight: 750;
     line-height: 1.04;
@@ -94,13 +127,13 @@
 }
 
 .home-hero-accent {
-    color: #75aaff;
+    color: var(--hero-accent);
 }
 
 .home-hero-copy p {
     max-width: 34rem;
     margin: 0 0 1.8rem;
-    color: #c5d0df;
+    color: var(--hero-copy);
     font-size: clamp(1rem, 1.15vw, 1.12rem);
     line-height: 1.65;
     text-wrap: pretty;
@@ -114,7 +147,10 @@
     gap: 0.75rem;
 }
 
-.home-hero-button {
+/* These are standalone links, not Bootstrap .btn controls. Keeping the
+   component self-contained prevents CSS import order from hiding its labels. */
+.home-hero .home-hero-button {
+    appearance: none;
     display: inline-flex;
     min-height: 48px;
     min-width: 174px;
@@ -130,41 +166,47 @@
     line-height: 1.2;
     text-align: center;
     text-decoration: none;
+    opacity: 1;
+    visibility: visible;
     transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
-.home-hero-button:hover {
+.home-hero .home-hero-button:hover {
     transform: translateY(-1px);
 }
 
-.home-hero-button-primary {
+.home-hero .home-hero-button-primary,
+html[data-bs-theme="light"] .home-hero .home-hero-button-primary,
+html[data-bs-theme="dark"] .home-hero .home-hero-button-primary {
     border-color: #2878f0;
     background: #2878f0;
-    color: #fff;
+    color: #ffffff;
 }
 
-.home-hero-button-primary:hover,
-.home-hero-button-primary:focus-visible {
+.home-hero .home-hero-button-primary:hover,
+.home-hero .home-hero-button-primary:focus-visible {
     border-color: #4b91ff;
     background: #4b91ff;
-    color: #fff;
+    color: #ffffff;
 }
 
-.home-hero-button-outline {
-    border-color: rgba(205, 219, 239, 0.55);
+.home-hero .home-hero-button-outline,
+html[data-bs-theme="light"] .home-hero .home-hero-button-outline,
+html[data-bs-theme="dark"] .home-hero .home-hero-button-outline {
+    border-color: var(--hero-outline-border);
     background: transparent;
-    color: #eef4fc;
+    color: var(--hero-outline-text);
 }
 
-.home-hero-button-outline:hover,
-.home-hero-button-outline:focus-visible {
-    border-color: #fff;
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+.home-hero .home-hero-button-outline:hover,
+.home-hero .home-hero-button-outline:focus-visible {
+    border-color: var(--hero-outline-text);
+    background: var(--hero-outline-hover);
+    color: var(--hero-outline-text);
 }
 
-.home-hero-button:focus-visible {
-    outline: 3px solid rgba(112, 170, 255, 0.55);
+.home-hero .home-hero-button:focus-visible {
+    outline: 3px solid rgba(55, 136, 255, 0.55);
     outline-offset: 3px;
 }
 
@@ -208,7 +250,7 @@
         font-size: clamp(2.3rem, 4vw, 3.25rem);
     }
 
-    .home-hero-button {
+    .home-hero .home-hero-button {
         min-width: 155px;
     }
 }
@@ -262,7 +304,7 @@
         gap: 0.65rem;
     }
 
-    .home-hero-button {
+    .home-hero .home-hero-button {
         width: 100%;
         min-width: 0;
         min-height: 46px;
@@ -276,7 +318,7 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .home-hero-button {
+    .home-hero .home-hero-button {
         min-height: 48px;
     }
 }
@@ -296,11 +338,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .home-hero-button {
+    .home-hero .home-hero-button {
         transition: none;
     }
 
-    .home-hero-button:hover {
+    .home-hero .home-hero-button:hover {
         transform: none;
     }
 }
