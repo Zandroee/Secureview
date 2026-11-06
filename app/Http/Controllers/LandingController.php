@@ -1,11 +1,11 @@
 <?php
 
-namespace App\\Http\\Controllers;
+namespace App\Http\Controllers;
 
-use App\\Models\\Package;
-use App\\Models\\Product;
-use App\\Services\\InventoryService;
-use Inertia\\Inertia;
+use App\Models\Package;
+use App\Models\Product;
+use App\Services\InventoryService;
+use Inertia\Inertia;
 
 class LandingController extends Controller
 {
