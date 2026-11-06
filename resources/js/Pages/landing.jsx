@@ -1,3 +1,4 @@
+import "../../css/landing.css";
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import PackageCard from "../Components/PackageCard";
