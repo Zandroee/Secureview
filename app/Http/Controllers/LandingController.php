@@ -11,43 +11,25 @@ class LandingController extends Controller
 {
     public function index(InventoryService $inventory)
     {
-        $now = now(config('app.timezone', 'Asia/Manila'));
+        $now = now(config('app.timezone', 'UTC'))->format('Y-m-d H:i:s');
 
-        $activeSale = function ($query) use ($now) {
-            $query->whereNotNull('sale_price')
-                ->where('sale_price', '>', 0)
-                ->whereColumn('sale_price', '<', 'price')
-                ->where(function ($window) use ($now) {
-                    $window->whereNull('sale_starts_at')->orWhere('sale_starts_at', '<=', $now);
-                })
-                ->where(function ($window) use ($now) {
-                    $window->whereNull('sale_ends_at')->orWhere('sale_ends_at', '>', $now);
-                });
-        };
-
-        $prioritizeActiveSales = function ($query) use ($now) {
-            $query->orderByRaw(
-                "CASE WHEN sale_price IS NOT NULL
-                    AND sale_price > 0
-                    AND sale_price < price
-                    AND (sale_starts_at IS NULL OR sale_starts_at <= ?)
-                    AND (sale_ends_at IS NULL OR sale_ends_at > ?)
-                    THEN 0 ELSE 1 END",
-                [$now, $now]
-            )->orderBy('id');
-        };
-
-        $packageQuery = Package::withCount('reviews')
+        $cctvPackages = Package::query()
+            ->withCount('reviews')
             ->with('packageItems.product')
-            ->where(function ($query) use ($activeSale) {
+            ->where(function ($query) use ($now) {
                 $query->where('is_featured', true)
-                    ->orWhere(fn ($sale) => $activeSale($sale));
-            });
-        $prioritizeActiveSales($packageQuery);
-
-        $cctvPackages = $packageQuery
-            ->take(8)
+                    ->orWhere(function ($sale) use ($now) {
+                        $sale->whereNotNull('sale_price')
+                            ->where('sale_price', '>', 0)
+                            ->whereColumn('sale_price', '<', 'price')
+                            ->where(fn ($dates) => $dates->whereNull('sale_starts_at')->orWhere('sale_starts_at', '<=', $now))
+                            ->where(fn ($dates) => $dates->whereNull('sale_ends_at')->orWhere('sale_ends_at', '>', $now));
+                    });
+            })
             ->get()
+            ->sortBy(fn (Package $package) => [$package->isOnSale() ? 0 : 1, $package->id])
+            ->take(8)
+            ->values()
             ->map(function (Package $package) use ($inventory) {
                 $availableStock = $inventory->getAvailableStock($package);
                 $package->setAttribute('available_stock', $availableStock);
@@ -71,21 +53,24 @@ class LandingController extends Controller
                 return $package;
             });
 
-        $cameraQuery = Product::withCount('reviews')
-            ->where(function ($query) use ($activeSale) {
+        $cameras = Product::query()
+            ->withCount('reviews')
+            ->where(function ($query) use ($now) {
                 $query->where('is_featured', true)
-                    ->orWhere(fn ($sale) => $activeSale($sale));
-            });
-        $prioritizeActiveSales($cameraQuery);
-
-        $cameras = $cameraQuery
-            ->take(8)
+                    ->orWhere(function ($sale) use ($now) {
+                        $sale->whereNotNull('sale_price')
+                            ->where('sale_price', '>', 0)
+                            ->whereColumn('sale_price', '<', 'price')
+                            ->where(fn ($dates) => $dates->whereNull('sale_starts_at')->orWhere('sale_starts_at', '<=', $now))
+                            ->where(fn ($dates) => $dates->whereNull('sale_ends_at')->orWhere('sale_ends_at', '>', $now));
+                    });
+            })
             ->get()
+            ->sortBy(fn (Product $product) => [$product->isOnSale() ? 0 : 1, $product->id])
+            ->take(8)
+            ->values()
             ->map(function (Product $product) {
-                $product->setAttribute(
-                    'available',
-                    max(0, (int) $product->stock_quantity) > 0
-                );
+                $product->setAttribute('available', max(0, (int) $product->stock_quantity) > 0);
                 $product->setAttribute('original_price', (float) $product->price);
                 $product->setAttribute('sale_active', $product->isOnSale());
                 $product->setAttribute('sale_discount_percent', $product->saleDiscountPercent());
