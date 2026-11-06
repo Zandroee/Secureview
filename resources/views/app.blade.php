@@ -8,7 +8,7 @@
 
         <script>
             (() => {
-                const preference = @json(auth()->user()?->preferred_theme ?? 'dark');
+                const preference = @json(auth()->user()?->preferred_theme ?? 'system');
                 const media = window.matchMedia('(prefers-color-scheme: dark)');
                 const applyTheme = () => {
                     const theme = preference === 'system'
