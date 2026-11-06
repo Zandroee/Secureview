@@ -47,6 +47,10 @@ use Illuminate\Support\Str;
 
 Route::get('/', [LandingController::class, 'index']);
 
+Route::get('/newsletter/unsubscribe/{user}', [NewsletterController::class, 'unsubscribe'])
+    ->middleware(['signed', 'throttle:10,1'])
+    ->name('newsletter.unsubscribe');
+
 Route::get('/search/suggestions', [SearchController::class, 'suggestions'])
     ->middleware('throttle:catalog-search')
     ->name('search.suggestions');
