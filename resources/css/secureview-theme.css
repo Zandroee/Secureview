@@ -1924,7 +1924,12 @@ html[data-bs-theme="dark"] .container-fluid > .row > main.col-md-9.col-lg-10 .ta
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    background: rgba(5, 12, 24, .32);
+    background: linear-gradient(
+        90deg,
+        rgba(5, 12, 24, .48) 0%,
+        rgba(5, 12, 24, .16) 48%,
+        rgba(5, 12, 24, .44) 100%
+    );
 }
 
 .about-hero-copy {
@@ -1981,9 +1986,9 @@ html[data-bs-theme="dark"] .container-fluid > .row > main.col-md-9.col-lg-10 .ta
     display: block;
     width: 100%;
     max-height: 410px;
-    object-fit: cover;
+    object-fit: contain;
     object-position: center;
-    background: #dbe5f0;
+    background: #fff;
     border: 1px solid rgba(148, 163, 184, .28);
     box-shadow: 0 14px 34px rgba(15, 23, 42, .12);
 }
