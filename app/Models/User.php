@@ -26,6 +26,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'role',
         'terms_accepted_at',
         'terms_version',
+        'newsletter_opt_in',
+        'newsletter_opted_in_at',
+        'newsletter_opted_out_at',
         'preferred_theme',
         'notification_popups_enabled',
     ];
@@ -41,6 +44,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
             'notification_popups_enabled' => 'boolean',
+            'newsletter_opt_in' => 'boolean',
+            'newsletter_opted_in_at' => 'datetime',
+            'newsletter_opted_out_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
