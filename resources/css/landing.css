@@ -1,116 +1,157 @@
-
+/* Homepage hero: solid brand colors, responsive split layout, no gradients. */
+.netmax-home-hero {
+    padding: clamp(1rem, 2.4vw, 2rem) 0;
+    background: #f3f6fa;
+}
+.netmax-home-hero__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+    min-height: 470px;
+    overflow: hidden;
+    border-radius: 22px;
+    background: #10213b;
+    box-shadow: 0 14px 34px rgba(12, 29, 54, 0.12);
+}
+.netmax-home-hero__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: clamp(2rem, 5vw, 5rem);
+    color: #fff;
+}
+.netmax-home-hero__eyebrow {
+    margin: 0 0 1rem;
+    color: #9fc7ff;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+.netmax-home-hero__copy h1 {
+    max-width: 620px;
+    margin: 0;
+    color: #fff;
+    font-family: "Outfit", sans-serif;
+    font-size: clamp(2.35rem, 4.1vw, 4.35rem);
+    font-weight: 800;
+    line-height: 1.06;
+    letter-spacing: -0.035em;
+}
+.netmax-home-hero__description {
+    max-width: 470px;
+    margin: 1.35rem 0 0;
+    color: #e3ebf6;
+    font-size: clamp(1rem, 1.3vw, 1.18rem);
+    line-height: 1.6;
+}
+.netmax-home-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-top: 2rem;
+}
+.netmax-home-hero__button {
+    min-width: 172px;
+    padding: 0.82rem 1.25rem;
+    border: 1px solid #fff;
+    border-radius: 8px;
+    font-weight: 750;
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.netmax-home-hero__button--primary {
+    border-color: #126bfa;
+    background: #126bfa;
+    color: #fff;
+}
+.netmax-home-hero__button--primary:hover,
+.netmax-home-hero__button--primary:focus-visible {
+    border-color: #0755ce;
+    background: #0755ce;
+    color: #fff;
+}
+.netmax-home-hero__button--secondary {
+    background: transparent;
+    color: #fff;
+}
+.netmax-home-hero__button--secondary:hover,
+.netmax-home-hero__button--secondary:focus-visible {
+    background: #fff;
+    color: #10213b;
+}
+.netmax-home-hero__media {
+    min-width: 0;
+    min-height: 100%;
+    background: #dfe7f0;
+}
+.netmax-home-hero__media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 470px;
+    object-fit: cover;
+    object-position: center;
+}
+@media (max-width: 767.98px) {
+    .netmax-home-hero {
+        padding: 0.75rem 0 1.25rem;
+        background: #f3f6fa;
+    }
+    .netmax-home-hero__panel {
+        grid-template-columns: minmax(0, 1fr);
+        border-radius: 14px;
+    }
+    .netmax-home-hero__media {
+        order: 0;
+        height: clamp(210px, 58vw, 310px);
+    }
+    .netmax-home-hero__media img {
+        min-height: 0;
+        height: 100%;
+        object-position: center 42%;
+    }
+    .netmax-home-hero__copy {
+        order: 1;
+        padding: 1.5rem 1.25rem 1.7rem;
+    }
+    .netmax-home-hero__eyebrow {
+        margin-bottom: 0.65rem;
+        font-size: 0.68rem;
+    }
+    .netmax-home-hero__copy h1 {
+        max-width: 18ch;
+        font-size: clamp(2rem, 8.5vw, 2.8rem);
+        line-height: 1.08;
+    }
+    .netmax-home-hero__description {
+        margin-top: 0.85rem;
+        font-size: 0.98rem;
+    }
+    .netmax-home-hero__actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+        gap: 0.65rem;
+        margin-top: 1.2rem;
+    }
+    .netmax-home-hero__button {
+        width: 100%;
+        min-height: 46px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .netmax-home-hero__button {
+        transition: none;
+    }
+}
 /* Soft image transition for product and package detail galleries. */
 .catalog-detail-main-image {
     animation: catalog-image-fade 700ms ease both;
     will-change: opacity, transform;
 }
-
 @keyframes catalog-image-fade {
-    from {
-        opacity: 0.2;
-        transform: scale(1.012);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+    from { opacity: 0.2; transform: scale(1.012); }
+    to { opacity: 1; transform: scale(1); }
 }
-
 @media (prefers-reduced-motion: reduce) {
-    .catalog-detail-main-image {
-        animation: none;
-        will-change: auto;
-    }
+    .catalog-detail-main-image { animation: none; will-change: auto; }
 }
-
-/* Netmax Trading homepage hero: solid surfaces, short copy, responsive media. */
-.netmax-home-hero {
-    background: #f4f7fb;
-    color: #101b2d;
-    border-bottom: 1px solid #dbe4ef;
-}
-.netmax-home-hero-copy {
-    width: min(100%, 680px);
-    margin-inline: auto;
-    padding: clamp(2.5rem, 6vw, 5.5rem) clamp(1.25rem, 5vw, 4.5rem);
-    font-family: "Outfit", sans-serif;
-}
-.netmax-home-hero-kicker {
-    margin: 0 0 1rem;
-    color: #1458b8;
-    font-size: .78rem;
-    font-weight: 800;
-    letter-spacing: .14em;
-}
-.netmax-home-hero-copy h1 {
-    max-width: 13ch;
-    margin: 0 0 1.15rem;
-    color: #101b2d;
-    font-size: clamp(2.2rem, 4.2vw, 4.1rem);
-    font-weight: 800;
-    letter-spacing: -.045em;
-    line-height: 1.05;
-}
-.netmax-home-hero-description {
-    max-width: 46ch;
-    margin: 0 0 1.75rem;
-    color: #43516a;
-    font-size: clamp(1rem, 1.45vw, 1.2rem);
-    line-height: 1.65;
-}
-.netmax-home-hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .8rem;
-}
-.netmax-home-hero-actions .btn {
-    min-height: 48px;
-    padding: .75rem 1.4rem;
-    border-radius: 8px;
-}
-.netmax-home-hero-media {
-    height: clamp(340px, 43vw, 560px);
-    min-height: 100%;
-    overflow: hidden;
-    background: #dbe5f0;
-}
-.netmax-home-hero-media img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center 48%;
-}
-@media (max-width: 991.98px) {
-    .netmax-home-hero-copy {
-        max-width: none;
-        padding: 2.25rem clamp(1.25rem, 5vw, 2.5rem) 2.5rem;
-    }
-    .netmax-home-hero-copy h1 {
-        max-width: 16ch;
-        font-size: clamp(2rem, 6.5vw, 3.1rem);
-    }
-    .netmax-home-hero-media {
-        height: clamp(250px, 48vw, 390px);
-        min-height: 0;
-    }
-    .netmax-home-hero-description { margin-bottom: 1.25rem; }
-}
-@media (max-width: 575.98px) {
-    .netmax-home-hero-copy { padding: 1.75rem 1.1rem 2rem; }
-    .netmax-home-hero-kicker {
-        margin-bottom: .75rem;
-        font-size: .68rem;
-        letter-spacing: .11em;
-    }
-    .netmax-home-hero-copy h1 {
-        max-width: 14ch;
-        font-size: clamp(1.9rem, 9vw, 2.55rem);
-    }
-    .netmax-home-hero-description { font-size: .98rem; line-height: 1.55; }
-    .netmax-home-hero-actions { display: grid; grid-template-columns: 1fr; }
-    .netmax-home-hero-actions .btn { width: 100%; }
-    .netmax-home-hero-media { height: 245px; }
-}
-
-/* Respect reduced motion for the existing catalog image effect. */
