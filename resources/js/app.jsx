@@ -28,7 +28,7 @@ createInertiaApp({
         const initialPreference =
             props.auth?.user?.preferred_theme ??
             document.documentElement.getAttribute('data-theme-preference') ??
-            'system';
+            'dark';
         applyUserTheme(initialPreference);
 
         const restoreDocumentScroll = () => {
@@ -69,7 +69,7 @@ createInertiaApp({
 
         router.on('navigate', (event) => {
             const pageProps = event.detail?.page?.props ?? {};
-            const userPreference = pageProps.auth?.user?.preferred_theme ?? 'system';
+            const userPreference = pageProps.auth?.user?.preferred_theme ?? 'dark';
             applyUserTheme(userPreference);
 
             restoreDocumentScroll();
