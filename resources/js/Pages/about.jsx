@@ -51,9 +51,9 @@ export default function About() {
                     <div className="row g-0">
                         <div className="col-12 position-relative text-center about-hero-media">
                             <img
-                                src="/images/AboutHeader.jpg"
+                                src="/images/about-header.jpg"
                                 className="about-hero-image"
-                                alt="CCTV security camera installation"
+                                alt="Outdoor CCTV security camera mounted on a building"
                             />
                             <div className="about-hero-copy position-absolute top-50 start-50 translate-middle text-center">
                                 <h1 className="display-3 fw-bold mb-2">ABOUT US</h1>
@@ -69,7 +69,7 @@ export default function About() {
                 <div className="container">
                     <div className="row g-4 g-lg-5 align-items-center">
                         <div className="col-md-6 mb-2 mb-md-0 about-story-media">
-                            <img src="/images/NETMAX.jpg" className="img-fluid rounded-4 about-story-image" alt="Netmax Trading CCTV and computer services"></img>
+                            <img src="/images/about-company.jpg" className="img-fluid rounded-4 about-story-image" alt="CCTV cameras mounted on an exterior wall"></img>
                         </div>
                         <div className="col-md-6 about-story-copy">
                             <p className="about-section-kicker mb-2">Who we are</p>
@@ -88,7 +88,7 @@ export default function About() {
                             <p className="about-section-lead mb-0">Our mission is to provide dependable products and services, exceed customer expectations, and build lasting relationships through trusted support and practical security solutions.</p>
                         </div>
                         <div className="col-md-6 about-story-media">
-                            <img src="/images/OurMission.jpg" className="img-fluid rounded-4 about-story-image" alt="CCTV product solutions for customers"></img>
+                            <img src="/images/about-mission.jpg" className="img-fluid rounded-4 about-story-image" alt="Security monitoring room with CCTV displays"></img>
                         </div>
                     </div>
                 </div>
