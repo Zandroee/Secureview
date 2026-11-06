@@ -42,30 +42,15 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
             <Navbar />
 
             <header className="home-hero" aria-labelledby="home-hero-title">
-                <div className="home-hero-media">
-                    <picture>
-                        <source
-                            media="(max-width: 767px)"
-                            srcSet="https://images.unsplash.com/photo-1773132500025-4465e723a1ab?fm=webp&fit=crop&w=1000&q=78"
-                        />
-                        <img
-                            src="https://images.unsplash.com/photo-1773132500025-4465e723a1ab?fm=webp&fit=crop&w=1800&q=82"
-                            srcSet="https://images.unsplash.com/photo-1773132500025-4465e723a1ab?fm=webp&fit=crop&w=900&q=78 900w, https://images.unsplash.com/photo-1773132500025-4465e723a1ab?fm=webp&fit=crop&w=1400&q=80 1400w, https://images.unsplash.com/photo-1773132500025-4465e723a1ab?fm=webp&fit=crop&w=1800&q=82 1800w"
-                            sizes="(max-width: 767px) 100vw, 52vw"
-                            alt="Security camera installed on the exterior of a modern building"
-                            className="home-hero-image"
-                            width="1800"
-                            height="1200"
-                            fetchPriority="high"
-                            decoding="async"
-                        />
-                    </picture>
-                </div>
-
                 <div className="home-hero-content">
                     <div className="home-hero-copy">
-                        <h1 id="home-hero-title">Security for your home or business.</h1>
-                        <p>Reliable CCTV systems, packages, and installation support from Netmax Trading.</p>
+                        <div className="home-hero-eyebrow">CCTV &amp; Security Solutions</div>
+                        <h1 id="home-hero-title">
+                            Protect what <span className="home-hero-accent">matters.</span>
+                        </h1>
+                        <p>
+                            Reliable CCTV cameras, complete security packages, and installation support for homes and businesses.
+                        </p>
                         <div className="home-hero-actions">
                             <a href="#featured-packages" className="btn home-hero-button home-hero-button-primary">
                                 VIEW PACKAGES
@@ -75,6 +60,26 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
                             </Link>
                         </div>
                     </div>
+                </div>
+
+                <div className="home-hero-media">
+                    <picture>
+                        <source
+                            media="(max-width: 767px)"
+                            srcSet="https://images.unsplash.com/photo-1758514475000-f7d515078c81?fm=webp&fit=crop&w=1000&q=80"
+                        />
+                        <img
+                            src="https://images.unsplash.com/photo-1758514475000-f7d515078c81?fm=webp&fit=crop&w=1800&q=85"
+                            srcSet="https://images.unsplash.com/photo-1758514475000-f7d515078c81?fm=webp&fit=crop&w=900&q=78 900w, https://images.unsplash.com/photo-1758514475000-f7d515078c81?fm=webp&fit=crop&w=1400&q=82 1400w, https://images.unsplash.com/photo-1758514475000-f7d515078c81?fm=webp&fit=crop&w=1800&q=85 1800w"
+                            sizes="(max-width: 767px) 100vw, 56vw"
+                            alt="Outdoor CCTV camera mounted on a building with trees in the background"
+                            className="home-hero-image"
+                            width="1800"
+                            height="1200"
+                            fetchPriority="high"
+                            decoding="async"
+                        />
+                    </picture>
                 </div>
             </header>
 
