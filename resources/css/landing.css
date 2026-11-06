@@ -22,3 +22,232 @@
         will-change: auto;
     }
 }
+
+
+/* Homepage hero: flat brand color, responsive split layout, no decorative overlays. */
+.home-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+    min-height: clamp(440px, 43vw, 610px);
+    overflow: hidden;
+    background: #1268ed;
+    color: #fff;
+}
+
+.home-hero-media,
+.home-hero-media picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 440px;
+}
+
+.home-hero-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 440px;
+    object-fit: cover;
+    object-position: center;
+}
+
+.home-hero-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    padding: clamp(2.5rem, 5.2vw, 5.5rem);
+}
+
+.home-hero-copy {
+    width: min(100%, 650px);
+    margin-inline: auto;
+    text-align: center;
+    font-family: "Outfit", sans-serif;
+}
+
+.home-hero-copy h1 {
+    max-width: 14ch;
+    margin: 0 auto 1.15rem;
+    color: #fff;
+    font-size: clamp(2.35rem, 3.6vw, 4.35rem);
+    font-weight: 750;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+}
+
+.home-hero-copy p {
+    max-width: 34rem;
+    margin: 0 auto 2rem;
+    color: rgba(255, 255, 255, 0.96);
+    font-size: clamp(1.05rem, 1.55vw, 1.45rem);
+    line-height: 1.55;
+    text-wrap: pretty;
+}
+
+.home-hero-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+}
+
+.home-hero-button {
+    display: inline-flex;
+    min-height: 48px;
+    min-width: 190px;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem 1.35rem;
+    border: 1px solid #fff;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.015em;
+    line-height: 1.2;
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.home-hero-button-primary {
+    background: #fff;
+    color: #0758d4;
+}
+
+.home-hero-button-primary:hover,
+.home-hero-button-primary:focus-visible {
+    background: #eaf2ff;
+    border-color: #eaf2ff;
+    color: #0647ad;
+}
+
+.home-hero-button-outline {
+    background: transparent;
+    color: #fff;
+}
+
+.home-hero-button-outline:hover,
+.home-hero-button-outline:focus-visible {
+    background: #fff;
+    border-color: #fff;
+    color: #0758d4;
+}
+
+.home-hero-button:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.65);
+    outline-offset: 3px;
+}
+
+@media (max-width: 991.98px) {
+    .home-hero {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+        min-height: 430px;
+    }
+
+    .home-hero-media,
+    .home-hero-media picture,
+    .home-hero-image {
+        min-height: 430px;
+    }
+
+    .home-hero-content {
+        padding: 2.25rem;
+    }
+
+    .home-hero-copy h1 {
+        font-size: clamp(2rem, 4vw, 3rem);
+    }
+
+    .home-hero-copy p {
+        font-size: 1rem;
+    }
+
+    .home-hero-button {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .home-hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+        max-width: 270px;
+        margin-inline: auto;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .home-hero {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .home-hero-media,
+    .home-hero-media picture {
+        height: auto;
+        min-height: 0;
+        aspect-ratio: 16 / 10;
+    }
+
+    .home-hero-image {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        aspect-ratio: 16 / 10;
+        object-fit: cover;
+        object-position: center 48%;
+    }
+
+    .home-hero-content {
+        padding: 2rem 1.25rem 2.25rem;
+    }
+
+    .home-hero-copy {
+        max-width: 520px;
+    }
+
+    .home-hero-copy h1 {
+        max-width: 15ch;
+        margin-bottom: 0.85rem;
+        font-size: clamp(2rem, 8vw, 2.75rem);
+        line-height: 1.1;
+    }
+
+    .home-hero-copy p {
+        margin-bottom: 1.35rem;
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
+    .home-hero-actions {
+        width: 100%;
+        max-width: 360px;
+        gap: 0.65rem;
+    }
+
+    .home-hero-button {
+        min-height: 46px;
+        width: 100%;
+    }
+}
+
+@media (max-width: 359.98px) {
+    .home-hero-content {
+        padding-inline: 1rem;
+    }
+
+    .home-hero-copy h1 {
+        font-size: 1.85rem;
+    }
+
+    .home-hero-copy p {
+        font-size: 0.95rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-hero-button {
+        transition: none;
+    }
+}
