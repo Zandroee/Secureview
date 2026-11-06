@@ -1,24 +1,157 @@
-
+/* Homepage hero: solid brand colors, responsive split layout, no gradients. */
+.netmax-home-hero {
+    padding: clamp(1rem, 2.4vw, 2rem) 0;
+    background: #f3f6fa;
+}
+.netmax-home-hero__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+    min-height: 470px;
+    overflow: hidden;
+    border-radius: 22px;
+    background: #10213b;
+    box-shadow: 0 14px 34px rgba(12, 29, 54, 0.12);
+}
+.netmax-home-hero__copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: clamp(2rem, 5vw, 5rem);
+    color: #fff;
+}
+.netmax-home-hero__eyebrow {
+    margin: 0 0 1rem;
+    color: #9fc7ff;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+.netmax-home-hero__copy h1 {
+    max-width: 620px;
+    margin: 0;
+    color: #fff;
+    font-family: "Outfit", sans-serif;
+    font-size: clamp(2.35rem, 4.1vw, 4.35rem);
+    font-weight: 800;
+    line-height: 1.06;
+    letter-spacing: -0.035em;
+}
+.netmax-home-hero__description {
+    max-width: 470px;
+    margin: 1.35rem 0 0;
+    color: #e3ebf6;
+    font-size: clamp(1rem, 1.3vw, 1.18rem);
+    line-height: 1.6;
+}
+.netmax-home-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-top: 2rem;
+}
+.netmax-home-hero__button {
+    min-width: 172px;
+    padding: 0.82rem 1.25rem;
+    border: 1px solid #fff;
+    border-radius: 8px;
+    font-weight: 750;
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+.netmax-home-hero__button--primary {
+    border-color: #126bfa;
+    background: #126bfa;
+    color: #fff;
+}
+.netmax-home-hero__button--primary:hover,
+.netmax-home-hero__button--primary:focus-visible {
+    border-color: #0755ce;
+    background: #0755ce;
+    color: #fff;
+}
+.netmax-home-hero__button--secondary {
+    background: transparent;
+    color: #fff;
+}
+.netmax-home-hero__button--secondary:hover,
+.netmax-home-hero__button--secondary:focus-visible {
+    background: #fff;
+    color: #10213b;
+}
+.netmax-home-hero__media {
+    min-width: 0;
+    min-height: 100%;
+    background: #dfe7f0;
+}
+.netmax-home-hero__media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 470px;
+    object-fit: cover;
+    object-position: center;
+}
+@media (max-width: 767.98px) {
+    .netmax-home-hero {
+        padding: 0.75rem 0 1.25rem;
+        background: #f3f6fa;
+    }
+    .netmax-home-hero__panel {
+        grid-template-columns: minmax(0, 1fr);
+        border-radius: 14px;
+    }
+    .netmax-home-hero__media {
+        order: 0;
+        height: clamp(210px, 58vw, 310px);
+    }
+    .netmax-home-hero__media img {
+        min-height: 0;
+        height: 100%;
+        object-position: center 42%;
+    }
+    .netmax-home-hero__copy {
+        order: 1;
+        padding: 1.5rem 1.25rem 1.7rem;
+    }
+    .netmax-home-hero__eyebrow {
+        margin-bottom: 0.65rem;
+        font-size: 0.68rem;
+    }
+    .netmax-home-hero__copy h1 {
+        max-width: 18ch;
+        font-size: clamp(2rem, 8.5vw, 2.8rem);
+        line-height: 1.08;
+    }
+    .netmax-home-hero__description {
+        margin-top: 0.85rem;
+        font-size: 0.98rem;
+    }
+    .netmax-home-hero__actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+        gap: 0.65rem;
+        margin-top: 1.2rem;
+    }
+    .netmax-home-hero__button {
+        width: 100%;
+        min-height: 46px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .netmax-home-hero__button {
+        transition: none;
+    }
+}
 /* Soft image transition for product and package detail galleries. */
 .catalog-detail-main-image {
     animation: catalog-image-fade 700ms ease both;
     will-change: opacity, transform;
 }
-
 @keyframes catalog-image-fade {
-    from {
-        opacity: 0.2;
-        transform: scale(1.012);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+    from { opacity: 0.2; transform: scale(1.012); }
+    to { opacity: 1; transform: scale(1); }
 }
-
 @media (prefers-reduced-motion: reduce) {
-    .catalog-detail-main-image {
-        animation: none;
-        will-change: auto;
-    }
+    .catalog-detail-main-image { animation: none; will-change: auto; }
 }

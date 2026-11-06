@@ -21,6 +21,7 @@ export default function Signup() {
         password: "",
         password_confirmation: "",
         terms: false,
+        newsletter_opt_in: false,
     });
 
     const [touched, setTouched] = useState({
@@ -423,6 +424,20 @@ export default function Signup() {
                                     {getError("terms")}
                                 </div>
                             )}
+                        </div>
+
+                        <div className="form-check border rounded-3 p-3 ps-5 mb-3">
+                            <input
+                                id="newsletter-opt-in"
+                                className="form-check-input"
+                                type="checkbox"
+                                checked={data.newsletter_opt_in}
+                                onChange={(event) => setData("newsletter_opt_in", event.target.checked)}
+                            />
+                            <label className="form-check-label" htmlFor="newsletter-opt-in">
+                                <span className="fw-semibold">Send me newsletters, voucher codes, and sale offers by email.</span>
+                                <span className="d-block small text-muted mt-1">Optional. You can unsubscribe at any time. This choice does not affect order or service emails.</span>
+                            </label>
                         </div>
 
                         <button

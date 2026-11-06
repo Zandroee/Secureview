@@ -5,6 +5,7 @@ import ProductCard from "../Components/ProductCard";
 
 import { Link } from "@inertiajs/react";
 import { useState } from "react";
+import "../../css/landing.css";
 
 function FeaturedNavigation({ currentPage, totalPages, onPrevious, onNext }) {
     if (totalPages <= 1) return null;
@@ -14,7 +15,6 @@ function FeaturedNavigation({ currentPage, totalPages, onPrevious, onNext }) {
             <button type="button" className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center shadow-sm" style={{ width: "44px", height: "44px", color: currentPage === 1 ? "#adb5bd" : "#0d6efd" }} disabled={currentPage === 1} onClick={onPrevious} aria-label="Previous">
                 <i className="bi bi-chevron-left fs-5"></i>
             </button>
-
             <button type="button" className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center shadow-sm" style={{ width: "44px", height: "44px", color: currentPage === totalPages ? "#adb5bd" : "#0d6efd" }} disabled={currentPage === totalPages} onClick={onNext} aria-label="Next">
                 <i className="bi bi-chevron-right fs-5"></i>
             </button>
@@ -41,23 +41,33 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
         <>
             <Navbar />
 
-            <header className="bg-primary text-white">
-                <div className="container-fluid px-0">
-                    <div className="row g-0">
-                        <div className="col-lg-6">
-                            <img src="/images/cctv-cameras.jpg" alt="CCTV Cameras" className="img-fluid w-100" style={{ height: "600px", objectFit: "cover", objectPosition: "center" }} />
-                        </div>
-
-                        <div className="col-lg-6 d-flex align-items-center">
-                            <div className="w-100 text-center px-4 px-md-5 py-5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                                <h1 className="display-3 fw-bold mb-4">Secure your home or your business</h1>
-                                <p className="display-6 mb-5">Secure them with our optimal CCTV packages offers just for you!</p>
-
-                                <div className="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                                    <a href="#featured-packages" className="btn btn-light text-primary fw-bold fs-5 px-5 py-2">VIEW PACKAGES</a>
-                                    <Link href="/products" className="btn btn-outline-light fw-bold fs-5 px-5 py-2">BROWSE CAMERAS</Link>
-                                </div>
+            <header className="netmax-home-hero">
+                <div className="container-fluid px-3 px-lg-5">
+                    <div className="netmax-home-hero__panel">
+                        <div className="netmax-home-hero__copy">
+                            <p className="netmax-home-hero__eyebrow">NETMAX TRADING · COMPUTER &amp; CCTV</p>
+                            <h1>Reliable CCTV solutions for your home or business</h1>
+                            <p className="netmax-home-hero__description">
+                                Quality cameras, professional installation, and trusted after-sales support.
+                            </p>
+                            <div className="netmax-home-hero__actions">
+                                <Link href="/packages" className="btn netmax-home-hero__button netmax-home-hero__button--primary">
+                                    Browse packages
+                                </Link>
+                                <Link href="/products" className="btn netmax-home-hero__button netmax-home-hero__button--secondary">
+                                    Browse cameras
+                                </Link>
                             </div>
+                        </div>
+                        <div className="netmax-home-hero__media">
+                            <img
+                                src="https://images.pexels.com/photos/37591157/pexels-photo-37591157.jpeg?auto=compress&cs=tinysrgb&w=1600"
+                                alt="Outdoor CCTV camera mounted on a modern building exterior"
+                                width="1600"
+                                height="1200"
+                                fetchPriority="high"
+                                decoding="async"
+                            />
                         </div>
                     </div>
                 </div>
@@ -69,7 +79,6 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
                         <div className="col">
                             <h2 className="display-6 fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>Featured CCTV Packages</h2>
                         </div>
-
                         <div className="col-auto">
                             <Link href="/packages" className="text-primary fw-bold text-decoration-none">VIEW ALL <i className="bi bi-arrow-right ms-2"></i></Link>
                         </div>
@@ -78,7 +87,21 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
                     <div className="row g-3 g-md-4">
                         {currentPackages.map((pkg) => (
                             <div className="col-sm-6 col-lg-4" key={pkg.id}>
-                                <PackageCard name={pkg.name} brand={pkg.brand} reviewsCount={pkg.reviews_count} image={pkg.image} price={pkg.price} badge={pkg.badge} specifications={pkg.specifications} inclusions={pkg.inclusions} rating={pkg.rating} href={`/packages/${pkg.id}`} />
+                                <PackageCard
+                                    name={pkg.name}
+                                    brand={pkg.brand}
+                                    reviewsCount={pkg.reviews_count}
+                                    image={pkg.image}
+                                    price={pkg.price}
+                                    originalPrice={pkg.original_price}
+                                    saleActive={pkg.sale_active}
+                                    saleDiscountPercent={pkg.sale_discount_percent}
+                                    badge={pkg.badge}
+                                    specifications={pkg.specifications}
+                                    inclusions={pkg.inclusions}
+                                    rating={pkg.rating}
+                                    href={`/packages/${pkg.id}`}
+                                />
                             </div>
                         ))}
                     </div>
@@ -93,7 +116,6 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
                         <div className="col">
                             <h2 className="display-6 fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>Featured Cameras</h2>
                         </div>
-
                         <div className="col-auto">
                             <Link href="/products" className="text-primary fw-bold text-decoration-none">VIEW ALL <i className="bi bi-arrow-right ms-2"></i></Link>
                         </div>
@@ -102,7 +124,20 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
                     <div className="row g-3 g-md-4">
                         {currentCameras.map((product) => (
                             <div className="col-sm-6 col-xl-3" key={product.id}>
-                                <ProductCard name={product.name} brand={product.brand} reviewsCount={product.reviews_count} image={product.image} price={product.price} badge={product.badge} specifications={product.specifications} rating={product.rating} href={`/products/${product.id}`} />
+                                <ProductCard
+                                    name={product.name}
+                                    brand={product.brand}
+                                    reviewsCount={product.reviews_count}
+                                    image={product.image}
+                                    price={product.price}
+                                    originalPrice={product.original_price}
+                                    saleActive={product.sale_active}
+                                    saleDiscountPercent={product.sale_discount_percent}
+                                    badge={product.badge}
+                                    specifications={product.specifications}
+                                    rating={product.rating}
+                                    href={`/products/${product.id}`}
+                                />
                             </div>
                         ))}
                     </div>
@@ -119,7 +154,6 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
                                 <h2 className="fw-bold mb-2" style={{ fontFamily: "Outfit, sans-serif" }}>Ready to secure your space?</h2>
                                 <p className="mb-0">Browse our CCTV cameras and packages to find the right security solution.</p>
                             </div>
-
                             <div className="col-lg-4 text-center text-lg-end mt-4 mt-lg-0">
                                 <Link href="/products" className="btn btn-light text-primary fw-bold px-4 py-2">BROWSE PRODUCTS <i className="bi bi-arrow-right ms-2"></i></Link>
                             </div>

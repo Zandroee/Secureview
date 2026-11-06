@@ -37,6 +37,7 @@ export default function Settings({ settings = {} }) {
     const [notificationPopups, setNotificationPopups] = useState(
         settings.notification_popups_enabled !== false
     );
+    const [newsletterOptIn, setNewsletterOptIn] = useState(settings.newsletter_opt_in === true);
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -49,12 +50,14 @@ export default function Settings({ settings = {} }) {
         setPhone(settings.phone ?? "");
         setTheme(settings.preferred_theme ?? "system");
         setNotificationPopups(settings.notification_popups_enabled !== false);
+        setNewsletterOptIn(settings.newsletter_opt_in === true);
         applyUserTheme(settings.preferred_theme ?? "system");
     }, [
         settings.name,
         settings.phone,
         settings.preferred_theme,
         settings.notification_popups_enabled,
+        settings.newsletter_opt_in,
     ]);
 
     const saveProfile = (event) => {
@@ -81,6 +84,7 @@ export default function Settings({ settings = {} }) {
         router.patch("/settings/preferences", {
             preferred_theme: theme,
             notification_popups_enabled: notificationPopups,
+            newsletter_opt_in: newsletterOptIn,
         }, {
             preserveScroll: true,
             onSuccess: (page) => {
@@ -315,6 +319,26 @@ export default function Settings({ settings = {} }) {
                                     </fieldset>
 
                                     <hr className="my-4" />
+
+                                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+                                        <div>
+                                            <div className="fw-semibold">Promotional email newsletter</div>
+                                            <div className="small text-muted">Receive optional product news, voucher codes, and sale announcements. Service, account, and order emails are not affected.</div>
+                                        </div>
+                                        <div className="form-check form-switch fs-5 flex-shrink-0">
+                                            <input
+                                                id="settings-newsletter-opt-in"
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                role="switch"
+                                                checked={newsletterOptIn}
+                                                onChange={(event) => setNewsletterOptIn(event.target.checked)}
+                                            />
+                                            <label className="form-check-label small" htmlFor="settings-newsletter-opt-in">
+                                                {newsletterOptIn ? "Subscribed" : "Not subscribed"}
+                                            </label>
+                                        </div>
+                                    </div>
 
                                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                                         <div>

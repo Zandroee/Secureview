@@ -43,6 +43,7 @@ class AuthController extends Controller
                     ->symbols(),
             ],
             'terms' => ['accepted'],
+            'newsletter_opt_in' => ['sometimes', 'boolean'],
         ], [
             'phone.unique' => 'This phone number is already registered.',
             'email.unique' => 'This email address is already registered.',
@@ -56,7 +57,9 @@ class AuthController extends Controller
             'password' => $validated['password'],
             'role' => 'user',
             'terms_accepted_at' => now(),
-            'terms_version' => '1.0',
+            'terms_version' => '2.0',
+            'newsletter_opt_in' => (bool) ($validated['newsletter_opt_in'] ?? false),
+            'newsletter_opted_in_at' => !empty($validated['newsletter_opt_in']) ? now() : null,
         ]);
 
         try {

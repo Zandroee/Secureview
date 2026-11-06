@@ -130,6 +130,8 @@ jobs:
           cp app/Http/Controllers/AuthController.php hostinger-release/app/Http/Controllers/AuthController.php
           cp app/Http/Controllers/EmailVerificationController.php hostinger-release/app/Http/Controllers/EmailVerificationController.php
           cp app/Http/Controllers/NotificationController.php hostinger-release/app/Http/Controllers/NotificationController.php
+          cp app/Http/Controllers/SettingsController.php hostinger-release/app/Http/Controllers/SettingsController.php
+          cp app/Http/Controllers/NewsletterController.php hostinger-release/app/Http/Controllers/NewsletterController.php
           cp app/Http/Controllers/LandingController.php hostinger-release/app/Http/Controllers/LandingController.php
           cp app/Http/Controllers/ProductController.php hostinger-release/app/Http/Controllers/ProductController.php
           cp app/Http/Controllers/PackageController.php hostinger-release/app/Http/Controllers/PackageController.php
@@ -144,7 +146,9 @@ jobs:
           cp app/Services/EmailVerificationCodeService.php hostinger-release/app/Services/EmailVerificationCodeService.php
           cp app/Mail/EmailVerificationCodeMail.php hostinger-release/app/Mail/EmailVerificationCodeMail.php
           cp app/Mail/PendingPaymentReminderMail.php hostinger-release/app/Mail/PendingPaymentReminderMail.php
+          cp app/Mail/NewsletterPromotionMail.php hostinger-release/app/Mail/NewsletterPromotionMail.php
           cp app/Models/User.php hostinger-release/app/Models/User.php
+          cp app/Models/NewsletterPromotionSend.php hostinger-release/app/Models/NewsletterPromotionSend.php
           cp app/Models/SupportConversation.php hostinger-release/app/Models/SupportConversation.php
           cp app/Models/SupportMessage.php hostinger-release/app/Models/SupportMessage.php
           cp app/Models/Order.php hostinger-release/app/Models/Order.php
@@ -166,11 +170,13 @@ jobs:
           cp resources/views/app.blade.php hostinger-release/resources/views/app.blade.php
           cp public/images/netmax-logo.png hostinger-release/public/images/netmax-logo.png
           cp public/images/netmax-logo.webp hostinger-release/public/images/netmax-logo.webp
+          cp public/images/netmax-logo-white-transparent.webp hostinger-release/public/images/netmax-logo-white-transparent.webp
           cp public/images/netmax-favicon.png hostinger-release/public/images/netmax-favicon.png
           cp resources/views/errors/404.blade.php hostinger-release/resources/views/errors/404.blade.php
           cp resources/views/errors/419.blade.php hostinger-release/resources/views/errors/419.blade.php
           cp resources/views/emails/email-verification-code.blade.php hostinger-release/resources/views/emails/email-verification-code.blade.php
           cp resources/views/emails/pending-payment-reminder.blade.php hostinger-release/resources/views/emails/pending-payment-reminder.blade.php
+          cp resources/views/emails/newsletter-promotion.blade.php hostinger-release/resources/views/emails/newsletter-promotion.blade.php
           cp app/Providers/AppServiceProvider.php hostinger-release/app/Providers/AppServiceProvider.php
           cp app/Http/Middleware/EnforceSingleLoginSession.php hostinger-release/app/Http/Middleware/EnforceSingleLoginSession.php
           cp app/Http/Middleware/HandleInertiaRequests.php hostinger-release/app/Http/Middleware/HandleInertiaRequests.php
@@ -192,6 +198,8 @@ jobs:
           cp database/migrations/2026_10_27_000002_change_voucher_schedule_fields_to_local_datetime.php hostinger-release/database/migrations/2026_10_27_000002_change_voucher_schedule_fields_to_local_datetime.php
           cp database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php hostinger-release/database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php
           cp database/migrations/2026_11_05_000001_create_support_conversations_tables.php hostinger-release/database/migrations/2026_11_05_000001_create_support_conversations_tables.php
+          cp database/migrations/2026_11_06_000001_add_newsletter_consent_to_users_table.php hostinger-release/database/migrations/2026_11_06_000001_add_newsletter_consent_to_users_table.php
+          cp database/migrations/2026_11_06_000002_create_newsletter_promotion_sends_table.php hostinger-release/database/migrations/2026_11_06_000002_create_newsletter_promotion_sends_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php
