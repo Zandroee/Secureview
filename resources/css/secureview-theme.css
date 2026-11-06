@@ -2807,7 +2807,8 @@ html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
 }
 
 
-/* Netmax Trading company identity */
+/* Netmax Trading company identity
+   Transparent artwork sits directly on the existing navbar/footer surfaces. */
 .netmax-navbar-logo {
     display: block;
     width: clamp(160px, 18vw, 220px);
@@ -2819,10 +2820,16 @@ html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
 .navbar-brand:has(.netmax-navbar-logo) {
     display: inline-flex;
     align-items: center;
-    padding: 4px 10px;
-    border-radius: 11px;
-    background: #fff;
-    box-shadow: 0 2px 9px rgba(7, 32, 77, .1);
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Light navigation uses the original navy-and-blue mark; dark navigation
+   switches it to white so the wordmark remains readable on the navy surface. */
+html[data-bs-theme="dark"] .navbar-brand:has(.netmax-navbar-logo) .netmax-navbar-logo {
+    filter: brightness(0) invert(1);
 }
 
 .netmax-footer-logo-wrap {
@@ -2830,9 +2837,9 @@ html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
     max-width: 100%;
     align-items: center;
     justify-content: center;
-    padding: 12px 15px;
-    border-radius: 12px;
-    background: #fff;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
 }
 
 .netmax-footer-logo {
@@ -2841,6 +2848,8 @@ html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
     max-height: 110px;
     height: auto;
     object-fit: contain;
+    /* Footer is blue in light mode and navy in dark mode. */
+    filter: brightness(0) invert(1);
 }
 
 @media (max-width: 575.98px) {
@@ -2850,6 +2859,6 @@ html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
     }
 
     .netmax-footer-logo-wrap {
-        padding: 10px 12px;
+        padding: 0;
     }
 }
