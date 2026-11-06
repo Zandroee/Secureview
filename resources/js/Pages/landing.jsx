@@ -41,23 +41,38 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
         <>
             <Navbar />
 
-            <header className="bg-primary text-white">
-                <div className="container-fluid px-0">
-                    <div className="row g-0">
-                        <div className="col-lg-6">
-                            <img src="/images/cctv-cameras.jpg" alt="CCTV Cameras" className="img-fluid w-100" style={{ height: "600px", objectFit: "cover", objectPosition: "center" }} />
-                        </div>
+            <header className="home-hero" aria-labelledby="home-hero-title">
+                <div className="home-hero-media">
+                    <picture>
+                        <source
+                            media="(max-width: 767px)"
+                            srcSet="https://images.unsplash.com/photo-1773132500025-4465e723a1ab?fm=webp&fit=crop&w=1000&q=78"
+                        />
+                        <img
+                            src="https://images.unsplash.com/photo-1773132500025-4465e723a1ab?fm=webp&fit=crop&w=1800&q=82"
+                            srcSet="https://images.unsplash.com/photo-1773132500025-4465e723a1ab?fm=webp&fit=crop&w=900&q=78 900w, https://images.unsplash.com/photo-1773132500025-4465e723a1ab?fm=webp&fit=crop&w=1400&q=80 1400w, https://images.unsplash.com/photo-1773132500025-4465e723a1ab?fm=webp&fit=crop&w=1800&q=82 1800w"
+                            sizes="(max-width: 767px) 100vw, 52vw"
+                            alt="Security camera installed on the exterior of a modern building"
+                            className="home-hero-image"
+                            width="1800"
+                            height="1200"
+                            fetchPriority="high"
+                            decoding="async"
+                        />
+                    </picture>
+                </div>
 
-                        <div className="col-lg-6 d-flex align-items-center">
-                            <div className="w-100 text-center px-4 px-md-5 py-5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                                <h1 className="display-3 fw-bold mb-4">Secure your home or your business</h1>
-                                <p className="display-6 mb-5">Secure them with our optimal CCTV packages offers just for you!</p>
-
-                                <div className="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                                    <a href="#featured-packages" className="btn btn-light text-primary fw-bold fs-5 px-5 py-2">VIEW PACKAGES</a>
-                                    <Link href="/products" className="btn btn-outline-light fw-bold fs-5 px-5 py-2">BROWSE CAMERAS</Link>
-                                </div>
-                            </div>
+                <div className="home-hero-content">
+                    <div className="home-hero-copy">
+                        <h1 id="home-hero-title">Security for your home or business.</h1>
+                        <p>Reliable CCTV systems, packages, and installation support from Netmax Trading.</p>
+                        <div className="home-hero-actions">
+                            <a href="#featured-packages" className="btn home-hero-button home-hero-button-primary">
+                                VIEW PACKAGES
+                            </a>
+                            <Link href="/products" className="btn home-hero-button home-hero-button-outline">
+                                BROWSE CAMERAS
+                            </Link>
                         </div>
                     </div>
                 </div>
