@@ -8,6 +8,12 @@ use Illuminate\Support\Facades\Schedule;
 use App\Mail\PendingPaymentReminderMail;
 use App\Models\CustomerNotification;
 use App\Models\Order;
+use App\Models\User;
+use App\Models\Voucher;
+use App\Models\Product;
+use App\Models\Package;
+use App\Models\NewsletterPromotionSend;
+use App\Mail\NewsletterPromotionMail;
 use App\Services\InventoryService;
 use App\Services\OrderCancellationService;
 
