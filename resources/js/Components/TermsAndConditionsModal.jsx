@@ -81,7 +81,7 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                         </h2>
 
                         <div className="text-muted small">
-                            Version 1.0
+                            Version 2.0
                         </div>
                     </div>
 
@@ -194,7 +194,29 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                     </section>
 
                     <section className="mb-4">
-                        <h3 className="h6 fw-bold">8. Changes to These Terms</h3>
+                        <h3 className="h6 fw-bold">8. Promotional Emails and Newsletter Consent</h3>
+                        <p className="mb-0">
+                            Promotional newsletters, voucher announcements, sale offers, and product marketing emails are optional.
+                            Choosing not to receive them does not affect account registration, purchases, services, or essential
+                            account and transaction messages. Customers who opt in may withdraw consent at any time through
+                            Account Settings or the unsubscribe link included in promotional emails. Netmax Trading will use
+                            newsletter consent only for promotional communications and will retain the consent status and
+                            related timestamps to honor the customer's choice.
+                        </p>
+                    </section>
+
+                    <section className="mb-4">
+                        <h3 className="h6 fw-bold">9. Privacy and Communications</h3>
+                        <p className="mb-0">
+                            Account, verification, payment, order, warranty, and service messages may still be sent when needed
+                            to provide the requested service or maintain the account. Marketing consent is separate from those
+                            operational messages. Customers should keep their contact details accurate and use the account
+                            settings or support channels to request help with their information.
+                        </p>
+                    </section>
+
+                    <section className="mb-4">
+                        <h3 className="h6 fw-bold">10. Changes to These Terms</h3>
                         <p className="mb-0">
                             Netmax Trading may update these Terms and Conditions when
                             necessary. A new version may require users to review
@@ -204,7 +226,7 @@ export default function TermsAndConditionsModal({ onClose, onAccept }) {
                     </section>
 
                     <section className="mb-4">
-                        <h3 className="h6 fw-bold">9. Contact and Support</h3>
+                        <h3 className="h6 fw-bold">11. Contact and Support</h3>
                         <p className="mb-0">
                             For questions about an order, service request, or
                             these Terms and Conditions, contact Netmax Trading
