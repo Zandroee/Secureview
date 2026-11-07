@@ -202,6 +202,7 @@ jobs:
           cp database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php hostinger-release/database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php
           cp database/migrations/2026_11_05_000001_create_support_conversations_tables.php hostinger-release/database/migrations/2026_11_05_000001_create_support_conversations_tables.php
           cp database/migrations/2026_11_07_000001_create_refunds_table.php hostinger-release/database/migrations/2026_11_07_000001_create_refunds_table.php
+          cp database/migrations/2026_11_07_000002_add_marketing_email_preferences_to_users_table.php hostinger-release/database/migrations/2026_11_07_000002_add_marketing_email_preferences_to_users_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php
