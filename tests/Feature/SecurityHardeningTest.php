@@ -84,7 +84,10 @@ class SecurityHardeningTest extends TestCase
 
     public function test_registration_rate_limit_is_session_aware_and_returns_a_friendly_inertia_notice(): void
     {
-        for ($attempt = 0; $attempt < 10; $attempt++) {
+        // The feature-test client does not persist browser session cookies between
+        // requests the way a real browser does. Exercise the shared-IP ceiling
+        // here; real browser sessions also use the tighter per-session ceiling.
+        for ($attempt = 0; $attempt < 60; $attempt++) {
             $this->from('/signup')
                 ->withHeaders(['X-Inertia' => 'true'])
                 ->post(route('register'), [])
