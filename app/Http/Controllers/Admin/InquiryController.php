@@ -11,6 +11,7 @@ use App\Models\ServiceBookingFeeSetting;
 use App\Models\User;
 use App\Services\AdminActivityLogger;
 use App\Services\JobNotificationService;
+use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -236,7 +237,8 @@ class InquiryController extends Controller
         Request $request,
         Inquiry $inquiry,
         AdminActivityLogger $activityLogger,
-        JobNotificationService $jobNotifications
+        JobNotificationService $jobNotifications,
+        RefundService $refunds
     ) {
         $validated = $request->validate([
             'technician_ids' => ['sometimes', 'array', 'max:10'],
@@ -385,7 +387,8 @@ class InquiryController extends Controller
         Request $request,
         Inquiry $inquiry,
         AdminActivityLogger $activityLogger,
-        JobNotificationService $jobNotifications
+        JobNotificationService $jobNotifications,
+        RefundService $refunds
     ) {
         if ($inquiry->status !== 'pending') {
             return back()->withErrors([
@@ -557,7 +560,8 @@ class InquiryController extends Controller
         Request $request,
         Inquiry $inquiry,
         AdminActivityLogger $activityLogger,
-        JobNotificationService $jobNotifications
+        JobNotificationService $jobNotifications,
+        RefundService $refunds
     ) {
         $validated = $request->validate([
             'status' => ['required', 'in:pending,confirmed,in_progress,completed,cancelled'],
@@ -648,6 +652,17 @@ class InquiryController extends Controller
                     ['status' => $newStatus]
                 );
             });
+        }
+
+        if ($oldStatus !== $newStatus && $newStatus === 'cancelled') {
+            $refund = $refunds->refundCancelledService($inquiry->fresh(), $request->user()->id);
+
+            if ($refund) {
+                return back()->with(
+                    'success',
+                    'Service cancelled. The installation and priority fee refund is now ' . str_replace('_', ' ', $refund->status) . '.'
+                );
+            }
         }
 
         return back()->with('success', 'Inquiry status updated successfully.');

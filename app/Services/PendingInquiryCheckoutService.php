@@ -43,14 +43,14 @@ class PendingInquiryCheckoutService
                     ->where('user_id', $pending->user_id)
                     ->find($pending->inquiry_id);
 
-                if ($inquiry && $pending->status === 'pending_payment' && $order->payment_status === 'paid') {
+                if ($inquiry && $pending->status === 'pending_payment' && in_array($order->payment_status, ['paid', 'partially_refunded', 'refunded'], true)) {
                     $pending->update(['status' => 'paid']);
                 }
 
                 return $inquiry;
             }
 
-            if ($pending->status !== 'pending_payment' || $order->payment_status !== 'paid') {
+            if ($pending->status !== 'pending_payment' || !in_array($order->payment_status, ['paid', 'partially_refunded', 'refunded'], true)) {
                 return null;
             }
 

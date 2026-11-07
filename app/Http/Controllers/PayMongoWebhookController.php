@@ -7,12 +7,13 @@ use App\Models\Order;
 use App\Models\PendingInquiryCheckout;
 use App\Services\PendingInquiryCheckoutService;
 use App\Services\InventoryService;
+use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PayMongoWebhookController extends Controller
 {
-    public function handle(Request $request, InventoryService $inventory)
+    public function handle(Request $request, InventoryService $inventory, RefundService $refunds)
     {
         $rawBody = $request->getContent();
         $signatureHeader = $request->header('Paymongo-Signature');
@@ -86,6 +87,18 @@ class PayMongoWebhookController extends Controller
             $session = $payload['data']['data'] ?? [];
         }
 
+        if (in_array($event, ['payment.refund.updated', 'payment.refunded'], true)) {
+            $refundResource = is_array($session) ? $session : [];
+            $refundResourceId = $refundResource['id'] ?? null;
+            $refundAttributes = $refundResource['attributes'] ?? [];
+
+            if ($refundResourceId && is_array($refundAttributes)) {
+                $refunds->syncProviderStatus((string) $refundResourceId, $refundAttributes);
+            }
+
+            return response()->json(['received' => true]);
+        }
+
         if ($event !== 'checkout_session.payment.paid') {
             return response()->json([
                 'received' => true,
@@ -131,7 +144,9 @@ class PayMongoWebhookController extends Controller
             ]);
         }
 
-        if ($order->payment_status === 'paid') {
+        if (in_array($order->payment_status, ['paid', 'partially_refunded', 'refunded'], true)) {
+            // A delayed duplicate checkout-paid event must never overwrite a
+            // later refund state and turn a partially/full-refunded order paid.
             return $this->finalizePaidOrder($order, $inventory, false)
                 ?? response()->json(['received' => true]);
         }
@@ -154,7 +169,7 @@ class PayMongoWebhookController extends Controller
                 ];
             }
 
-            if ($lockedOrder->payment_status === 'paid') {
+            if (in_array($lockedOrder->payment_status, ['paid', 'partially_refunded', 'refunded'], true)) {
                 return [
                     'order' => $lockedOrder,
                     'cancelled' => false,

@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CustomerNotification;
 use App\Models\Order;
+use App\Models\Refund;
 use App\Services\AdminActivityLogger;
 use App\Services\InventoryService;
 use App\Services\InvoiceDocumentService;
 use App\Services\OrderCancellationService;
 use App\Services\PendingInquiryCheckoutService;
+use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -29,7 +31,7 @@ class PurchaseController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'payment_status' => ['nullable', 'in:pending,paid,failed,cancelled'],
+            'payment_status' => ['nullable', 'in:pending,paid,partially_refunded,refunded,failed,cancelled'],
             'order_status' => ['nullable', 'in:' . implode(',', self::ORDER_STATUSES)],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
             'attention' => ['nullable', 'in:stale'],
@@ -39,7 +41,7 @@ class PurchaseController extends Controller
 
         $invoiceProfileReady = app(InvoiceDocumentService::class)->profileReady();
 
-        $query = Order::with(['user', 'items', 'events.actor', 'invoiceRecord'])
+        $query = Order::with(['user', 'items', 'events.actor', 'invoiceRecord', 'refunds'])
             ->latest();
 
         // Keep the active Orders workspace focused on actionable orders by default.
@@ -104,6 +106,13 @@ class PurchaseController extends Controller
             ->whereIn('payment_status', ['pending', 'failed'])
             ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed']);
 
+        $summaryPaidOrderQuery = (clone $summaryOrderQuery)
+            ->whereIn('payment_status', ['paid', 'partially_refunded', 'refunded']);
+        $summaryRefundedAmount = (float) Refund::query()
+            ->where('status', 'completed')
+            ->whereIn('order_id', (clone $summaryOrderQuery)->select('orders.id'))
+            ->sum('amount_approved');
+
         $orders = $query
             ->paginate(12)
             ->withQueryString()
@@ -137,7 +146,7 @@ class PurchaseController extends Controller
             ],
             'summary' => [
                 'total_orders' => (clone $summaryOrderQuery)->count(),
-                'paid_orders' => (clone $summaryOrderQuery)->where('payment_status', 'paid')->count(),
+                'paid_orders' => (clone $summaryPaidOrderQuery)->count(),
                 'pending_payments' => (clone $summaryUnpaidOrderQuery)->where('payment_status', 'pending')->count(),
                 'pending_online_payments' => (clone $summaryUnpaidOrderQuery)
                     ->where('payment_status', 'pending')
@@ -155,7 +164,7 @@ class PurchaseController extends Controller
                 'stale_unpaid_orders' => (clone $summaryUnpaidOrderQuery)
                     ->where('created_at', '<=', now()->subHours(48))
                     ->count(),
-                'revenue' => (float) (clone $summaryOrderQuery)->where('payment_status', 'paid')->sum('total'),
+                'revenue' => max(0, (float) (clone $summaryPaidOrderQuery)->sum('total') - $summaryRefundedAmount),
             ],
         ]);
     }
@@ -165,14 +174,14 @@ class PurchaseController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'order_status' => ['nullable', 'in:completed,cancelled'],
-            'payment_status' => ['nullable', 'in:pending,paid,failed,cancelled'],
+            'payment_status' => ['nullable', 'in:pending,paid,partially_refunded,refunded,failed,cancelled'],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $invoiceProfileReady = app(InvoiceDocumentService::class)->profileReady();
-        $query = Order::with(['user', 'items', 'events.actor', 'invoiceRecord'])
+        $query = Order::with(['user', 'items', 'events.actor', 'invoiceRecord', 'refunds'])
             ->whereIn('order_status', ['completed', 'cancelled'])
             ->latest();
 
@@ -218,6 +227,14 @@ class PurchaseController extends Controller
             $historySummaryQuery->whereDate('created_at', '<=', $filters['date_to']);
         }
 
+        $historyPaidOrderQuery = (clone $historySummaryQuery)
+            ->where('order_status', 'completed')
+            ->whereIn('payment_status', ['paid', 'partially_refunded', 'refunded']);
+        $historyRefundedAmount = (float) Refund::query()
+            ->where('status', 'completed')
+            ->whereIn('order_id', (clone $historySummaryQuery)->select('orders.id'))
+            ->sum('amount_approved');
+
         $orders = $query->paginate(12)->withQueryString()
             ->through(fn (Order $order) => $this->formatOrder($order, $invoiceProfileReady));
 
@@ -234,10 +251,7 @@ class PurchaseController extends Controller
             'summary' => [
                 'completed_orders' => (clone $historySummaryQuery)->where('order_status', 'completed')->count(),
                 'cancelled_orders' => (clone $historySummaryQuery)->where('order_status', 'cancelled')->count(),
-                'completed_paid_revenue' => (float) (clone $historySummaryQuery)
-                    ->where('order_status', 'completed')
-                    ->where('payment_status', 'paid')
-                    ->sum('total'),
+                'completed_paid_revenue' => max(0, (float) $historyPaidOrderQuery->sum('total') - $historyRefundedAmount),
             ],
         ]);
     }
@@ -247,21 +261,27 @@ class PurchaseController extends Controller
         Order $order,
         OrderCancellationService $cancellation,
         InventoryService $inventory,
-        AdminActivityLogger $activityLogger
+        AdminActivityLogger $activityLogger,
+        RefundService $refunds
     ) {
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:500'],
         ]);
         $reason = trim($validated['reason']);
         $oldStatus = $order->order_status;
+        $wasPaid = in_array($order->payment_status, ['paid', 'partially_refunded'], true) && $order->paid_at !== null;
 
-        $cancellation->cancel($order, $inventory, $reason);
+        if ($wasPaid) {
+            $refunds->cancelPaidOrderForBusiness($order, $reason, $request->user()->id, $inventory);
+        } else {
+            $cancellation->cancel($order, $inventory, $reason);
+        }
         $order->refresh();
 
         $activityLogger->record(
             $request,
-            'order_cancelled',
-            'Cancelled unpaid order ' . $order->order_number . '. Reason: ' . $reason,
+            $wasPaid ? 'paid_order_cancelled_with_refund' : 'order_cancelled',
+            ($wasPaid ? 'Cancelled paid order and initiated its remaining refund ' : 'Cancelled unpaid order ') . $order->order_number . '. Reason: ' . $reason,
             $order,
             ['status' => $oldStatus],
             ['status' => $order->order_status, 'cancellation_reason' => $reason]
@@ -271,13 +291,17 @@ class PurchaseController extends Controller
             'user_id' => $order->user_id,
             'type' => 'order_cancelled',
             'title' => 'Order cancelled',
-            'message' => 'Your unpaid order ' . $order->order_number . ' was cancelled by Netmax Trading. Reason: ' . $reason,
+            'message' => $wasPaid
+                ? 'Netmax Trading cancelled your paid order and is handling a refund of its remaining refundable balance. Check the Refunds section for updates. Reason: ' . $reason
+                : 'Your unpaid order ' . $order->order_number . ' was cancelled by Netmax Trading. Reason: ' . $reason,
             'action_url' => route('purchases.show', $order),
             'related_type' => Order::class,
             'related_id' => $order->id,
         ]);
 
-        return back()->with('success', 'Order ' . $order->order_number . ' was cancelled.');
+        return back()->with('success', $wasPaid
+            ? 'Paid order ' . $order->order_number . ' was cancelled and its remaining refundable balance was sent to refund processing.'
+            : 'Order ' . $order->order_number . ' was cancelled.');
     }
 
     public function confirmCashPayment(
@@ -336,9 +360,9 @@ class PurchaseController extends Controller
         Order $order,
         AdminActivityLogger $activityLogger
     ) {
-        if ($order->payment_status !== 'paid' || $order->order_status !== 'processing') {
+        if (!in_array($order->payment_status, ['paid', 'partially_refunded'], true) || $order->order_status !== 'processing') {
             return back()->withErrors([
-                'order' => 'Only paid orders in Processing status can be marked Completed.',
+                'order' => 'Only paid or partially refunded orders in Processing status can be marked Completed.',
             ]);
         }
 
@@ -349,10 +373,10 @@ class PurchaseController extends Controller
 
         if (
             $installationCheckout &&
-            (!$installationCheckout->inquiry || $installationCheckout->inquiry->status !== 'completed')
+            (!$installationCheckout->inquiry || !in_array($installationCheckout->inquiry->status, ['completed', 'cancelled'], true))
         ) {
             return back()->withErrors([
-                'order' => 'This order is linked to a service booking. Complete the related service from Schedules and Service History before marking the order Completed.',
+                'order' => 'This order is linked to a service booking. Complete or cancel the related service before marking the product order Completed.',
             ]);
         }
 
@@ -384,7 +408,7 @@ class PurchaseController extends Controller
     {
         $invoiceRecord = $order->invoiceRecord;
         $canRecordInvoice = $invoiceProfileReady
-            && $order->payment_status === 'paid'
+            && in_array($order->payment_status, ['paid', 'partially_refunded'], true)
             && in_array($order->order_status, ['processing', 'completed', 'delivered'], true)
             && !$invoiceRecord;
 
@@ -446,6 +470,10 @@ class PurchaseController extends Controller
                         : (in_array($order->order_status, ['pending', 'awaiting_payment'], true)
                             ? 'awaiting_payment'
                             : 'review'))),
+            'can_business_cancel' => in_array($order->payment_status, ['paid', 'partially_refunded'], true)
+                && $order->paid_at !== null
+                && in_array($order->order_status, ['processing', 'delivered'], true),
+            'refunded_total' => (float) $order->refunds()->where('status', 'completed')->sum('amount_approved'),
             'can_cancel' => $order->payment_status !== 'paid'
                 && $order->paid_at === null
                 && in_array($order->payment_status, ['pending', 'failed'], true)
@@ -453,13 +481,13 @@ class PurchaseController extends Controller
             'can_confirm_cash_payment' => $order->payment_method === 'cash'
                 && $order->payment_status === 'pending'
                 && $order->order_status === 'pending',
-            'can_mark_completed' => $order->payment_status === 'paid'
+            'can_mark_completed' => in_array($order->payment_status, ['paid', 'partially_refunded'], true)
                 && $order->order_status === 'processing'
                 && !\App\Models\PendingInquiryCheckout::query()
                     ->where('order_id', $order->id)
                     ->where(function ($query) {
                         $query->whereNull('inquiry_id')
-                            ->orWhereHas('inquiry', fn ($inquiryQuery) => $inquiryQuery->where('status', '!=', 'completed'));
+                            ->orWhereHas('inquiry', fn ($inquiryQuery) => $inquiryQuery->whereNotIn('status', ['completed', 'cancelled']));
                     })
                     ->exists(),
             'items' => $order->items->map(fn ($item) => [

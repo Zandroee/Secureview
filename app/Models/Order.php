@@ -72,6 +72,16 @@ class Order extends Model
         return $this->hasMany(OrderEvent::class)->oldest();
     }
 
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class);
+    }
+
+    public function pendingInquiryCheckout(): HasOne
+    {
+        return $this->hasOne(PendingInquiryCheckout::class);
+    }
+
     public function invoiceRecord(): HasOne
     {
         return $this->hasOne(InvoiceRecord::class);

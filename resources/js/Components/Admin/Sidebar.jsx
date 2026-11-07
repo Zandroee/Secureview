@@ -57,6 +57,12 @@ const menuGroups = [
             icon: "bi-bag-check",
         },
         {
+            label: "Refunds",
+            href: "/admin/refunds",
+            key: "refunds",
+            icon: "bi-arrow-counterclockwise",
+        },
+        {
             label: "Promotions & Vouchers",
             href: "/admin/vouchers",
             key: "vouchers",

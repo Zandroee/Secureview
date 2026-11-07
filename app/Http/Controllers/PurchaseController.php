@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\CustomerNotification;
 use App\Models\Order;
 use App\Models\PendingInquiryCheckout;
+use App\Models\Refund;
 use App\Services\InventoryService;
 use App\Services\PayMongoLineItemBuilder;
 use App\Services\OrderCancellationService;
 use App\Services\PendingInquiryCheckoutService;
+use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
@@ -19,7 +21,7 @@ class PurchaseController extends Controller
     {
         $orders = $request->user()
             ->orders()
-            ->with(['items.purchasable'])
+            ->with(['items.purchasable', 'refunds', 'pendingInquiryCheckout.inquiry'])
             ->latest()
             ->get()
             ->map(function (Order $order) {
@@ -36,6 +38,18 @@ class PurchaseController extends Controller
                     'payment_method' => $order->payment_method,
                     'payment_status' => $order->payment_status,
                     'order_status' => $order->order_status,
+                    'refunded_total' => (float) $order->refunds->where('status', 'completed')->sum('amount_approved'),
+                    'service_booking' => $order->pendingInquiryCheckout?->inquiry
+                        ? [
+                            'inquiry_id' => $order->pendingInquiryCheckout->inquiry->id,
+                            'inquiry_number' => $order->pendingInquiryCheckout->inquiry->inquiry_number,
+                            'service_type' => $order->pendingInquiryCheckout->inquiry->service_type,
+                            'status' => $order->pendingInquiryCheckout->inquiry->status,
+                            'preferred_date' => $order->pendingInquiryCheckout->inquiry->preferred_date,
+                            'preferred_time' => $order->pendingInquiryCheckout->inquiry->preferred_time,
+                            'url' => route('inquiries.show', $order->pendingInquiryCheckout->inquiry),
+                        ]
+                        : null,
                     'cancellation_reason' => $order->cancellation_reason,
                     'can_cancel' => $this->canCancel($order),
                     'created_at' => $order->created_at?->format('M d, Y h:i A'),
@@ -69,7 +83,7 @@ class PurchaseController extends Controller
             abort(404);
         }
 
-        $order->load(['items.purchasable', 'events.actor']);
+        $order->load(['items.purchasable', 'events.actor', 'refunds', 'pendingInquiryCheckout.inquiry']);
 
         return Inertia::render('purchase_details', [
             'order' => [
@@ -83,6 +97,34 @@ class PurchaseController extends Controller
                 'payment_method' => $order->payment_method,
                 'payment_status' => $order->payment_status,
                 'order_status' => $order->order_status,
+                'refunded_total' => (float) $order->refunds->where('status', 'completed')->sum('amount_approved'),
+                'service_booking' => $order->pendingInquiryCheckout?->inquiry
+                    ? [
+                        'inquiry_id' => $order->pendingInquiryCheckout->inquiry->id,
+                        'inquiry_number' => $order->pendingInquiryCheckout->inquiry->inquiry_number,
+                        'service_type' => $order->pendingInquiryCheckout->inquiry->service_type,
+                        'status' => $order->pendingInquiryCheckout->inquiry->status,
+                        'preferred_date' => $order->pendingInquiryCheckout->inquiry->preferred_date,
+                        'preferred_time' => $order->pendingInquiryCheckout->inquiry->preferred_time,
+                        'url' => route('inquiries.show', $order->pendingInquiryCheckout->inquiry),
+                    ]
+                    : null,
+                'refundable_remaining' => app(RefundService::class)->availableAmount($order),
+                'can_request_refund' => in_array($order->payment_status, ['paid', 'partially_refunded'], true)
+                    && $order->paid_at !== null
+                    && $order->order_status !== 'cancelled',
+                'refunds' => $order->refunds->sortByDesc('created_at')->map(fn (Refund $refund) => [
+                    'id' => $refund->id,
+                    'amount_requested' => (float) $refund->amount_requested,
+                    'amount_approved' => $refund->amount_approved === null ? null : (float) $refund->amount_approved,
+                    'source' => $refund->source,
+                    'status' => $refund->status,
+                    'reason' => $refund->reason,
+                    'rejection_reason' => $refund->rejection_reason,
+                    'provider' => $refund->provider,
+                    'created_at' => $refund->created_at?->format('M d, Y h:i A'),
+                    'completed_at' => $refund->completed_at?->format('M d, Y h:i A'),
+                ])->values(),
                 'cancellation_reason' => $order->cancellation_reason,
                 'timeline' => $order->events->map(fn ($event) => [
                     'id' => $event->id,

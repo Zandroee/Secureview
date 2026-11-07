@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Refund;
 use App\Models\InvoiceRecord;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -36,6 +37,14 @@ class TransactionController extends Controller
             ->through(fn (Order $order) => $this->formatTransaction($order));
 
         $summaryQuery = $this->buildQuery($filters);
+        $matchingOrderIds = (clone $summaryQuery)->reorder()->select('orders.id');
+        $refundedAmount = (float) Refund::query()
+            ->whereIn('order_id', $matchingOrderIds)
+            ->where('status', 'completed')
+            ->sum('amount_approved');
+        $grossPaidAmount = (float) (clone $summaryQuery)
+            ->whereIn('payment_status', ['paid', 'partially_refunded', 'refunded'])
+            ->sum('total');
 
         return Inertia::render('Admin/Transactions', [
             'transactions' => $transactions,
@@ -49,12 +58,12 @@ class TransactionController extends Controller
             ],
             'summary' => [
                 'total' => (clone $summaryQuery)->count(),
-                'paid' => (clone $summaryQuery)->where('payment_status', 'paid')->count(),
+                'paid' => (clone $summaryQuery)->whereIn('payment_status', ['paid', 'partially_refunded', 'refunded'])->count(),
+                'refunded' => (clone $summaryQuery)->whereIn('payment_status', ['partially_refunded', 'refunded'])->count(),
                 'pending' => (clone $summaryQuery)->where('payment_status', 'pending')->count(),
-                'failed' => (clone $summaryQuery)->where('payment_status', 'failed')->count(),
-                'paid_amount' => (float) (clone $summaryQuery)
-                    ->where('payment_status', 'paid')
-                    ->sum('total'),
+                'failed' => (clone $summaryQuery)->whereIn('payment_status', ['failed', 'cancelled'])->count(),
+                'refunded_amount' => $refundedAmount,
+                'paid_amount' => max(0, $grossPaidAmount - $refundedAmount),
             ],
         ]);
     }
@@ -66,7 +75,7 @@ class TransactionController extends Controller
     {
         return $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'payment_status' => ['nullable', 'in:pending,paid,failed'],
+            'payment_status' => ['nullable', 'in:pending,paid,partially_refunded,refunded,failed,cancelled'],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
             'order_status' => ['nullable', 'in:' . implode(',', self::ORDER_STATUSES)],
             'date_from' => ['nullable', 'date'],

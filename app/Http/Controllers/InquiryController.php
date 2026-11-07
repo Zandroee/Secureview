@@ -296,7 +296,11 @@ class InquiryController extends Controller
                 ]);
             }
 
-            if ($existingOrder->payment_method === 'cash' || $existingOrder->payment_status === 'paid') {
+            if (
+                $existingOrder->payment_method === 'cash' ||
+                in_array($existingOrder->payment_status, ['paid', 'partially_refunded', 'refunded'], true) ||
+                $existingOrder->order_status === 'cancelled'
+            ) {
                 return redirect()->route('inquiries.show', $existingInquiry)
                     ->with('success', 'This booking was already submitted. Your existing service request is shown here; no duplicate fee was created.');
             }
