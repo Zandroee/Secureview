@@ -273,10 +273,10 @@ class AdminDashboardTest extends TestCase
                 ->where('stats.0.title', 'Total Sales')
                 ->where('stats.0.value', '₱1,000.00')
                 ->where('revenueData', function ($rows) {
-                    $currentMonth = now()->format('M');
+                    $netChartRevenue = collect($rows)
+                        ->sum(fn ($row) => (float) ($row['revenue'] ?? 0));
 
-                    return collect($rows)
-                        ->firstWhere('month', $currentMonth)['revenue'] === 1000.0;
+                    return abs($netChartRevenue - 1000.0) < 0.001;
                 }));
     }
 

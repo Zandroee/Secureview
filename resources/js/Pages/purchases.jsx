@@ -14,9 +14,14 @@ function statusClass(status) {
     if (
         status === "paid" ||
         status === "delivered" ||
-        status === "completed"
+        status === "completed" ||
+        status === "refunded"
     ) {
         return "bg-success-subtle text-success";
+    }
+
+    if (status === "partially_refunded") {
+        return "bg-info-subtle text-info-emphasis";
     }
 
     if (
