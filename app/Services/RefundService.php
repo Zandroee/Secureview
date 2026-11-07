@@ -538,9 +538,18 @@ class RefundService
                 ->where('idempotency_key', 'business-order-cancellation-' . $lockedOrder->id)
                 ->first();
 
-            if ($lockedOrder->payment_status === 'cancelled' || !$lockedOrder->paid_at) {
+            if (
+                !in_array($lockedOrder->payment_status, ['paid', 'partially_refunded'], true) ||
+                !$lockedOrder->paid_at
+            ) {
                 throw ValidationException::withMessages([
                     'order' => 'Only a confirmed paid order can be cancelled with an automatic refund.',
+                ]);
+            }
+
+            if ($lockedOrder->order_status !== 'processing') {
+                throw ValidationException::withMessages([
+                    'order' => 'Automatic paid-order cancellation is limited to orders that have not been delivered. Delivered orders must go through return inspection and refund review.',
                 ]);
             }
 

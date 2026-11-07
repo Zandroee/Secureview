@@ -654,7 +654,7 @@ class InquiryController extends Controller
             });
         }
 
-        if ($oldStatus !== $newStatus && $newStatus === 'cancelled') {
+        if ($oldStatus !== $newStatus && $newStatus === 'cancelled' && $oldStatus !== 'completed') {
             $refund = $refunds->refundCancelledService($inquiry->fresh(), $request->user()->id);
 
             if ($refund) {

@@ -472,7 +472,7 @@ class PurchaseController extends Controller
                             : 'review'))),
             'can_business_cancel' => in_array($order->payment_status, ['paid', 'partially_refunded'], true)
                 && $order->paid_at !== null
-                && in_array($order->order_status, ['processing', 'delivered'], true),
+                && $order->order_status === 'processing',
             'refunded_total' => (float) $order->refunds()->where('status', 'completed')->sum('amount_approved'),
             'can_cancel' => $order->payment_status !== 'paid'
                 && $order->paid_at === null
