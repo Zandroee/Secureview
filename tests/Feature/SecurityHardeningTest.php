@@ -73,22 +73,49 @@ class SecurityHardeningTest extends TestCase
                 ->assertRedirect('/login');
         }
 
-        $this->from('/login')
-            ->post(route('login.authenticate'), $payload)
-            ->assertStatus(429);
+        $limitedResponse = $this->from('/login')
+            ->post(route('login.authenticate'), $payload);
+
+        $limitedResponse
+            ->assertStatus(429)
+            ->assertSee('Please slow down a moment')
+            ->assertSee('Netmax Trading');
     }
 
-    public function test_registration_is_rate_limited_by_client_ip(): void
+    public function test_registration_rate_limit_is_session_aware_and_returns_a_friendly_inertia_notice(): void
     {
-        for ($attempt = 0; $attempt < 5; $attempt++) {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
             $this->from('/signup')
+                ->withHeaders(['X-Inertia' => 'true'])
                 ->post(route('register'), [])
                 ->assertRedirect('/signup');
         }
 
         $this->from('/signup')
+            ->withHeaders(['X-Inertia' => 'true'])
             ->post(route('register'), [])
-            ->assertStatus(429);
+            ->assertRedirect('/signup')
+            ->assertSessionHas('rateLimitMessage');
+    }
+
+    public function test_password_reset_rate_limit_returns_a_friendly_inertia_notice(): void
+    {
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $this->from('/forgot-password')
+                ->withHeaders(['X-Inertia' => 'true'])
+                ->post(route('password.email'), [
+                    'email' => 'password-limit@example.test',
+                ])
+                ->assertRedirect('/forgot-password');
+        }
+
+        $this->from('/forgot-password')
+            ->withHeaders(['X-Inertia' => 'true'])
+            ->post(route('password.email'), [
+                'email' => 'password-limit@example.test',
+            ])
+            ->assertRedirect('/forgot-password')
+            ->assertSessionHas('rateLimitMessage');
     }
 
     public function test_catalog_search_suggestions_return_a_public_json_payload(): void
@@ -113,6 +140,16 @@ class SecurityHardeningTest extends TestCase
         $this->assertStringContainsString('Your session has expired', $html);
         $this->assertStringContainsString('Return to previous page', $html);
         $this->assertStringContainsString('Sign in', $html);
+    }
+
+    public function test_rate_limit_recovery_page_uses_customer_friendly_copy(): void
+    {
+        $html = view('errors.429', ['retryAfter' => 60])->render();
+
+        $this->assertStringContainsString('Please slow down a moment', $html);
+        $this->assertStringContainsString('Netmax Trading', $html);
+        $this->assertStringContainsString('60 seconds', $html);
+        $this->assertStringContainsString('Return to the previous page', $html);
     }
 
     public function test_authenticated_admin_pages_encrypt_history_and_disable_browser_caching(): void
