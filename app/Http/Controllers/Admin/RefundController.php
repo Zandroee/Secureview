@@ -102,6 +102,15 @@ class RefundController extends Controller
                 'processing' => Refund::where('status', 'processing')->count(),
                 'completed' => Refund::where('status', 'completed')->count(),
                 'manual_action' => Refund::where('provider', 'manual')->whereIn('status', ['approved', 'failed'])->count(),
+                'reconciliation_required' => Refund::where('provider', 'paymongo')
+                    ->where('status', 'processing')
+                    ->whereNull('provider_refund_id')
+                    ->whereNotNull('provider_error')
+                    ->where(function ($query) {
+                        $query->whereNull('submitted_at')
+                            ->orWhere('submitted_at', '<=', now()->subHours(23));
+                    })
+                    ->count(),
             ],
         ]);
     }

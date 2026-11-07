@@ -292,6 +292,8 @@ class RefundService
         string $providerRefundId
     ): Refund {
         $refundSnapshot = Refund::query()->with('order')->findOrFail($refund->id);
+        $snapshotIdempotencyKey = $refundSnapshot->idempotency_key;
+        $snapshotSubmittedAt = $refundSnapshot->submitted_at?->timestamp;
 
         if (
             $refundSnapshot->provider !== 'paymongo' ||
@@ -379,7 +381,7 @@ class RefundService
             ]);
         }
 
-        return DB::transaction(function () use ($refund, $admin, $providerRefundId, $attributes, $body, $providerStatus) {
+        return DB::transaction(function () use ($refund, $admin, $providerRefundId, $attributes, $body, $providerStatus, $snapshotIdempotencyKey, $snapshotSubmittedAt) {
             $refundOrderId = Refund::query()->whereKey($refund->id)->value('order_id');
             $lockedOrder = Order::query()->lockForUpdate()->findOrFail($refundOrderId);
             $lockedRefund = Refund::query()->lockForUpdate()->findOrFail($refund->id);
@@ -387,7 +389,10 @@ class RefundService
             if (
                 $lockedRefund->provider !== 'paymongo' ||
                 $lockedRefund->status !== 'processing' ||
-                $lockedRefund->provider_refund_id !== null
+                $lockedRefund->provider_refund_id !== null ||
+                !$lockedRefund->provider_error ||
+                $lockedRefund->idempotency_key !== $snapshotIdempotencyKey ||
+                $lockedRefund->submitted_at?->timestamp !== $snapshotSubmittedAt
             ) {
                 throw ValidationException::withMessages([
                     'refund' => 'This refund changed while reconciliation was in progress. Refresh the page and review its current status.',
@@ -571,7 +576,7 @@ class RefundService
                 $nextStatus,
                 $providerError
             );
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             report($exception);
 
             return $this->persistSubmissionResult(
