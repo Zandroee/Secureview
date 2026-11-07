@@ -6,6 +6,7 @@ import GoogleLoginButton from "../Components/GoogleLoginButton";
 import PasswordInput from "../Components/PasswordInput";
 import PasswordStrength from "../Components/PasswordStrength";
 import TermsAndConditionsModal from "../Components/TermsAndConditionsModal";
+import RateLimitNotice from "../Components/RateLimitNotice";
 
 import "../../css/signup.css";
 
@@ -207,6 +208,8 @@ export default function Signup() {
                     >
                         CREATE AN ACCOUNT
                     </h2>
+
+                    <RateLimitNotice />
 
                     <form onSubmit={handleSubmit} noValidate>
 
