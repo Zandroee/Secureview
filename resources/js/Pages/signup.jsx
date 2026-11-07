@@ -22,6 +22,7 @@ export default function Signup() {
         password: "",
         password_confirmation: "",
         terms: false,
+        newsletter_opt_in: false,
     });
 
     const [touched, setTouched] = useState({
@@ -472,10 +473,12 @@ export default function Signup() {
 
             {showTerms && (
                 <TermsAndConditionsModal
+                    initialNewsletterOptIn={data.newsletter_opt_in}
                     onClose={() => setShowTerms(false)}
-                    onAccept={() => {
+                    onAccept={({ newsletterOptIn }) => {
                         setTermsRead(true);
                         setData("terms", true);
+                        setData("newsletter_opt_in", newsletterOptIn);
                         setShowTerms(false);
                     }}
                 />
