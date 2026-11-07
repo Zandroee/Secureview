@@ -319,7 +319,7 @@ class RefundService
             $response = Http::withBasicAuth($secretKey, '')
                 ->acceptJson()
                 ->timeout(20)
-                ->get($baseUrl . '/refunds/' . rawurlencode($providerRefundId));
+                ->get($baseUrl . '/v1/refunds/' . rawurlencode($providerRefundId));
         } catch (\Throwable $exception) {
             report($exception);
 

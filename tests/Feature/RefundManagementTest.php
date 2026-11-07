@@ -653,7 +653,7 @@ class RefundManagementTest extends TestCase
         ]);
 
         Http::fake([
-            'https://api.paymongo.com/refunds/re_reconcile_001' => Http::response([
+            'https://api.paymongo.com/v1/refunds/re_reconcile_001' => Http::response([
                 'data' => [
                     'id' => 're_reconcile_001',
                     'type' => 'refund',
@@ -717,7 +717,7 @@ class RefundManagementTest extends TestCase
         ]);
 
         Http::fake([
-            'https://api.paymongo.com/refunds/re_wrong_payment_001' => Http::response([
+            'https://api.paymongo.com/v1/refunds/re_wrong_payment_001' => Http::response([
                 'data' => [
                     'id' => 're_wrong_payment_001',
                     'type' => 'refund',
