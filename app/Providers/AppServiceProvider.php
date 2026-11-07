@@ -47,25 +47,6 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        RateLimiter::for('password-reset', function (Request $request): array {
-            $email = Str::lower(trim((string) $request->input('email', '')));
-            $ip = (string) ($request->ip() ?? 'unknown');
-
-            $limits = [
-                // Permit normal bursts from schools, offices, and mobile networks.
-                Limit::perMinute(20)->by('password-reset:ip:' . $ip),
-            ];
-
-            if ($email !== '') {
-                // Prevent repeated reset-email requests for one account.
-                Limit::perHour(10)->by(
-                    'password-reset:email:' . hash('sha256', $email)
-                );
-            }
-
-            return $limits;
-        });
-
         // Autocomplete can make one request for each settled search phrase.
         // Bound each browser session separately, with a higher IP-wide ceiling
         // to retain abuse protection without penalizing visitors behind shared networks.
