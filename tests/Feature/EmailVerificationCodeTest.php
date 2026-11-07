@@ -44,6 +44,36 @@ class EmailVerificationCodeTest extends TestCase
         Mail::assertSent(EmailVerificationCodeMail::class, fn (EmailVerificationCodeMail $mail) =>
             $mail->user->is($user) && preg_match('/^\d{6}$/', $mail->code) === 1
         );
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'terms_version' => '2.0',
+            'marketing_emails_enabled' => false,
+            'marketing_emails_consented_at' => null,
+        ]);
+    }
+
+    public function test_registration_records_an_explicit_newsletter_opt_in(): void
+    {
+        Mail::fake();
+
+        $this->post(route('register'), [
+            'firstName' => 'Newsletter',
+            'lastName' => 'Customer',
+            'phone' => '09181234567',
+            'email' => 'newsletter.customer@example.com',
+            'password' => 'SecurePassword1!',
+            'password_confirmation' => 'SecurePassword1!',
+            'terms' => true,
+            'newsletter_opt_in' => true,
+        ])->assertRedirect(route('verification.notice'));
+
+        $user = User::where('email', 'newsletter.customer@example.com')->firstOrFail();
+
+        $this->assertTrue($user->marketing_emails_enabled);
+        $this->assertNotNull($user->marketing_emails_consented_at);
+        $this->assertNull($user->marketing_emails_withdrawn_at);
+        $this->assertSame('2.0', $user->terms_version);
     }
 
     public function test_correct_code_verifies_email_and_redirects_to_login(): void

@@ -28,6 +28,7 @@ class SettingsPageTest extends TestCase
                 ->component('Settings')
                 ->where('settings.preferred_theme', 'dark')
                 ->where('settings.notification_popups_enabled', false)
+                ->where('settings.marketing_emails_enabled', false)
                 ->where('settings.email', $user->email));
     }
 
@@ -47,15 +48,42 @@ class SettingsPageTest extends TestCase
             ->patch(route('settings.preferences.update'), [
                 'preferred_theme' => 'dark',
                 'notification_popups_enabled' => false,
+                'marketing_emails_enabled' => true,
             ])
             ->assertRedirect()
-            ->assertSessionHas('success', 'Appearance and notification preferences saved.');
+            ->assertSessionHas('success', 'Account preferences saved.');
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
             'preferred_theme' => 'dark',
             'notification_popups_enabled' => 0,
+            'marketing_emails_enabled' => 1,
         ]);
+
+        $this->assertNotNull($user->fresh()->marketing_emails_consented_at);
+        $this->assertNull($user->fresh()->marketing_emails_withdrawn_at);
+    }
+
+    public function test_user_can_withdraw_promotional_email_consent_from_settings(): void
+    {
+        $user = User::factory()->create([
+            'email_verified_at' => now(),
+            'marketing_emails_enabled' => true,
+            'marketing_emails_consented_at' => now()->subDay(),
+        ]);
+
+        $this->actingAs($user)
+            ->patch(route('settings.preferences.update'), [
+                'preferred_theme' => 'system',
+                'notification_popups_enabled' => true,
+                'marketing_emails_enabled' => false,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Account preferences saved.');
+
+        $this->assertFalse($user->fresh()->marketing_emails_enabled);
+        $this->assertNotNull($user->fresh()->marketing_emails_consented_at);
+        $this->assertNotNull($user->fresh()->marketing_emails_withdrawn_at);
     }
 
     public function test_user_cannot_save_an_invalid_theme(): void

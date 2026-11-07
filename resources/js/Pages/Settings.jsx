@@ -37,6 +37,9 @@ export default function Settings({ settings = {} }) {
     const [notificationPopups, setNotificationPopups] = useState(
         settings.notification_popups_enabled !== false
     );
+    const [marketingEmails, setMarketingEmails] = useState(
+        settings.marketing_emails_enabled === true
+    );
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -49,12 +52,14 @@ export default function Settings({ settings = {} }) {
         setPhone(settings.phone ?? "");
         setTheme(settings.preferred_theme ?? "system");
         setNotificationPopups(settings.notification_popups_enabled !== false);
+        setMarketingEmails(settings.marketing_emails_enabled === true);
         applyUserTheme(settings.preferred_theme ?? "system");
     }, [
         settings.name,
         settings.phone,
         settings.preferred_theme,
         settings.notification_popups_enabled,
+        settings.marketing_emails_enabled,
     ]);
 
     const saveProfile = (event) => {
@@ -81,6 +86,7 @@ export default function Settings({ settings = {} }) {
         router.patch("/settings/preferences", {
             preferred_theme: theme,
             notification_popups_enabled: notificationPopups,
+            marketing_emails_enabled: marketingEmails,
         }, {
             preserveScroll: true,
             onSuccess: (page) => {
@@ -336,8 +342,34 @@ export default function Settings({ settings = {} }) {
                                         </div>
                                     </div>
 
+                                    <hr className="my-4" />
+
+                                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                        <div>
+                                            <div className="fw-semibold">Promotional emails and newsletters</div>
+                                            <div className="small text-muted">
+                                                Receive optional emails about Netmax Trading promotions, vouchers, discounts, and special offers.
+                                                This choice is separate from account, payment, and service notifications, and you can turn it off at any time.
+                                            </div>
+                                        </div>
+                                        <div className="form-check form-switch fs-5 flex-shrink-0">
+                                            <input
+                                                id="settings-marketing-emails"
+                                                className="form-check-input"
+                                                type="checkbox"
+                                                role="switch"
+                                                checked={marketingEmails}
+                                                onChange={(event) => setMarketingEmails(event.target.checked)}
+                                            />
+                                            <label className="form-check-label small" htmlFor="settings-marketing-emails">
+                                                {marketingEmails ? "Subscribed" : "Not subscribed"}
+                                            </label>
+                                        </div>
+                                    </div>
+
                                     {errors.preferred_theme && <div className="text-danger small mt-3">{errors.preferred_theme}</div>}
                                     {errors.notification_popups_enabled && <div className="text-danger small mt-1">{errors.notification_popups_enabled}</div>}
+                                    {errors.marketing_emails_enabled && <div className="text-danger small mt-1">{errors.marketing_emails_enabled}</div>}
 
                                     <div className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mt-4">
                                         <div className="small text-muted">Your theme is previewed immediately and saved to your account when you click Save Preferences.</div>

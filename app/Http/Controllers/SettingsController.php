@@ -21,6 +21,7 @@ class SettingsController extends Controller
                 'phone' => $request->user()->phone,
                 'preferred_theme' => $request->user()->preferred_theme ?? 'system',
                 'notification_popups_enabled' => (bool) ($request->user()->notification_popups_enabled ?? true),
+                'marketing_emails_enabled' => (bool) ($request->user()->marketing_emails_enabled ?? false),
             ],
         ]);
     }
@@ -51,14 +52,32 @@ class SettingsController extends Controller
         $validated = $request->validate([
             'preferred_theme' => ['required', Rule::in(['system', 'light', 'dark'])],
             'notification_popups_enabled' => ['required', 'boolean'],
+            'marketing_emails_enabled' => ['sometimes', 'boolean'],
         ]);
 
-        $request->user()->update([
+        $user = $request->user();
+        $updates = [
             'preferred_theme' => $validated['preferred_theme'],
             'notification_popups_enabled' => (bool) $validated['notification_popups_enabled'],
-        ]);
+        ];
 
-        return back()->with('success', 'Appearance and notification preferences saved.');
+        if (array_key_exists('marketing_emails_enabled', $validated)) {
+            $wasSubscribed = (bool) $user->marketing_emails_enabled;
+            $willSubscribe = (bool) $validated['marketing_emails_enabled'];
+            $updates['marketing_emails_enabled'] = $willSubscribe;
+
+            // Keep an auditable timestamp when the customer opts in or withdraws.
+            if ($willSubscribe && !$wasSubscribed) {
+                $updates['marketing_emails_consented_at'] = now();
+                $updates['marketing_emails_withdrawn_at'] = null;
+            } elseif (!$willSubscribe && $wasSubscribed) {
+                $updates['marketing_emails_withdrawn_at'] = now();
+            }
+        }
+
+        $user->update($updates);
+
+        return back()->with('success', 'Account preferences saved.');
     }
 
     public function updatePassword(Request $request): RedirectResponse
