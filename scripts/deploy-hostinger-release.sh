@@ -5,10 +5,10 @@ set -Eeuo pipefail
 # The production .env, vendor/, storage/, and customer data are never copied from
 # the release ZIP. Database backup confirmation is required before any changes.
 
-APP_DIR="${APP_DIR:-/home/u512629837/domains/secureviewcctv.shop/secureview_app}"
-PUBLIC_DIR="${PUBLIC_DIR:-/home/u512629837/domains/secureviewcctv.shop/public_html}"
+APP_DIR="${APP_DIR:-/home/u512629837/domains/netmaxtrading.shop/secureview_app}"
+PUBLIC_DIR="${PUBLIC_DIR:-/home/u512629837/domains/netmaxtrading.shop/public_html}"
 PHP_BIN="${PHP_BIN:-php}"
-SITE_URL="${SITE_URL:-https://secureviewcctv.shop}"
+SITE_URL="${SITE_URL:-https://netmaxtrading.shop}"
 RELEASE_ZIP="${1:-}"
 CHECKSUM_FILE="${2:-}"
 
