@@ -103,7 +103,7 @@ class SecurityHardeningTest extends TestCase
 
     public function test_password_reset_rate_limit_returns_a_friendly_inertia_notice(): void
     {
-        for ($attempt = 0; $attempt < 10; $attempt++) {
+        for ($attempt = 0; $attempt < 20; $attempt++) {
             $this->from('/forgot-password')
                 ->withHeaders(['X-Inertia' => 'true'])
                 ->post(route('password.email'), [
