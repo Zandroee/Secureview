@@ -104,6 +104,7 @@ class HandleInertiaRequests extends Middleware
                 'serviceNotification' => fn () => $request->session()->get('serviceNotification'),
                 'status' => fn () => $request->session()->get('status'),
                 'message' => fn () => $request->session()->get('message'),
+                'rateLimitMessage' => fn () => $request->session()->get('rateLimitMessage'),
                 'verificationRequired' => fn () => $request->session()->get('verificationRequired', false),
                 'verificationEmail' => fn () => $request->session()->get('verificationEmail'),
             ],

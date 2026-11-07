@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 import Navbar from "../Components/navbar";
+import RateLimitNotice from "../Components/RateLimitNotice";
 
 export default function VerifyEmail({ email = "", resendCooldownSeconds = 0 }) {
     const { props } = usePage();
@@ -92,6 +93,8 @@ export default function VerifyEmail({ email = "", resendCooldownSeconds = 0 }) {
                                 Enter the six-digit code we emailed you to activate your SecureView account.
                             </p>
                         </div>
+
+                        <RateLimitNotice />
 
                         {props.flash?.status && (
                             <div className="alert alert-info" role="status">

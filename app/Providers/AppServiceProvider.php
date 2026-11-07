@@ -33,8 +33,18 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
-        RateLimiter::for('register', function (Request $request): Limit {
-            return Limit::perMinute(5)->by($request->ip());
+        RateLimiter::for('register', function (Request $request): array {
+            $sessionId = $request->hasSession()
+                ? $request->session()->getId()
+                : 'no-session';
+            $ip = (string) ($request->ip() ?? 'unknown');
+
+            return [
+                // Allow a visitor to correct and resubmit a form without a very
+                // tight IP-only limit blocking everyone on a shared network.
+                Limit::perMinute(10)->by('register:session:' . hash('sha256', $sessionId)),
+                Limit::perMinutes(10, 60)->by('register:ip:' . $ip),
+            ];
         });
 
         // Autocomplete can make one request for each settled search phrase.

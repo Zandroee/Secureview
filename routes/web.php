@@ -146,7 +146,7 @@ Route::post('/forgot-password', function (Request $request) {
         : back()->withErrors([
             'email' => __($status),
         ]);
-})->middleware(['guest', 'throttle:1,1'])->name('password.email');
+})->middleware(['guest', 'throttle:20,1'])->name('password.email');
 
 Route::get('/reset-password/{token}', function (Request $request, string $token) {
     return Inertia::render('reset-password', [

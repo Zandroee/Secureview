@@ -1,6 +1,7 @@
 import { Link, useForm } from "@inertiajs/react";
 import { useEffect, useState } from "react";
 import Navbar from "../Components/navbar";
+import RateLimitNotice from "../Components/RateLimitNotice";
 import "../../css/login.css";
 
 export default function ForgotPassword({ status = "" }) {
@@ -78,6 +79,8 @@ export default function ForgotPassword({ status = "" }) {
                         Enter your email address and we'll send you a password
                         reset link.
                     </p>
+
+                    <RateLimitNotice />
 
                     {emailSent && (
                         <div className="alert alert-success">
