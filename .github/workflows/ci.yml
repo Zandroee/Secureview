@@ -175,6 +175,7 @@ jobs:
           cp public/images/netmax-favicon.png hostinger-release/public/images/netmax-favicon.png
           cp resources/views/errors/404.blade.php hostinger-release/resources/views/errors/404.blade.php
           cp resources/views/errors/419.blade.php hostinger-release/resources/views/errors/419.blade.php
+          cp resources/views/errors/429.blade.php hostinger-release/resources/views/errors/429.blade.php
           cp resources/views/emails/email-verification-code.blade.php hostinger-release/resources/views/emails/email-verification-code.blade.php
           cp resources/views/emails/pending-payment-reminder.blade.php hostinger-release/resources/views/emails/pending-payment-reminder.blade.php
           cp app/Providers/AppServiceProvider.php hostinger-release/app/Providers/AppServiceProvider.php
