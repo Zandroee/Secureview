@@ -62,7 +62,7 @@ class OrderCancellationService
     {
         if ($order->payment_status === 'paid' || $order->paid_at !== null) {
             throw ValidationException::withMessages([
-                'order' => 'This order has already been paid. It cannot be cancelled here because refunds are not yet supported.',
+                'order' => 'This order has already been paid. Use the refund request option instead of the unpaid-order cancellation action.',
             ]);
         }
 

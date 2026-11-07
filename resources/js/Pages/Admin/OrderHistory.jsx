@@ -25,11 +25,13 @@ const paymentLabel = (method) => ({
     maya: "Maya",
 }[String(method ?? "").toLowerCase()] ?? statusLabel(method));
 
-const paymentStatusClass = (status) => status === "paid"
+const paymentStatusClass = (status) => ["paid", "refunded"].includes(status)
     ? "bg-success-subtle text-success"
-    : ["cancelled", "failed"].includes(status)
-        ? "bg-danger-subtle text-danger"
-        : "bg-warning-subtle text-warning-emphasis";
+    : status === "partially_refunded"
+        ? "bg-info-subtle text-info-emphasis"
+        : ["cancelled", "failed"].includes(status)
+            ? "bg-danger-subtle text-danger"
+            : "bg-warning-subtle text-warning-emphasis";
 
 export default function OrderHistory({ orders = {}, filters = {}, summary = {} }) {
     const rows = orders.data ?? [];
@@ -137,6 +139,8 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                     <select id="order-history-payment-status" className="form-select" value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value)}>
                                         <option value="">All payment statuses</option>
                                         <option value="paid">Paid</option>
+                                        <option value="partially_refunded">Partially refunded</option>
+                                        <option value="refunded">Refunded</option>
                                         <option value="pending">Pending</option>
                                         <option value="failed">Failed</option>
                                         <option value="cancelled">Cancelled</option>

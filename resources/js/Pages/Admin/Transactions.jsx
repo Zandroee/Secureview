@@ -6,11 +6,15 @@ import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
 function paymentClass(status) {
-    if (status === "paid") {
+    if (status === "paid" || status === "refunded") {
         return "bg-success-subtle text-success";
     }
 
-    if (status === "failed") {
+    if (status === "partially_refunded") {
+        return "bg-info-subtle text-info-emphasis";
+    }
+
+    if (status === "failed" || status === "cancelled") {
         return "bg-danger-subtle text-danger";
     }
 
@@ -192,6 +196,12 @@ export default function AdminTransactions({
                                         ).toLocaleString()}
                                     </div>
 
+                                    {Number(summary.refunded_amount ?? 0) > 0 && (
+                                        <div className="small text-danger mt-1">
+                                            {summary.refunded ?? 0} refunded orders · ₱{Number(summary.refunded_amount).toLocaleString()} returned
+                                        </div>
+                                    )}
+
                                     {summary.failed > 0 && (
                                         <div className="small text-danger mt-1">
                                             {summary.failed} failed
@@ -237,7 +247,10 @@ export default function AdminTransactions({
                                             <option value="">All payment</option>
                                             <option value="pending">Pending</option>
                                             <option value="paid">Paid</option>
+                                            <option value="partially_refunded">Partially refunded</option>
+                                            <option value="refunded">Refunded</option>
                                             <option value="failed">Failed</option>
+                                            <option value="cancelled">Cancelled</option>
                                         </select>
                                     </div>
 

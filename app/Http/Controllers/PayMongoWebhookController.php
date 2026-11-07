@@ -7,12 +7,13 @@ use App\Models\Order;
 use App\Models\PendingInquiryCheckout;
 use App\Services\PendingInquiryCheckoutService;
 use App\Services\InventoryService;
+use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class PayMongoWebhookController extends Controller
 {
-    public function handle(Request $request, InventoryService $inventory)
+    public function handle(Request $request, InventoryService $inventory, RefundService $refunds)
     {
         $rawBody = $request->getContent();
         $signatureHeader = $request->header('Paymongo-Signature');
@@ -86,6 +87,49 @@ class PayMongoWebhookController extends Controller
             $session = $payload['data']['data'] ?? [];
         }
 
+        if (in_array($event, ['payment.refund.updated', 'payment.refunded'], true)) {
+            $refundResource = is_array($session) ? $session : [];
+            $refundResourceId = $refundResource['id'] ?? null;
+            $refundAttributes = $refundResource['attributes'] ?? [];
+
+            if ($refundResourceId && is_array($refundAttributes)) {
+                $matchedRefund = $refunds->syncProviderStatus((string) $refundResourceId, $refundAttributes);
+
+                // The create-refund API response can save the provider ID
+                // between the initial lookup and this status check. Re-read it
+                // once to close that narrow webhook/API race.
+                if (!$matchedRefund && $refunds->hasProviderRefundId((string) $refundResourceId)) {
+                    $matchedRefund = $refunds->syncProviderStatus((string) $refundResourceId, $refundAttributes);
+                }
+
+                $paymentId = (string) ($refundAttributes['payment_id'] ?? '');
+
+                // A newly-created refund can emit its webhook before the create
+                // API response has saved the provider refund ID locally. Ask
+                // PayMongo to retry only when a matching submission is in flight.
+                if (!$matchedRefund && $refunds->hasProviderRefundId((string) $refundResourceId)) {
+                    // The refund ID is known locally, but its payment/amount
+                    // did not match. Reject this event rather than silently
+                    // acknowledging a financial mismatch.
+                    return response()->json([
+                        'message' => 'Refund resource does not match its linked SecureView payment.',
+                    ], 409);
+                }
+
+                if (
+                    !$matchedRefund &&
+                    $paymentId !== '' &&
+                    $refunds->hasUnlinkedSubmittedRefundForPayment($paymentId)
+                ) {
+                    return response()->json([
+                        'message' => 'Refund mapping is not available yet. Retry this webhook shortly.',
+                    ], 503);
+                }
+            }
+
+            return response()->json(['received' => true]);
+        }
+
         if ($event !== 'checkout_session.payment.paid') {
             return response()->json([
                 'received' => true,
@@ -131,7 +175,9 @@ class PayMongoWebhookController extends Controller
             ]);
         }
 
-        if ($order->payment_status === 'paid') {
+        if (in_array($order->payment_status, ['paid', 'partially_refunded', 'refunded'], true)) {
+            // A delayed duplicate checkout-paid event must never overwrite a
+            // later refund state and turn a partially/full-refunded order paid.
             return $this->finalizePaidOrder($order, $inventory, false)
                 ?? response()->json(['received' => true]);
         }
@@ -154,7 +200,7 @@ class PayMongoWebhookController extends Controller
                 ];
             }
 
-            if ($lockedOrder->payment_status === 'paid') {
+            if (in_array($lockedOrder->payment_status, ['paid', 'partially_refunded', 'refunded'], true)) {
                 return [
                     'order' => $lockedOrder,
                     'cancelled' => false,

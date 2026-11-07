@@ -207,7 +207,7 @@ export default function Inquiries({ inquiries = [] }) {
                                                         {service.payment_status && service.payment_status !== "not_applicable" && (
                                                             <div className="small text-muted mt-1">
                                                                 PAYMENT
-                                                                <span className={"badge rounded-pill ms-2 text-capitalize " + (service.payment_status === "paid" ? "bg-success-subtle text-success" : service.payment_status === "cancelled" || service.payment_status === "failed" ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning-emphasis")}>
+                                                                <span className={"badge rounded-pill ms-2 text-capitalize " + (["paid", "partially_refunded", "refunded"].includes(service.payment_status) ? "bg-success-subtle text-success" : service.payment_status === "cancelled" || service.payment_status === "failed" ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning-emphasis")}>
                                                                     {service.payment_status.replaceAll("_", " ")}
                                                                 </span>
                                                             </div>

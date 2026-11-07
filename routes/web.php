@@ -15,6 +15,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\RefundRequestController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\ScheduleController;
@@ -37,6 +38,7 @@ use App\Http\Controllers\Admin\InvoiceSettingsController as AdminInvoiceSettings
 use App\Http\Controllers\Admin\InvoiceIssuanceController as AdminInvoiceIssuanceController;
 use App\Http\Controllers\Admin\VoucherController as AdminVoucherController;
 use App\Http\Controllers\Admin\PromoSaleController as AdminPromoSaleController;
+use App\Http\Controllers\Admin\RefundController as AdminRefundController;
 use App\Http\Controllers\WarrantyClaimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -215,6 +217,7 @@ Route::middleware(['auth', 'verified', 'inertia.encrypt'])->group(function () {
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
     Route::patch('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
+    Route::post('/purchases/{order}/refunds', [RefundRequestController::class, 'store'])->name('purchases.refunds.store');
     Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
 
     Route::get('/warranty-claims', [WarrantyClaimController::class, 'index'])->name('warranty-claims.index');
@@ -362,6 +365,14 @@ Route::middleware(['auth', 'verified', 'admin', 'inertia.encrypt'])->group(funct
 
     Route::delete('/admin/booking-time-slots/{blockedBookingTimeSlot}', [AdminScheduleController::class, 'destroyBookingTimeSlot'])
         ->name('admin.booking-time-slots.destroy');
+
+    Route::get('/admin/refunds', [AdminRefundController::class, 'index'])->name('admin.refunds.index');
+    Route::patch('/admin/refunds/{refund}/approve', [AdminRefundController::class, 'approve'])->name('admin.refunds.approve');
+    Route::patch('/admin/refunds/{refund}/reject', [AdminRefundController::class, 'reject'])->name('admin.refunds.reject');
+    Route::patch('/admin/refunds/{refund}/complete-manual', [AdminRefundController::class, 'completeManual'])->name('admin.refunds.complete-manual');
+    Route::patch('/admin/refunds/{refund}/retry', [AdminRefundController::class, 'retry'])->name('admin.refunds.retry');
+    Route::patch('/admin/refunds/{refund}/reconcile', [AdminRefundController::class, 'reconcile'])->name('admin.refunds.reconcile');
+    Route::patch('/admin/refunds/{refund}/convert-to-manual', [AdminRefundController::class, 'convertToManual'])->name('admin.refunds.convert-to-manual');
 
     Route::get('/admin/purchases', [AdminPurchaseController::class, 'index'])
         ->name('admin.purchases.index');

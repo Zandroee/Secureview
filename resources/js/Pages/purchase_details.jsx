@@ -11,7 +11,8 @@ function formatPaymentMethod(method) {
 }
 
 function statusClass(status) {
-    if (status === "paid" || status === "delivered") return "bg-success-subtle text-success";
+    if (status === "paid" || status === "delivered" || status === "refunded") return "bg-success-subtle text-success";
+    if (status === "partially_refunded") return "bg-info-subtle text-info-emphasis";
     if (status === "failed" || status === "cancelled" || status === "payment_failed") return "bg-danger-subtle text-danger";
     if (status === "awaiting_payment") return "bg-warning-subtle text-warning-emphasis";
     return "bg-primary-subtle text-primary";
@@ -21,6 +22,25 @@ export default function PurchaseDetails({ order }) {
     const { props } = usePage();
     const [paying, setPaying] = useState(false);
     const [cancelling, setCancelling] = useState(false);
+    const [refundAmount, setRefundAmount] = useState(String(order.refundable_remaining ?? ""));
+    const [refundReason, setRefundReason] = useState("");
+    const [requestingRefund, setRequestingRefund] = useState(false);
+
+    const submitRefundRequest = (event) => {
+        event.preventDefault();
+        if (!window.confirm("Submit this refund request for admin review? Submitting a request does not mean the refund is approved.")) return;
+
+        setRequestingRefund(true);
+        router.post(
+            "/purchases/" + order.id + "/refunds",
+            { amount: refundAmount, reason: refundReason },
+            {
+                preserveScroll: true,
+                onSuccess: () => setRefundReason(""),
+                onFinish: () => setRequestingRefund(false),
+            }
+        );
+    };
 
     const payNow = () => {
         setPaying(true);
@@ -264,6 +284,16 @@ export default function PurchaseDetails({ order }) {
                                 </div>
                             </div>
 
+                            {order.service_booking && (
+                                <div className="bg-white border rounded-4 p-3 p-md-4 mb-4">
+                                    <div className="small text-primary fw-bold">SERVICE BOOKING</div>
+                                    <div className="fw-semibold">{order.service_booking.service_type} · {order.service_booking.inquiry_number}</div>
+                                    <div className="small text-muted text-capitalize mt-1">Status: {order.service_booking.status.replace(/_/g, " ")}</div>
+                                    <div className="small text-muted">Preferred schedule: {order.service_booking.preferred_date || "To be arranged"} · {order.service_booking.preferred_time || "Flexible"}</div>
+                                    <Link href={order.service_booking.url} className="btn btn-outline-primary btn-sm mt-2">VIEW SERVICE DETAILS</Link>
+                                </div>
+                            )}
+
                             <div
                                 className="bg-white border rounded-4 p-3 p-md-4"
                                 style={{
@@ -348,6 +378,98 @@ export default function PurchaseDetails({ order }) {
                                     )}
                                 </div>
                             </div>
+                            <div
+                                className="bg-white border rounded-4 p-3 p-md-4 mt-4"
+                                style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}
+                            >
+                                <div className="d-flex flex-column flex-sm-row justify-content-between gap-1 mb-3">
+                                    <div>
+                                        <h4 className="fw-bold mb-1" style={{ fontFamily: "Outfit, sans-serif" }}>
+                                            REFUND REQUESTS
+                                        </h4>
+                                        <div className="small text-muted">
+                                            Refunded: ₱{Number(order.refunded_total ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            {" · "}
+                                            Remaining refundable: ₱{Number(order.refundable_remaining ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {props.flash?.success && (
+                                    <div className="alert alert-success py-2 small">{props.flash.success}</div>
+                                )}
+                                {props.errors?.refund && <div className="alert alert-danger py-2 small">{props.errors.refund}</div>}
+                                {props.errors?.amount && <div className="alert alert-danger py-2 small">{props.errors.amount}</div>}
+                                {props.errors?.reason && <div className="alert alert-danger py-2 small">{props.errors.reason}</div>}
+
+                                {order.can_request_refund && Number(order.refundable_remaining) > 0 && (
+                                    <form onSubmit={submitRefundRequest} className="border rounded-3 p-3 mb-3">
+                                        <div className="small text-muted mb-2">
+                                            Request a full or partial refund. Netmax Trading will review the reason before approving customer-requested refunds.
+                                        </div>
+                                        <div className="row g-2">
+                                            <div className="col-md-4">
+                                                <label className="form-label small fw-semibold" htmlFor="refund-amount">Requested amount (PHP)</label>
+                                                <input
+                                                    id="refund-amount"
+                                                    type="number"
+                                                    className="form-control"
+                                                    min="1.00"
+                                                    max={Number(order.refundable_remaining)}
+                                                    step="0.01"
+                                                    value={refundAmount}
+                                                    onChange={(event) => setRefundAmount(event.target.value)}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="col-md-8">
+                                                <label className="form-label small fw-semibold" htmlFor="refund-reason">Reason for refund</label>
+                                                <textarea
+                                                    id="refund-reason"
+                                                    className="form-control"
+                                                    rows="2"
+                                                    minLength="5"
+                                                    maxLength="1000"
+                                                    value={refundReason}
+                                                    onChange={(event) => setRefundReason(event.target.value)}
+                                                    placeholder="Explain what happened and why you are requesting a refund."
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                        <button type="submit" className="btn btn-outline-primary btn-sm fw-bold mt-3" disabled={requestingRefund}>
+                                            {requestingRefund ? "SUBMITTING..." : "SUBMIT REFUND REQUEST"}
+                                        </button>
+                                    </form>
+                                )}
+
+                                {order.refunds?.length ? (
+                                    <div className="d-flex flex-column gap-2 mb-3">
+                                        {order.refunds.map((refund) => (
+                                            <div key={refund.id} className="border rounded-3 p-3">
+                                                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                                    <div className="fw-semibold">Refund #{refund.id}</div>
+                                                    <span className={"badge text-capitalize " + (refund.status === "completed" ? "bg-success-subtle text-success" : refund.status === "rejected" || refund.status === "failed" ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning-emphasis")}>
+                                                        {refund.status.replace(/_/g, " ")}
+                                                    </span>
+                                                </div>
+                                                <div className="small text-muted mt-1">
+                                                    Requested ₱{Number(refund.amount_requested).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    {refund.amount_approved !== null && " · Approved ₱" + Number(refund.amount_approved).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    {" · "}{refund.source === "business_cancellation" ? "Business cancellation" : "Customer request"}
+                                                    {" · "}{refund.created_at}
+                                                </div>
+                                                <div className="small mt-2">{refund.reason}</div>
+                                                {refund.rejection_reason && <div className="small text-danger mt-1">Decision: {refund.rejection_reason}</div>}
+                                                {refund.completed_at && <div className="small text-success mt-1">Completed: {refund.completed_at}</div>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="small text-muted mb-3">There are no refund requests for this order.</div>
+                                )}
+                            </div>
+
                             <div
                                 className="bg-white border rounded-4 p-3 p-md-4 mt-4"
                                 style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}

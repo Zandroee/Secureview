@@ -6,8 +6,12 @@ import { router, usePage } from "@inertiajs/react";
 import { useEffect, useState } from "react";
 
 function paymentClass(status) {
-    if (status === "paid") {
+    if (status === "paid" || status === "refunded") {
         return "bg-success-subtle text-success";
+    }
+
+    if (status === "partially_refunded") {
+        return "bg-info-subtle text-info-emphasis";
     }
 
     if (status === "failed") {
@@ -83,9 +87,10 @@ export default function AdminPurchases({
     }, [orderRows]);
 
     const cancelOrder = (order) => {
+        const paidOrder = ["paid", "partially_refunded"].includes(order.payment_status);
         const reason = window.prompt(
             "Enter the cancellation reason for " + order.order_number + " (required, at least 5 characters).",
-            order.payment_status === "failed" ? "Payment failed and customer did not proceed" : "Payment was not completed"
+            paidOrder ? "Cancelled by Netmax Trading" : (order.payment_status === "failed" ? "Payment failed and customer did not proceed" : "Payment was not completed")
         );
 
         if (reason === null) return;
@@ -95,9 +100,11 @@ export default function AdminPurchases({
             return;
         }
 
-        if (!window.confirm(
-            "Cancel unpaid order " + order.order_number + "? The reason will be saved in order history. Paid orders cannot be cancelled here.\n\nReason: " + reason.trim()
-        )) {
+        const confirmation = paidOrder
+            ? "Cancel paid order " + order.order_number + "? SecureView will automatically initiate a refund for the remaining refundable balance. Online payments are submitted to PayMongo; cash refunds still require an admin to physically return the cash and record the reference.\n\nReason: " + reason.trim()
+            : "Cancel unpaid order " + order.order_number + "? The reason will be saved in order history.\n\nReason: " + reason.trim();
+
+        if (!window.confirm(confirmation)) {
             return;
         }
 
@@ -245,7 +252,7 @@ export default function AdminPurchases({
                             </h1>
 
                             <div className="small text-muted">
-                                Review orders, manage failed or pending payments, and cancel eligible unpaid orders.
+                                Review orders, manage payments, cancel unpaid orders, and initiate refunds when Netmax Trading cancels a paid order.
                             </div>
                         </div>
 
@@ -449,6 +456,8 @@ export default function AdminPurchases({
                                         <option value="">All payment</option>
                                         <option value="pending">Pending</option>
                                         <option value="paid">Paid</option>
+                                        <option value="partially_refunded">Partially refunded</option>
+                                        <option value="refunded">Refunded</option>
                                         <option value="failed">Failed</option>
                                             <option value="cancelled">Cancelled</option>
                                     </select>
@@ -1036,6 +1045,17 @@ export default function AdminPurchases({
                                         disabled={cancellingOrderId === viewingOrder.id || updatingOrderId === viewingOrder.id}
                                     >
                                         {cancellingOrderId === viewingOrder.id ? "CANCELLING..." : "CANCEL UNPAID ORDER"}
+                                    </button>
+                                )}
+
+                                {viewingOrder.can_business_cancel && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-danger fw-bold"
+                                        onClick={() => cancelOrder(viewingOrder)}
+                                        disabled={cancellingOrderId === viewingOrder.id || updatingOrderId === viewingOrder.id}
+                                    >
+                                        {cancellingOrderId === viewingOrder.id ? "CANCELLING..." : "CANCEL PAID ORDER & REFUND"}
                                     </button>
                                 )}
                             </div>

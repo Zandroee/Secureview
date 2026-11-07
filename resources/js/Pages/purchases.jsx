@@ -14,9 +14,14 @@ function statusClass(status) {
     if (
         status === "paid" ||
         status === "delivered" ||
-        status === "completed"
+        status === "completed" ||
+        status === "refunded"
     ) {
         return "bg-success-subtle text-success";
+    }
+
+    if (status === "partially_refunded") {
+        return "bg-info-subtle text-info-emphasis";
     }
 
     if (
@@ -324,8 +329,15 @@ export default function Purchases({ orders = [] }) {
                                                                     )
                                                                 }
                                                             >
-                                                                VIEW ITEMS
+                                                                {order.items.length === 0 && order.service_booking ? "VIEW SERVICE & REFUND" : "VIEW ITEMS"}
                                                             </button>
+
+                                                            <Link
+                                                                href={"/purchases/" + order.id}
+                                                                className="btn btn-outline-primary btn-sm fw-bold"
+                                                            >
+                                                                {order.service_booking ? "VIEW SERVICE & REFUND" : "ORDER DETAILS / REFUND"}
+                                                            </Link>
 
                                                             {canPay(order) && (
                                                                 <button
@@ -527,6 +539,16 @@ export default function Purchases({ orders = [] }) {
                                 </div>
                             ))}
                         </div>
+
+                        {viewingOrder.service_booking && (
+                            <div className="border rounded-3 p-3 mt-3">
+                                <div className="small text-primary fw-bold">SERVICE BOOKING</div>
+                                <div className="fw-semibold">{viewingOrder.service_booking.service_type} · {viewingOrder.service_booking.inquiry_number}</div>
+                                <div className="small text-muted text-capitalize mt-1">Status: {viewingOrder.service_booking.status.replace(/_/g, " ")}</div>
+                                <div className="small text-muted">Preferred schedule: {viewingOrder.service_booking.preferred_date || "To be arranged"} · {viewingOrder.service_booking.preferred_time || "Flexible"}</div>
+                                <Link href={viewingOrder.service_booking.url} className="btn btn-outline-primary btn-sm mt-2" onClick={() => setViewingOrder(null)}>VIEW SERVICE DETAILS</Link>
+                            </div>
+                        )}
 
                         {Number(viewingOrder.service_priority_fee ?? 0) > 0 && (
                             <div className="d-flex justify-content-between align-items-center mt-3 small">
