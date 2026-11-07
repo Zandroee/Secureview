@@ -3,6 +3,7 @@ import { useState } from "react";
 import PasswordInput from "../Components/PasswordInput";
 import PasswordStrength from "../Components/PasswordStrength";
 import Navbar from "../Components/navbar";
+import RateLimitNotice from "../Components/RateLimitNotice";
 import "../../css/signup.css";
 
 export default function ResetPassword({ token, email = "" }) {
@@ -132,6 +133,8 @@ export default function ResetPassword({ token, email = "" }) {
                     >
                         RESET PASSWORD
                     </h2>
+
+                    <RateLimitNotice />
 
                     <form onSubmit={handleSubmit} noValidate>
                         <div className="mb-3">
