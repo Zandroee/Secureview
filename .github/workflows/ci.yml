@@ -131,6 +131,7 @@ jobs:
           cp app/Http/Controllers/PayMongoWebhookController.php hostinger-release/app/Http/Controllers/PayMongoWebhookController.php
           cp app/Http/Controllers/InquiryController.php hostinger-release/app/Http/Controllers/InquiryController.php
           cp app/Http/Controllers/AuthController.php hostinger-release/app/Http/Controllers/AuthController.php
+          cp app/Http/Controllers/SettingsController.php hostinger-release/app/Http/Controllers/SettingsController.php
           cp app/Http/Controllers/EmailVerificationController.php hostinger-release/app/Http/Controllers/EmailVerificationController.php
           cp app/Http/Controllers/NotificationController.php hostinger-release/app/Http/Controllers/NotificationController.php
           cp app/Http/Controllers/LandingController.php hostinger-release/app/Http/Controllers/LandingController.php
