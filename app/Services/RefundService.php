@@ -246,6 +246,15 @@ class RefundService
                 ]);
             }
 
+            if (
+                $retryUnknownOutcome &&
+                (!$lockedRefund->submitted_at || $lockedRefund->submitted_at->lte(now()->subHours(23)))
+            ) {
+                throw ValidationException::withMessages([
+                    'refund' => 'The safe PayMongo idempotency retry window has expired. Check the PayMongo Dashboard and reconcile the original refund before submitting another payment return.',
+                ]);
+            }
+
             $available = $this->availableAmount($order, $lockedRefund->id);
             if ((float) $lockedRefund->amount_approved > $available) {
                 throw ValidationException::withMessages([
@@ -257,6 +266,9 @@ class RefundService
                 'status' => 'approved',
                 'provider_error' => null,
                 'provider_refund_id' => null,
+                // A definite failed attempt gets a new key and a new time window.
+                // An ambiguous attempt keeps both its original key and timestamp.
+                'submitted_at' => $retryUnknownOutcome ? $lockedRefund->submitted_at : null,
             ];
 
             // Reuse the same idempotency key after an ambiguous timeout so
@@ -272,6 +284,161 @@ class RefundService
         });
 
         return $this->submitApprovedRefund($approved);
+    }
+
+    public function reconcileUnknownPayMongoRefund(
+        Refund $refund,
+        User $admin,
+        string $providerRefundId
+    ): Refund {
+        $refundSnapshot = Refund::query()->with('order')->findOrFail($refund->id);
+
+        if (
+            $refundSnapshot->provider !== 'paymongo' ||
+            $refundSnapshot->status !== 'processing' ||
+            $refundSnapshot->provider_refund_id !== null ||
+            !$refundSnapshot->provider_error
+        ) {
+            throw ValidationException::withMessages([
+                'refund' => 'Only an unresolved PayMongo refund with no saved provider refund ID can be reconciled.',
+            ]);
+        }
+
+        $secretKey = config('services.paymongo.secret_key');
+        if (!$secretKey) {
+            throw ValidationException::withMessages([
+                'refund' => 'PayMongo is not configured. Verify the provider refund manually before taking any action.',
+            ]);
+        }
+
+        $baseUrl = rtrim((string) config('services.paymongo.base_url'), '/');
+
+        try {
+            $response = Http::withBasicAuth($secretKey, '')
+                ->acceptJson()
+                ->timeout(20)
+                ->get($baseUrl . '/refunds/' . rawurlencode($providerRefundId));
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            throw ValidationException::withMessages([
+                'provider_refund_id' => 'PayMongo could not be reached. No local refund record was changed; try reconciliation again.',
+            ]);
+        }
+
+        if (!$response->successful()) {
+            throw ValidationException::withMessages([
+                'provider_refund_id' => 'PayMongo could not retrieve that refund ID. Confirm the ID and that it belongs to the currently configured PayMongo account and mode.',
+            ]);
+        }
+
+        $body = $response->json();
+        $resource = is_array($body) ? ($body['data'] ?? []) : [];
+        $attributes = is_array($resource) ? ($resource['attributes'] ?? []) : [];
+
+        if (
+            !is_array($resource) ||
+            ($resource['id'] ?? null) !== $providerRefundId ||
+            !is_array($attributes)
+        ) {
+            throw ValidationException::withMessages([
+                'provider_refund_id' => 'PayMongo returned an unexpected refund resource. No local record was changed.',
+            ]);
+        }
+
+        $order = $refundSnapshot->order;
+        $providerPaymentId = $attributes['payment_id'] ?? null;
+        $providerAmount = isset($attributes['amount']) ? (int) $attributes['amount'] : null;
+        $expectedAmount = (int) round((float) $refundSnapshot->amount_approved * 100);
+
+        if (!$order || !$order->paymongo_payment_id || $providerPaymentId !== $order->paymongo_payment_id) {
+            throw ValidationException::withMessages([
+                'provider_refund_id' => 'The PayMongo refund belongs to a different payment. No local record was changed.',
+            ]);
+        }
+
+        if ($providerAmount !== $expectedAmount) {
+            throw ValidationException::withMessages([
+                'provider_refund_id' => 'The PayMongo refund amount does not match the approved SecureView refund amount. No local record was changed.',
+            ]);
+        }
+
+        if (
+            array_key_exists('livemode', $attributes) &&
+            (bool) $attributes['livemode'] !== str_starts_with($secretKey, 'sk_live_')
+        ) {
+            throw ValidationException::withMessages([
+                'provider_refund_id' => 'The PayMongo refund belongs to a different payment mode (test/live). No local record was changed.',
+            ]);
+        }
+
+        $providerStatus = (string) ($attributes['status'] ?? '');
+        if (!in_array($providerStatus, ['pending', 'processing', 'succeeded', 'failed'], true)) {
+            throw ValidationException::withMessages([
+                'provider_refund_id' => 'PayMongo returned an unrecognized refund status. No local record was changed.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($refund, $admin, $providerRefundId, $attributes, $body, $providerStatus) {
+            $refundOrderId = Refund::query()->whereKey($refund->id)->value('order_id');
+            $lockedOrder = Order::query()->lockForUpdate()->findOrFail($refundOrderId);
+            $lockedRefund = Refund::query()->lockForUpdate()->findOrFail($refund->id);
+
+            if (
+                $lockedRefund->provider !== 'paymongo' ||
+                $lockedRefund->status !== 'processing' ||
+                $lockedRefund->provider_refund_id !== null
+            ) {
+                throw ValidationException::withMessages([
+                    'refund' => 'This refund changed while reconciliation was in progress. Refresh the page and review its current status.',
+                ]);
+            }
+
+            $duplicate = Refund::query()
+                ->where('provider_refund_id', $providerRefundId)
+                ->where('id', '!=', $lockedRefund->id)
+                ->exists();
+
+            if ($duplicate) {
+                throw ValidationException::withMessages([
+                    'provider_refund_id' => 'That PayMongo refund ID is already linked to another SecureView refund.',
+                ]);
+            }
+
+            $newStatus = $this->mapProviderStatus($providerStatus);
+            $lockedRefund->update([
+                'provider_refund_id' => $providerRefundId,
+                'provider_status' => $providerStatus,
+                'provider_response' => is_array($body) ? $body : null,
+                'provider_error' => null,
+                'status' => $newStatus,
+                'processed_by_user_id' => $admin->id,
+                'admin_notes' => trim(
+                    ($lockedRefund->admin_notes ? $lockedRefund->admin_notes . "\n" : '') .
+                    'PayMongo refund reconciled by admin. Provider refund ID: ' . $providerRefundId
+                ),
+                'completed_at' => $newStatus === 'completed'
+                    ? ($lockedRefund->completed_at ?? now())
+                    : null,
+            ]);
+
+            if ($newStatus === 'completed') {
+                $this->syncOrderPaymentStatus($lockedOrder);
+            }
+
+            $freshRefund = $lockedRefund->fresh();
+            $this->recordEvent(
+                $lockedOrder,
+                $freshRefund,
+                'refund_reconciled',
+                'PayMongo refund reconciled',
+                'Admin verified PayMongo refund ' . $providerRefundId . ' against the original payment and approved amount. Provider status: ' . $providerStatus . '.',
+                $admin->id
+            );
+            $this->notifyCustomer($freshRefund, $newStatus);
+
+            return $freshRefund;
+        });
     }
 
     public function convertFailedPayMongoToManual(Refund $refund, User $admin, string $notes): Refund
@@ -333,7 +500,7 @@ class RefundService
 
             $lockedRefund->update([
                 'status' => 'processing',
-                'submitted_at' => now(),
+                'submitted_at' => $lockedRefund->submitted_at ?? now(),
                 'provider_error' => null,
             ]);
 
@@ -380,81 +547,148 @@ class RefundService
             $attributes = is_array($resource) ? ($resource['attributes'] ?? []) : [];
             $providerStatus = is_array($attributes) ? ($attributes['status'] ?? null) : null;
 
-            if ($response->successful()) {
-                $processingRefund->update([
-                    'provider_refund_id' => $resource['id'] ?? $processingRefund->provider_refund_id,
-                    'provider_status' => $providerStatus,
-                    'provider_response' => is_array($body) ? $body : null,
-                    'provider_error' => null,
-                    'status' => $this->mapProviderStatus($providerStatus),
-                    'completed_at' => $providerStatus === 'succeeded' ? now() : null,
-                ]);
+            $providerError = $response->successful()
+                ? null
+                : mb_substr((string) ($response->json('errors.0.detail') ?? $response->body()), 0, 4000);
 
-                if ($processingRefund->status === 'completed') {
-                    $this->syncOrderPaymentStatus($order);
-                    $this->recordEvent(
-                        $order,
-                        $processingRefund,
-                        'refund_completed',
-                        'Refund sent to payment partner',
-                        'PayMongo confirmed the refund of ₱' . number_format((float) $processingRefund->amount_approved, 2) . ' as succeeded.',
-                        null
-                    );
-                    $this->notifyCustomer($processingRefund, 'completed');
-                } else {
-                    $this->recordEvent(
-                        $order,
-                        $processingRefund,
-                        'refund_processing',
-                        'Refund submitted',
-                        'The refund was submitted to PayMongo and is awaiting its final status.',
-                        null
-                    );
-                    $this->notifyCustomer($processingRefund, 'processing');
-                }
+            // 5xx, rate-limit, and idempotency-in-progress responses can have an
+            // ambiguous outcome. Keep the same key and reconcile instead of
+            // treating the request as a definite failure.
+            $ambiguousResponse = $response->serverError()
+                || in_array($response->status(), [409, 429], true);
 
-                return $processingRefund->fresh();
+            $nextStatus = $response->successful()
+                ? $this->mapProviderStatus($providerStatus)
+                : ($ambiguousResponse ? 'processing' : 'failed');
+
+            if ($response->successful() && empty($resource['id'])) {
+                $providerError = 'PayMongo accepted the refund request but did not return a refund ID. Reconciliation is required; do not submit a new refund.';
             }
 
-            $processingRefund->update([
-                'provider_status' => $providerStatus,
-                'provider_response' => is_array($body) ? $body : null,
-                'provider_error' => mb_substr((string) ($response->json('errors.0.detail') ?? $response->body()), 0, 4000),
-                // A 5xx response may be ambiguous: keep the amount reserved and
-                // require reconciliation instead of blindly submitting twice.
-                'status' => $response->serverError() ? 'processing' : 'failed',
-            ]);
-
-            $this->recordEvent(
-                $order,
+            return $this->persistSubmissionResult(
                 $processingRefund,
-                'refund_failed',
-                $response->serverError() ? 'Refund outcome requires verification' : 'Refund processing failed',
-                $response->serverError()
-                    ? 'PayMongo returned a server error. The refund remains reserved while its outcome is verified.'
-                    : 'PayMongo rejected the refund request. Review the provider response before retrying.',
-                null
+                is_array($body) ? $body : [],
+                $nextStatus,
+                $providerError
             );
-            $this->notifyCustomer($processingRefund, $processingRefund->status);
-
-            return $processingRefund->fresh();
-        } catch (\Throwable $exception) {
+        } catch (\\Throwable $exception) {
             report($exception);
-            $processingRefund->update([
-                'status' => 'processing',
-                'provider_error' => mb_substr($exception->getMessage(), 0, 4000),
-            ]);
-            $this->recordEvent(
-                $order,
-                $processingRefund,
-                'refund_outcome_unknown',
-                'Refund outcome requires verification',
-                'The connection ended before PayMongo confirmed the refund result. The amount remains reserved to prevent a duplicate submission.',
-                null
-            );
 
-            return $processingRefund->fresh();
+            return $this->persistSubmissionResult(
+                $processingRefund,
+                [],
+                'processing',
+                mb_substr($exception->getMessage(), 0, 4000)
+            );
         }
+    }
+
+    private function persistSubmissionResult(
+        Refund $submittedRefund,
+        array $providerResponse,
+        string $nextStatus,
+        ?string $providerError
+    ): Refund {
+        $refundOrderId = Refund::query()->whereKey($submittedRefund->id)->value('order_id');
+
+        return DB::transaction(function () use ($submittedRefund, $providerResponse, $nextStatus, $providerError, $refundOrderId) {
+            $order = Order::query()->lockForUpdate()->findOrFail($refundOrderId);
+            $refund = Refund::query()->lockForUpdate()->findOrFail($submittedRefund->id);
+
+            // A retry may have started while an earlier HTTP request was still
+            // returning. Never let an old attempt overwrite the newer attempt.
+            if ($refund->idempotency_key !== $submittedRefund->idempotency_key) {
+                return $refund;
+            }
+
+            // Terminal states are authoritative. A late API response must not
+            // downgrade a completed/failed result from a webhook or prior response.
+            if (in_array($refund->status, ['completed', 'failed'], true)) {
+                return $refund;
+            }
+
+            $resource = $providerResponse['data'] ?? [];
+            $attributes = is_array($resource) ? ($resource['attributes'] ?? []) : [];
+            $resourceId = is_array($resource) ? ($resource['id'] ?? null) : null;
+            $providerStatus = is_array($attributes) ? ($attributes['status'] ?? null) : null;
+            $oldStatus = $refund->status;
+
+            if ($resourceId) {
+                $responsePaymentId = $attributes['payment_id'] ?? null;
+                $responseAmount = isset($attributes['amount']) ? (int) $attributes['amount'] : null;
+                $expectedAmount = (int) round((float) $refund->amount_approved * 100);
+
+                if ($responsePaymentId !== $order->paymongo_payment_id || $responseAmount !== $expectedAmount) {
+                    $resourceId = null;
+                    $providerStatus = null;
+                    $nextStatus = 'processing';
+                    $providerError = 'PayMongo returned a refund resource that did not match the original payment and approved amount. Reconciliation is required; no completed status was accepted.';
+                }
+            }
+
+            $refund->update([
+                'provider_refund_id' => $resourceId ?: $refund->provider_refund_id,
+                'provider_status' => $providerStatus,
+                'provider_response' => $providerResponse ?: null,
+                'provider_error' => $providerError,
+                'status' => $nextStatus,
+                'completed_at' => $nextStatus === 'completed'
+                    ? ($refund->completed_at ?? now())
+                    : null,
+            ]);
+
+            if ($nextStatus === 'completed') {
+                $this->syncOrderPaymentStatus($order);
+            }
+
+            $freshRefund = $refund->fresh();
+
+            $eventKey = match ($nextStatus) {
+                'completed' => 'refund_completed',
+                'failed' => 'refund_failed',
+                default => 'refund_processing',
+            };
+
+            $title = match ($nextStatus) {
+                'completed' => 'Refund sent to payment partner',
+                'failed' => 'Refund processing failed',
+                default => 'Refund outcome requires verification',
+            };
+
+            $description = match ($nextStatus) {
+                'completed' => 'PayMongo confirmed the refund of ₱' . number_format((float) $freshRefund->amount_approved, 2) . ' as succeeded.',
+                'failed' => 'PayMongo rejected the refund request. Review the provider response before retrying.',
+                default => $providerError
+                    ? 'The refund request was sent, but its outcome still needs verification. The amount remains reserved to prevent a duplicate submission.'
+                    : 'The refund was submitted to PayMongo and is awaiting its final status.',
+            };
+
+            if ($oldStatus !== $nextStatus || $resourceId || $providerError) {
+                $this->recordEvent($order, $freshRefund, $eventKey, $title, $description, null);
+                $this->notifyCustomer($freshRefund, $nextStatus);
+            }
+
+            return $freshRefund;
+        });
+    }
+
+    public function hasProviderRefundId(string $providerRefundId): bool
+    {
+        return Refund::query()
+            ->where('provider_refund_id', $providerRefundId)
+            ->exists();
+    }
+
+    public function hasUnlinkedSubmittedRefundForPayment(string $paymentId): bool
+    {
+        return Refund::query()
+            ->where('provider', 'paymongo')
+            ->where('status', 'processing')
+            ->whereNull('provider_refund_id')
+            ->whereNotNull('submitted_at')
+            ->where('submitted_at', '>', now()->subHours(23))
+            ->whereHas('order', fn ($query) => $query->where('paymongo_payment_id', $paymentId))
+            ->exists();
     }
 
     public function syncProviderStatus(string $providerRefundId, array $attributes): ?Refund
@@ -476,11 +710,15 @@ class RefundService
 
             $providerStatus = (string) ($attributes['status'] ?? '');
 
+            $providerPaymentId = $attributes['payment_id'] ?? null;
+            $providerAmount = isset($attributes['amount']) ? (int) $attributes['amount'] : null;
+            $expectedAmount = (int) round((float) $lockedRefund->amount_approved * 100);
+
             if (
-                !empty($attributes['payment_id']) &&
-                $attributes['payment_id'] !== $order->paymongo_payment_id
+                $providerPaymentId !== $order->paymongo_payment_id ||
+                $providerAmount !== $expectedAmount
             ) {
-                report(new \RuntimeException('PayMongo refund webhook payment ID does not match the linked order.'));
+                report(new \RuntimeException('PayMongo refund webhook payment ID or amount does not match the linked SecureView refund.'));
                 return null;
             }
 
@@ -538,6 +776,10 @@ class RefundService
                 ->where('idempotency_key', 'business-order-cancellation-' . $lockedOrder->id)
                 ->first();
 
+            if ($existing) {
+                return $existing;
+            }
+
             if (
                 !in_array($lockedOrder->payment_status, ['paid', 'partially_refunded'], true) ||
                 !$lockedOrder->paid_at
@@ -551,10 +793,6 @@ class RefundService
                 throw ValidationException::withMessages([
                     'order' => 'Automatic paid-order cancellation is limited to orders that have not been delivered. Delivered orders must go through return inspection and refund review.',
                 ]);
-            }
-
-            if ($existing) {
-                return $existing;
             }
 
             $this->cancelUnsubmittedRequests($lockedOrder, $actorId);

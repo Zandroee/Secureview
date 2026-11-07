@@ -87,12 +87,35 @@ export default function AdminRefunds({ refunds = {}, filters = {}, summary = {} 
     };
 
     const retry = (refund) => {
-        if (!window.confirm("Retry PayMongo refund #" + refund.id + "? This reuses the same idempotency key. If the previous request succeeded, PayMongo should return the original refund instead of creating another one. If its refund ID is already known, wait for the webhook rather than retry.")) return;
+        const uncertainAttempt = refund.status === "processing" && !refund.provider_refund_id;
+        const message = uncertainAttempt
+            ? "Retry PayMongo refund #" + refund.id + " using the original idempotency key? This is only safe within the 23-hour reconciliation window. If the earlier request succeeded, PayMongo should return its original result."
+            : "PayMongo reported that refund #" + refund.id + " failed. Starting another attempt creates a new idempotency key. Confirm the failed status in the PayMongo Dashboard before continuing.";
+
+        if (!window.confirm(message)) return;
         setBusyId(refund.id);
         router.patch("/admin/refunds/" + refund.id + "/retry", {}, {
             preserveScroll: true,
             onFinish: () => setBusyId(null),
         });
+    };
+
+    const reconcile = (refund) => {
+        const providerRefundId = window.prompt(
+            "Enter the refund ID shown in the PayMongo Dashboard for this exact payment.",
+            ""
+        );
+        if (providerRefundId === null) return;
+        if (providerRefundId.trim().length < 8) {
+            window.alert("Enter the complete PayMongo refund ID.");
+            return;
+        }
+        if (!window.confirm("SecureView will retrieve this refund from PayMongo and verify its payment ID, amount, and test/live mode before linking it. No new refund will be created. Continue?")) return;
+
+        setBusyId(refund.id);
+        router.patch("/admin/refunds/" + refund.id + "/reconcile", {
+            provider_refund_id: providerRefundId.trim(),
+        }, { preserveScroll: true, onFinish: () => setBusyId(null) });
     };
 
     const convertToManual = (refund) => {
@@ -137,8 +160,9 @@ export default function AdminRefunds({ refunds = {}, filters = {}, summary = {} 
                                 ["PROCESSING", summary.processing, "text-primary"],
                                 ["COMPLETED", summary.completed, "text-success"],
                                 ["MANUAL ACTION", summary.manual_action, "text-danger"],
+                                ["RECONCILIATION", summary.reconciliation_required, "text-danger"],
                             ].map(([label, value, color]) => (
-                                <div className="col-6 col-xl-3" key={label}>
+                                <div className="col-6 col-xl" key={label}>
                                     <div className="bg-white border rounded-3 p-3 h-100">
                                         <div className="small text-muted">{label}</div>
                                         <div className={"h4 fw-bold mb-0 " + color}>{value ?? 0}</div>
@@ -204,12 +228,18 @@ export default function AdminRefunds({ refunds = {}, filters = {}, summary = {} 
                                                     {refund.rejection_reason && <div className="small text-danger mt-1">Rejection reason: {refund.rejection_reason}</div>}
                                                     {refund.provider_refund_id && <div className="small text-muted mt-1">PayMongo refund ID: {refund.provider_refund_id}</div>}
                                                     {refund.provider_error && <div className="alert alert-warning py-2 small mt-2 mb-0">{refund.provider_error}</div>}
+                                                    {refund.requires_reconciliation && (
+                                                        <div className="alert alert-danger py-2 small mt-2 mb-0">
+                                                            <strong>Manual reconciliation required.</strong> PayMongo's safe idempotency retry window has expired or the original submission time is unavailable. Check the PayMongo Dashboard for the original refund before taking any further action. Do not submit a new refund or switch to manual processing until the original outcome is confirmed.
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="d-flex flex-wrap align-items-start align-content-start gap-2">
                                                     {refund.can_approve && <button type="button" className="btn btn-success btn-sm fw-bold" disabled={busyId === refund.id} onClick={() => approve(refund)}>APPROVE</button>}
                                                     {refund.can_reject && <button type="button" className="btn btn-outline-danger btn-sm fw-bold" disabled={busyId === refund.id} onClick={() => reject(refund)}>REJECT</button>}
                                                     {refund.can_complete_manual && <button type="button" className="btn btn-primary btn-sm fw-bold" disabled={busyId === refund.id} onClick={() => completeManual(refund)}>RECORD MONEY RETURNED</button>}
                                                     {refund.can_retry && <button type="button" className="btn btn-outline-warning btn-sm fw-bold" disabled={busyId === refund.id} onClick={() => retry(refund)}>VERIFY / RETRY REFUND</button>}
+                                                    {refund.can_reconcile && <button type="button" className="btn btn-outline-primary btn-sm fw-bold" disabled={busyId === refund.id} onClick={() => reconcile(refund)}>RECONCILE PAYMONGO ID</button>}
                                                     {refund.can_convert_to_manual && <button type="button" className="btn btn-outline-secondary btn-sm fw-bold" disabled={busyId === refund.id} onClick={() => convertToManual(refund)}>SWITCH TO MANUAL</button>}
                                                 </div>
                                             </div>

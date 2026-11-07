@@ -371,6 +371,7 @@ Route::middleware(['auth', 'verified', 'admin', 'inertia.encrypt'])->group(funct
     Route::patch('/admin/refunds/{refund}/reject', [AdminRefundController::class, 'reject'])->name('admin.refunds.reject');
     Route::patch('/admin/refunds/{refund}/complete-manual', [AdminRefundController::class, 'completeManual'])->name('admin.refunds.complete-manual');
     Route::patch('/admin/refunds/{refund}/retry', [AdminRefundController::class, 'retry'])->name('admin.refunds.retry');
+    Route::patch('/admin/refunds/{refund}/reconcile', [AdminRefundController::class, 'reconcile'])->name('admin.refunds.reconcile');
     Route::patch('/admin/refunds/{refund}/convert-to-manual', [AdminRefundController::class, 'convertToManual'])->name('admin.refunds.convert-to-manual');
 
     Route::get('/admin/purchases', [AdminPurchaseController::class, 'index'])

@@ -107,7 +107,7 @@ class RefundManagementTest extends TestCase
                         'amount' => 50000,
                         'payment_id' => 'pay_refund_partial_001',
                         'status' => 'succeeded',
-                        'reason' => 'requested_by_customer',
+                        'reason' => 'others',
                     ],
                 ],
             ], 200),
@@ -444,17 +444,340 @@ class RefundManagementTest extends TestCase
         $this->assertSame('partially_refunded', $order->fresh()->payment_status);
     }
 
-    public function test_admin_can_view_refund_management_page(): void
+    public function test_signed_paymongo_refund_webhook_rejects_an_amount_mismatch(): void
+    {
+        $customer = $this->createCustomer();
+        $product = $this->createProduct();
+        $order = $this->createPaidOrder($customer, $product, [
+            'paymongo_payment_id' => 'pay_webhook_amount_mismatch_001',
+        ]);
+
+        $refund = Refund::create([
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'requested_by_user_id' => $customer->id,
+            'source' => 'customer_request',
+            'amount_requested' => 300,
+            'amount_approved' => 300,
+            'reason_code' => 'others',
+            'reason' => 'A requested partial refund.',
+            'status' => 'processing',
+            'provider' => 'paymongo',
+            'provider_refund_id' => 're_webhook_amount_mismatch_001',
+            'idempotency_key' => 'refund-webhook-amount-mismatch-test-001',
+            'provider_status' => 'processing',
+            'requested_at' => now(),
+            'approved_at' => now(),
+            'submitted_at' => now(),
+        ]);
+
+        $body = json_encode([
+            'data' => [
+                'id' => 'evt_refund_amount_mismatch_001',
+                'type' => 'event',
+                'attributes' => [
+                    'type' => 'payment.refund.updated',
+                    'livemode' => false,
+                    'data' => [
+                        'id' => 're_webhook_amount_mismatch_001',
+                        'type' => 'refund',
+                        'attributes' => [
+                            'amount' => 15000,
+                            'payment_id' => 'pay_webhook_amount_mismatch_001',
+                            'status' => 'succeeded',
+                        ],
+                    ],
+                ],
+            ],
+        ], JSON_UNESCAPED_SLASHES);
+
+        $timestamp = (string) time();
+        $signature = hash_hmac('sha256', $timestamp . '.' . $body, self::WEBHOOK_SECRET);
+
+        $this->call(
+            'POST',
+            '/api/webhooks/paymongo',
+            [],
+            [],
+            [],
+            [
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_PAYMONGO_SIGNATURE' => 't=' . $timestamp . ',te=' . $signature,
+            ],
+            $body
+        )->assertStatus(409);
+
+        $this->assertSame('processing', $refund->fresh()->status);
+        $this->assertSame('paid', $order->fresh()->payment_status);
+    }
+
+    public function test_unknown_paymongo_refund_is_not_retried_after_the_idempotency_window(): void
     {
         $admin = $this->createAdmin();
+        $customer = $this->createCustomer();
+        $product = $this->createProduct();
+        $order = $this->createPaidOrder($customer, $product, [
+            'paymongo_payment_id' => 'pay_refund_unknown_expired_001',
+        ]);
+
+        $refund = Refund::create([
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'requested_by_user_id' => $admin->id,
+            'source' => 'customer_request',
+            'amount_requested' => 500,
+            'amount_approved' => 500,
+            'reason_code' => 'others',
+            'reason' => 'A refund request with an unknown provider outcome.',
+            'status' => 'processing',
+            'provider' => 'paymongo',
+            'idempotency_key' => 'refund-unknown-expired-001',
+            'provider_error' => 'The connection ended before PayMongo confirmed the result.',
+            'requested_at' => now()->subDays(2),
+            'approved_at' => now()->subDays(2),
+            'submitted_at' => now()->subHours(24),
+        ]);
+
+        Http::fake();
+
+        $this->actingAs($admin)
+            ->patch(route('admin.refunds.retry', $refund))
+            ->assertRedirect()
+            ->assertSessionHasErrors('refund');
+
+        Http::assertNothingSent();
+        $this->assertSame('processing', $refund->fresh()->status);
+        $this->assertSame('refund-unknown-expired-001', $refund->fresh()->idempotency_key);
+    }
+
+    public function test_unmatched_refund_webhook_is_retried_when_a_refund_submission_is_waiting_for_its_id(): void
+    {
+        $customer = $this->createCustomer();
+        $product = $this->createProduct();
+        $order = $this->createPaidOrder($customer, $product, [
+            'paymongo_payment_id' => 'pay_refund_early_webhook_001',
+        ]);
+
+        $refund = Refund::create([
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'requested_by_user_id' => $customer->id,
+            'source' => 'customer_request',
+            'amount_requested' => 300,
+            'amount_approved' => 300,
+            'reason_code' => 'others',
+            'reason' => 'A refund whose provider response is still being saved.',
+            'status' => 'processing',
+            'provider' => 'paymongo',
+            'idempotency_key' => 'refund-early-webhook-001',
+            'provider_error' => 'Waiting for the PayMongo create response.',
+            'requested_at' => now(),
+            'approved_at' => now(),
+            'submitted_at' => now(),
+        ]);
+
+        $body = json_encode([
+            'data' => [
+                'id' => 'evt_refund_early_webhook_001',
+                'type' => 'event',
+                'attributes' => [
+                    'type' => 'payment.refund.updated',
+                    'livemode' => false,
+                    'data' => [
+                        'id' => 're_early_webhook_001',
+                        'type' => 'refund',
+                        'attributes' => [
+                            'amount' => 30000,
+                            'payment_id' => 'pay_refund_early_webhook_001',
+                            'status' => 'succeeded',
+                        ],
+                    ],
+                ],
+            ],
+        ], JSON_UNESCAPED_SLASHES);
+
+        $timestamp = (string) time();
+        $signature = hash_hmac('sha256', $timestamp . '.' . $body, self::WEBHOOK_SECRET);
+
+        $sendWebhook = function () use ($body, $timestamp, $signature) {
+            return $this->call(
+                'POST',
+                '/api/webhooks/paymongo',
+                [],
+                [],
+                [],
+                [
+                    'CONTENT_TYPE' => 'application/json',
+                    'HTTP_PAYMONGO_SIGNATURE' => 't=' . $timestamp . ',te=' . $signature,
+                ],
+                $body
+            );
+        };
+
+        $sendWebhook()->assertStatus(503);
+
+        // The API response is now persisted; PayMongo's retry can be matched.
+        $refund->update(['provider_refund_id' => 're_early_webhook_001']);
+
+        $sendWebhook()->assertOk();
+
+        $this->assertSame('completed', $refund->fresh()->status);
+        $this->assertSame('partially_refunded', $order->fresh()->payment_status);
+    }
+
+    public function test_admin_can_reconcile_an_unlinked_paymongo_refund_without_creating_a_new_refund(): void
+    {
+        $admin = $this->createAdmin();
+        $customer = $this->createCustomer();
+        $product = $this->createProduct();
+        $order = $this->createPaidOrder($customer, $product, [
+            'paymongo_payment_id' => 'pay_refund_reconcile_001',
+        ]);
+
+        $refund = Refund::create([
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'requested_by_user_id' => $customer->id,
+            'source' => 'customer_request',
+            'amount_requested' => 500,
+            'amount_approved' => 500,
+            'reason_code' => 'others',
+            'reason' => 'The initial PayMongo response timed out.',
+            'status' => 'processing',
+            'provider' => 'paymongo',
+            'idempotency_key' => 'refund-reconcile-001',
+            'provider_error' => 'The connection ended before PayMongo confirmed the result.',
+            'requested_at' => now()->subDays(2),
+            'approved_at' => now()->subDays(2),
+            'submitted_at' => now()->subHours(24),
+        ]);
+
+        Http::fake([
+            'https://api.paymongo.com/refunds/re_reconcile_001' => Http::response([
+                'data' => [
+                    'id' => 're_reconcile_001',
+                    'type' => 'refund',
+                    'attributes' => [
+                        'amount' => 50000,
+                        'payment_id' => 'pay_refund_reconcile_001',
+                        'livemode' => false,
+                        'status' => 'succeeded',
+                        'reason' => 'others',
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.refunds.reconcile', $refund), [
+                'provider_refund_id' => 're_reconcile_001',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('refunds', [
+            'id' => $refund->id,
+            'provider_refund_id' => 're_reconcile_001',
+            'provider_status' => 'succeeded',
+            'status' => 'completed',
+        ]);
+        $this->assertSame('partially_refunded', $order->fresh()->payment_status);
+
+        Http::assertSent(fn ($request) =>
+            $request->method() === 'GET' &&
+            str_ends_with($request->url(), '/refunds/re_reconcile_001')
+        );
+    }
+
+    public function test_paymongo_reconciliation_rejects_a_refund_for_a_different_payment(): void
+    {
+        $admin = $this->createAdmin();
+        $customer = $this->createCustomer();
+        $product = $this->createProduct();
+        $order = $this->createPaidOrder($customer, $product, [
+            'paymongo_payment_id' => 'pay_refund_reconcile_mismatch_001',
+        ]);
+
+        $refund = Refund::create([
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'requested_by_user_id' => $customer->id,
+            'source' => 'customer_request',
+            'amount_requested' => 500,
+            'amount_approved' => 500,
+            'reason_code' => 'others',
+            'reason' => 'The refund ID must belong to this order.',
+            'status' => 'processing',
+            'provider' => 'paymongo',
+            'idempotency_key' => 'refund-reconcile-mismatch-001',
+            'provider_error' => 'The original API response was unavailable.',
+            'requested_at' => now()->subDays(2),
+            'approved_at' => now()->subDays(2),
+            'submitted_at' => now()->subHours(24),
+        ]);
+
+        Http::fake([
+            'https://api.paymongo.com/refunds/re_wrong_payment_001' => Http::response([
+                'data' => [
+                    'id' => 're_wrong_payment_001',
+                    'type' => 'refund',
+                    'attributes' => [
+                        'amount' => 50000,
+                        'payment_id' => 'pay_another_order_001',
+                        'livemode' => false,
+                        'status' => 'succeeded',
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.refunds.reconcile', $refund), [
+                'provider_refund_id' => 're_wrong_payment_001',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('provider_refund_id');
+
+        $this->assertNull($refund->fresh()->provider_refund_id);
+        $this->assertSame('processing', $refund->fresh()->status);
+        $this->assertSame('paid', $order->fresh()->payment_status);
+    }
+
+    public function test_admin_can_view_refund_management_page_and_old_unknown_attempts_require_reconciliation(): void
+    {
+        $admin = $this->createAdmin();
+        $customer = $this->createCustomer();
+        $product = $this->createProduct();
+        $order = $this->createPaidOrder($customer, $product);
+
+        Refund::create([
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'requested_by_user_id' => $customer->id,
+            'source' => 'customer_request',
+            'amount_requested' => 300,
+            'amount_approved' => 300,
+            'reason_code' => 'others',
+            'reason' => 'A refund with an expired idempotency retry window.',
+            'status' => 'processing',
+            'provider' => 'paymongo',
+            'idempotency_key' => 'refund-admin-reconciliation-001',
+            'provider_error' => 'The original refund outcome is unknown.',
+            'requested_at' => now()->subDays(2),
+            'approved_at' => now()->subDays(2),
+            'submitted_at' => now()->subHours(24),
+        ]);
 
         $this->actingAs($admin)
             ->get(route('admin.refunds.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Admin/Refunds')
-                ->has('refunds.data', 0)
-                ->where('summary.pending', 0));
+                ->has('refunds.data', 1)
+                ->where('refunds.data.0.requires_reconciliation', true)
+                ->where('refunds.data.0.can_retry', false)
+                ->where('refunds.data.0.can_reconcile', true)
+                ->where('summary.reconciliation_required', 1));
     }
 
     private function createAdmin(): User

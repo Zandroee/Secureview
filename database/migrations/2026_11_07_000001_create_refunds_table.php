@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('source', 40)->default('customer_request');
             $table->decimal('amount_requested', 10, 2);
             $table->decimal('amount_approved', 10, 2)->nullable();
-            $table->string('reason_code', 40)->default('requested_by_customer');
+            $table->string('reason_code', 40)->default('others');
             $table->text('reason');
             $table->text('admin_notes')->nullable();
             $table->text('rejection_reason')->nullable();

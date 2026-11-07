@@ -67,7 +67,25 @@ class RefundController extends Controller
                 'can_approve' => $refund->status === 'pending',
                 'can_reject' => $refund->status === 'pending',
                 'can_complete_manual' => $refund->provider === 'manual' && in_array($refund->status, ['approved', 'failed'], true),
-                'can_retry' => $refund->provider === 'paymongo' && ($refund->status === 'failed' || ($refund->status === 'processing' && !$refund->provider_refund_id && $refund->provider_error)),
+                'can_retry' => $refund->provider === 'paymongo' && (
+                    $refund->status === 'failed' ||
+                    (
+                        $refund->status === 'processing' &&
+                        !$refund->provider_refund_id &&
+                        $refund->provider_error &&
+                        $refund->submitted_at &&
+                        $refund->submitted_at->gt(now()->subHours(23))
+                    )
+                ),
+                'requires_reconciliation' => $refund->provider === 'paymongo' &&
+                    $refund->status === 'processing' &&
+                    !$refund->provider_refund_id &&
+                    $refund->provider_error &&
+                    (!$refund->submitted_at || $refund->submitted_at->lte(now()->subHours(23))),
+                'can_reconcile' => $refund->provider === 'paymongo' &&
+                    $refund->status === 'processing' &&
+                    !$refund->provider_refund_id &&
+                    $refund->provider_error,
                 'can_convert_to_manual' => $refund->provider === 'paymongo' && $refund->status === 'failed',
             ];
         });
@@ -168,6 +186,30 @@ class RefundController extends Controller
         );
 
         return back()->with('success', 'Refund retry submitted. Current status: ' . $updated->status . '.');
+    }
+
+    public function reconcile(Request $request, Refund $refund, RefundService $refunds, AdminActivityLogger $activityLogger)
+    {
+        $validated = $request->validate([
+            'provider_refund_id' => ['required', 'string', 'min:8', 'max:255'],
+        ]);
+
+        $updated = $refunds->reconcileUnknownPayMongoRefund(
+            $refund,
+            $request->user(),
+            trim($validated['provider_refund_id'])
+        );
+
+        $activityLogger->record(
+            $request,
+            'refund_reconciled',
+            'Reconciled SecureView refund #' . $refund->id . ' against PayMongo refund ' . $updated->provider_refund_id . '.',
+            $refund,
+            ['status' => 'processing', 'provider_refund_id' => null],
+            ['status' => $updated->status, 'provider_refund_id' => $updated->provider_refund_id]
+        );
+
+        return back()->with('success', 'PayMongo refund verified and linked. Current status: ' . $updated->status . '.');
     }
 
     public function convertToManual(Request $request, Refund $refund, RefundService $refunds, AdminActivityLogger $activityLogger)

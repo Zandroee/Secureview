@@ -83,19 +83,29 @@ class DashboardController extends Controller
             ->all();
 
         $salesWindow = $this->periodWindow($metricPeriods['sales']);
+        $currentSalesRefunds = (float) Refund::query()
+            ->where('status', 'completed')
+            ->whereBetween('completed_at', [$salesWindow['start'], $salesWindow['end']])
+            ->sum('amount_approved');
         $currentSales = (float) $this->paidOrdersBetween(
             $salesWindow['start'],
             $salesWindow['end']
         )->sum('total') + (float) ServiceRecord::query()
             ->whereBetween('completed_at', [$salesWindow['start'], $salesWindow['end']])
-            ->sum('total_income');
+            ->sum('total_income') - $currentSalesRefunds;
+        $previousSalesRefunds = $salesWindow['previous_start']
+            ? (float) Refund::query()
+                ->where('status', 'completed')
+                ->whereBetween('completed_at', [$salesWindow['previous_start'], $salesWindow['previous_end']])
+                ->sum('amount_approved')
+            : 0.0;
         $previousSales = $salesWindow['previous_start']
             ? (float) $this->paidOrdersBetween(
                 $salesWindow['previous_start'],
                 $salesWindow['previous_end']
             )->sum('total') + (float) ServiceRecord::query()
                 ->whereBetween('completed_at', [$salesWindow['previous_start'], $salesWindow['previous_end']])
-                ->sum('total_income')
+                ->sum('total_income') - $previousSalesRefunds
             : null;
 
         $ordersWindow = $this->periodWindow($metricPeriods['orders']);

@@ -388,7 +388,6 @@ class InquiryController extends Controller
         Inquiry $inquiry,
         AdminActivityLogger $activityLogger,
         JobNotificationService $jobNotifications,
-        RefundService $refunds
     ) {
         if ($inquiry->status !== 'pending') {
             return back()->withErrors([
@@ -654,7 +653,7 @@ class InquiryController extends Controller
             });
         }
 
-        if ($oldStatus !== $newStatus && $newStatus === 'cancelled' && $oldStatus !== 'completed') {
+        if ($newStatus === 'cancelled' && $oldStatus !== 'completed') {
             $refund = $refunds->refundCancelledService($inquiry->fresh(), $request->user()->id);
 
             if ($refund) {

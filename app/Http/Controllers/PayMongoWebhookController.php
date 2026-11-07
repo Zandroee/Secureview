@@ -93,7 +93,38 @@ class PayMongoWebhookController extends Controller
             $refundAttributes = $refundResource['attributes'] ?? [];
 
             if ($refundResourceId && is_array($refundAttributes)) {
-                $refunds->syncProviderStatus((string) $refundResourceId, $refundAttributes);
+                $matchedRefund = $refunds->syncProviderStatus((string) $refundResourceId, $refundAttributes);
+
+                // The create-refund API response can save the provider ID
+                // between the initial lookup and this status check. Re-read it
+                // once to close that narrow webhook/API race.
+                if (!$matchedRefund && $refunds->hasProviderRefundId((string) $refundResourceId)) {
+                    $matchedRefund = $refunds->syncProviderStatus((string) $refundResourceId, $refundAttributes);
+                }
+
+                $paymentId = (string) ($refundAttributes['payment_id'] ?? '');
+
+                // A newly-created refund can emit its webhook before the create
+                // API response has saved the provider refund ID locally. Ask
+                // PayMongo to retry only when a matching submission is in flight.
+                if (!$matchedRefund && $refunds->hasProviderRefundId((string) $refundResourceId)) {
+                    // The refund ID is known locally, but its payment/amount
+                    // did not match. Reject this event rather than silently
+                    // acknowledging a financial mismatch.
+                    return response()->json([
+                        'message' => 'Refund resource does not match its linked SecureView payment.',
+                    ], 409);
+                }
+
+                if (
+                    !$matchedRefund &&
+                    $paymentId !== '' &&
+                    $refunds->hasUnlinkedSubmittedRefundForPayment($paymentId)
+                ) {
+                    return response()->json([
+                        'message' => 'Refund mapping is not available yet. Retry this webhook shortly.',
+                    ], 503);
+                }
             }
 
             return response()->json(['received' => true]);

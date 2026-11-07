@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Order;
+use App\Models\Refund;
 use App\Models\Product;
 use App\Models\ServiceRecord;
 use App\Models\User;
@@ -221,6 +222,61 @@ class AdminDashboardTest extends TestCase
                 ->where('unreadInquiryNotificationCount', 1)
                 ->where('calendarAvailability.fullyBookedDates', function ($dates) use ($date) {
                     return collect($dates)->contains($date);
+                }));
+    }
+
+    public function test_dashboard_sales_metric_and_revenue_chart_subtract_completed_refunds(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'user']);
+
+        $order = Order::create([
+            'user_id' => $customer->id,
+            'order_number' => 'ORD-DASH-NET-REFUND',
+            'subtotal' => 1500,
+            'shipping_fee' => 0,
+            'total' => 1500,
+            'payment_method' => 'cash',
+            'payment_status' => 'partially_refunded',
+            'order_status' => 'processing',
+            'paid_at' => now(),
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'delivery_address' => '123 Test Street',
+        ]);
+
+        Refund::create([
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'requested_by_user_id' => $admin->id,
+            'processed_by_user_id' => $admin->id,
+            'source' => 'customer_request',
+            'amount_requested' => 500,
+            'amount_approved' => 500,
+            'reason_code' => 'others',
+            'reason' => 'A partial refund for a returned accessory.',
+            'status' => 'completed',
+            'provider' => 'manual',
+            'idempotency_key' => 'dashboard-net-refund-001',
+            'provider_status' => 'succeeded',
+            'requested_at' => now(),
+            'approved_at' => now(),
+            'completed_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('stats.0.title', 'Total Sales')
+                ->where('stats.0.value', '₱1,000.00')
+                ->where('revenueData', function ($rows) {
+                    $currentMonth = now()->format('M');
+
+                    return collect($rows)
+                        ->firstWhere('month', $currentMonth)['revenue'] === 1000.0;
                 }));
     }
 
