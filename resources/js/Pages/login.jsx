@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import Navbar from "../Components/navbar";
 import GoogleLoginButton from "../Components/GoogleLoginButton";
+import RateLimitNotice from "../Components/RateLimitNotice";
 import "../../css/login.css";
 
 export default function Login() {
@@ -107,6 +108,8 @@ export default function Login() {
                 className="container-fluid px-3 px-md-4 py-5"
                 style={{ minHeight: "calc(100vh - 75px)" }}
             >
+                <RateLimitNotice className="mx-auto mb-4" />
+
                 {props.flash?.verificationRequired && (
                     <div className="alert alert-warning mx-auto mb-4" role="alert" style={{ maxWidth: "820px" }}>
                         <div className="fw-bold mb-1">
