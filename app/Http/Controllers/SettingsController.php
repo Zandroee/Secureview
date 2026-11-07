@@ -52,25 +52,27 @@ class SettingsController extends Controller
         $validated = $request->validate([
             'preferred_theme' => ['required', Rule::in(['system', 'light', 'dark'])],
             'notification_popups_enabled' => ['required', 'boolean'],
-            'marketing_emails_enabled' => ['required', 'boolean'],
+            'marketing_emails_enabled' => ['sometimes', 'boolean'],
         ]);
 
         $user = $request->user();
-        $wasSubscribed = (bool) $user->marketing_emails_enabled;
-        $willSubscribe = (bool) $validated['marketing_emails_enabled'];
-
         $updates = [
             'preferred_theme' => $validated['preferred_theme'],
             'notification_popups_enabled' => (bool) $validated['notification_popups_enabled'],
-            'marketing_emails_enabled' => $willSubscribe,
         ];
 
-        // Keep an auditable timestamp when the customer opts in or withdraws.
-        if ($willSubscribe && !$wasSubscribed) {
-            $updates['marketing_emails_consented_at'] = now();
-            $updates['marketing_emails_withdrawn_at'] = null;
-        } elseif (!$willSubscribe && $wasSubscribed) {
-            $updates['marketing_emails_withdrawn_at'] = now();
+        if (array_key_exists('marketing_emails_enabled', $validated)) {
+            $wasSubscribed = (bool) $user->marketing_emails_enabled;
+            $willSubscribe = (bool) $validated['marketing_emails_enabled'];
+            $updates['marketing_emails_enabled'] = $willSubscribe;
+
+            // Keep an auditable timestamp when the customer opts in or withdraws.
+            if ($willSubscribe && !$wasSubscribed) {
+                $updates['marketing_emails_consented_at'] = now();
+                $updates['marketing_emails_withdrawn_at'] = null;
+            } elseif (!$willSubscribe && $wasSubscribed) {
+                $updates['marketing_emails_withdrawn_at'] = now();
+            }
         }
 
         $user->update($updates);
