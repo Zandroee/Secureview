@@ -398,6 +398,7 @@ export default function AdminTransactions({
                                                         <div className="small text-muted">
                                                             {transaction.order_number}
                                                         </div>
+                                                        <span className={"badge mt-1 " + (transaction.sales_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{transaction.sales_channel === "walk_in" ? "Walk-in sale" : "Online order"}</span>
                                                         {transaction.invoice_record && (
                                                             <div className="small text-success mt-1">
                                                                 <i className="bi bi-file-earmark-check me-1"></i>
