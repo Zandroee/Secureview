@@ -122,7 +122,7 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
         ]);
     }
 
-    public function test_warranty_covered_replacements_are_not_charged_and_service_invoice_tracks_partial_payment(): void
+    public function test_warranty_covered_replacements_are_not_charged_and_service_invoice_tracks_each_payment(): void
     {
         $admin = User::factory()->create([
             'role' => 'admin',
@@ -221,13 +221,35 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
 
         $this->actingAs($admin)
             ->patch(route('admin.service-records.payment.update', $record), [
-                'amount_paid' => 100,
+                'payment_amount' => 100,
                 'payment_method' => 'cash',
+                'reference' => 'COUNTER-RECEIPT-001',
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();
 
         $this->assertSame('partially_paid', $record->fresh()->payment_status);
+        $this->assertDatabaseHas('service_record_payments', [
+            'service_record_id' => $record->id,
+            'amount' => 100,
+            'payment_method' => 'cash',
+            'reference' => 'COUNTER-RECEIPT-001',
+            'recorded_by_user_id' => $admin->id,
+            'is_legacy_import' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.service-records.payment.update', $record), [
+                'payment_amount' => 350,
+                'payment_method' => 'gcash',
+                'reference' => 'GCASH-REF-002',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('paid', $record->fresh()->payment_status);
+        $this->assertEquals(450, $record->fresh()->amount_paid);
+        $this->assertSame(2, $record->payments()->count());
 
         $this->actingAs($admin)
             ->get(route('admin.service-records.invoice', $record))
@@ -236,9 +258,19 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
                 ->component('invoice')
                 ->where('invoice.is_recorded', true)
                 ->where('invoice.total', 450)
-                ->where('invoice.amount_paid', 100)
-                ->where('invoice.balance_due', 350)
-                ->where('invoice.payment_status', 'partially_paid'));
+                ->where('invoice.amount_paid', 450)
+                ->where('invoice.balance_due', 0)
+                ->where('invoice.payment_status', 'paid')
+                ->has('invoice.payments', 2));
+
+        $this->actingAs($admin)
+            ->patch(route('admin.service-records.payment.update', $record), [
+                'payment_amount' => 0.01,
+                'payment_method' => 'cash',
+            ])
+            ->assertSessionHasErrors('payment_amount');
+
+        $this->assertSame(2, $record->payments()->count());
     }
 
     private function createProduct(string $name, int $stock, float $price): Product
