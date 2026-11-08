@@ -425,6 +425,41 @@ export default function Invoice({ invoice }) {
                         </div>
                     </div>
 
+                    {invoice.document_type === "service_invoice" && Array.isArray(invoice.payments) && invoice.payments.length > 0 && (
+                        <section className="mt-4">
+                            <h2 className="h6 fw-bold mb-2">Payment history</h2>
+                            <div className="table-responsive">
+                                <table className="table table-sm invoice-table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Date received</th>
+                                            <th>Method / reference</th>
+                                            <th>Recorded by</th>
+                                            <th className="text-end">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {invoice.payments.map((payment) => (
+                                            <tr key={payment.id}>
+                                                <td>
+                                                    {payment.paid_at || "—"}
+                                                    {payment.is_legacy_import && <div className="small text-muted">Legacy balance imported</div>}
+                                                    {payment.notes && <div className="small text-muted">{payment.notes}</div>}
+                                                </td>
+                                                <td>
+                                                    <div className="fw-semibold">{methodLabel(payment.payment_method)}</div>
+                                                    <div className="small text-muted">{payment.reference || "No reference supplied"}</div>
+                                                </td>
+                                                <td>{payment.recorded_by || "—"}</td>
+                                                <td className="text-end text-nowrap fw-semibold">{peso(payment.amount)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
+
                     <div className="invoice-disclaimer">
                         <div className="fw-semibold mb-1">
                             {invoice.is_recorded
