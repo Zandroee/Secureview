@@ -63,10 +63,17 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
 
         // One standalone camera and four cameras contained in two packages.
         $this->assertSame(5, (int) $product->fresh()->stock_quantity);
-        $this->assertSame(2, InventoryAdjustment::query()
+        $this->assertSame(1, InventoryAdjustment::query()
             ->where('user_id', $admin->id)
             ->where('reason', 'like', 'Walk-in sale ' . $order->order_number . '%')
             ->count());
+        $this->assertDatabaseHas('inventory_adjustments', [
+            'user_id' => $admin->id,
+            'product_id' => $product->id,
+            'previous_quantity' => 10,
+            'new_quantity' => 5,
+            'quantity_change' => -5,
+        ]);
 
         $this->assertDatabaseHas('order_events', [
             'order_id' => $order->id,
