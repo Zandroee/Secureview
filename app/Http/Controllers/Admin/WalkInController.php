@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BlockedBookingDate;
 use App\Models\BlockedBookingTimeSlot;
 use App\Models\Inquiry;
+use App\Models\InventoryAdjustment;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderEvent;
@@ -137,6 +138,7 @@ class WalkInController extends Controller
 
             $inventory->validateOrderStock($order);
             $inventory->deductForOrder($order);
+            $this->recordSaleInventoryAdjustments($order, $request->user());
 
             $order->events()->create([
                 'actor_user_id' => $request->user()->id,
@@ -212,6 +214,69 @@ class WalkInController extends Controller
 
         return redirect()->route('admin.walk-in.index')
             ->with('success', 'Walk-in service ' . $inquiry->inquiry_number . ' was recorded and sent to the existing service review and scheduling workflow.');
+    }
+
+    /**
+     * Create an auditable inventory movement for every physical product
+     * consumed by a walk-in sale, including package components.
+     */
+    private function recordSaleInventoryAdjustments(Order $order, User $actor): void
+    {
+        $order->loadMissing('items');
+
+        foreach ($order->items as $orderItem) {
+            if ($orderItem->purchasable_type === Package::class) {
+                $package = Package::query()->with('packageItems')->find($orderItem->purchasable_id);
+                if (!$package) {
+                    continue;
+                }
+
+                foreach ($package->packageItems as $packageItem) {
+                    $product = Product::query()->whereKey($packageItem->product_id)->lockForUpdate()->first();
+                    if (!$product) {
+                        continue;
+                    }
+
+                    $quantity = (int) $packageItem->quantity * (int) $orderItem->quantity;
+                    $newQuantity = (int) $product->stock_quantity;
+                    $previousQuantity = $newQuantity + $quantity;
+
+                    InventoryAdjustment::create([
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                        'user_id' => $actor->id,
+                        'previous_quantity' => $previousQuantity,
+                        'new_quantity' => $newQuantity,
+                        'quantity_change' => -$quantity,
+                        'reason' => 'Walk-in sale ' . $order->order_number . ' — package ' . $orderItem->name,
+                    ]);
+                }
+
+                continue;
+            }
+
+            if ($orderItem->purchasable_type !== Product::class) {
+                continue;
+            }
+
+            $product = Product::query()->whereKey($orderItem->purchasable_id)->lockForUpdate()->first();
+            if (!$product) {
+                continue;
+            }
+
+            $quantity = (int) $orderItem->quantity;
+            $newQuantity = (int) $product->stock_quantity;
+
+            InventoryAdjustment::create([
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                'user_id' => $actor->id,
+                'previous_quantity' => $newQuantity + $quantity,
+                'new_quantity' => $newQuantity,
+                'quantity_change' => -$quantity,
+                'reason' => 'Walk-in sale ' . $order->order_number,
+            ]);
+        }
     }
 
     private function assertBookingSlotAvailable(string $date, string $time): void
