@@ -35,7 +35,9 @@ class InvoiceSettingsTest extends TestCase
             ->patch(route('admin.invoice-settings.update'), [
                 'business_name' => 'SecureView',
                 'registered_name' => 'SecureView Test Company',
+            'pickup_address' => 'Unit 5, Netmax Building, 456 Store Road, Taguig City',
                 'address' => '123 Test Street, Taguig City',
+                'pickup_address' => 'Unit 5, Netmax Building, 456 Store Road, Taguig City',
                 'email' => 'billing@example.test',
                 'phone' => '02-8000-0000',
                 'tin' => '000-000-000-000',
