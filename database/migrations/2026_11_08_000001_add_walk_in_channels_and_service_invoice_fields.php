@@ -76,10 +76,6 @@ return new class extends Migration
             $table->unique('order_id');
         });
 
-        Schema::table('service_record_items', function (Blueprint $table) {
-            $table->dropColumn('is_warranty_covered');
-        });
-
         Schema::table('service_records', function (Blueprint $table) {
             $table->dropColumn(['payment_method', 'payment_status', 'amount_paid', 'paid_at']);
         });
