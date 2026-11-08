@@ -10,6 +10,7 @@ use App\Models\Inquiry;
 use App\Models\ServiceRecord;
 use App\Models\ServiceRecordItem;
 use App\Models\User;
+use App\Services\InvoiceDocumentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -85,7 +86,18 @@ class ScheduleController extends Controller
             ->orderByDesc('created_at')
             ->paginate(10)
             ->withQueryString()
-            ->through(function (Inquiry $inquiry) {
+            ->through(function (Inquiry $inquiry) use ($documents) {
+                $serviceRecord = $inquiry->serviceRecord;
+                $invoiceTotal = $serviceRecord
+                    ? (float) ($serviceRecord->invoiceRecord?->snapshot['total'] ?? $documents->buildServiceSnapshot($serviceRecord)['total'])
+                    : 0.0;
+                $amountPaid = $serviceRecord
+                    ? (float) $serviceRecord->payments->sum('amount')
+                    : 0.0;
+                $paymentStatus = $amountPaid <= 0
+                    ? 'pending'
+                    : ($amountPaid >= $invoiceTotal ? 'paid' : 'partially_paid');
+
                 return [
                     'id' => $inquiry->id,
                     'inquiry_number' => $inquiry->inquiry_number,
@@ -325,7 +337,7 @@ class ScheduleController extends Controller
         ]);
     }
 
-    public function history(Request $request)
+    public function history(Request $request, InvoiceDocumentService $documents)
     {
         Inquiry::escalateOverdueUrgency();
 
@@ -338,7 +350,7 @@ class ScheduleController extends Controller
         ]);
 
         $query = Inquiry::query()
-            ->with(['technicians', 'serviceRecord.technician', 'serviceRecord.items', 'serviceRecord.invoiceRecord'])
+            ->with(['technicians', 'serviceRecord.technician', 'serviceRecord.items', 'serviceRecord.invoiceRecord', 'serviceRecord.payments.recordedBy'])
             ->where('status', 'completed');
 
         if (!empty($filters['search'])) {
@@ -402,9 +414,23 @@ class ScheduleController extends Controller
                             'issued_at' => $inquiry->serviceRecord->invoiceRecord->issued_at?->format('M d, Y h:i A'),
                             'url' => route('admin.service-records.invoice', $inquiry->serviceRecord),
                         ] : null,
-                        'amount_paid' => (float) $inquiry->serviceRecord->amount_paid,
-                        'payment_status' => $inquiry->serviceRecord->payment_status,
-                        'payment_method' => $inquiry->serviceRecord->payment_method,
+                        'invoice_total' => $invoiceTotal,
+                        'amount_paid' => $amountPaid,
+                        'balance_due' => max(0, round($invoiceTotal - $amountPaid, 2)),
+                        'payment_status' => $paymentStatus,
+                        'payment_method' => $inquiry->serviceRecord->payments->last()?->payment_method
+                            ?? $inquiry->serviceRecord->payment_method,
+                        'payment_count' => $inquiry->serviceRecord->payments->count(),
+                        'payments' => $inquiry->serviceRecord->payments->map(fn ($payment) => [
+                            'id' => $payment->id,
+                            'amount' => (float) $payment->amount,
+                            'payment_method' => $payment->payment_method,
+                            'reference' => $payment->reference,
+                            'paid_at' => $payment->paid_at?->format('M d, Y h:i A'),
+                            'recorded_by' => $payment->recordedBy?->name
+                                ?? ($payment->is_legacy_import ? 'Historical balance (legacy import)' : 'Staff account unavailable'),
+                            'is_legacy_import' => (bool) $payment->is_legacy_import,
+                        ])->values(),
                         'technician_name' => $inquiry->serviceRecord->technician?->name,
                         'work_summary' => $inquiry->serviceRecord->work_summary,
                         'labor_charge' => (float) $inquiry->serviceRecord->labor_charge,
