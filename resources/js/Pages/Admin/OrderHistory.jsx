@@ -39,6 +39,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
     const [orderStatus, setOrderStatus] = useState(filters.order_status ?? "");
     const [paymentStatus, setPaymentStatus] = useState(filters.payment_status ?? "");
     const [paymentMethod, setPaymentMethod] = useState(filters.payment_method ?? "");
+    const [salesChannel, setSalesChannel] = useState(filters.sales_channel ?? "");
     const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
     const [dateTo, setDateTo] = useState(filters.date_to ?? "");
 
@@ -49,6 +50,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
             order_status: orderStatus,
             payment_status: paymentStatus,
             payment_method: paymentMethod,
+            sales_channel: salesChannel,
             date_from: dateFrom,
             date_to: dateTo,
         }, {
@@ -63,6 +65,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
         setOrderStatus("");
         setPaymentStatus("");
         setPaymentMethod("");
+        setSalesChannel("");
         setDateFrom("");
         setDateTo("");
         router.get("/admin/order-history", {}, {
@@ -154,6 +157,14 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                         <option value="gcash">GCash</option>
                                         <option value="card">Card</option>
                                         <option value="maya">Maya</option>
+                                    </select>
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold" htmlFor="order-history-sales-channel">SALES CHANNEL</label>
+                                    <select id="order-history-sales-channel" className="form-select" value={salesChannel} onChange={(event) => setSalesChannel(event.target.value)}>
+                                        <option value="">All channels</option>
+                                        <option value="online">Online</option>
+                                        <option value="walk_in">Walk-in / in-store</option>
                                     </select>
                                 </div>
                                 <div className="col-sm-6 col-lg-1">
