@@ -140,6 +140,7 @@ class TransactionController extends Controller
     {
         return [
             'id' => $order->id,
+            'sales_channel' => $order->sales_channel ?? 'online',
             'transaction_id' => $order->paymongo_payment_id,
             'checkout_session_id' => $order->paymongo_checkout_session_id,
             'order_number' => $order->order_number,
