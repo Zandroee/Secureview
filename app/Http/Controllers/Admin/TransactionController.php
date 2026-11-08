@@ -52,6 +52,7 @@ class TransactionController extends Controller
                 'search' => $filters['search'] ?? '',
                 'payment_status' => $filters['payment_status'] ?? '',
                 'payment_method' => $filters['payment_method'] ?? '',
+                'sales_channel' => $filters['sales_channel'] ?? '',
                 'order_status' => $filters['order_status'] ?? '',
                 'date_from' => $filters['date_from'] ?? '',
                 'date_to' => $filters['date_to'] ?? '',
@@ -77,6 +78,7 @@ class TransactionController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'payment_status' => ['nullable', 'in:pending,paid,partially_refunded,refunded,failed,cancelled'],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
+            'sales_channel' => ['nullable', 'in:online,walk_in'],
             'order_status' => ['nullable', 'in:' . implode(',', self::ORDER_STATUSES)],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
@@ -119,6 +121,10 @@ class TransactionController extends Controller
 
         if (!empty($filters['payment_method'])) {
             $query->where('payment_method', $filters['payment_method']);
+        }
+
+        if (!empty($filters['sales_channel'])) {
+            $query->where('sales_channel', $filters['sales_channel']);
         }
 
         if (!empty($filters['order_status'])) {
