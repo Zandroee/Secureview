@@ -32,6 +32,7 @@ class Order extends Model
         'customer_phone',
         'customer_email',
         'fulfillment_method',
+        'pickup_address',
         'delivery_address',
         'delivery_address_details',
         'delivery_city',
