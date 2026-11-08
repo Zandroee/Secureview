@@ -1,16 +1,16 @@
 <?php
 
-namespace App\\Http\\Controllers\\Admin;
+namespace App\Http\Controllers\Admin;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\InvoiceRecord;
-use App\\Models\\InvoiceSetting;
-use App\\Models\\ServiceRecord;
-use App\\Services\\AdminActivityLogger;
-use App\\Services\\InvoiceDocumentService;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Validation\\ValidationException;
+use App\Http\Controllers\Controller;
+use App\Models\InvoiceRecord;
+use App\Models\InvoiceSetting;
+use App\Models\ServiceRecord;
+use App\Services\AdminActivityLogger;
+use App\Services\InvoiceDocumentService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ServiceInvoiceIssuanceController extends Controller
 {
