@@ -83,6 +83,144 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
         ]);
     }
 
+
+    public function test_walk_in_sale_can_be_linked_to_an_existing_customer_account(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'name' => 'Existing Store Customer',
+            'email' => 'existing.customer@example.test',
+            'phone' => '09171234567',
+        ]);
+        $product = $this->createProduct('Linked Customer Camera', 5, 2500);
+
+        $this->actingAs($admin)
+            ->post(route('admin.walk-in.sales.store'), [
+                'customer_user_id' => $customer->id,
+                'customer_name' => $customer->name,
+                'customer_phone' => $customer->phone,
+                'customer_email' => $customer->email,
+                'payment_method' => 'gcash',
+                'items' => [
+                    ['type' => 'product', 'id' => $product->id, 'quantity' => 1],
+                ],
+            ])
+            ->assertRedirect(route('admin.walk-in.index'))
+            ->assertSessionHasNoErrors();
+
+        $order = Order::query()->where('sales_channel', 'walk_in')->firstOrFail();
+
+        $this->assertSame($customer->id, $order->user_id);
+        $this->assertSame($customer->name, $order->customer_name);
+        $this->assertSame($customer->phone, $order->customer_phone);
+        $this->assertSame($customer->email, $order->customer_email);
+        $this->assertSame('paid', $order->payment_status);
+    }
+
+    public function test_walk_in_installation_requires_a_product_or_package_and_saves_the_selected_catalog_item(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'name' => 'Installation Customer',
+            'email' => 'installation.customer@example.test',
+            'phone' => '09171234567',
+        ]);
+        User::factory()->create(['role' => 'technician']);
+        $product = $this->createProduct('Walk-in Installation Camera', 6, 4200);
+        $date = today()->addDays(6)->toDateString();
+
+        $basePayload = [
+            'customer_user_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'customer_phone' => $customer->phone,
+            'customer_email' => $customer->email,
+            'service_type' => 'Installation',
+            'service_location_type' => 'in_shop',
+            'preferred_date' => $date,
+            'preferred_time' => self::SLOT,
+            'urgency' => 'normal',
+            'preferred_payment_method' => 'gcash',
+            'notes' => 'Installation booked at the physical store.',
+        ];
+
+        $this->actingAs($admin)
+            ->post(route('admin.walk-in.services.store'), $basePayload)
+            ->assertSessionHasErrors(['item_type', 'item_id']);
+
+        $this->assertDatabaseMissing('inquiries', [
+            'customer_email' => $customer->email,
+            'service_type' => 'Installation',
+            'intake_channel' => 'walk_in',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.walk-in.services.store'), [
+                ...$basePayload,
+                'item_type' => 'product',
+                'item_id' => $product->id,
+            ])
+            ->assertRedirect(route('admin.walk-in.index'))
+            ->assertSessionHasNoErrors();
+
+        $inquiry = Inquiry::query()
+            ->where('intake_channel', 'walk_in')
+            ->where('service_type', 'Installation')
+            ->firstOrFail();
+
+        $this->assertSame($customer->id, $inquiry->user_id);
+        $this->assertSame(Product::class, $inquiry->inquirable_type);
+        $this->assertSame($product->id, $inquiry->inquirable_id);
+        $this->assertSame($product->name, $inquiry->item_name);
+        $this->assertSame('gcash', $inquiry->preferred_payment_method);
+        $this->assertSame('pending', $inquiry->status);
+        $this->assertSame(6, (int) $product->fresh()->stock_quantity);
+    }
+
+    public function test_walk_in_booking_page_includes_searchable_products_and_packages_for_sale_and_installation(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'name' => 'Picker Customer',
+            'email' => 'picker@example.test',
+            'phone' => '09171234567',
+        ]);
+        $product = $this->createProduct('Z Picker Camera', 7, 1700);
+        $package = $this->createPackage('A Picker CCTV Package', 6500);
+        $package->packageItems()->create([
+            'product_id' => $product->id,
+            'quantity' => 2,
+            'price' => $product->price,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.walk-in.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/WalkIn')
+                ->where('customers.0.id', $customer->id)
+                ->where('customers.0.email', $customer->email)
+                ->where('customers.0.phone', $customer->phone)
+                ->has('catalogItems', 2)
+                ->where('catalogItems.0.type', 'package')
+                ->where('catalogItems.0.includes.0.name', 'Z Picker Camera')
+                ->where('catalogItems.1.type', 'product')
+                ->has('unavailableDates')
+                ->has('unavailableTimeSlots')
+                ->where('noTechniciansAvailable', true));
+    }
+
     public function test_admin_can_register_a_walk_in_drop_off_without_creating_a_customer_account(): void
     {
         $admin = User::factory()->create([
@@ -95,7 +233,7 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
             ->post(route('admin.walk-in.services.store'), [
                 'customer_name' => 'Guest Repair Customer',
                 'customer_phone' => '09171234567',
-                'customer_email' => null,
+                'customer_email' => 'guest.repair@example.test',
                 'service_type' => 'Repair',
                 'service_location_type' => 'in_shop',
                 'preferred_date' => today()->addDays(4)->toDateString(),
@@ -110,7 +248,7 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
         $inquiry = Inquiry::query()->where('intake_channel', 'walk_in')->firstOrFail();
 
         $this->assertNull($inquiry->user_id);
-        $this->assertNull($inquiry->customer_email);
+        $this->assertSame('guest.repair@example.test', $inquiry->customer_email);
         $this->assertSame('in_shop', $inquiry->service_location_type);
         $this->assertSame('pending', $inquiry->status);
         $this->assertSame('Netmax Trading — In-shop service counter', $inquiry->street_address);
@@ -192,6 +330,7 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
             ->post(route('admin.walk-in.services.store'), [
                 'customer_name' => 'New Counter Customer',
                 'customer_phone' => '09179998888',
+                'customer_email' => 'new.counter@example.test',
                 'service_type' => 'Repair',
                 'service_location_type' => 'customer_site',
                 'street_address' => 'New customer address',

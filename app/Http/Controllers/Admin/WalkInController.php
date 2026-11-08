@@ -42,6 +42,8 @@ class WalkInController extends Controller
                 'price' => $product->effectivePrice(),
                 'stock' => $inventory->getAvailableStock($product),
                 'warranty' => $product->warranty,
+                'category' => $product->category,
+                'brand' => $product->brand,
             ])
             ->merge(Package::query()->with('packageItems.product')->orderBy('name')->get()
                 ->map(fn (Package $package) => [
@@ -51,6 +53,12 @@ class WalkInController extends Controller
                     'price' => $package->effectivePrice(),
                     'stock' => $inventory->getAvailableStock($package),
                     'warranty' => $package->warranty,
+                    'category' => $package->category,
+                    'brand' => $package->brand,
+                    'includes' => $package->packageItems->map(fn ($packageItem) => [
+                        'name' => $packageItem->product?->name ?? 'Catalog product',
+                        'quantity' => (int) $packageItem->quantity,
+                    ])->values(),
                 ]))
             ->sortBy('name')
             ->values();
@@ -70,6 +78,7 @@ class WalkInController extends Controller
             'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
             'todayDate' => today()->toDateString(),
             'urgencyFees' => ServiceBookingFeeSetting::current()->fees(),
+            ...$this->bookingAvailability(),
         ]);
     }
 
@@ -188,33 +197,85 @@ class WalkInController extends Controller
             ->with('sale_order_number', $order->order_number);
     }
 
-    public function storeService(Request $request, JobNotificationService $notifications)
+    public function storeService(Request $request, JobNotificationService $notifications, InventoryService $inventory)
     {
         $validated = $request->validate([
             'customer_user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'user'))],
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['required', 'regex:/^09\d{9}$/'],
-            'customer_email' => ['nullable', 'email', 'max:255'],
+            'customer_email' => ['required', 'email', 'max:255'],
             'service_type' => ['required', Rule::in(['Installation', 'Site Inspection', 'Maintenance', 'Repair', 'Consultation', 'Other'])],
             'service_location_type' => ['required', Rule::in(['in_shop', 'customer_site'])],
             'street_address' => ['required_if:service_location_type,customer_site', 'nullable', 'string', 'max:255'],
             'address_details' => ['nullable', 'string', 'max:500'],
             'city' => ['required_if:service_location_type,customer_site', 'nullable', 'string', 'max:120'],
+            'service_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'service_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'google_place_id' => ['nullable', 'string', 'max:255'],
             'preferred_date' => ['required', 'date', 'after_or_equal:today'],
             'preferred_time' => ['required', Rule::in(self::BOOKING_TIME_SLOTS)],
             'urgency' => ['required', Rule::in(['normal', 'urgent', 'emergency'])],
+            'item_type' => ['nullable', 'required_if:service_type,Installation', Rule::in(['product', 'package'])],
+            'item_id' => ['nullable', 'required_if:service_type,Installation', 'integer', 'min:1'],
             'item_name' => ['nullable', 'string', 'max:180'],
+            'preferred_payment_method' => ['nullable', 'required_if:service_type,Installation', Rule::in(['cash', 'gcash', 'card', 'maya'])],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $this->assertBookingSlotAvailable($validated['preferred_date'], $validated['preferred_time']);
-
         $urgencyFees = ServiceBookingFeeSetting::current()->fees();
         $urgencyFee = match ($validated['urgency']) {
-            'urgent' => (float) ($urgencyFees['urgent'] ?? 0),
-            'emergency' => (float) ($urgencyFees['emergency'] ?? 0),
+            'urgent' => round(max(0, (float) ($urgencyFees['urgent'] ?? 0)), 2),
+            'emergency' => round(max(0, (float) ($urgencyFees['emergency'] ?? 0)), 2),
             default => 0.0,
         };
+
+        if ($urgencyFee > 0 && empty($validated['preferred_payment_method'])) {
+            throw ValidationException::withMessages([
+                'preferred_payment_method' => 'Choose a preferred payment method for the priority booking fee.',
+            ]);
+        }
+
+        $hasItemType = filled($validated['item_type'] ?? null);
+        $hasItemId = filled($validated['item_id'] ?? null);
+        if ($hasItemType !== $hasItemId) {
+            throw ValidationException::withMessages([
+                'item_id' => 'Select both the product/package type and catalog item.',
+            ]);
+        }
+
+        $inquirable = null;
+        if ($hasItemType && $hasItemId) {
+            $modelClass = $validated['item_type'] === 'product' ? Product::class : Package::class;
+            $inquirable = $modelClass::query()->find($validated['item_id']);
+            if (!$inquirable) {
+                throw ValidationException::withMessages([
+                    'item_id' => 'The selected product or package is no longer available.',
+                ]);
+            }
+        }
+
+        if ($validated['service_type'] === 'Installation' && !$inquirable) {
+            throw ValidationException::withMessages([
+                'item_id' => 'Choose a product or package before registering an installation booking.',
+            ]);
+        }
+
+        if ($inquirable) {
+            $stockError = $inventory->getAvailabilityError($inquirable, 1);
+            if ($stockError) {
+                throw ValidationException::withMessages(['item_id' => $stockError]);
+            }
+        }
+
+        $hasLatitude = filled($validated['service_latitude'] ?? null);
+        $hasLongitude = filled($validated['service_longitude'] ?? null);
+        if ($hasLatitude !== $hasLongitude) {
+            throw ValidationException::withMessages([
+                'service_location' => 'Choose a point on the map or leave the map pin unset.',
+            ]);
+        }
+
+        $this->assertBookingSlotAvailable($validated['preferred_date'], $validated['preferred_time']);
 
         $inquiryNumber = $this->uniqueReference('INQ-WI-');
         $isInShop = $validated['service_location_type'] === 'in_shop';
@@ -222,16 +283,22 @@ class WalkInController extends Controller
         $inquiry = Inquiry::create([
             'user_id' => $validated['customer_user_id'] ?? null,
             'inquiry_number' => $inquiryNumber,
-            'item_name' => filled($validated['item_name'] ?? null) ? trim($validated['item_name']) : null,
+            'inquirable_type' => $inquirable ? get_class($inquirable) : null,
+            'inquirable_id' => $inquirable?->id,
+            'item_name' => $inquirable?->name ?? (filled($validated['item_name'] ?? null) ? trim($validated['item_name']) : null),
             'customer_name' => trim($validated['customer_name']),
             'customer_phone' => $validated['customer_phone'],
-            'customer_email' => $validated['customer_email'] ?? null,
+            'customer_email' => $validated['customer_email'],
             'street_address' => $isInShop ? 'Netmax Trading — In-shop service counter' : trim($validated['street_address']),
-            'address_details' => $validated['address_details'] ?? null,
+            'address_details' => $isInShop ? null : ($validated['address_details'] ?? null),
             'city' => $isInShop ? 'In-shop' : trim($validated['city']),
+            'service_latitude' => $isInShop ? null : ($validated['service_latitude'] ?? null),
+            'service_longitude' => $isInShop ? null : ($validated['service_longitude'] ?? null),
+            'google_place_id' => $isInShop ? null : ($validated['google_place_id'] ?? null),
             'service_type' => $validated['service_type'],
             'urgency' => $validated['urgency'],
             'urgency_fee' => $urgencyFee,
+            'preferred_payment_method' => $validated['preferred_payment_method'] ?? null,
             'preferred_date' => $validated['preferred_date'],
             'preferred_time' => $validated['preferred_time'],
             'notes' => $validated['notes'] ?? null,
@@ -330,6 +397,65 @@ class WalkInController extends Controller
                 'reason' => 'Walk-in sale ' . $order->order_number . ': ' . $items,
             ]);
         }
+    }
+
+    private function bookingAvailability(): array
+    {
+        $unavailableDates = BlockedBookingDate::query()
+            ->whereDate('booking_date', '>=', today())
+            ->get()
+            ->map(fn (BlockedBookingDate $row) => $row->booking_date->format('Y-m-d'))
+            ->values();
+
+        $unavailableTimeSlots = BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', '>=', today())
+            ->get(['booking_date', 'booking_time'])
+            ->groupBy(fn (BlockedBookingTimeSlot $row) => $row->booking_date->format('Y-m-d'))
+            ->map(fn ($rows) => $rows->pluck('booking_time')->unique()->values())
+            ->all();
+
+        $technicianCount = User::query()->where('role', 'technician')->count();
+        $active = Inquiry::query()
+            ->with('technicians:id')
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->get(['id', 'technician_id', 'preferred_date', 'preferred_time']);
+
+        $assignedIds = fn (Inquiry $job) => $job->technicians->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->push($job->technician_id ? (int) $job->technician_id : null)
+            ->filter()
+            ->unique();
+
+        if ($technicianCount > 0) {
+            foreach ($active->groupBy(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d') . '|' . $job->preferred_time) as $key => $jobs) {
+                if ($jobs->flatMap($assignedIds)->unique()->count() >= $technicianCount) {
+                    [$date, $time] = explode('|', $key, 2);
+                    $unavailableTimeSlots[$date] = collect($unavailableTimeSlots[$date] ?? [])
+                        ->push($time)->unique()->values();
+                }
+            }
+
+            foreach ($active->groupBy(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d')) as $date => $jobs) {
+                if ($jobs->flatMap($assignedIds)->unique()->count() >= $technicianCount) {
+                    $unavailableDates->push($date);
+                    $unavailableTimeSlots[$date] = collect($unavailableTimeSlots[$date] ?? [])
+                        ->merge(self::BOOKING_TIME_SLOTS)->unique()->values();
+                }
+            }
+        }
+
+        foreach ($unavailableTimeSlots as $date => $slots) {
+            if (collect(self::BOOKING_TIME_SLOTS)->every(fn ($slot) => collect($slots)->contains($slot))) {
+                $unavailableDates->push($date);
+            }
+        }
+
+        return [
+            'unavailableDates' => $unavailableDates->unique()->values(),
+            'unavailableTimeSlots' => $unavailableTimeSlots,
+            'noTechniciansAvailable' => $technicianCount === 0,
+        ];
     }
 
     private function assertBookingSlotAvailable(string $date, string $time): void

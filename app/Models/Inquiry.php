@@ -29,6 +29,7 @@ class Inquiry extends Model
         'service_type',
         'urgency',
         'urgency_fee',
+        'preferred_payment_method',
         'preferred_date',
         'preferred_time',
         'notes',
