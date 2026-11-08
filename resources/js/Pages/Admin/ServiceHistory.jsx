@@ -250,6 +250,7 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                                                 <button
                                                                     type="button"
                                                                     className="btn btn-outline-secondary btn-sm"
+                                                                    disabled={Number(service.service_record.balance_due ?? 0) <= 0}
                                                                     onClick={() => {
                                                                         const balance = Number(service.service_record.balance_due ?? 0);
                                                                         if (balance <= 0) {
