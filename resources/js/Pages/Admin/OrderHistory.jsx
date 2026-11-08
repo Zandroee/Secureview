@@ -186,6 +186,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                         <div className="d-flex align-items-start justify-content-between gap-2">
                                             <div className="min-w-0">
                                                 <h2 id={"order-history-mobile-title-" + order.id} className="h6 fw-bold mb-1">{order.order_number}</h2>
+                                                <span className={"badge " + (order.sales_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{order.sales_channel === "walk_in" ? "Walk-in sale" : "Online order"}</span>
                                                 <div className="small text-muted">{order.items?.length ?? 0} {(order.items?.length ?? 0) === 1 ? "item" : "items"}</div>
                                             </div>
                                             <span className={"badge rounded-pill text-capitalize flex-shrink-0 " + statusClass(order.order_status)}>{statusLabel(order.order_status)}</span>
@@ -236,6 +237,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                             <tr key={order.id}>
                                                 <td className="ps-3">
                                                     <div className="fw-bold">{order.order_number}</div>
+                                                    <span className={"badge mt-1 " + (order.sales_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{order.sales_channel === "walk_in" ? "Walk-in sale" : "Online order"}</span>
                                                     <div className="small text-secondary">{order.items?.length ?? 0} {(order.items?.length ?? 0) === 1 ? "item" : "items"}</div>
                                                 </td>
                                                 <td>
