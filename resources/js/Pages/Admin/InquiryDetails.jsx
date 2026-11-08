@@ -197,6 +197,10 @@ export default function AdminInquiryDetails({
                                                 {service.item_name ||
                                                     "General Service"}
                                             </div>
+                                            <div className="d-flex flex-wrap gap-1 mt-2">
+                                                <span className={"badge " + (service.intake_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{service.intake_channel === "walk_in" ? "Walk-in intake" : "Online request"}</span>
+                                                <span className="badge text-bg-light text-dark">{service.service_location_type === "in_shop" ? "In-shop drop-off" : "Customer site"}</span>
+                                            </div>
                                         </div>
 
                                         <div className="text-end">
@@ -245,11 +249,11 @@ export default function AdminInquiryDetails({
 
                                         <div className="col-12">
                                             <div className="small text-muted">
-                                                SERVICE ADDRESS
+                                                {service.service_location_type === "in_shop" ? "SERVICE LOCATION" : "SERVICE ADDRESS"}
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {service.street_address}, {service.city}
+                                                {service.service_location_type === "in_shop" ? "Netmax Trading — In-shop service counter" : service.street_address + ", " + service.city}
                                             </div>
                                             {service.address_details && (
                                                 <div className="small text-muted mt-1">
@@ -258,7 +262,7 @@ export default function AdminInquiryDetails({
                                             )}
                                         </div>
 
-                                        {(service.street_address || service.city || service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined) && (
+                                        {(service.service_location_type !== "in_shop" && (service.street_address || service.city || service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined)) && (
                                             <div className="col-12">
                                                 <ServiceLocationMap
                                                     latitude={service.service_latitude}
