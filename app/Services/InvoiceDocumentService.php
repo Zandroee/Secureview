@@ -39,7 +39,7 @@ class InvoiceDocumentService
                 'name' => $order->customer_name,
                 'email' => $order->customer_email,
                 'phone' => $order->customer_phone,
-                'address' => ($order->fulfillment_method ?? 'delivery') === 'pickup' ? 'Shop pickup at Netmax Trading' : $order->delivery_address,
+                'address' => ($order->fulfillment_method ?? 'delivery') === 'pickup' ? ($order->pickup_address ?: 'Shop pickup — location to be confirmed by Netmax Trading') : $order->delivery_address,
             ],
             'items' => $order->items->map(fn ($item) => [
                 'id' => $item->id,
