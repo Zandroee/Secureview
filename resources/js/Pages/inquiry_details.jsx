@@ -108,6 +108,10 @@ export default function ServiceDetails({ inquiry: service, success }) {
                                         "0 8px 24px rgba(0,0,0,0.04)",
                                 }}
                             >
+                                <div className="d-flex flex-wrap gap-2 mb-3">
+                                    <span className={"badge " + (service.intake_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{service.intake_channel === "walk_in" ? "Walk-in booking" : "Online booking"}</span>
+                                    <span className="badge text-bg-light text-dark">{service.service_location_type === "in_shop" ? "In-shop drop-off" : "Customer site visit"}</span>
+                                </div>
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <h4
                                         className="fw-bold mb-0"
@@ -271,7 +275,7 @@ export default function ServiceDetails({ inquiry: service, success }) {
                                                     {service.service_record.items.map((item, index) => (
                                                         <tr key={index}>
                                                             <td><div className="fw-semibold">{item.product_name}</div>{item.notes && <div className="small text-muted">{item.notes}</div>}</td>
-                                                            <td><span className={"badge " + (item.action === "used" ? "text-bg-primary" : "text-bg-secondary")}>{item.action === "used" ? (item.is_warranty_covered ? "Used · Warranty-covered" : "Used / replaced") : "Removed"}</span></td>
+                                                            <td><span className={"badge " + (item.is_warranty_covered ? "text-bg-success" : item.action === "used" ? "text-bg-primary" : "text-bg-secondary")}>{item.action === "used" ? (item.is_warranty_covered ? "Used · Warranty-covered" : "Used / replaced") : "Removed"}</span></td>
                                                             <td className="text-end">{item.quantity}</td>
                                                             <td className="text-end">{item.action === "used" ? (item.is_warranty_covered ? "No charge" : "₱" + Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : "—"}</td>
                                                         </tr>
@@ -338,11 +342,11 @@ export default function ServiceDetails({ inquiry: service, success }) {
 
                                     <div className="col-md-7">
                                         <div className="small text-muted mb-1">
-                                            STREET ADDRESS
+                                            {service.service_location_type === "in_shop" ? "SERVICE LOCATION" : "STREET ADDRESS"}
                                         </div>
 
                                         <div className="fw-semibold">
-                                            {service.street_address}
+                                            {service.service_location_type === "in_shop" ? "In-shop drop-off at Netmax Trading" : service.street_address}
                                         </div>
                                     </div>
 
@@ -363,7 +367,7 @@ export default function ServiceDetails({ inquiry: service, success }) {
                                         </div>
                                     )}
 
-                                    {(service.street_address || service.city || service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined) && (
+                                    {(service.service_location_type !== "in_shop" && (service.street_address || service.city || service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined)) && (
                                         <div className="col-12">
                                             <div className="small text-muted fw-semibold mb-2">SERVICE LOCATION MAP</div>
                                             <ServiceLocationMap
