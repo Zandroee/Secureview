@@ -89,7 +89,7 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
             'role' => 'admin',
             'email_verified_at' => now(),
         ]);
-        User::factory()->create(['role' => 'technician']);
+        $technician = User::factory()->create(['role' => 'technician']);
 
         $this->actingAs($admin)
             ->post(route('admin.walk-in.services.store'), [
@@ -120,6 +120,36 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
             'type' => 'new_inquiry',
             'related_id' => $inquiry->id,
         ]);
+
+        // Guest walk-ins must remain compatible with the ordinary assignment
+        // and confirmation workflow without attempting customer notifications.
+        $this->actingAs($admin)
+            ->patch(route('admin.inquiries.technician', $inquiry), [
+                'technician_ids' => [$technician->id],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)
+            ->patch(route('admin.inquiries.confirm', $inquiry), [
+                'preferred_date' => $inquiry->preferred_date->format('Y-m-d'),
+                'preferred_time' => self::SLOT,
+                'technician_ids' => [$technician->id],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('confirmed', $inquiry->fresh()->status);
+        $notificationRecipients = \App\Models\CustomerNotification::query()
+            ->where('related_type', Inquiry::class)
+            ->where('related_id', $inquiry->id)
+            ->pluck('user_id')
+            ->unique()
+            ->all();
+        $this->assertNotEmpty($notificationRecipients);
+        $this->assertContains($admin->id, $notificationRecipients);
+        $this->assertContains($technician->id, $notificationRecipients);
+        $this->assertNotContains(null, $notificationRecipients);
     }
 
     public function test_warranty_covered_replacements_are_not_charged_and_service_invoice_tracks_each_payment(): void
