@@ -519,6 +519,7 @@ class TechnicianWorkspaceController extends Controller
             'items.*.product_name' => ['required', 'string', 'max:180'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:10000'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
+            'items.*.is_warranty_covered' => ['nullable', 'boolean'],
             'items.*.notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -581,9 +582,12 @@ class TechnicianWorkspaceController extends Controller
                     }
 
                     $productName = $product->name;
-                    $unitPrice = array_key_exists('unit_price', $item) && $item['unit_price'] !== null && $item['unit_price'] !== ''
-                        ? round((float) $item['unit_price'], 2)
-                        : round((float) $product->price, 2);
+                    $isWarrantyCovered = (bool) ($item['is_warranty_covered'] ?? false);
+                    $unitPrice = $isWarrantyCovered
+                        ? 0.0
+                        : (array_key_exists('unit_price', $item) && $item['unit_price'] !== null && $item['unit_price'] !== ''
+                            ? round((float) $item['unit_price'], 2)
+                            : round((float) $product->price, 2));
                     $next = $previous - $quantity;
                     $product->update(['stock_quantity' => $next]);
 
@@ -610,6 +614,7 @@ class TechnicianWorkspaceController extends Controller
                     'action' => $action,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
+                    'is_warranty_covered' => $action === 'used' && (bool) ($item['is_warranty_covered'] ?? false),
                     'notes' => filled($item['notes'] ?? null) ? trim($item['notes']) : null,
                 ]);
             }
@@ -812,6 +817,7 @@ class TechnicianWorkspaceController extends Controller
                     'action' => $item->action,
                     'quantity' => $item->quantity,
                     'unit_price' => (float) $item->unit_price,
+                    'is_warranty_covered' => (bool) $item->is_warranty_covered,
                     'notes' => $item->notes,
                 ])->values(),
             ] : null,
