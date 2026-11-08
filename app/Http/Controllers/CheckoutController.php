@@ -455,7 +455,7 @@ class CheckoutController extends Controller
             }
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $checkoutItems, $deliveryDetails, $deliveryCity, $vouchers) {
+        $order = DB::transaction(function () use ($request, $validated, $checkoutItems, $deliveryDetails, $deliveryCity, $fulfillmentMethod, $vouchers) {
             $subtotal = 0;
 
             foreach ($checkoutItems as $checkoutItem) {
