@@ -74,6 +74,49 @@ class CheckoutDeliveryLocationTest extends TestCase
         $this->assertEquals(121.0509002, $order->delivery_longitude);
     }
 
+    public function test_checkout_preserves_legacy_single_field_delivery_address_requests(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+            'phone' => '09171234567',
+        ]);
+        $product = Product::create([
+            'name' => 'Legacy Address Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 900,
+            'stock_quantity' => 4,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => 900,
+        ]);
+
+        $this->actingAs($customer)
+            ->post(route('checkout.store'), [
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'delivery_address' => '12 Legacy Street, Barangay San Miguel, Taguig',
+                'payment_method' => 'cash',
+            ])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHasNoErrors();
+
+        $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
+        $this->assertSame('delivery', $order->fulfillment_method);
+        $this->assertSame('12 Legacy Street, Barangay San Miguel, Taguig', $order->delivery_address);
+    }
+
     public function test_checkout_requires_a_complete_delivery_pin_when_coordinates_are_started(): void
     {
         $customer = User::factory()->create([
@@ -371,6 +414,11 @@ class CheckoutDeliveryLocationTest extends TestCase
                 'customer_phone' => '09171234567',
                 'customer_email' => $customer->email,
                 'fulfillment_method' => 'pickup',
+                // Simulate switching from delivery after an address and map pin were entered.
+                'delivery_street_address' => 'Old delivery address that must not be saved',
+                'delivery_city' => 'Old delivery city',
+                'delivery_latitude' => 14.5176,
+                'delivery_longitude' => 121.0509,
                 'payment_method' => 'cash',
                 'notes' => 'I will collect this at the shop.',
             ])
