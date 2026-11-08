@@ -93,6 +93,8 @@ class ScheduleController extends Controller
                     'customer_phone' => $inquiry->customer_phone,
                     'service_type' => $inquiry->service_type,
                     'item_name' => $inquiry->item_name,
+                    'intake_channel' => $inquiry->intake_channel ?? 'online',
+                    'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                     'urgency' => $inquiry->urgency,
                     'urgency_fee' => (float) $inquiry->urgency_fee,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
@@ -332,7 +334,7 @@ class ScheduleController extends Controller
         ]);
 
         $query = Inquiry::query()
-            ->with(['technicians', 'serviceRecord.technician', 'serviceRecord.items'])
+            ->with(['technicians', 'serviceRecord.technician', 'serviceRecord.items', 'serviceRecord.invoiceRecord'])
             ->where('status', 'completed');
 
         if (!empty($filters['search'])) {
@@ -389,6 +391,14 @@ class ScheduleController extends Controller
                         ?? $inquiry->updated_at?->format('M d, Y h:i A'),
                     'service_record' => $inquiry->serviceRecord ? [
                         'id' => $inquiry->serviceRecord->id,
+                        'invoice_record' => $inquiry->serviceRecord->invoiceRecord ? [
+                            'record_number' => $inquiry->serviceRecord->invoiceRecord->record_number,
+                            'issued_at' => $inquiry->serviceRecord->invoiceRecord->issued_at?->format('M d, Y h:i A'),
+                            'url' => route('admin.service-records.invoice', $inquiry->serviceRecord),
+                        ] : null,
+                        'amount_paid' => (float) $inquiry->serviceRecord->amount_paid,
+                        'payment_status' => $inquiry->serviceRecord->payment_status,
+                        'payment_method' => $inquiry->serviceRecord->payment_method,
                         'technician_name' => $inquiry->serviceRecord->technician?->name,
                         'work_summary' => $inquiry->serviceRecord->work_summary,
                         'labor_charge' => (float) $inquiry->serviceRecord->labor_charge,
