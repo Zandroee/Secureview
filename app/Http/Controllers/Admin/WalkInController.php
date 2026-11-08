@@ -223,58 +223,66 @@ class WalkInController extends Controller
     private function recordSaleInventoryAdjustments(Order $order, User $actor): void
     {
         $order->loadMissing('items');
+        $movements = [];
 
         foreach ($order->items as $orderItem) {
-            if ($orderItem->purchasable_type === Package::class) {
+            if ($orderItem->purchasable_type === Product::class) {
+                $productId = (int) $orderItem->purchasable_id;
+                $required = (int) $orderItem->quantity;
+                $itemLabel = $orderItem->name;
+            } elseif ($orderItem->purchasable_type === Package::class) {
                 $package = Package::query()->with('packageItems')->find($orderItem->purchasable_id);
                 if (!$package) {
                     continue;
                 }
 
                 foreach ($package->packageItems as $packageItem) {
-                    $product = Product::query()->whereKey($packageItem->product_id)->lockForUpdate()->first();
-                    if (!$product) {
-                        continue;
+                    $productId = (int) $packageItem->product_id;
+                    $required = (int) $packageItem->quantity * (int) $orderItem->quantity;
+
+                    if (!isset($movements[$productId])) {
+                        $movements[$productId] = ['quantity' => 0, 'items' => []];
                     }
 
-                    $quantity = (int) $packageItem->quantity * (int) $orderItem->quantity;
-                    $newQuantity = (int) $product->stock_quantity;
-                    $previousQuantity = $newQuantity + $quantity;
-
-                    InventoryAdjustment::create([
-                        'product_id' => $product->id,
-                        'product_name' => $product->name,
-                        'user_id' => $actor->id,
-                        'previous_quantity' => $previousQuantity,
-                        'new_quantity' => $newQuantity,
-                        'quantity_change' => -$quantity,
-                        'reason' => 'Walk-in sale ' . $order->order_number . ' — package ' . $orderItem->name,
-                    ]);
+                    $movements[$productId]['quantity'] += $required;
+                    $movements[$productId]['items'][] = $orderItem->name;
                 }
 
                 continue;
-            }
-
-            if ($orderItem->purchasable_type !== Product::class) {
+            } else {
                 continue;
             }
 
-            $product = Product::query()->whereKey($orderItem->purchasable_id)->lockForUpdate()->first();
+            if (!isset($movements[$productId])) {
+                $movements[$productId] = ['quantity' => 0, 'items' => []];
+            }
+
+            $movements[$productId]['quantity'] += $required;
+            $movements[$productId]['items'][] = $itemLabel;
+        }
+
+        // Aggregate duplicate product lines and package components so the audit
+        // records the real before/after stock for one sale, not misleading
+        // intermediate quantities when the same SKU appears more than once.
+        foreach ($movements as $productId => $movement) {
+            $product = Product::query()->whereKey($productId)->lockForUpdate()->first();
             if (!$product) {
                 continue;
             }
 
-            $quantity = (int) $orderItem->quantity;
+            $quantity = (int) $movement['quantity'];
             $newQuantity = (int) $product->stock_quantity;
+            $previousQuantity = $newQuantity + $quantity;
+            $items = implode(', ', array_values(array_unique($movement['items'])));
 
             InventoryAdjustment::create([
                 'product_id' => $product->id,
                 'product_name' => $product->name,
                 'user_id' => $actor->id,
-                'previous_quantity' => $newQuantity + $quantity,
+                'previous_quantity' => $previousQuantity,
                 'new_quantity' => $newQuantity,
                 'quantity_change' => -$quantity,
-                'reason' => 'Walk-in sale ' . $order->order_number,
+                'reason' => 'Walk-in sale ' . $order->order_number . ': ' . $items,
             ]);
         }
     }
