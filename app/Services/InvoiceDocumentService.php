@@ -71,6 +71,97 @@ class InvoiceDocumentService
         ];
     }
 
+    /**
+     * Build an internal service invoice snapshot from the technician's
+     * finalized Post-Service Record. Removed customer components are never
+     * billed; only parts marked "used" contribute to the invoice.
+     */
+    public function buildServiceSnapshot(ServiceRecord $record): array
+    {
+        $record->loadMissing(['inquiry', 'technician', 'items']);
+        $inquiry = $record->inquiry;
+        $parts = $record->items
+            ->where('action', 'used')
+            ->map(fn ($item) => [
+                'id' => $item->id,
+                'name' => $item->product_name,
+                'quantity' => (int) $item->quantity,
+                'unit_price' => (float) $item->unit_price,
+                'amount' => round((float) $item->unit_price * (int) $item->quantity, 2),
+                'notes' => $item->notes,
+            ])
+            ->values()
+            ->all();
+
+        $partTotal = collect($parts)->sum('amount');
+        $priorityFee = $inquiry->intake_channel === 'walk_in'
+            ? (float) $inquiry->urgency_fee
+            : 0.0;
+        $total = round((float) $record->labor_charge + (float) $record->additional_charge + $partTotal + $priorityFee, 2);
+        $amountPaid = min($total, max(0, (float) $record->amount_paid));
+
+        $lines = [];
+        if ((float) $record->labor_charge > 0) {
+            $lines[] = ['name' => 'Labor / service charge', 'quantity' => 1, 'unit_price' => (float) $record->labor_charge, 'amount' => (float) $record->labor_charge];
+        }
+        foreach ($parts as $part) {
+            $lines[] = ['name' => $part['name'], 'quantity' => $part['quantity'], 'unit_price' => $part['unit_price'], 'amount' => $part['amount'], 'notes' => $part['notes']];
+        }
+        if ((float) $record->additional_charge > 0) {
+            $lines[] = ['name' => 'Additional service charge', 'quantity' => 1, 'unit_price' => (float) $record->additional_charge, 'amount' => (float) $record->additional_charge];
+        }
+        if ($priorityFee > 0) {
+            $lines[] = ['name' => ucfirst($inquiry->urgency) . ' walk-in booking fee', 'quantity' => 1, 'unit_price' => $priorityFee, 'amount' => $priorityFee];
+        }
+
+        $business = $this->businessSettings();
+
+        return [
+            'document_type' => 'service_invoice',
+            'service_record_id' => $record->id,
+            'reference_number' => $inquiry->inquiry_number,
+            'document_date' => $record->completed_at?->format('F j, Y'),
+            'generated_at' => now()->format('F j, Y h:i A'),
+            'payment_method' => $record->payment_method,
+            'payment_status' => $record->payment_status,
+            'is_paid' => $record->payment_status === 'paid',
+            'customer' => [
+                'name' => $inquiry->customer_name,
+                'email' => $inquiry->customer_email,
+                'phone' => $inquiry->customer_phone,
+                'address' => $inquiry->street_address . ', ' . $inquiry->city,
+            ],
+            'service' => [
+                'type' => $inquiry->service_type,
+                'item_name' => $inquiry->item_name,
+                'work_summary' => $record->work_summary,
+                'customer_notes' => $record->customer_notes,
+                'location_type' => $inquiry->service_location_type,
+                'technician' => $record->technician?->name,
+            ],
+            'items' => $lines,
+            'parts' => $parts,
+            'subtotal' => $total,
+            'total' => $total,
+            'amount_paid' => $amountPaid,
+            'balance_due' => max(0, round($total - $amountPaid, 2)),
+            'paid_at' => $record->paid_at?->format('F j, Y h:i A'),
+            'business' => [
+                'name' => $business['business_name'] ?? null,
+                'registered_name' => $business['registered_name'] ?? null,
+                'address' => $business['address'] ?? null,
+                'email' => $business['email'] ?? null,
+                'phone' => $business['phone'] ?? null,
+                'tin' => $business['tin'] ?? null,
+                'vat_status' => $business['vat_status'] ?? null,
+                'branch_code' => $business['branch_code'] ?? null,
+                'bir_permit_number' => $business['bir_permit_number'] ?? null,
+                'bir_atp_number' => $business['bir_atp_number'] ?? null,
+                'serial_number_range' => $business['serial_number_range'] ?? null,
+            ],
+        ];
+    }
+
     public function profileReady(?InvoiceSetting $settings = null): bool
     {
         $settings ??= InvoiceSetting::query()->find(1);
