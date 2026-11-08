@@ -83,9 +83,9 @@ class InvoiceController extends Controller
         $totalCents = (int) round((float) $invoice['total'] * 100);
         $amountPaidCents = (int) round((float) $serviceRecord->payments->sum('amount') * 100);
         $amountPaidCents = min($totalCents, max(0, $amountPaidCents));
-        $invoice['payment_status'] = $amountPaidCents <= 0
-            ? 'pending'
-            : ($amountPaidCents >= $totalCents ? 'paid' : 'partially_paid');
+        $invoice['payment_status'] = $totalCents <= 0 || $amountPaidCents >= $totalCents
+            ? 'paid'
+            : ($amountPaidCents <= 0 ? 'pending' : 'partially_paid');
         $invoice['payment_method'] = $serviceRecord->payments->last()?->payment_method
             ?? $serviceRecord->payment_method;
         $invoice['amount_paid'] = $amountPaidCents / 100;
