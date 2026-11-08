@@ -24,6 +24,7 @@ class InvoiceDocumentService
 
         return [
             'order_id' => $order->id,
+            'sales_channel' => $order->sales_channel ?? 'online',
             'reference_number' => $order->order_number,
             'document_date' => $order->created_at?->format('F j, Y'),
             'payment_date' => $order->paid_at?->format('F j, Y h:i A'),
