@@ -11,6 +11,7 @@ const money = (value) => "₱" + Number(value || 0).toLocaleString("en-PH", {
 
 export default function WalkIn({
     catalogItems = [],
+    customers = [],
     bookingTimeSlots = [],
     todayDate,
     urgencyFees = {},
@@ -18,6 +19,7 @@ export default function WalkIn({
     const { props } = usePage();
     const [cart, setCart] = useState([]);
     const [sale, setSale] = useState({
+        customer_user_id: "",
         customer_name: "",
         customer_phone: "",
         customer_email: "",
@@ -25,6 +27,7 @@ export default function WalkIn({
         notes: "",
     });
     const [service, setService] = useState({
+        customer_user_id: "",
         customer_name: "",
         customer_phone: "",
         customer_email: "",
@@ -80,7 +83,7 @@ export default function WalkIn({
             preserveScroll: true,
             onSuccess: () => {
                 setCart([]);
-                setSale({ customer_name: "", customer_phone: "", customer_email: "", payment_method: "cash", notes: "" });
+                setSale({ customer_user_id: "", customer_name: "", customer_phone: "", customer_email: "", payment_method: "cash", notes: "" });
             },
             onFinish: () => setSubmitting(""),
         });
@@ -93,6 +96,7 @@ export default function WalkIn({
         router.post("/admin/walk-in/services", service, {
             preserveScroll: true,
             onSuccess: () => setService({
+                customer_user_id: "",
                 customer_name: "",
                 customer_phone: "",
                 customer_email: "",
@@ -113,6 +117,16 @@ export default function WalkIn({
 
     const setSaleField = (field, value) => setSale((current) => ({ ...current, [field]: value }));
     const setServiceField = (field, value) => setService((current) => ({ ...current, [field]: value }));
+    const chooseServiceCustomer = (id) => {
+        const customer = customers.find((row) => String(row.id) === String(id));
+        setService((current) => ({
+            ...current,
+            customer_user_id: id,
+            customer_name: customer?.name ?? "",
+            customer_phone: customer?.phone ?? "",
+            customer_email: customer?.email ?? "",
+        }));
+    };
 
     return (
         <div>
@@ -132,7 +146,7 @@ export default function WalkIn({
                             <span className="badge text-bg-primary align-self-start align-self-lg-center">Staff workspace</span>
                         </div>
 
-                        {props.flash?.success && <div className="alert alert-success">{props.flash.success}</div>}
+                        {props.flash?.success && <div className="alert alert-success">{props.flash.success}{props.flash?.sale_invoice_url && <div className="mt-2"><a className="alert-link fw-semibold" href={props.flash.sale_invoice_url} target="_blank" rel="noreferrer"><i className="bi bi-printer me-1"></i>Open / print invoice for {props.flash.sale_order_number}</a></div>}</div>}
                         {Object.keys(props.errors || {}).length > 0 && (
                             <div className="alert alert-danger">
                                 <div className="fw-semibold mb-1">Please review the following:</div>
@@ -171,6 +185,14 @@ export default function WalkIn({
                                     </div>
 
                                     <form onSubmit={submitSale}>
+                                        <div className="mb-3">
+                                            <label className="form-label">Existing customer account (optional)</label>
+                                            <select className="form-select" value={sale.customer_user_id} onChange={(event) => chooseSaleCustomer(event.target.value)}>
+                                                <option value="">Guest customer / no account</option>
+                                                {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name} · {customer.email}</option>)}
+                                            </select>
+                                            <div className="small text-muted mt-1">Linking an account makes this purchase available in the customer's online order history.</div>
+                                        </div>
                                         <h3 className="h6 fw-bold">Sale items</h3>
                                         {cart.length ? (
                                             <div className="table-responsive mb-3">
@@ -218,6 +240,14 @@ export default function WalkIn({
                                         <i className="bi bi-calendar2-check fs-3 text-primary" aria-hidden="true"></i>
                                     </div>
                                     <form onSubmit={submitService}>
+                                        <div className="mb-2">
+                                            <label className="form-label">Existing customer account (optional)</label>
+                                            <select className="form-select" value={service.customer_user_id} onChange={(event) => chooseServiceCustomer(event.target.value)}>
+                                                <option value="">Guest customer / no account</option>
+                                                {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name} · {customer.email}</option>)}
+                                            </select>
+                                            <div className="small text-muted mt-1">Linking an account lets the customer see this service and its invoice after signing in.</div>
+                                        </div>
                                         <div className="row g-2">
                                             <div className="col-12"><label className="form-label">Customer name *</label><input className="form-control" required maxLength="120" value={service.customer_name} onChange={(e) => setServiceField("customer_name", e.target.value)} /></div>
                                             <div className="col-md-6"><label className="form-label">Mobile number *</label><input className="form-control" required placeholder="09XXXXXXXXX" value={service.customer_phone} onChange={(e) => setServiceField("customer_phone", e.target.value)} /></div>
