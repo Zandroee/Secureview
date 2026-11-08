@@ -186,6 +186,11 @@ class CheckoutController extends Controller
         $orderNumber = $request->session()->get('orderNumber');
 
         if ($orderNumber) {
+            $successOrder = Order::query()
+                ->where('user_id', $request->user()->id)
+                ->where('order_number', $orderNumber)
+                ->first();
+
             return Inertia::render('checkout', [
                 'customer' => [
                     'name' => $request->user()->name,
@@ -200,6 +205,8 @@ class CheckoutController extends Controller
                 ],
                 'success' => true,
                 'pickupAddress' => $pickupAddress,
+                'successPickupAddress' => $successOrder?->pickup_address,
+                'fulfillmentMethod' => $successOrder?->fulfillment_method ?? 'delivery',
                 'orderNumber' => $orderNumber,
                 'paymentMethod' => $request->session()->get('paymentMethod'),
             ]);
