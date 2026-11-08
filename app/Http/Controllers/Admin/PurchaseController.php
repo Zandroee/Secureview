@@ -415,6 +415,8 @@ class PurchaseController extends Controller
         return [
             'id' => $order->id,
             'order_number' => $order->order_number,
+            'sales_channel' => $order->sales_channel ?? 'online',
+            'created_by_name' => $order->createdBy?->name,
             'customer_name' => $order->customer_name,
             'customer_email' => $order->customer_email,
             'customer_phone' => $order->customer_phone,
