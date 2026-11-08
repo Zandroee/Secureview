@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Inquiry;
+use App\Models\InvoiceRecord;
 use App\Models\Order;
 use App\Models\PendingInquiryCheckout;
 use App\Models\Product;
@@ -778,6 +779,51 @@ class RefundManagementTest extends TestCase
                 ->where('refunds.data.0.can_retry', false)
                 ->where('refunds.data.0.can_reconcile', true)
                 ->where('summary.reconciliation_required', 1));
+    }
+
+    public function test_admin_refund_list_exposes_order_items_and_invoice_details_for_review(): void
+    {
+        $admin = $this->createAdmin();
+        $customer = $this->createCustomer();
+        $product = $this->createProduct();
+        $order = $this->createPaidOrder($customer, $product);
+
+        InvoiceRecord::create([
+            'order_id' => $order->id,
+            'record_number' => 'INV-REFUND-DETAIL-' . $order->id,
+            'snapshot' => [
+                'reference_number' => $order->order_number,
+                'total' => 2500,
+                'items' => [['name' => $product->name, 'quantity' => 1, 'amount' => 2500]],
+            ],
+            'issued_at' => now(),
+        ]);
+
+        $refund = Refund::create([
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'requested_by_user_id' => $customer->id,
+            'source' => 'customer_request',
+            'amount_requested' => 500,
+            'reason_code' => 'others',
+            'reason' => 'The customer returned one item.',
+            'status' => 'pending',
+            'provider' => 'paymongo',
+            'idempotency_key' => 'refund-detail-test-' . $order->id,
+            'requested_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.refunds.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/Refunds')
+                ->where('refunds.data.0.id', $refund->id)
+                ->where('refunds.data.0.amount_requested', 500)
+                ->where('refunds.data.0.order_total', 2500)
+                ->where('refunds.data.0.order_items.0.name', $product->name)
+                ->where('refunds.data.0.invoice_record_number', 'INV-REFUND-DETAIL-' . $order->id)
+                ->where('refunds.data.0.invoice_url', route('admin.purchases.invoice', $order)));
     }
 
     private function createAdmin(): User
