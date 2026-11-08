@@ -223,6 +223,11 @@ export default function AdminInquiryDetails({
                                                     Booking fee: ₱{Number(service.urgency_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </div>
                                             )}
+                                            {service.preferred_payment_method && (
+                                                <div className="small text-muted fw-semibold mt-1">
+                                                    Preferred payment: {String(service.preferred_payment_method).toUpperCase()}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
