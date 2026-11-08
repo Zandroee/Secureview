@@ -30,6 +30,62 @@ class InvoiceController extends Controller
         return $this->renderInvoice($order, true, $documents);
     }
 
+    public function customerService(
+        Request $request,
+        ServiceRecord $serviceRecord,
+        InvoiceDocumentService $documents
+    ): Response {
+        $serviceRecord->loadMissing('inquiry');
+        abort_unless((int) $serviceRecord->inquiry?->user_id === (int) $request->user()->id, 404);
+        abort_unless($serviceRecord->invoiceRecord()->exists(), 404);
+
+        return $this->renderServiceInvoice($serviceRecord, false, $documents);
+    }
+
+    public function adminService(
+        Request $request,
+        ServiceRecord $serviceRecord,
+        InvoiceDocumentService $documents
+    ): Response {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        return $this->renderServiceInvoice($serviceRecord, true, $documents);
+    }
+
+    private function renderServiceInvoice(
+        ServiceRecord $serviceRecord,
+        bool $isAdmin,
+        InvoiceDocumentService $documents
+    ): Response {
+        $serviceRecord->loadMissing(['inquiry', 'technician', 'items', 'invoiceRecord']);
+
+        if ($serviceRecord->invoiceRecord) {
+            $invoice = $serviceRecord->invoiceRecord->snapshot ?? $documents->buildServiceSnapshot($serviceRecord);
+            $invoice['record_number'] = $serviceRecord->invoiceRecord->record_number;
+            $invoice['record_issued_at'] = $serviceRecord->invoiceRecord->issued_at?->format('F j, Y h:i A');
+            $invoice['is_recorded'] = true;
+        } else {
+            $invoice = $documents->buildServiceSnapshot($serviceRecord);
+            $invoice['record_number'] = null;
+            $invoice['record_issued_at'] = null;
+            $invoice['is_recorded'] = false;
+        }
+
+        // The invoice's charge snapshot remains immutable; payment progress is
+        // deliberately live so later counter payments update the visible balance.
+        $invoice['payment_status'] = $serviceRecord->payment_status;
+        $invoice['payment_method'] = $serviceRecord->payment_method;
+        $invoice['amount_paid'] = min((float) $invoice['total'], (float) $serviceRecord->amount_paid);
+        $invoice['balance_due'] = max(0, round((float) $invoice['total'] - (float) $invoice['amount_paid'], 2));
+        $invoice['is_paid'] = $serviceRecord->payment_status === 'paid';
+        $invoice['paid_at'] = $serviceRecord->paid_at?->format('F j, Y h:i A');
+        $invoice['viewer_role'] = $isAdmin ? 'admin' : 'customer';
+
+        return Inertia::render('invoice', [
+            'invoice' => $invoice,
+        ]);
+    }
+
     private function renderInvoice(
         Order $order,
         bool $isAdmin,
