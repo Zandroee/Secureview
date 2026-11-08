@@ -35,6 +35,12 @@ return new class extends Migration
             });
         }
 
+        if (!Schema::hasColumn('service_record_items', 'is_warranty_covered')) {
+            Schema::table('service_record_items', function (Blueprint $table) {
+                $table->boolean('is_warranty_covered')->default(false)->after('unit_price');
+            });
+        }
+
         Schema::table('service_records', function (Blueprint $table) {
             $table->string('payment_method', 24)->nullable();
             $table->string('payment_status', 24)->default('pending');
@@ -74,6 +80,10 @@ return new class extends Migration
             $table->unsignedBigInteger('order_id')->nullable(false)->change();
             $table->foreign('order_id')->references('id')->on('orders')->restrictOnDelete();
             $table->unique('order_id');
+        });
+
+        Schema::table('service_record_items', function (Blueprint $table) {
+            $table->dropColumn('is_warranty_covered');
         });
 
         Schema::table('service_records', function (Blueprint $table) {
