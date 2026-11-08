@@ -103,6 +103,7 @@ class InquiryController extends Controller
                     'service_type' => $inquiry->service_type,
                     'urgency' => $inquiry->urgency,
                     'urgency_fee' => (float) $inquiry->urgency_fee,
+                'preferred_payment_method' => $inquiry->preferred_payment_method,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                     'preferred_time' => $inquiry->preferred_time,
