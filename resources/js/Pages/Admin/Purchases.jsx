@@ -386,6 +386,7 @@ export default function AdminPurchases({
                                                 <div className="min-w-0">
                                                     <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
                                                         <span className="fw-bold">{order.order_number}</span>
+                                                        <span className={"badge " + (order.sales_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{order.sales_channel === "walk_in" ? "Walk-in" : "Online"}</span>
                                                         {order.is_stale_unpaid && <span className="badge rounded-pill bg-danger-subtle text-danger">Over 48 hours unpaid</span>}
                                                         <span title="Payment status" className={"badge rounded-pill " + paymentClass(order.payment_status)}>Payment: {statusLabel(order.payment_status)}</span>
                                                         <span title="Order workflow status" className={"badge rounded-pill " + orderClass(order.order_status)}>Order: {statusLabel(order.order_status)}</span>
@@ -592,6 +593,7 @@ export default function AdminPurchases({
                                                         <div className="fw-semibold">
                                                             {order.order_number}
                                                         </div>
+                                                        <span className={"badge mt-1 " + (order.sales_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{order.sales_channel === "walk_in" ? "Walk-in sale" : "Online order"}</span>
 
                                                         <div className="small text-muted">
                                                             {order.items.length} item
