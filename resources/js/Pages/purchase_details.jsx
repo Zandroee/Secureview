@@ -343,7 +343,7 @@ export default function PurchaseDetails({ order }) {
                                             {order.fulfillment_method === "pickup" ? "FULFILLMENT" : "DELIVERY ADDRESS"}
                                         </div>
                                         <div className="fw-semibold">
-                                            {order.fulfillment_method === "pickup" ? "Shop pickup at Netmax Trading" : order.delivery_address}
+                                            {order.fulfillment_method === "pickup" ? (order.pickup_address || "Pickup location will be confirmed by Netmax Trading") : order.delivery_address}
                                         </div>
                                         {order.delivery_latitude != null && order.delivery_longitude != null && (
                                             <a
