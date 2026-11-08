@@ -56,9 +56,11 @@ return new class extends Migration
         // before rolling back this schema change.
         if (\Illuminate\Support\Facades\DB::table('orders')->whereNull('user_id')->exists()
             || \Illuminate\Support\Facades\DB::table('inquiries')->whereNull('user_id')->exists()
-            || \Illuminate\Support\Facades\DB::table('invoice_records')->whereNotNull('service_record_id')->exists()) {
+            || \Illuminate\Support\Facades\DB::table('invoice_records')->whereNotNull('service_record_id')->exists()
+            || \Illuminate\Support\Facades\DB::table('service_records')->where('amount_paid', '>', 0)->exists()
+            || \Illuminate\Support\Facades\DB::table('service_record_items')->where('is_warranty_covered', true)->exists()) {
             throw new \RuntimeException(
-                'Cannot roll back walk-in POS/service invoicing while walk-in orders, walk-in services, or service invoices exist.'
+                'Cannot roll back walk-in POS/service invoicing while walk-in records, service payments, warranty-covered parts, or service invoices exist.'
             );
         }
 
