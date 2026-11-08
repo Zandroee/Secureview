@@ -188,6 +188,7 @@ class TransactionController extends Controller
 
             fputcsv($output, [
                 'Order Number',
+                'Sales Channel',
                 'Payment Transaction ID',
                 'Checkout Session ID',
                 'Customer Name',
@@ -204,6 +205,7 @@ class TransactionController extends Controller
             foreach ($query->cursor() as $order) {
                 fputcsv($output, [
                     $this->safeCsvCell($order->order_number),
+                    $order->sales_channel ?? 'online',
                     $this->safeCsvCell($order->paymongo_payment_id),
                     $this->safeCsvCell($order->paymongo_checkout_session_id),
                     $this->safeCsvCell($order->customer_name),
