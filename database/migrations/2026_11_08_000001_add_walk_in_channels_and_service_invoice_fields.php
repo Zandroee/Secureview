@@ -29,6 +29,18 @@ return new class extends Migration
             $table->index(['intake_channel', 'service_location_type']);
         });
 
+        if (!Schema::hasColumn('order_items', 'warranty_period')) {
+            Schema::table('order_items', function (Blueprint $table) {
+                $table->string('warranty_period', 120)->nullable()->after('name');
+            });
+        }
+
+        if (!Schema::hasColumn('service_record_items', 'is_warranty_covered')) {
+            Schema::table('service_record_items', function (Blueprint $table) {
+                $table->boolean('is_warranty_covered')->default(false)->after('unit_price');
+            });
+        }
+
         Schema::table('service_records', function (Blueprint $table) {
             $table->string('payment_method', 24)->nullable();
             $table->string('payment_status', 24)->default('pending');
