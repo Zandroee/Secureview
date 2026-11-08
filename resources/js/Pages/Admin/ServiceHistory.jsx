@@ -184,6 +184,7 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                                     <div className="fw-bold">{service.service_type}</div>
                                                     <div className="small text-muted">{service.item_name || "General service"}</div>
                                                     <div className="small text-muted">{service.inquiry_number}</div>
+                                                    <div className="mt-1 d-flex flex-wrap gap-1"><span className={"badge " + (service.intake_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{service.intake_channel === "walk_in" ? "Walk-in" : "Online"}</span><span className="badge text-bg-light text-dark">{service.service_location_type === "in_shop" ? "In-shop" : "Customer site"}</span></div>
                                                 </td>
                                                 <td>
                                                     <div className="fw-semibold">{service.customer_name}</div>
@@ -207,6 +208,11 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                                         <div>
                                                             <div className="fw-bold text-success">₱{Number(service.service_record.total_income ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                                             <div className="small text-muted">{service.service_record.items?.length ?? 0} part line(s)</div>
+                                                            {service.service_record.invoice_record && (
+                                                                <div className="small text-muted">
+                                                                    {service.service_record.payment_count ?? 0} payment(s) · Paid ₱{Number(service.service_record.amount_paid ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · Balance ₱{Number(service.service_record.balance_due ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                </div>
+                                                            )}
                                                             <div className="small text-break" title={service.service_record.work_summary}>{service.service_record.work_summary}</div>
                                                         </div>
                                                     ) : (
@@ -218,12 +224,66 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                                 </td>
                                                 <td className="small text-muted">{service.completed_at || "—"}</td>
                                                 <td className="text-end pe-3">
-                                                    <Link
-                                                        href={"/admin/schedules/" + service.id + "?from=history"}
-                                                        className="btn btn-outline-primary btn-sm fw-bold"
-                                                    >
-                                                        VIEW
-                                                    </Link>
+                                                    <div className="d-flex flex-column align-items-end gap-1">
+                                                        <Link
+                                                            href={"/admin/schedules/" + service.id + "?from=history"}
+                                                            className="btn btn-outline-primary btn-sm fw-bold"
+                                                        >
+                                                            VIEW
+                                                        </Link>
+                                                        {service.service_record && !service.service_record.invoice_record && (
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-primary btn-sm fw-semibold"
+                                                                onClick={() => {
+                                                                    if (window.confirm("Issue an internal service invoice for " + service.inquiry_number + "? The invoice will preserve the finalized Post-Service Record charges. It is not a BIR-registered tax invoice.")) {
+                                                                        router.post("/admin/service-records/" + service.service_record.id + "/invoice-record", {}, { preserveScroll: true });
+                                                                    }
+                                                                }}
+                                                            >
+                                                                ISSUE INVOICE
+                                                            </button>
+                                                        )}
+                                                        {service.service_record?.invoice_record && (
+                                                            <>
+                                                                <Link href={service.service_record.invoice_record.url} className="btn btn-outline-success btn-sm fw-semibold">VIEW INVOICE</Link>
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-outline-secondary btn-sm"
+                                                                    disabled={Number(service.service_record.balance_due ?? 0) <= 0}
+                                                                    onClick={() => {
+                                                                        const balance = Number(service.service_record.balance_due ?? 0);
+                                                                        if (balance <= 0) {
+                                                                            window.alert("This service invoice is already fully paid.");
+                                                                            return;
+                                                                        }
+                                                                        const amount = window.prompt("Enter the payment received now (PHP). Remaining balance: ₱" + balance.toFixed(2), balance.toFixed(2));
+                                                                        if (amount === null) return;
+                                                                        const parsed = Number(amount);
+                                                                        if (!Number.isFinite(parsed) || parsed <= 0 || parsed > balance) {
+                                                                            window.alert("Enter a payment greater than zero and no more than the remaining balance.");
+                                                                            return;
+                                                                        }
+                                                                        const method = window.prompt("Payment method: cash, gcash, card, or maya", service.service_record.payment_method || "cash");
+                                                                        if (method === null) return;
+                                                                        if (!["cash", "gcash", "card", "maya"].includes(method.toLowerCase())) {
+                                                                            window.alert("Choose cash, gcash, card, or maya.");
+                                                                            return;
+                                                                        }
+                                                                        const reference = window.prompt("Payment reference (optional). Add a GCash/Maya/card reference when available.", "");
+                                                                        if (reference === null) return;
+                                                                        router.patch("/admin/service-records/" + service.service_record.id + "/payment", {
+                                                                            payment_amount: parsed,
+                                                                            payment_method: method.toLowerCase(),
+                                                                            reference: reference.trim() || null,
+                                                                        }, { preserveScroll: true });
+                                                                    }}
+                                                                >
+                                                                    RECORD PAYMENT
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

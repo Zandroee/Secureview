@@ -34,6 +34,7 @@ class PurchaseController extends Controller
             'payment_status' => ['nullable', 'in:pending,paid,partially_refunded,refunded,failed,cancelled'],
             'order_status' => ['nullable', 'in:' . implode(',', self::ORDER_STATUSES)],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
+            'sales_channel' => ['nullable', 'in:online,walk_in'],
             'attention' => ['nullable', 'in:stale'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
@@ -41,7 +42,7 @@ class PurchaseController extends Controller
 
         $invoiceProfileReady = app(InvoiceDocumentService::class)->profileReady();
 
-        $query = Order::with(['user', 'items', 'events.actor', 'invoiceRecord', 'refunds'])
+        $query = Order::with(['user', 'createdBy', 'items', 'events.actor', 'invoiceRecord', 'refunds'])
             ->latest();
 
         // Keep the active Orders workspace focused on actionable orders by default.
@@ -72,6 +73,10 @@ class PurchaseController extends Controller
 
         if (!empty($filters['payment_method'])) {
             $query->where('payment_method', $filters['payment_method']);
+        }
+
+        if (!empty($filters['sales_channel'])) {
+            $query->where('sales_channel', $filters['sales_channel']);
         }
 
         if (!empty($filters['date_from'])) {
@@ -140,6 +145,7 @@ class PurchaseController extends Controller
                 'payment_status' => $filters['payment_status'] ?? '',
                 'order_status' => $filters['order_status'] ?? '',
                 'payment_method' => $filters['payment_method'] ?? '',
+                'sales_channel' => $filters['sales_channel'] ?? '',
                 'attention' => $filters['attention'] ?? '',
                 'date_from' => $filters['date_from'] ?? '',
                 'date_to' => $filters['date_to'] ?? '',
@@ -176,6 +182,7 @@ class PurchaseController extends Controller
             'order_status' => ['nullable', 'in:completed,cancelled'],
             'payment_status' => ['nullable', 'in:pending,paid,partially_refunded,refunded,failed,cancelled'],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
+            'sales_channel' => ['nullable', 'in:online,walk_in'],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
@@ -205,6 +212,10 @@ class PurchaseController extends Controller
 
         if (!empty($filters['payment_method'])) {
             $query->where('payment_method', $filters['payment_method']);
+        }
+
+        if (!empty($filters['sales_channel'])) {
+            $query->where('sales_channel', $filters['sales_channel']);
         }
 
         if (!empty($filters['date_from'])) {
@@ -245,6 +256,7 @@ class PurchaseController extends Controller
                 'order_status' => $filters['order_status'] ?? '',
                 'payment_status' => $filters['payment_status'] ?? '',
                 'payment_method' => $filters['payment_method'] ?? '',
+                'sales_channel' => $filters['sales_channel'] ?? '',
                 'date_from' => $filters['date_from'] ?? '',
                 'date_to' => $filters['date_to'] ?? '',
             ],
@@ -264,6 +276,10 @@ class PurchaseController extends Controller
         AdminActivityLogger $activityLogger,
         RefundService $refunds
     ) {
+        if (($order->sales_channel ?? 'online') === 'walk_in') {
+            return back()->withErrors(['order' => 'Walk-in sales cannot use the online customer refund workflow. Record any counter refund through the shop refund procedure instead.']);
+        }
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:500'],
         ]);
@@ -287,17 +303,19 @@ class PurchaseController extends Controller
             ['status' => $order->order_status, 'cancellation_reason' => $reason]
         );
 
-        CustomerNotification::create([
-            'user_id' => $order->user_id,
-            'type' => 'order_cancelled',
-            'title' => 'Order cancelled',
-            'message' => $wasPaid
-                ? 'Netmax Trading cancelled your paid order and is handling a refund of its remaining refundable balance. Check the Refunds section for updates. Reason: ' . $reason
-                : 'Your unpaid order ' . $order->order_number . ' was cancelled by Netmax Trading. Reason: ' . $reason,
-            'action_url' => route('purchases.show', $order),
-            'related_type' => Order::class,
-            'related_id' => $order->id,
-        ]);
+        if ($order->user_id) {
+            CustomerNotification::create([
+                        'user_id' => $order->user_id,
+                        'type' => 'order_cancelled',
+                        'title' => 'Order cancelled',
+                        'message' => $wasPaid
+                            ? 'Netmax Trading cancelled your paid order and is handling a refund of its remaining refundable balance. Check the Refunds section for updates. Reason: ' . $reason
+                            : 'Your unpaid order ' . $order->order_number . ' was cancelled by Netmax Trading. Reason: ' . $reason,
+                        'action_url' => route('purchases.show', $order),
+                        'related_type' => Order::class,
+                        'related_id' => $order->id,
+                    ]);
+        }
 
         return back()->with('success', $wasPaid
             ? 'Paid order ' . $order->order_number . ' was cancelled and its remaining refundable balance was sent to refund processing.'
@@ -342,15 +360,17 @@ class PurchaseController extends Controller
             ['status' => 'processing']
         );
 
-        CustomerNotification::create([
-            'user_id' => $order->user_id,
-            'type' => 'payment_paid',
-            'title' => 'Cash payment confirmed',
-            'message' => 'Netmax Trading confirmed receipt of cash payment for order ' . $order->order_number . '.',
-            'action_url' => route('purchases.show', $order),
-            'related_type' => Order::class,
-            'related_id' => $order->id,
-        ]);
+        if ($order->user_id) {
+            CustomerNotification::create([
+                        'user_id' => $order->user_id,
+                        'type' => 'payment_paid',
+                        'title' => 'Cash payment confirmed',
+                        'message' => 'Netmax Trading confirmed receipt of cash payment for order ' . $order->order_number . '.',
+                        'action_url' => route('purchases.show', $order),
+                        'related_type' => Order::class,
+                        'related_id' => $order->id,
+                    ]);
+        }
 
         return back()->with('success', 'Cash payment confirmed. Order ' . $order->order_number . ' is now Processing.');
     }
@@ -391,15 +411,17 @@ class PurchaseController extends Controller
             ['status' => 'completed']
         );
 
-        CustomerNotification::create([
-            'user_id' => $order->user_id,
-            'type' => 'order_completed',
-            'title' => 'Order completed',
-            'message' => 'Your order ' . $order->order_number . ' has been marked Completed by Netmax Trading.',
-            'action_url' => route('purchases.show', $order),
-            'related_type' => Order::class,
-            'related_id' => $order->id,
-        ]);
+        if ($order->user_id) {
+            CustomerNotification::create([
+                        'user_id' => $order->user_id,
+                        'type' => 'order_completed',
+                        'title' => 'Order completed',
+                        'message' => 'Your order ' . $order->order_number . ' has been marked Completed by Netmax Trading.',
+                        'action_url' => route('purchases.show', $order),
+                        'related_type' => Order::class,
+                        'related_id' => $order->id,
+                    ]);
+        }
 
         return back()->with('success', 'Order ' . $order->order_number . ' has been marked Completed.');
     }
@@ -415,6 +437,8 @@ class PurchaseController extends Controller
         return [
             'id' => $order->id,
             'order_number' => $order->order_number,
+            'sales_channel' => $order->sales_channel ?? 'online',
+            'created_by_name' => $order->createdBy?->name,
             'customer_name' => $order->customer_name,
             'customer_email' => $order->customer_email,
             'customer_phone' => $order->customer_phone,

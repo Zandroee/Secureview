@@ -39,6 +39,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
     const [orderStatus, setOrderStatus] = useState(filters.order_status ?? "");
     const [paymentStatus, setPaymentStatus] = useState(filters.payment_status ?? "");
     const [paymentMethod, setPaymentMethod] = useState(filters.payment_method ?? "");
+    const [salesChannel, setSalesChannel] = useState(filters.sales_channel ?? "");
     const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
     const [dateTo, setDateTo] = useState(filters.date_to ?? "");
 
@@ -49,6 +50,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
             order_status: orderStatus,
             payment_status: paymentStatus,
             payment_method: paymentMethod,
+            sales_channel: salesChannel,
             date_from: dateFrom,
             date_to: dateTo,
         }, {
@@ -63,6 +65,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
         setOrderStatus("");
         setPaymentStatus("");
         setPaymentMethod("");
+        setSalesChannel("");
         setDateFrom("");
         setDateTo("");
         router.get("/admin/order-history", {}, {
@@ -156,6 +159,14 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                         <option value="maya">Maya</option>
                                     </select>
                                 </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold" htmlFor="order-history-sales-channel">SALES CHANNEL</label>
+                                    <select id="order-history-sales-channel" className="form-select" value={salesChannel} onChange={(event) => setSalesChannel(event.target.value)}>
+                                        <option value="">All channels</option>
+                                        <option value="online">Online</option>
+                                        <option value="walk_in">Walk-in / in-store</option>
+                                    </select>
+                                </div>
                                 <div className="col-sm-6 col-lg-1">
                                     <label className="form-label small fw-semibold" htmlFor="order-history-date-from">DATE FROM</label>
                                     <input id="order-history-date-from" type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
@@ -186,6 +197,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                         <div className="d-flex align-items-start justify-content-between gap-2">
                                             <div className="min-w-0">
                                                 <h2 id={"order-history-mobile-title-" + order.id} className="h6 fw-bold mb-1">{order.order_number}</h2>
+                                                <span className={"badge " + (order.sales_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{order.sales_channel === "walk_in" ? "Walk-in sale" : "Online order"}</span>
                                                 <div className="small text-muted">{order.items?.length ?? 0} {(order.items?.length ?? 0) === 1 ? "item" : "items"}</div>
                                             </div>
                                             <span className={"badge rounded-pill text-capitalize flex-shrink-0 " + statusClass(order.order_status)}>{statusLabel(order.order_status)}</span>
@@ -236,6 +248,7 @@ export default function OrderHistory({ orders = {}, filters = {}, summary = {} }
                                             <tr key={order.id}>
                                                 <td className="ps-3">
                                                     <div className="fw-bold">{order.order_number}</div>
+                                                    <span className={"badge mt-1 " + (order.sales_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{order.sales_channel === "walk_in" ? "Walk-in sale" : "Online order"}</span>
                                                     <div className="small text-secondary">{order.items?.length ?? 0} {(order.items?.length ?? 0) === 1 ? "item" : "items"}</div>
                                                 </td>
                                                 <td>

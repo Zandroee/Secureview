@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ServiceRecord extends Model
 {
@@ -17,6 +18,10 @@ class ServiceRecord extends Model
         'additional_charge',
         'total_income',
         'completed_at',
+        'payment_method',
+        'payment_status',
+        'amount_paid',
+        'paid_at',
     ];
 
     protected $casts = [
@@ -24,6 +29,8 @@ class ServiceRecord extends Model
         'additional_charge' => 'float',
         'total_income' => 'float',
         'completed_at' => 'datetime',
+        'amount_paid' => 'float',
+        'paid_at' => 'datetime',
     ];
 
     public function inquiry(): BelongsTo
@@ -39,5 +46,15 @@ class ServiceRecord extends Model
     public function items(): HasMany
     {
         return $this->hasMany(ServiceRecordItem::class);
+    }
+
+    public function invoiceRecord(): HasOne
+    {
+        return $this->hasOne(InvoiceRecord::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(ServiceRecordPayment::class)->orderBy('paid_at')->orderBy('id');
     }
 }

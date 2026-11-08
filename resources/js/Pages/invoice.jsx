@@ -223,7 +223,7 @@ export default function Invoice({ invoice }) {
                             INVOICE
                         </h1>
                         <div className="text-muted small">
-                            Order reference {invoice.reference_number}
+                            {invoice.document_type === "service_invoice" ? "Service reference " : "Order reference "}{invoice.reference_number}
                         </div>
                         {invoice.is_recorded && (
                             <div className="small text-success fw-semibold mt-1">
@@ -233,9 +233,9 @@ export default function Invoice({ invoice }) {
                     </div>
                     <div className="d-flex flex-wrap gap-2">
                         <Link
-                            href={invoice.viewer_role === "admin"
-                                ? "/admin/purchases"
-                                : "/purchases/" + invoice.order_id}
+                            href={invoice.document_type === "service_invoice"
+                                ? (invoice.viewer_role === "admin" ? "/admin/service-history" : "/inquiries/" + invoice.inquiry_id)
+                                : (invoice.viewer_role === "admin" ? "/admin/purchases" : "/purchases/" + invoice.order_id)}
                             className="btn btn-outline-primary fw-semibold"
                         >
                             BACK
@@ -250,7 +250,7 @@ export default function Invoice({ invoice }) {
                     <div className="alert alert-info no-print" role="status">
                         <strong>Saved internal invoice record:</strong> {invoice.record_number}
                         {invoice.record_issued_at ? " · Saved " + invoice.record_issued_at : ""}.
-                        This page uses the preserved snapshot, so later order or seller-profile changes will not rewrite it.
+                        This page uses the preserved snapshot, so later order or service-record changes will not rewrite its original charges.
                         The reference is internal only; it is not a BIR-authorized serial number or a BIR-registered tax invoice.
                     </div>
                 ) : (
@@ -274,7 +274,7 @@ export default function Invoice({ invoice }) {
                                     <div className="h4 fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>
                                         {business.name || "Netmax Trading"}
                                     </div>
-                                    <div className="text-muted small">ORDER INVOICE</div>
+                                    <div className="text-muted small">{invoice.document_type === "service_invoice" ? "SERVICE INVOICE" : "ORDER INVOICE"}</div>
                                 </div>
                             </div>
                             {business.registered_name && <div className="fw-semibold">{business.registered_name}</div>}
@@ -296,7 +296,7 @@ export default function Invoice({ invoice }) {
                             {invoice.is_recorded && (
                                 <div className="small fw-semibold mt-1">Internal record: {invoice.record_number}</div>
                             )}
-                            <div className="small text-muted mt-1">Order placed: {invoice.document_date || "—"}</div>
+                            <div className="small text-muted mt-1">{invoice.document_type === "service_invoice" ? "Service completed: " : "Order placed: "}{invoice.document_date || "—"}</div>
                             {invoice.is_recorded && invoice.record_issued_at && (
                                 <div className="small text-muted mt-1">Record saved: {invoice.record_issued_at}</div>
                             )}
@@ -322,22 +322,38 @@ export default function Invoice({ invoice }) {
                         </div>
                         <div className="col-md-5">
                             <div className="invoice-meta">
-                                <div className="small text-uppercase text-muted fw-bold mb-3">Order details</div>
+                                <div className="small text-uppercase text-muted fw-bold mb-3">{invoice.document_type === "service_invoice" ? "Service details" : "Order details"}</div>
                                 <div className="d-flex justify-content-between gap-3 mb-2">
-                                    <span className="text-muted">Order reference</span>
+                                    <span className="text-muted">{invoice.document_type === "service_invoice" ? "Service reference" : "Order reference"}</span>
                                     <span className="fw-semibold text-end">{invoice.reference_number}</span>
                                 </div>
+                                {invoice.document_type !== "service_invoice" && (
+                                    <div className="d-flex justify-content-between gap-3 mb-2">
+                                        <span className="text-muted">Sales channel</span>
+                                        <span className="fw-semibold text-end">{invoice.sales_channel === "walk_in" ? "Walk-in / in-store" : "Online"}</span>
+                                    </div>
+                                )}
                                 <div className="d-flex justify-content-between gap-3 mb-2">
                                     <span className="text-muted">Payment method</span>
                                     <span className="fw-semibold text-end">{methodLabel(invoice.payment_method)}</span>
                                 </div>
                                 <div className="d-flex justify-content-between gap-3">
-                                    <span className="text-muted">Order status</span>
+                                    <span className="text-muted">{invoice.document_type === "service_invoice" ? "Service status" : "Order status"}</span>
                                     <span className="fw-semibold text-end text-capitalize">{humanize(invoice.order_status)}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    {invoice.document_type === "service_invoice" && invoice.service && (
+                        <section className="border rounded-3 p-3 mb-4">
+                            <div className="small text-uppercase text-muted fw-bold mb-2">Service performed</div>
+                            <div className="fw-semibold mb-2">{invoice.service.type}{invoice.service.item_name ? " · " + invoice.service.item_name : ""}</div>
+                            <div style={{ whiteSpace: "pre-wrap" }}>{invoice.service.work_summary}</div>
+                            {invoice.service.technician && <div className="small text-muted mt-2">Technician: {invoice.service.technician}</div>}
+                            {invoice.service.customer_notes && <div className="small text-muted mt-2">Notes: {invoice.service.customer_notes}</div>}
+                        </section>
+                    )}
 
                     <div className="table-responsive">
                         <table className="table invoice-table align-middle">
@@ -350,9 +366,9 @@ export default function Invoice({ invoice }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {invoice.items.map((item) => (
-                                    <tr key={item.id}>
-                                        <td className="fw-semibold">{item.name}</td>
+                                {invoice.items.map((item, index) => (
+                                    <tr key={item.id ?? index}>
+                                        <td><div className="fw-semibold">{item.name}</div>{item.notes && <div className="small text-muted mt-1">{item.notes}</div>}</td>
                                         <td className="text-end">{item.quantity}</td>
                                         <td className="text-end text-nowrap">{peso(item.unit_price)}</td>
                                         <td className="text-end text-nowrap">{peso(item.amount)}</td>
@@ -365,7 +381,7 @@ export default function Invoice({ invoice }) {
                     <div className="row justify-content-end mt-4">
                         <div className="col-sm-8 col-md-6 col-lg-5">
                             <div className="d-flex justify-content-between py-2">
-                                <span className="text-muted">Items subtotal</span>
+                                <span className="text-muted">{invoice.document_type === "service_invoice" ? "Service charges subtotal" : "Items subtotal"}</span>
                                 <span>{peso(invoice.subtotal)}</span>
                             </div>
                             {Number(invoice.discount_amount) > 0 && (
@@ -386,10 +402,12 @@ export default function Invoice({ invoice }) {
                                     <span>{peso(invoice.service_priority_fee)}</span>
                                 </div>
                             )}
-                            <div className="d-flex justify-content-between py-2">
-                                <span className="text-muted">Shipping</span>
-                                <span>{peso(invoice.shipping_fee)}</span>
-                            </div>
+                            {invoice.document_type !== "service_invoice" && (
+                                <div className="d-flex justify-content-between py-2">
+                                    <span className="text-muted">Shipping</span>
+                                    <span>{peso(invoice.shipping_fee)}</span>
+                                </div>
+                            )}
                             <div className="invoice-total-row d-flex justify-content-between gap-3 py-3 fw-bold">
                                 <span>Total</span>
                                 <span className="text-nowrap">{peso(invoice.total)}</span>
@@ -407,14 +425,51 @@ export default function Invoice({ invoice }) {
                         </div>
                     </div>
 
+                    {invoice.document_type === "service_invoice" && Array.isArray(invoice.payments) && invoice.payments.length > 0 && (
+                        <section className="mt-4">
+                            <h2 className="h6 fw-bold mb-2">Payment history</h2>
+                            <div className="table-responsive">
+                                <table className="table table-sm invoice-table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Date received</th>
+                                            <th>Method / reference</th>
+                                            <th>Recorded by</th>
+                                            <th className="text-end">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {invoice.payments.map((payment) => (
+                                            <tr key={payment.id}>
+                                                <td>
+                                                    {payment.paid_at || "—"}
+                                                    {payment.is_legacy_import && <div className="small text-muted">Legacy balance imported</div>}
+                                                    {payment.notes && <div className="small text-muted">{payment.notes}</div>}
+                                                </td>
+                                                <td>
+                                                    <div className="fw-semibold">{methodLabel(payment.payment_method)}</div>
+                                                    <div className="small text-muted">{payment.reference || "No reference supplied"}</div>
+                                                </td>
+                                                <td>{payment.recorded_by || "—"}</td>
+                                                <td className="text-end text-nowrap fw-semibold">{peso(payment.amount)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
+
                     <div className="invoice-disclaimer">
                         <div className="fw-semibold mb-1">
-                            {invoice.is_recorded ? "Saved Netmax Trading internal invoice record" : "Netmax Trading order document"}
+                            {invoice.is_recorded
+                                ? (invoice.document_type === "service_invoice" ? "Saved Netmax Trading internal service invoice" : "Saved Netmax Trading internal invoice record")
+                                : (invoice.document_type === "service_invoice" ? "Netmax Trading service document" : "Netmax Trading order document")}
                         </div>
-                        This document is an internal order document, not a BIR-registered tax invoice.
+                        This document is an internal {invoice.document_type === "service_invoice" ? "service" : "order"} document, not a BIR-registered tax invoice.
                         {invoice.is_recorded
-                            ? " The saved version preserves the order, customer, item, and seller details as recorded on " + (invoice.record_issued_at || "the saved date") + ". Its internal reference is not a BIR-authorized invoice serial number."
-                            : " It reflects the order and payment details currently stored in Netmax Trading."}
+                            ? " The saved version preserves the customer, itemized charges, and seller details as recorded on " + (invoice.record_issued_at || "the saved date") + ". Its internal reference is not a BIR-authorized invoice serial number."
+                            : " It reflects the service charges or order details currently stored in Netmax Trading."}
                         {" "}No VAT, withholding tax, or other tax amount is calculated by this document. The authorized BIR serial-number series is not consumed by saving an internal record. Confirm applicable tax treatment, required invoice information, and electronic-invoicing obligations with your accountant before using an invoice for tax purposes.
                     </div>
                     <div className="small text-muted mt-3 invoice-print-note">

@@ -61,6 +61,7 @@ export default function AdminTransactions({
     const [paymentMethod, setPaymentMethod] = useState(
         filters.payment_method ?? ""
     );
+    const [salesChannel, setSalesChannel] = useState(filters.sales_channel ?? "");
     const [orderStatus, setOrderStatus] = useState(filters.order_status ?? "");
     const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
     const [dateTo, setDateTo] = useState(filters.date_to ?? "");
@@ -84,6 +85,7 @@ export default function AdminTransactions({
                 search,
                 payment_status: paymentStatus,
                 payment_method: paymentMethod,
+                sales_channel: salesChannel,
                 order_status: orderStatus,
                 date_from: dateFrom,
                 date_to: dateTo,
@@ -100,6 +102,7 @@ export default function AdminTransactions({
         setSearch("");
         setPaymentStatus("");
         setPaymentMethod("");
+        setSalesChannel("");
         setOrderStatus("");
         setDateFrom("");
         setDateTo("");
@@ -271,6 +274,15 @@ export default function AdminTransactions({
                                         </select>
                                     </div>
 
+                                    <div className="col-sm-6 col-lg-2">
+                                        <label className="form-label small fw-semibold mb-1">SALES CHANNEL</label>
+                                        <select className="form-select" value={salesChannel} onChange={(event) => setSalesChannel(event.target.value)}>
+                                            <option value="">All channels</option>
+                                            <option value="online">Online</option>
+                                            <option value="walk_in">Walk-in / in-store</option>
+                                        </select>
+                                    </div>
+
                                     <div className="col-sm-6 col-lg-3">
                                         <label className="form-label small fw-semibold mb-1">
                                             ORDER STATUS
@@ -398,6 +410,7 @@ export default function AdminTransactions({
                                                         <div className="small text-muted">
                                                             {transaction.order_number}
                                                         </div>
+                                                        <span className={"badge mt-1 " + (transaction.sales_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{transaction.sales_channel === "walk_in" ? "Walk-in sale" : "Online order"}</span>
                                                         {transaction.invoice_record && (
                                                             <div className="small text-success mt-1">
                                                                 <i className="bi bi-file-earmark-check me-1"></i>
@@ -596,6 +609,11 @@ export default function AdminTransactions({
                                             viewingTransaction.order_status
                                         )}
                                     </span>
+                                </div>
+
+                                <div className="col-md-6">
+                                    <div className="small text-muted">SALES CHANNEL</div>
+                                    <div className="fw-semibold">{viewingTransaction.sales_channel === "walk_in" ? "Walk-in / in-store" : "Online"}</div>
                                 </div>
 
                                 <div className="col-md-6">

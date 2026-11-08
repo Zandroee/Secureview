@@ -39,6 +39,8 @@ use App\Http\Controllers\Admin\InvoiceIssuanceController as AdminInvoiceIssuance
 use App\Http\Controllers\Admin\VoucherController as AdminVoucherController;
 use App\Http\Controllers\Admin\PromoSaleController as AdminPromoSaleController;
 use App\Http\Controllers\Admin\RefundController as AdminRefundController;
+use App\Http\Controllers\Admin\WalkInController as AdminWalkInController;
+use App\Http\Controllers\Admin\ServiceInvoiceIssuanceController as AdminServiceInvoiceIssuanceController;
 use App\Http\Controllers\WarrantyClaimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -213,6 +215,7 @@ Route::middleware(['auth', 'verified', 'inertia.encrypt'])->group(function () {
 
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/purchases/{order}/invoice', [InvoiceController::class, 'customer'])->name('purchases.invoice');
+    Route::get('/service-records/{serviceRecord}/invoice', [InvoiceController::class, 'customerService'])->name('service-records.invoice');
     Route::get('/purchases/{order}/items/{orderItem}/review', [ReviewController::class, 'create'])->name('purchases.items.review');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
@@ -296,6 +299,13 @@ Route::middleware(['auth', 'verified', 'admin', 'inertia.encrypt'])->group(funct
     Route::delete('/admin/vouchers/{voucher}', [AdminVoucherController::class, 'destroy'])->name('admin.vouchers.destroy');
     Route::patch('/admin/promotions/products/{product}/sale', [AdminPromoSaleController::class, 'updateProduct'])->name('admin.promotions.products.sale.update');
     Route::patch('/admin/promotions/packages/{package}/sale', [AdminPromoSaleController::class, 'updatePackage'])->name('admin.promotions.packages.sale.update');
+
+    Route::get('/admin/walk-in', [AdminWalkInController::class, 'index'])->name('admin.walk-in.index');
+    Route::post('/admin/service-records/{serviceRecord}/invoice-record', [AdminServiceInvoiceIssuanceController::class, 'store'])->name('admin.service-records.invoice-record.store');
+    Route::patch('/admin/service-records/{serviceRecord}/payment', [AdminServiceInvoiceIssuanceController::class, 'updatePayment'])->name('admin.service-records.payment.update');
+    Route::get('/admin/service-records/{serviceRecord}/invoice', [InvoiceController::class, 'adminService'])->name('admin.service-records.invoice');
+    Route::post('/admin/walk-in/sales', [AdminWalkInController::class, 'storeSale'])->name('admin.walk-in.sales.store');
+    Route::post('/admin/walk-in/services', [AdminWalkInController::class, 'storeService'])->name('admin.walk-in.services.store');
 
     Route::get('/admin/transactions', [AdminTransactionController::class, 'index'])
         ->name('admin.transactions.index');

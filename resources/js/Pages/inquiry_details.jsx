@@ -108,6 +108,10 @@ export default function ServiceDetails({ inquiry: service, success }) {
                                         "0 8px 24px rgba(0,0,0,0.04)",
                                 }}
                             >
+                                <div className="d-flex flex-wrap gap-2 mb-3">
+                                    <span className={"badge " + (service.intake_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{service.intake_channel === "walk_in" ? "Walk-in booking" : "Online booking"}</span>
+                                    <span className="badge text-bg-light text-dark">{service.service_location_type === "in_shop" ? "In-shop drop-off" : "Customer site visit"}</span>
+                                </div>
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <h4
                                         className="fw-bold mb-0"
@@ -239,6 +243,56 @@ export default function ServiceDetails({ inquiry: service, success }) {
                                 </div>
                             </div>
 
+                            {service.service_record && (
+                                <section className="bg-white border rounded-4 p-3 p-md-4 mb-4" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}>
+                                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-3">
+                                        <div>
+                                            <div className="small text-primary fw-bold">COMPLETED SERVICE</div>
+                                            <h4 className="fw-bold mb-1">POST-SERVICE REPORT</h4>
+                                            <div className="small text-muted">Completed {service.service_record.completed_at || ""}</div>
+                                        </div>
+                                        {service.service_record.invoice_url ? (
+                                            <Link href={service.service_record.invoice_url} className="btn btn-primary fw-bold">VIEW SERVICE INVOICE</Link>
+                                        ) : (
+                                            <span className="badge text-bg-warning align-self-start">Invoice pending review</span>
+                                        )}
+                                    </div>
+                                    <div className="mb-3">
+                                        <div className="small text-muted fw-semibold mb-1">WORK PERFORMED</div>
+                                        <div className="fw-medium" style={{ whiteSpace: "pre-wrap" }}>{service.service_record.work_summary}</div>
+                                    </div>
+                                    {service.service_record.customer_notes && (
+                                        <div className="mb-3">
+                                            <div className="small text-muted fw-semibold mb-1">TECHNICIAN NOTES</div>
+                                            <div>{service.service_record.customer_notes}</div>
+                                        </div>
+                                    )}
+                                    {service.service_record.items?.length > 0 && (
+                                        <div className="table-responsive">
+                                            <table className="table table-sm align-middle mb-0">
+                                                <thead><tr><th>PART / COMPONENT</th><th>ACTION</th><th className="text-end">QTY</th><th className="text-end">UNIT PRICE</th></tr></thead>
+                                                <tbody>
+                                                    {service.service_record.items.map((item, index) => (
+                                                        <tr key={index}>
+                                                            <td><div className="fw-semibold">{item.product_name}</div>{item.notes && <div className="small text-muted">{item.notes}</div>}</td>
+                                                            <td><span className={"badge " + (item.is_warranty_covered ? "text-bg-success" : item.action === "used" ? "text-bg-primary" : "text-bg-secondary")}>{item.action === "used" ? (item.is_warranty_covered ? "Used · Warranty-covered" : "Used / replaced") : "Removed"}</span></td>
+                                                            <td className="text-end">{item.quantity}</td>
+                                                            <td className="text-end">{item.action === "used" ? (item.is_warranty_covered ? "No charge" : "₱" + Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : "—"}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                    <div className="row g-2 mt-3">
+                                        <div className="col-sm-4"><div className="small text-muted">LABOR</div><div className="fw-semibold">₱{Number(service.service_record.labor_charge).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+                                        <div className="col-sm-4"><div className="small text-muted">ADDITIONAL CHARGES</div><div className="fw-semibold">₱{Number(service.service_record.additional_charge).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+                                        <div className="col-sm-4"><div className="small text-muted">RECORDED SERVICE TOTAL</div><div className="fw-bold text-primary">₱{Number(service.service_record.total_income).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+                                    </div>
+                                    {!service.service_record.invoice_url && <div className="small text-muted mt-3">The service report is available. Netmax Trading will review the charges and issue the invoice when it is ready.</div>}
+                                </section>
+                            )}
+
                             <div
                                 className="bg-white border rounded-4 p-3 p-md-4"
                                 style={{
@@ -288,11 +342,11 @@ export default function ServiceDetails({ inquiry: service, success }) {
 
                                     <div className="col-md-7">
                                         <div className="small text-muted mb-1">
-                                            STREET ADDRESS
+                                            {service.service_location_type === "in_shop" ? "SERVICE LOCATION" : "STREET ADDRESS"}
                                         </div>
 
                                         <div className="fw-semibold">
-                                            {service.street_address}
+                                            {service.service_location_type === "in_shop" ? "In-shop drop-off at Netmax Trading" : service.street_address}
                                         </div>
                                     </div>
 
@@ -313,7 +367,7 @@ export default function ServiceDetails({ inquiry: service, success }) {
                                         </div>
                                     )}
 
-                                    {(service.street_address || service.city || service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined) && (
+                                    {(service.service_location_type !== "in_shop" && (service.street_address || service.city || service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined)) && (
                                         <div className="col-12">
                                             <div className="small text-muted fw-semibold mb-2">SERVICE LOCATION MAP</div>
                                             <ServiceLocationMap

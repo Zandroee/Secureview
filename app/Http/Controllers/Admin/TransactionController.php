@@ -52,6 +52,7 @@ class TransactionController extends Controller
                 'search' => $filters['search'] ?? '',
                 'payment_status' => $filters['payment_status'] ?? '',
                 'payment_method' => $filters['payment_method'] ?? '',
+                'sales_channel' => $filters['sales_channel'] ?? '',
                 'order_status' => $filters['order_status'] ?? '',
                 'date_from' => $filters['date_from'] ?? '',
                 'date_to' => $filters['date_to'] ?? '',
@@ -77,6 +78,7 @@ class TransactionController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'payment_status' => ['nullable', 'in:pending,paid,partially_refunded,refunded,failed,cancelled'],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
+            'sales_channel' => ['nullable', 'in:online,walk_in'],
             'order_status' => ['nullable', 'in:' . implode(',', self::ORDER_STATUSES)],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
@@ -121,6 +123,10 @@ class TransactionController extends Controller
             $query->where('payment_method', $filters['payment_method']);
         }
 
+        if (!empty($filters['sales_channel'])) {
+            $query->where('sales_channel', $filters['sales_channel']);
+        }
+
         if (!empty($filters['order_status'])) {
             $query->where('order_status', $filters['order_status']);
         }
@@ -140,6 +146,7 @@ class TransactionController extends Controller
     {
         return [
             'id' => $order->id,
+            'sales_channel' => $order->sales_channel ?? 'online',
             'transaction_id' => $order->paymongo_payment_id,
             'checkout_session_id' => $order->paymongo_checkout_session_id,
             'order_number' => $order->order_number,
@@ -187,6 +194,7 @@ class TransactionController extends Controller
 
             fputcsv($output, [
                 'Order Number',
+                'Sales Channel',
                 'Payment Transaction ID',
                 'Checkout Session ID',
                 'Customer Name',
@@ -203,6 +211,7 @@ class TransactionController extends Controller
             foreach ($query->cursor() as $order) {
                 fputcsv($output, [
                     $this->safeCsvCell($order->order_number),
+                    $order->sales_channel ?? 'online',
                     $this->safeCsvCell($order->paymongo_payment_id),
                     $this->safeCsvCell($order->paymongo_checkout_session_id),
                     $this->safeCsvCell($order->customer_name),

@@ -446,15 +446,17 @@ class TechnicianWorkspaceController extends Controller
             $notifications->notifyAssignmentsChanged($lockedInquiry, [$lockedTechnician->id]);
             $notifications->notifyTechnicianJoined($lockedInquiry, $lockedTechnician);
 
-            CustomerNotification::create([
-                'user_id' => $lockedInquiry->user_id,
-                'type' => 'technician_assignment',
-                'title' => 'Technician team updated',
-                'message' => $lockedTechnician->name . ' joined the team for service ' . $lockedInquiry->inquiry_number . '.',
-                'action_url' => route('inquiries.show', $lockedInquiry),
-                'related_type' => Inquiry::class,
-                'related_id' => $lockedInquiry->id,
-            ]);
+            if ($lockedInquiry->user_id) {
+    CustomerNotification::create([
+                    'user_id' => $lockedInquiry->user_id,
+                    'type' => 'technician_assignment',
+                    'title' => 'Technician team updated',
+                    'message' => $lockedTechnician->name . ' joined the team for service ' . $lockedInquiry->inquiry_number . '.',
+                    'action_url' => route('inquiries.show', $lockedInquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $lockedInquiry->id,
+                ]);
+}
         });
 
         return back()->with('success', 'You have joined the service team.');
@@ -488,15 +490,17 @@ class TechnicianWorkspaceController extends Controller
             $lockedInquiry->load('technicians');
             $notifications->notifyStatusChanged($lockedInquiry, 'confirmed', 'in_progress', $request->user());
 
-            CustomerNotification::create([
-                'user_id' => $lockedInquiry->user_id,
-                'type' => 'inquiry_status',
-                'title' => 'Service started',
-                'message' => 'Your service ' . $lockedInquiry->inquiry_number . ' has been started by the technician team.',
-                'action_url' => route('inquiries.show', $lockedInquiry),
-                'related_type' => Inquiry::class,
-                'related_id' => $lockedInquiry->id,
-            ]);
+            if ($lockedInquiry->user_id) {
+    CustomerNotification::create([
+                    'user_id' => $lockedInquiry->user_id,
+                    'type' => 'inquiry_status',
+                    'title' => 'Service started',
+                    'message' => 'Your service ' . $lockedInquiry->inquiry_number . ' has been started by the technician team.',
+                    'action_url' => route('inquiries.show', $lockedInquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $lockedInquiry->id,
+                ]);
+}
         });
 
         return back()->with('success', 'Job marked as in progress.');
@@ -515,6 +519,7 @@ class TechnicianWorkspaceController extends Controller
             'items.*.product_name' => ['required', 'string', 'max:180'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:10000'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
+            'items.*.is_warranty_covered' => ['nullable', 'boolean'],
             'items.*.notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -577,9 +582,12 @@ class TechnicianWorkspaceController extends Controller
                     }
 
                     $productName = $product->name;
-                    $unitPrice = array_key_exists('unit_price', $item) && $item['unit_price'] !== null && $item['unit_price'] !== ''
-                        ? round((float) $item['unit_price'], 2)
-                        : round((float) $product->price, 2);
+                    $isWarrantyCovered = (bool) ($item['is_warranty_covered'] ?? false);
+                    $unitPrice = $isWarrantyCovered
+                        ? 0.0
+                        : (array_key_exists('unit_price', $item) && $item['unit_price'] !== null && $item['unit_price'] !== ''
+                            ? round((float) $item['unit_price'], 2)
+                            : round((float) $product->price, 2));
                     $next = $previous - $quantity;
                     $product->update(['stock_quantity' => $next]);
 
@@ -606,26 +614,42 @@ class TechnicianWorkspaceController extends Controller
                     'action' => $action,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
+                    'is_warranty_covered' => $action === 'used' && (bool) ($item['is_warranty_covered'] ?? false),
                     'notes' => filled($item['notes'] ?? null) ? trim($item['notes']) : null,
                 ]);
             }
 
+            // Walk-in priority fees are collected with the service invoice,
+            // so include them in the same service-income ledger. Online booking
+            // fees already belong to their separate checkout order.
+            $walkInPriorityFee = ($lockedInquiry->intake_channel ?? 'online') === 'walk_in'
+                ? (float) $lockedInquiry->urgency_fee
+                : 0.0;
+
             $record->update([
-                'total_income' => round((float) $record->labor_charge + (float) $record->additional_charge + $partsIncome, 2),
+                'total_income' => round(
+                    (float) $record->labor_charge
+                    + (float) $record->additional_charge
+                    + $partsIncome
+                    + $walkInPriorityFee,
+                    2
+                ),
             ]);
             $lockedInquiry->update(['status' => 'completed']);
             $lockedInquiry->load('technicians');
             $notifications->notifyStatusChanged($lockedInquiry, 'in_progress', 'completed', $technician);
 
-            CustomerNotification::create([
-                'user_id' => $lockedInquiry->user_id,
-                'type' => 'service_completed',
-                'title' => 'Service completed',
-                'message' => 'Your service ' . $lockedInquiry->inquiry_number . ' has been completed. Please review the service details in your account.',
-                'action_url' => route('inquiries.show', $lockedInquiry),
-                'related_type' => Inquiry::class,
-                'related_id' => $lockedInquiry->id,
-            ]);
+            if ($lockedInquiry->user_id) {
+    CustomerNotification::create([
+                    'user_id' => $lockedInquiry->user_id,
+                    'type' => 'service_completed',
+                    'title' => 'Service completed',
+                    'message' => 'Your service ' . $lockedInquiry->inquiry_number . ' has been completed. Please review the service details in your account.',
+                    'action_url' => route('inquiries.show', $lockedInquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $lockedInquiry->id,
+                ]);
+}
         });
 
         return back()->with('success', 'Post-Service Record saved and the service has been marked completed.');
@@ -793,6 +817,7 @@ class TechnicianWorkspaceController extends Controller
                     'action' => $item->action,
                     'quantity' => $item->quantity,
                     'unit_price' => (float) $item->unit_price,
+                    'is_warranty_covered' => (bool) $item->is_warranty_covered,
                     'notes' => $item->notes,
                 ])->values(),
             ] : null,
@@ -878,16 +903,16 @@ class TechnicianWorkspaceController extends Controller
         });
 
         if ($inquiry->user_id) {
-            CustomerNotification::create([
-                'user_id' => $inquiry->user_id,
-                'type' => 'schedule_updated',
-                'title' => 'Service schedule updated',
-                'message' => 'Your service ' . $inquiry->inquiry_number . ' is now scheduled for ' . $validated['preferred_date'] . ' (' . $validated['preferred_time'] . ').',
-                'action_url' => route('inquiries.show', $inquiry),
-                'related_type' => Inquiry::class,
-                'related_id' => $inquiry->id,
-            ]);
-        }
+    CustomerNotification::create([
+    'user_id' => $inquiry->user_id,
+    'type' => 'schedule_updated',
+    'title' => 'Service schedule updated',
+    'message' => 'Your service ' . $inquiry->inquiry_number . ' is now scheduled for ' . $validated['preferred_date'] . ' (' . $validated['preferred_time'] . ').',
+    'action_url' => route('inquiries.show', $inquiry),
+    'related_type' => Inquiry::class,
+    'related_id' => $inquiry->id,
+    ]);
+}
 
         return back()->with('success', 'Service schedule updated successfully.');
     }
@@ -911,16 +936,16 @@ class TechnicianWorkspaceController extends Controller
         if ($decision === 'decline') {
             $inquiry->update(['reschedule_request_status' => 'declined']);
             if ($inquiry->user_id) {
-                CustomerNotification::create([
-                    'user_id' => $inquiry->user_id,
-                    'type' => 'reschedule_declined',
-                    'title' => 'Reschedule request declined',
-                    'message' => 'Your reschedule request for ' . $inquiry->inquiry_number . ' was declined by the assigned technician. Your original appointment remains scheduled.',
-                    'action_url' => route('inquiries.show', $inquiry),
-                    'related_type' => Inquiry::class,
-                    'related_id' => $inquiry->id,
-                ]);
-            }
+    CustomerNotification::create([
+    'user_id' => $inquiry->user_id,
+    'type' => 'reschedule_declined',
+    'title' => 'Reschedule request declined',
+    'message' => 'Your reschedule request for ' . $inquiry->inquiry_number . ' was declined by the assigned technician. Your original appointment remains scheduled.',
+    'action_url' => route('inquiries.show', $inquiry),
+    'related_type' => Inquiry::class,
+    'related_id' => $inquiry->id,
+    ]);
+}
             return back()->with('success', 'Reschedule request declined. The original schedule remains unchanged.');
         }
 
@@ -965,16 +990,16 @@ class TechnicianWorkspaceController extends Controller
         ]);
 
         if ($inquiry->user_id) {
-            CustomerNotification::create([
-                'user_id' => $inquiry->user_id,
-                'type' => 'reschedule_approved',
-                'title' => 'Reschedule request approved',
-                'message' => 'Your service ' . $inquiry->inquiry_number . ' has been rescheduled to ' . $date . ' (' . $time . ') by the assigned technician.',
-                'action_url' => route('inquiries.show', $inquiry),
-                'related_type' => Inquiry::class,
-                'related_id' => $inquiry->id,
-            ]);
-        }
+    CustomerNotification::create([
+    'user_id' => $inquiry->user_id,
+    'type' => 'reschedule_approved',
+    'title' => 'Reschedule request approved',
+    'message' => 'Your service ' . $inquiry->inquiry_number . ' has been rescheduled to ' . $date . ' (' . $time . ') by the assigned technician.',
+    'action_url' => route('inquiries.show', $inquiry),
+    'related_type' => Inquiry::class,
+    'related_id' => $inquiry->id,
+    ]);
+}
 
         return back()->with('success', 'Customer reschedule request approved.');
     }

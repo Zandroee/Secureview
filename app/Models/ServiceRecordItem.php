@@ -14,12 +14,14 @@ class ServiceRecordItem extends Model
         'action',
         'quantity',
         'unit_price',
+        'is_warranty_covered',
         'notes',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'float',
+        'is_warranty_covered' => 'boolean',
     ];
 
     public function serviceRecord(): BelongsTo

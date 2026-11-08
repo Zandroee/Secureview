@@ -33,6 +33,8 @@ class Inquiry extends Model
         'preferred_time',
         'notes',
         'status',
+        'intake_channel',
+        'service_location_type',
     ];
 
     protected $casts = [

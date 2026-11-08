@@ -893,7 +893,7 @@ class InquiryController extends Controller
             abort(404);
         }
 
-        $inquiry->load(['inquirable', 'technician', 'technicians', 'pendingCheckout.order']);
+        $inquiry->load(['inquirable', 'technician', 'technicians', 'pendingCheckout.order', 'serviceRecord.technician', 'serviceRecord.items', 'serviceRecord.invoiceRecord']);
 
         return Inertia::render('inquiry_details', [
             'inquiry' => [
@@ -914,6 +914,8 @@ class InquiryController extends Controller
                 'service_longitude' => $inquiry->service_longitude,
                 'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
+                'intake_channel' => $inquiry->intake_channel ?? 'online',
+                'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                 'urgency' => $inquiry->urgency,
                 'urgency_fee' => (float) $inquiry->urgency_fee,
                 'technician' => $inquiry->technician
@@ -939,6 +941,27 @@ class InquiryController extends Controller
                 'payment_method' => $inquiry->pendingCheckout?->order?->payment_method,
                 'order_id' => $inquiry->pendingCheckout?->order?->id,
                 'order_number' => $inquiry->pendingCheckout?->order?->order_number,
+                'service_record' => $inquiry->serviceRecord ? [
+                    'id' => $inquiry->serviceRecord->id,
+                    'work_summary' => $inquiry->serviceRecord->work_summary,
+                    'customer_notes' => $inquiry->serviceRecord->customer_notes,
+                    'labor_charge' => (float) $inquiry->serviceRecord->labor_charge,
+                    'additional_charge' => (float) $inquiry->serviceRecord->additional_charge,
+                    'total_income' => (float) $inquiry->serviceRecord->total_income,
+                    'completed_at' => $inquiry->serviceRecord->completed_at?->format('M d, Y h:i A'),
+                    'items' => $inquiry->serviceRecord->items->map(fn ($item) => [
+                        'product_name' => $item->product_name,
+                        'action' => $item->action,
+                        'is_warranty_covered' => (bool) $item->is_warranty_covered,
+                        'quantity' => (int) $item->quantity,
+                        'unit_price' => (float) $item->unit_price,
+                        'notes' => $item->notes,
+                    ])->values(),
+                    'invoice_url' => $inquiry->serviceRecord->invoiceRecord
+                        ? route('service-records.invoice', $inquiry->serviceRecord)
+                        : null,
+                    'invoice_record_number' => $inquiry->serviceRecord->invoiceRecord?->record_number,
+                ] : null,
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
                 'created_date' => $inquiry->created_at?->format('M d, Y'),
                 'created_time' => $inquiry->created_at?->format('h:i A'),
