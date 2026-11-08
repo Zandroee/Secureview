@@ -152,6 +152,64 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
         $this->assertNotContains(null, $notificationRecipients);
     }
 
+    public function test_walk_in_service_intake_rejects_a_day_when_all_technicians_are_busy_across_different_slots(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $date = today()->addDays(9)->toDateString();
+        $technicians = [
+            User::factory()->create(['role' => 'technician']),
+            User::factory()->create(['role' => 'technician']),
+            User::factory()->create(['role' => 'technician']),
+        ];
+
+        foreach ($technicians as $index => $technician) {
+            Inquiry::create([
+                'user_id' => null,
+                'technician_id' => $technician->id,
+                'inquiry_number' => 'INQ-WI-CAPACITY-' . ($index + 1),
+                'customer_name' => 'Existing Customer ' . ($index + 1),
+                'customer_phone' => '09171234567',
+                'customer_email' => null,
+                'street_address' => 'Existing service address',
+                'city' => 'Taguig',
+                'service_type' => 'Repair',
+                'urgency' => 'normal',
+                'urgency_fee' => 0,
+                'preferred_date' => $date,
+                'preferred_time' => [
+                    '08:00 AM - 11:00 AM',
+                    '11:00 AM - 02:00 PM',
+                    '02:00 PM - 05:00 PM',
+                ][$index],
+                'status' => 'confirmed',
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->post(route('admin.walk-in.services.store'), [
+                'customer_name' => 'New Counter Customer',
+                'customer_phone' => '09179998888',
+                'service_type' => 'Repair',
+                'service_location_type' => 'customer_site',
+                'street_address' => 'New customer address',
+                'city' => 'Taguig',
+                'preferred_date' => $date,
+                'preferred_time' => self::SLOT,
+                'urgency' => 'normal',
+            ])
+            ->assertSessionHasErrors('preferred_date');
+
+        $this->assertFalse(
+            Inquiry::query()
+                ->where('intake_channel', 'walk_in')
+                ->whereDate('preferred_date', $date)
+                ->exists()
+        );
+    }
+
     public function test_warranty_covered_replacements_are_not_charged_and_service_invoice_tracks_each_payment(): void
     {
         $admin = User::factory()->create([
