@@ -339,6 +339,16 @@ export default function Invoice({ invoice }) {
                         </div>
                     </div>
 
+                    {invoice.document_type === "service_invoice" && invoice.service && (
+                        <section className="border rounded-3 p-3 mb-4">
+                            <div className="small text-uppercase text-muted fw-bold mb-2">Service performed</div>
+                            <div className="fw-semibold mb-2">{invoice.service.type}{invoice.service.item_name ? " · " + invoice.service.item_name : ""}</div>
+                            <div style={{ whiteSpace: "pre-wrap" }}>{invoice.service.work_summary}</div>
+                            {invoice.service.technician && <div className="small text-muted mt-2">Technician: {invoice.service.technician}</div>}
+                            {invoice.service.customer_notes && <div className="small text-muted mt-2">Notes: {invoice.service.customer_notes}</div>}
+                        </section>
+                    )}
+
                     <div className="table-responsive">
                         <table className="table invoice-table align-middle">
                             <thead>
@@ -352,7 +362,7 @@ export default function Invoice({ invoice }) {
                             <tbody>
                                 {invoice.items.map((item, index) => (
                                     <tr key={item.id ?? index}>
-                                        <td className="fw-semibold">{item.name}</td>
+                                        <td><div className="fw-semibold">{item.name}</div>{item.notes && <div className="small text-muted mt-1">{item.notes}</div>}</td>
                                         <td className="text-end">{item.quantity}</td>
                                         <td className="text-end text-nowrap">{peso(item.unit_price)}</td>
                                         <td className="text-end text-nowrap">{peso(item.amount)}</td>
