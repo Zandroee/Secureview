@@ -28,6 +28,9 @@ class PurchaseController extends Controller
                 return [
                     'id' => $order->id,
                     'order_number' => $order->order_number,
+                    'fulfillment_method' => $order->fulfillment_method ?? 'delivery',
+                'pickup_address' => $order->pickup_address,
+                    'pickup_address' => $order->pickup_address,
                     'subtotal' => (float) $order->subtotal,
                 'voucher_code' => $order->voucher_code,
                 'discount_amount' => (float) $order->discount_amount,
