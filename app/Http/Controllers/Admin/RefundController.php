@@ -53,6 +53,7 @@ class RefundController extends Controller
                 'order_payment_method' => $refund->order?->payment_method,
                 'order_payment_status' => $refund->order?->payment_status,
                 'order_status' => $refund->order?->order_status,
+                'order_fulfillment_method' => $refund->order?->fulfillment_method ?? 'delivery',
                 'order_address' => $refund->order?->delivery_address,
                 'order_created_at' => $refund->order?->created_at?->format('M d, Y h:i A'),
                 'order_items' => $refund->order?->items?->map(fn ($item) => [
