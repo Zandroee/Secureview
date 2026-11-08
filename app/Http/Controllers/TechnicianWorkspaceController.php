@@ -884,18 +884,16 @@ class TechnicianWorkspaceController extends Controller
         });
 
         if ($inquiry->user_id) {
-            if ($inquiry->user_id) {
     CustomerNotification::create([
-                    'user_id' => $inquiry->user_id,
-                    'type' => 'schedule_updated',
-                    'title' => 'Service schedule updated',
-                    'message' => 'Your service ' . $inquiry->inquiry_number . ' is now scheduled for ' . $validated['preferred_date'] . ' (' . $validated['preferred_time'] . ').',
-                    'action_url' => route('inquiries.show', $inquiry),
-                    'related_type' => Inquiry::class,
-                    'related_id' => $inquiry->id,
-                ]);
+    'user_id' => $inquiry->user_id,
+    'type' => 'schedule_updated',
+    'title' => 'Service schedule updated',
+    'message' => 'Your service ' . $inquiry->inquiry_number . ' is now scheduled for ' . $validated['preferred_date'] . ' (' . $validated['preferred_time'] . ').',
+    'action_url' => route('inquiries.show', $inquiry),
+    'related_type' => Inquiry::class,
+    'related_id' => $inquiry->id,
+    ]);
 }
-        }
 
         return back()->with('success', 'Service schedule updated successfully.');
     }
@@ -919,18 +917,16 @@ class TechnicianWorkspaceController extends Controller
         if ($decision === 'decline') {
             $inquiry->update(['reschedule_request_status' => 'declined']);
             if ($inquiry->user_id) {
-                if ($inquiry->user_id) {
     CustomerNotification::create([
-                        'user_id' => $inquiry->user_id,
-                        'type' => 'reschedule_declined',
-                        'title' => 'Reschedule request declined',
-                        'message' => 'Your reschedule request for ' . $inquiry->inquiry_number . ' was declined by the assigned technician. Your original appointment remains scheduled.',
-                        'action_url' => route('inquiries.show', $inquiry),
-                        'related_type' => Inquiry::class,
-                        'related_id' => $inquiry->id,
-                    ]);
+    'user_id' => $inquiry->user_id,
+    'type' => 'reschedule_declined',
+    'title' => 'Reschedule request declined',
+    'message' => 'Your reschedule request for ' . $inquiry->inquiry_number . ' was declined by the assigned technician. Your original appointment remains scheduled.',
+    'action_url' => route('inquiries.show', $inquiry),
+    'related_type' => Inquiry::class,
+    'related_id' => $inquiry->id,
+    ]);
 }
-            }
             return back()->with('success', 'Reschedule request declined. The original schedule remains unchanged.');
         }
 
@@ -975,18 +971,16 @@ class TechnicianWorkspaceController extends Controller
         ]);
 
         if ($inquiry->user_id) {
-            if ($inquiry->user_id) {
     CustomerNotification::create([
-                    'user_id' => $inquiry->user_id,
-                    'type' => 'reschedule_approved',
-                    'title' => 'Reschedule request approved',
-                    'message' => 'Your service ' . $inquiry->inquiry_number . ' has been rescheduled to ' . $date . ' (' . $time . ') by the assigned technician.',
-                    'action_url' => route('inquiries.show', $inquiry),
-                    'related_type' => Inquiry::class,
-                    'related_id' => $inquiry->id,
-                ]);
+    'user_id' => $inquiry->user_id,
+    'type' => 'reschedule_approved',
+    'title' => 'Reschedule request approved',
+    'message' => 'Your service ' . $inquiry->inquiry_number . ' has been rescheduled to ' . $date . ' (' . $time . ') by the assigned technician.',
+    'action_url' => route('inquiries.show', $inquiry),
+    'related_type' => Inquiry::class,
+    'related_id' => $inquiry->id,
+    ]);
 }
-        }
 
         return back()->with('success', 'Customer reschedule request approved.');
     }
