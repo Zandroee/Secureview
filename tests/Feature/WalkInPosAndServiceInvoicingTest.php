@@ -196,8 +196,8 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
             'email' => 'picker@example.test',
             'phone' => '09171234567',
         ]);
-        $product = $this->createProduct('Picker Camera', 7, 1700);
-        $package = $this->createPackage('Picker CCTV Package', 6500);
+        $product = $this->createProduct('Z Picker Camera', 7, 1700);
+        $package = $this->createPackage('A Picker CCTV Package', 6500);
         $package->packageItems()->create([
             'product_id' => $product->id,
             'quantity' => 2,
