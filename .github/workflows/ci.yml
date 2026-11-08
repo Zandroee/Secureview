@@ -167,6 +167,7 @@ jobs:
           cp app/Models/ServiceBookingFeeSetting.php hostinger-release/app/Models/ServiceBookingFeeSetting.php
           cp app/Models/ServiceRecord.php hostinger-release/app/Models/ServiceRecord.php
           cp app/Models/ServiceRecordItem.php hostinger-release/app/Models/ServiceRecordItem.php
+          cp app/Models/ServiceRecordPayment.php hostinger-release/app/Models/ServiceRecordPayment.php
           cp app/Models/Review.php hostinger-release/app/Models/Review.php
           cp app/Models/Review.php hostinger-release/app/Models/Review.php
           cp app/Http/Controllers/Admin/CatalogOptionController.php hostinger-release/app/Http/Controllers/Admin/CatalogOptionController.php
@@ -208,6 +209,7 @@ jobs:
           cp database/migrations/2026_11_07_000001_create_refunds_table.php hostinger-release/database/migrations/2026_11_07_000001_create_refunds_table.php
           cp database/migrations/2026_11_07_000002_add_marketing_email_preferences_to_users_table.php hostinger-release/database/migrations/2026_11_07_000002_add_marketing_email_preferences_to_users_table.php
           cp database/migrations/2026_11_08_000001_add_walk_in_channels_and_service_invoice_fields.php hostinger-release/database/migrations/2026_11_08_000001_add_walk_in_channels_and_service_invoice_fields.php
+          cp database/migrations/2026_11_08_000002_create_service_record_payments_table.php hostinger-release/database/migrations/2026_11_08_000002_create_service_record_payments_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php
