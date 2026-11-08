@@ -271,9 +271,9 @@ export default function ServiceDetails({ inquiry: service, success }) {
                                                     {service.service_record.items.map((item, index) => (
                                                         <tr key={index}>
                                                             <td><div className="fw-semibold">{item.product_name}</div>{item.notes && <div className="small text-muted">{item.notes}</div>}</td>
-                                                            <td><span className={"badge " + (item.action === "used" ? "text-bg-primary" : "text-bg-secondary")}>{item.action === "used" ? "Used / replaced" : "Removed"}</span></td>
+                                                            <td><span className={"badge " + (item.action === "used" ? "text-bg-primary" : "text-bg-secondary")}>{item.action === "used" ? (item.is_warranty_covered ? "Used · Warranty-covered" : "Used / replaced") : "Removed"}</span></td>
                                                             <td className="text-end">{item.quantity}</td>
-                                                            <td className="text-end">{item.action === "used" ? "₱" + Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}</td>
+                                                            <td className="text-end">{item.action === "used" ? (item.is_warranty_covered ? "No charge" : "₱" + Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : "—"}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
