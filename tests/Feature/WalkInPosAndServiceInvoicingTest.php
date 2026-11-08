@@ -1,21 +1,21 @@
 <?php
 
-namespace Tests\\Feature;
+namespace Tests\Feature;
 
-use App\\Models\\Inquiry;
-use App\\Models\\InventoryAdjustment;
-use App\\Models\\InvoiceRecord;
-use App\\Models\\InvoiceSetting;
-use App\\Models\\Order;
-use App\\Models\\Package;
-use App\\Models\\Product;
-use App\\Models\\ServiceRecord;
-use App\\Models\\ServiceRecordItem;
-use App\\Models\\User;
-use App\\Services\\InvoiceDocumentService;
-use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use Inertia\\Testing\\AssertableInertia as Assert;
-use Tests\\TestCase;
+use App\Models\Inquiry;
+use App\Models\InventoryAdjustment;
+use App\Models\InvoiceRecord;
+use App\Models\InvoiceSetting;
+use App\Models\Order;
+use App\Models\Package;
+use App\Models\Product;
+use App\Models\ServiceRecord;
+use App\Models\ServiceRecordItem;
+use App\Models\User;
+use App\Services\InvoiceDocumentService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
+use Tests\TestCase;
 
 class WalkInPosAndServiceInvoicingTest extends TestCase
 {
