@@ -359,15 +359,17 @@ class InquiryController extends Controller
             $jobNotifications->notifyAssignmentsRemoved($removedIds, $inquiry);
 
             if ($inquiry->user_id) {
-                CustomerNotification::create([
-                    'user_id' => $inquiry->user_id,
-                    'type' => 'technician_assignment',
-                    'title' => 'Technician team updated',
-                    'message' => 'The team assigned to inquiry ' . $inquiry->inquiry_number . ' is now: ' . ($names ?: 'not assigned') . '.',
-                    'action_url' => route('inquiries.show', $inquiry),
-                    'related_type' => Inquiry::class,
-                    'related_id' => $inquiry->id,
-                ]);
+                if ($inquiry->user_id) {
+    CustomerNotification::create([
+                        'user_id' => $inquiry->user_id,
+                        'type' => 'technician_assignment',
+                        'title' => 'Technician team updated',
+                        'message' => 'The team assigned to inquiry ' . $inquiry->inquiry_number . ' is now: ' . ($names ?: 'not assigned') . '.',
+                        'action_url' => route('inquiries.show', $inquiry),
+                        'related_type' => Inquiry::class,
+                        'related_id' => $inquiry->id,
+                    ]);
+}
             }
 
             $activityLogger->record(
@@ -525,17 +527,19 @@ class InquiryController extends Controller
             $removedTechnicianIds = array_values(array_diff($oldTechnicianIds, $technicianIds));
             $jobNotifications->notifyAssignmentsRemoved($removedTechnicianIds, $inquiry);
 
-            CustomerNotification::create([
-                'user_id' => $inquiry->user_id,
-                'type' => 'inquiry_status',
-                'title' => 'Service inquiry confirmed',
-                'message' => 'Your inquiry ' . $inquiry->inquiry_number
-                    . ' has been confirmed for ' . $inquiry->preferred_date->format('F j, Y')
-                    . ' (' . $inquiry->preferred_time . '). Assigned technicians: ' . $technicianNames . '.',
-                'action_url' => route('inquiries.show', $inquiry),
-                'related_type' => Inquiry::class,
-                'related_id' => $inquiry->id,
-            ]);
+            if ($inquiry->user_id) {
+    CustomerNotification::create([
+                    'user_id' => $inquiry->user_id,
+                    'type' => 'inquiry_status',
+                    'title' => 'Service inquiry confirmed',
+                    'message' => 'Your inquiry ' . $inquiry->inquiry_number
+                        . ' has been confirmed for ' . $inquiry->preferred_date->format('F j, Y')
+                        . ' (' . $inquiry->preferred_time . '). Assigned technicians: ' . $technicianNames . '.',
+                    'action_url' => route('inquiries.show', $inquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $inquiry->id,
+                ]);
+}
 
             $jobNotifications->notifyConfirmation($inquiry);
 
@@ -630,15 +634,17 @@ class InquiryController extends Controller
                     'status' => $newStatus,
                 ]);
 
-                CustomerNotification::create([
-                    'user_id' => $inquiry->user_id,
-                    'type' => 'inquiry_status',
-                    'title' => 'Inquiry status updated',
-                    'message' => 'Your inquiry ' . $inquiry->inquiry_number . ' is now marked as ' . str_replace('_', ' ', $newStatus) . '.',
-                    'action_url' => route('inquiries.show', $inquiry),
-                    'related_type' => Inquiry::class,
-                    'related_id' => $inquiry->id,
-                ]);
+                if ($inquiry->user_id) {
+    CustomerNotification::create([
+                        'user_id' => $inquiry->user_id,
+                        'type' => 'inquiry_status',
+                        'title' => 'Inquiry status updated',
+                        'message' => 'Your inquiry ' . $inquiry->inquiry_number . ' is now marked as ' . str_replace('_', ' ', $newStatus) . '.',
+                        'action_url' => route('inquiries.show', $inquiry),
+                        'related_type' => Inquiry::class,
+                        'related_id' => $inquiry->id,
+                    ]);
+}
 
                 $jobNotifications->notifyStatusChanged($inquiry, $oldStatus, $newStatus, $request->user());
 
