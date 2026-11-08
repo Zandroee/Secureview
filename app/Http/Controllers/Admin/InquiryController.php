@@ -363,16 +363,16 @@ class InquiryController extends Controller
             $jobNotifications->notifyAssignmentsRemoved($removedIds, $inquiry);
 
             if ($inquiry->user_id) {
-    CustomerNotification::create([
-    'user_id' => $inquiry->user_id,
-    'type' => 'technician_assignment',
-    'title' => 'Technician team updated',
-    'message' => 'The team assigned to inquiry ' . $inquiry->inquiry_number . ' is now: ' . ($names ?: 'not assigned') . '.',
-    'action_url' => route('inquiries.show', $inquiry),
-    'related_type' => Inquiry::class,
-    'related_id' => $inquiry->id,
-    ]);
-}
+                CustomerNotification::create([
+                    'user_id' => $inquiry->user_id,
+                    'type' => 'technician_assignment',
+                    'title' => 'Technician team updated',
+                    'message' => 'The team assigned to inquiry ' . $inquiry->inquiry_number . ' is now: ' . ($names ?: 'not assigned') . '.',
+                    'action_url' => route('inquiries.show', $inquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $inquiry->id,
+                ]);
+            }
 
             $activityLogger->record(
                 $request,
@@ -530,7 +530,7 @@ class InquiryController extends Controller
             $jobNotifications->notifyAssignmentsRemoved($removedTechnicianIds, $inquiry);
 
             if ($inquiry->user_id) {
-    CustomerNotification::create([
+                CustomerNotification::create([
                     'user_id' => $inquiry->user_id,
                     'type' => 'inquiry_status',
                     'title' => 'Service inquiry confirmed',
@@ -541,7 +541,7 @@ class InquiryController extends Controller
                     'related_type' => Inquiry::class,
                     'related_id' => $inquiry->id,
                 ]);
-}
+            }
 
             $jobNotifications->notifyConfirmation($inquiry);
 
@@ -637,7 +637,7 @@ class InquiryController extends Controller
                 ]);
 
                 if ($inquiry->user_id) {
-    CustomerNotification::create([
+                    CustomerNotification::create([
                         'user_id' => $inquiry->user_id,
                         'type' => 'inquiry_status',
                         'title' => 'Inquiry status updated',
@@ -646,7 +646,7 @@ class InquiryController extends Controller
                         'related_type' => Inquiry::class,
                         'related_id' => $inquiry->id,
                     ]);
-}
+                }
 
                 $jobNotifications->notifyStatusChanged($inquiry, $oldStatus, $newStatus, $request->user());
 
