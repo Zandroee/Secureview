@@ -86,18 +86,7 @@ class ScheduleController extends Controller
             ->orderByDesc('created_at')
             ->paginate(10)
             ->withQueryString()
-            ->through(function (Inquiry $inquiry) use ($documents) {
-                $serviceRecord = $inquiry->serviceRecord;
-                $invoiceTotal = $serviceRecord
-                    ? (float) ($serviceRecord->invoiceRecord?->snapshot['total'] ?? $documents->buildServiceSnapshot($serviceRecord)['total'])
-                    : 0.0;
-                $amountPaid = $serviceRecord
-                    ? (float) $serviceRecord->payments->sum('amount')
-                    : 0.0;
-                $paymentStatus = $amountPaid <= 0
-                    ? 'pending'
-                    : ($amountPaid >= $invoiceTotal ? 'paid' : 'partially_paid');
-
+            ->through(function (Inquiry $inquiry) {
                 return [
                     'id' => $inquiry->id,
                     'inquiry_number' => $inquiry->inquiry_number,
