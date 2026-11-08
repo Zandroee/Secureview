@@ -346,11 +346,11 @@ class CheckoutController extends Controller
             'customer_email' => ['required', 'email', 'max:255'],
             'fulfillment_method' => ['required', 'in:delivery,pickup'],
             // Address details are required only for delivery; pickup does not collect a destination.
-            'delivery_street_address' => ['required_if:fulfillment_method,delivery', 'nullable', 'string', 'min:5', 'max:500'],
+            'delivery_street_address' => ['exclude_if:fulfillment_method,pickup', 'required_without:delivery_address', 'nullable', 'string', 'min:5', 'max:500'],
             'delivery_address_details' => ['nullable', 'string', 'max:500'],
-            'delivery_city' => ['required_if:fulfillment_method,delivery', 'nullable', 'string', 'max:180'],
-            'delivery_latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:delivery_longitude'],
-            'delivery_longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:delivery_latitude'],
+            'delivery_city' => ['exclude_if:fulfillment_method,pickup', 'required_without:delivery_address', 'nullable', 'string', 'max:180'],
+            'delivery_latitude' => ['exclude_if:fulfillment_method,pickup', 'nullable', 'numeric', 'between:-90,90', 'required_with:delivery_longitude'],
+            'delivery_longitude' => ['exclude_if:fulfillment_method,pickup', 'nullable', 'numeric', 'between:-180,180', 'required_with:delivery_latitude'],
             'delivery_address' => ['nullable', 'string', 'min:10', 'max:1000'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['required', 'in:cash,gcash,card,maya'],
@@ -505,8 +505,8 @@ class CheckoutController extends Controller
                 'delivery_address' => $validated['delivery_address'],
                 'delivery_address_details' => $deliveryDetails !== '' ? $deliveryDetails : null,
                 'delivery_city' => $deliveryCity !== '' ? $deliveryCity : null,
-                'delivery_latitude' => $validated['delivery_latitude'] ?? null,
-                'delivery_longitude' => $validated['delivery_longitude'] ?? null,
+                'delivery_latitude' => $fulfillmentMethod === 'delivery' ? ($validated['delivery_latitude'] ?? null) : null,
+                'delivery_longitude' => $fulfillmentMethod === 'delivery' ? ($validated['delivery_longitude'] ?? null) : null,
                 'notes' => $validated['notes'] ?? null,
             ]);
 
