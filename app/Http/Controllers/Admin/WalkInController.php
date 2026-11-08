@@ -202,7 +202,7 @@ class WalkInController extends Controller
         $validated = $request->validate([
             'customer_user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'user'))],
             'customer_name' => ['required', 'string', 'max:120'],
-            'customer_phone' => ['required', 'regex:/^09\\d{9}$/'],
+            'customer_phone' => ['required', 'regex:/^09\d{9}$/'],
             'customer_email' => ['required', 'email', 'max:255'],
             'service_type' => ['required', Rule::in(['Installation', 'Site Inspection', 'Maintenance', 'Repair', 'Consultation', 'Other'])],
             'service_location_type' => ['required', Rule::in(['in_shop', 'customer_site'])],
