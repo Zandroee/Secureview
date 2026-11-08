@@ -914,6 +914,8 @@ class InquiryController extends Controller
                 'service_longitude' => $inquiry->service_longitude,
                 'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
+                'intake_channel' => $inquiry->intake_channel ?? 'online',
+                'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                 'urgency' => $inquiry->urgency,
                 'urgency_fee' => (float) $inquiry->urgency_fee,
                 'technician' => $inquiry->technician
@@ -950,6 +952,7 @@ class InquiryController extends Controller
                     'items' => $inquiry->serviceRecord->items->map(fn ($item) => [
                         'product_name' => $item->product_name,
                         'action' => $item->action,
+                        'is_warranty_covered' => (bool) $item->is_warranty_covered,
                         'quantity' => (int) $item->quantity,
                         'unit_price' => (float) $item->unit_price,
                             'is_warranty_covered' => (bool) $item->is_warranty_covered,
