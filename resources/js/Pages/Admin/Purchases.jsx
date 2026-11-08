@@ -788,7 +788,7 @@ export default function AdminPurchases({
                                     </div>
 
                                     <div className="fw-semibold">
-                                        {viewingOrder.fulfillment_method === "pickup" ? "Shop pickup at Netmax Trading" : viewingOrder.delivery_address}
+                                        {viewingOrder.fulfillment_method === "pickup" ? (viewingOrder.pickup_address || "Pickup location not recorded on this order") : viewingOrder.delivery_address}
                                     </div>
                                     {viewingOrder.delivery_latitude != null && viewingOrder.delivery_longitude != null && (
                                         <a
