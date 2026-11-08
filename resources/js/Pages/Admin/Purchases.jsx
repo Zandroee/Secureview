@@ -64,6 +64,7 @@ export default function AdminPurchases({
     const [paymentMethod, setPaymentMethod] = useState(
         filters.payment_method ?? ""
     );
+    const [salesChannel, setSalesChannel] = useState(filters.sales_channel ?? "");
     const [attentionFilter, setAttentionFilter] = useState(filters.attention ?? "");
     const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
     const [dateTo, setDateTo] = useState(filters.date_to ?? "");
@@ -166,6 +167,7 @@ export default function AdminPurchases({
                 payment_status: paymentStatus,
                 order_status: orderStatus,
                 payment_method: paymentMethod,
+                sales_channel: salesChannel,
                 attention: attentionFilter,
                 date_from: dateFrom,
                 date_to: dateTo,
@@ -184,6 +186,7 @@ export default function AdminPurchases({
             payment_status: preset.payment_status ?? "",
             order_status: preset.order_status ?? "",
             payment_method: preset.payment_method ?? "",
+            sales_channel: preset.sales_channel ?? "",
             attention: preset.attention ?? "",
             date_from: "",
             date_to: "",
@@ -193,6 +196,7 @@ export default function AdminPurchases({
         setPaymentStatus(next.payment_status);
         setOrderStatus(next.order_status);
         setPaymentMethod(next.payment_method);
+        setSalesChannel(next.sales_channel);
         setAttentionFilter(next.attention);
         setDateFrom("");
         setDateTo("");
@@ -209,6 +213,7 @@ export default function AdminPurchases({
         setPaymentStatus("");
         setOrderStatus("");
         setPaymentMethod("");
+        setSalesChannel("");
         setAttentionFilter("");
         setDateFrom("");
         setDateTo("");
@@ -496,6 +501,15 @@ export default function AdminPurchases({
                                         <option value="cancelled">
                                             Cancelled
                                         </option>
+                                    </select>
+                                </div>
+
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">SALES CHANNEL</label>
+                                    <select className="form-select" value={salesChannel} onChange={(event) => setSalesChannel(event.target.value)}>
+                                        <option value="">All channels</option>
+                                        <option value="online">Online</option>
+                                        <option value="walk_in">Walk-in / in-store</option>
                                     </select>
                                 </div>
 
