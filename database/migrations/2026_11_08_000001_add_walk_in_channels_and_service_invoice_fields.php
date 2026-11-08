@@ -47,12 +47,23 @@ return new class extends Migration
 
     public function down(): void
     {
+        // A rollback must never silently discard walk-in sales, walk-in service
+        // intake, or service invoice records. Migrate those records deliberately
+        // before rolling back this schema change.
+        if (\\Illuminate\\Support\\Facades\\DB::table('orders')->whereNull('user_id')->exists()
+            || \\Illuminate\\Support\\Facades\\DB::table('inquiries')->whereNull('user_id')->exists()
+            || \\Illuminate\\Support\\Facades\\DB::table('invoice_records')->whereNotNull('service_record_id')->exists()) {
+            throw new \\RuntimeException(
+                'Cannot roll back walk-in POS/service invoicing while walk-in orders, walk-in services, or service invoices exist.'
+            );
+        }
+
         Schema::table('invoice_records', function (Blueprint $table) {
             $table->dropForeign(['service_record_id']);
             $table->dropUnique(['service_record_id']);
             $table->dropColumn('service_record_id');
             $table->dropForeign(['order_id']);
-            $table->unsignedBigInteger('order_id')->nullable()->change();
+            $table->unsignedBigInteger('order_id')->nullable(false)->change();
             $table->foreign('order_id')->references('id')->on('orders')->restrictOnDelete();
             $table->unique('order_id');
         });
@@ -64,12 +75,21 @@ return new class extends Migration
         Schema::table('inquiries', function (Blueprint $table) {
             $table->dropIndex(['intake_channel', 'service_location_type']);
             $table->dropColumn(['intake_channel', 'service_location_type']);
+            $table->string('customer_email')->nullable(false)->change();
+            $table->dropForeign(['user_id']);
+            $table->unsignedBigInteger('user_id')->nullable(false)->change();
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         });
 
         Schema::table('orders', function (Blueprint $table) {
             $table->dropIndex(['sales_channel']);
             $table->dropForeign(['created_by']);
             $table->dropColumn(['sales_channel', 'created_by']);
+            $table->string('customer_email')->nullable(false)->change();
+            $table->text('delivery_address')->nullable(false)->change();
+            $table->dropForeign(['user_id']);
+            $table->unsignedBigInteger('user_id')->nullable(false)->change();
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         });
     }
 };
