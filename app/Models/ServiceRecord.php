@@ -52,4 +52,9 @@ class ServiceRecord extends Model
     {
         return $this->hasOne(InvoiceRecord::class);
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(ServiceRecordPayment::class)->orderBy('paid_at')->orderBy('id');
+    }
 }
