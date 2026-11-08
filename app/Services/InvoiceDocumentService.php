@@ -87,9 +87,15 @@ class InvoiceDocumentService
                 'id' => $item->id,
                 'name' => $item->product_name,
                 'quantity' => (int) $item->quantity,
-                'unit_price' => (float) $item->unit_price,
-                'amount' => round((float) $item->unit_price * (int) $item->quantity, 2),
-                'notes' => $item->notes,
+                'is_warranty_covered' => (bool) $item->is_warranty_covered,
+                'unit_price' => $item->is_warranty_covered ? 0.0 : (float) $item->unit_price,
+                'amount' => $item->is_warranty_covered
+                    ? 0.0
+                    : round((float) $item->unit_price * (int) $item->quantity, 2),
+                'notes' => trim(implode(' · ', array_filter([
+                    $item->is_warranty_covered ? 'Warranty-covered — no customer charge' : null,
+                    $item->notes,
+                ]))),
             ])
             ->values()
             ->all();
