@@ -58,7 +58,13 @@ class InvoiceController extends Controller
         bool $isAdmin,
         InvoiceDocumentService $documents
     ): Response {
-        $serviceRecord->loadMissing(['inquiry', 'technician', 'items', 'invoiceRecord']);
+        $serviceRecord->loadMissing([
+            'inquiry',
+            'technician',
+            'items',
+            'invoiceRecord',
+            'payments.recordedBy',
+        ]);
 
         if ($serviceRecord->invoiceRecord) {
             $invoice = $serviceRecord->invoiceRecord->snapshot ?? $documents->buildServiceSnapshot($serviceRecord);
@@ -72,14 +78,34 @@ class InvoiceController extends Controller
             $invoice['is_recorded'] = false;
         }
 
-        // The invoice's charge snapshot remains immutable; payment progress is
-        // deliberately live so later counter payments update the visible balance.
-        $invoice['payment_status'] = $serviceRecord->payment_status;
-        $invoice['payment_method'] = $serviceRecord->payment_method;
-        $invoice['amount_paid'] = min((float) $invoice['total'], (float) $serviceRecord->amount_paid);
-        $invoice['balance_due'] = max(0, round((float) $invoice['total'] - (float) $invoice['amount_paid'], 2));
-        $invoice['is_paid'] = $serviceRecord->payment_status === 'paid';
+        // Charge lines are taken from the immutable invoice snapshot. Payment
+        // progress is live and comes from the append-only payment ledger.
+        $totalCents = (int) round((float) $invoice['total'] * 100);
+        $amountPaidCents = (int) round((float) $serviceRecord->payments->sum('amount') * 100);
+        $amountPaidCents = min($totalCents, max(0, $amountPaidCents));
+        $invoice['payment_status'] = $amountPaidCents <= 0
+            ? 'pending'
+            : ($amountPaidCents >= $totalCents ? 'paid' : 'partially_paid');
+        $invoice['payment_method'] = $serviceRecord->payments->last()?->payment_method
+            ?? $serviceRecord->payment_method;
+        $invoice['amount_paid'] = $amountPaidCents / 100;
+        $invoice['balance_due'] = max(0, $totalCents - $amountPaidCents) / 100;
+        $invoice['is_paid'] = $amountPaidCents >= $totalCents;
         $invoice['paid_at'] = $serviceRecord->paid_at?->format('F j, Y h:i A');
+        $invoice['payments'] = $serviceRecord->payments
+            ->map(fn ($payment) => [
+                'id' => $payment->id,
+                'amount' => (float) $payment->amount,
+                'payment_method' => $payment->payment_method,
+                'reference' => $payment->reference,
+                'notes' => $payment->notes,
+                'paid_at' => $payment->paid_at?->format('M d, Y h:i A'),
+                'recorded_by' => $payment->recordedBy?->name
+                    ?? ($payment->is_legacy_import ? 'Historical balance (legacy import)' : 'Staff account unavailable'),
+                'is_legacy_import' => (bool) $payment->is_legacy_import,
+            ])
+            ->values()
+            ->all();
         $invoice['viewer_role'] = $isAdmin ? 'admin' : 'customer';
 
         return Inertia::render('invoice', [
