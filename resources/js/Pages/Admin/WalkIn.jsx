@@ -345,12 +345,12 @@ const emptySale = () => ({
     notes: "",
 });
 
-const emptyService = (initialDate = "") => ({
+const emptyService = () => ({
     customer_user_id: "",
     customer_name: "",
     customer_phone: "",
     customer_email: "",
-    service_type: "Repair",
+    service_type: "Installation",
     service_location_type: "in_shop",
     street_address: "",
     address_details: "",
