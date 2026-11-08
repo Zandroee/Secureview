@@ -48,10 +48,6 @@ return new class extends Migration
             $table->timestamp('paid_at')->nullable();
         });
 
-        Schema::table('service_record_items', function (Blueprint $table) {
-            $table->boolean('is_warranty_covered')->default(false)->after('unit_price');
-        });
-
         Schema::table('invoice_records', function (Blueprint $table) {
             $table->dropForeign(['order_id']);
             $table->dropUnique(['order_id']);
