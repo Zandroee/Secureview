@@ -214,7 +214,7 @@ class WalkInPosAndServiceInvoicingTest extends TestCase
                 ->where('customers.0.phone', $customer->phone)
                 ->has('catalogItems', 2)
                 ->where('catalogItems.0.type', 'package')
-                ->where('catalogItems.0.includes.0.name', 'Picker Camera')
+                ->where('catalogItems.0.includes.0.name', 'Z Picker Camera')
                 ->where('catalogItems.1.type', 'product')
                 ->has('unavailableDates')
                 ->has('unavailableTimeSlots')
