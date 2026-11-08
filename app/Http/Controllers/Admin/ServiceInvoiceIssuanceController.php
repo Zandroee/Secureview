@@ -86,26 +86,94 @@ class ServiceInvoiceIssuanceController extends Controller
         );
     }
 
-    public function updatePayment(Request $request, ServiceRecord $serviceRecord, InvoiceDocumentService $documents)
-    {
-        $serviceRecord->loadMissing(['inquiry', 'items']);
-        $total = (float) $documents->buildServiceSnapshot($serviceRecord)['total'];
-
+    public function updatePayment(
+        Request $request,
+        ServiceRecord $serviceRecord,
+        InvoiceDocumentService $documents,
+        AdminActivityLogger $activityLogger
+    ) {
         $validated = $request->validate([
-            'amount_paid' => ['required', 'numeric', 'min:0', 'max:' . number_format($total, 2, '.', '')],
+            'payment_amount' => ['required', 'numeric', 'gt:0', 'max:1000000'],
             'payment_method' => ['required', 'in:cash,gcash,card,maya'],
+            'reference' => ['nullable', 'string', 'max:120'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $amountPaid = round((float) $validated['amount_paid'], 2);
-        $status = $amountPaid <= 0 ? 'pending' : ($amountPaid >= $total ? 'paid' : 'partially_paid');
+        $result = DB::transaction(function () use ($request, $serviceRecord, $documents, $validated) {
+            $lockedRecord = ServiceRecord::query()
+                ->with(['inquiry', 'technician', 'items'])
+                ->whereKey($serviceRecord->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $serviceRecord->update([
-            'amount_paid' => $amountPaid,
-            'payment_method' => $amountPaid > 0 ? $validated['payment_method'] : null,
-            'payment_status' => $status,
-            'paid_at' => $status === 'paid' ? ($serviceRecord->paid_at ?? now()) : null,
-        ]);
+            if ($lockedRecord->inquiry?->status !== 'completed') {
+                throw ValidationException::withMessages([
+                    'payment_amount' => 'Payments can only be recorded for a completed service.',
+                ]);
+            }
 
-        return back()->with('success', 'Service payment record updated. Current status: ' . str_replace('_', ' ', $status) . '.');
+            if (!$lockedRecord->invoiceRecord()->exists()) {
+                throw ValidationException::withMessages([
+                    'payment_amount' => 'Issue the service invoice before recording a payment.',
+                ]);
+            }
+
+            $totalCents = (int) round((float) $documents->buildServiceSnapshot($lockedRecord)['total'] * 100);
+            $paidCents = (int) round((float) $lockedRecord->payments()->sum('amount') * 100);
+            $paymentCents = (int) round((float) $validated['payment_amount'] * 100);
+            $balanceCents = max(0, $totalCents - $paidCents);
+
+            if ($paymentCents > $balanceCents) {
+                throw ValidationException::withMessages([
+                    'payment_amount' => 'The payment exceeds the remaining balance of ₱' . number_format($balanceCents / 100, 2) . '.',
+                ]);
+            }
+
+            $payment = $lockedRecord->payments()->create([
+                'amount' => number_format($paymentCents / 100, 2, '.', ''),
+                'payment_method' => $validated['payment_method'],
+                'reference' => filled($validated['reference'] ?? null) ? trim($validated['reference']) : null,
+                'notes' => filled($validated['notes'] ?? null) ? trim($validated['notes']) : null,
+                'paid_at' => now(),
+                'recorded_by_user_id' => $request->user()->id,
+                'is_legacy_import' => false,
+            ]);
+
+            $newPaidCents = $paidCents + $paymentCents;
+            $status = $newPaidCents <= 0
+                ? 'pending'
+                : ($newPaidCents >= $totalCents ? 'paid' : 'partially_paid');
+
+            $lockedRecord->update([
+                'amount_paid' => number_format($newPaidCents / 100, 2, '.', ''),
+                'payment_method' => $payment->payment_method,
+                'payment_status' => $status,
+                'paid_at' => $status === 'paid' ? $payment->paid_at : null,
+            ]);
+
+            return [
+                'payment' => $payment,
+                'amount_paid' => $newPaidCents / 100,
+                'balance_due' => max(0, $totalCents - $newPaidCents) / 100,
+                'status' => $status,
+            ];
+        });
+
+        $activityLogger->record(
+            $request,
+            'service_payment_recorded',
+            'Recorded a ₱' . number_format((float) $result['payment']->amount, 2) . ' ' . strtoupper($result['payment']->payment_method)
+                . ' payment for service record #' . $serviceRecord->id . '. New balance: ₱' . number_format($result['balance_due'], 2) . '.',
+            $serviceRecord,
+            [],
+            ['status' => $result['status']]
+        );
+
+        return back()->with(
+            'success',
+            'Payment of ₱' . number_format((float) $result['payment']->amount, 2)
+                . ' recorded. Total paid: ₱' . number_format($result['amount_paid'], 2)
+                . '; balance due: ₱' . number_format($result['balance_due'], 2) . '.'
+        );
     }
 }
