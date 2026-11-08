@@ -32,13 +32,14 @@ class InvoiceDocumentService
             'payment_method' => $this->paymentMethodLabel($order->payment_method),
             'payment_status' => $order->payment_status,
             'order_status' => $order->order_status,
+            'fulfillment_method' => $order->fulfillment_method ?? 'delivery',
             'is_paid' => $isPaid,
             'is_cancelled' => $isCancelled,
             'customer' => [
                 'name' => $order->customer_name,
                 'email' => $order->customer_email,
                 'phone' => $order->customer_phone,
-                'address' => $order->delivery_address,
+                'address' => ($order->fulfillment_method ?? 'delivery') === 'pickup' ? 'Shop pickup at Netmax Trading' : $order->delivery_address,
             ],
             'items' => $order->items->map(fn ($item) => [
                 'id' => $item->id,
