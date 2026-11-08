@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\ServiceRecord;
 use App\Services\InvoiceDocumentService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
