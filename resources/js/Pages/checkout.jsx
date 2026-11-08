@@ -51,6 +51,9 @@ export default function Checkout({
     success,
     orderNumber,
     paymentMethod,
+    pickupAddress = "",
+    successPickupAddress = null,
+    fulfillmentMethod = "delivery",
 }) {
     const { props: pageProps } = usePage();
     const pageErrors = pageProps.errors ?? {};
@@ -171,6 +174,14 @@ export default function Checkout({
                                     </span>
                                 </div>
                             </div>
+
+                            {fulfillmentMethod === "pickup" && successPickupAddress && (
+                                <div className="alert alert-info text-start mt-3">
+                                    <div className="fw-bold mb-1"><i className="bi bi-shop me-2" />SHOP PICKUP ADDRESS</div>
+                                    <div className="small">{successPickupAddress}</div>
+                                    <div className="small mt-2">Please collect your order from this location. Keep your order number for reference.</div>
+                                </div>
+                            )}
 
                             <p className="small text-muted mb-4">
                                 Online payment processing for GCash, Card, and
@@ -346,9 +357,17 @@ export default function Checkout({
                                                 </label>
                                             </div>
                                             <div className="col-sm-6">
-                                                <label className={"border rounded-3 p-3 d-flex gap-2 align-items-start h-100 w-100 " + (data.fulfillment_method === "pickup" ? "border-primary bg-primary-subtle" : "bg-white")} style={{ cursor: "pointer" }}>
-                                                    <input type="radio" name="fulfillment_method" value="pickup" checked={data.fulfillment_method === "pickup"} onChange={() => setData("fulfillment_method", "pickup")} className="form-check-input mt-1" />
-                                                    <span><strong className="d-block">Shop pickup</strong><span className="small text-muted">Collect your order at the Netmax Trading physical store. No delivery address needed.</span></span>
+                                                <label className={"border rounded-3 p-3 d-flex gap-2 align-items-start h-100 w-100 " + (data.fulfillment_method === "pickup" ? "border-primary bg-primary-subtle" : "bg-white")} style={{ cursor: pickupAddress ? "pointer" : "not-allowed", opacity: pickupAddress ? 1 : 0.6 }}>
+                                                    <input type="radio" name="fulfillment_method" value="pickup" checked={data.fulfillment_method === "pickup"} disabled={!pickupAddress} onChange={() => setData("fulfillment_method", "pickup")} className="form-check-input mt-1" />
+                                                    <span>
+                                                        <strong className="d-block">Shop pickup</strong>
+                                                        {pickupAddress ? (
+                                                            <span className="small text-muted d-block mt-1">Collect your order at this store:</span>
+                                                        ) : (
+                                                            <span className="small text-danger d-block mt-1">Shop pickup is temporarily unavailable because the store address has not been configured.</span>
+                                                        )}
+                                                        {pickupAddress && <span className="small fw-semibold d-block mt-1">{pickupAddress}</span>}
+                                                    </span>
                                                 </label>
                                             </div>
                                         </div>
@@ -508,7 +527,7 @@ export default function Checkout({
                                     <button
                                         type="submit"
                                         className="btn btn-primary fw-bold w-100 mt-4 py-2"
-                                        disabled={processing}
+                                        disabled={processing || (data.fulfillment_method === "pickup" && !pickupAddress)}
                                     >
                                         {processing
                                             ? "PROCESSING..."

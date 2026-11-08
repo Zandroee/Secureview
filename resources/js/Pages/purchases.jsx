@@ -264,6 +264,13 @@ export default function Purchases({ orders = [] }) {
                                                                 )[2]
                                                             }
                                                         </div>
+
+                                                        {order.fulfillment_method === "pickup" && (
+                                                            <div className="small text-success fw-semibold mt-2">
+                                                                <i className="bi bi-shop me-1" />SHOP PICKUP
+                                                                <div className="small fw-normal text-muted">{order.pickup_address || "Pickup location will be confirmed by Netmax Trading"}</div>
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                     <div className="col-md-3">

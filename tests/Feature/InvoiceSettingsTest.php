@@ -35,7 +35,9 @@ class InvoiceSettingsTest extends TestCase
             ->patch(route('admin.invoice-settings.update'), [
                 'business_name' => 'SecureView',
                 'registered_name' => 'SecureView Test Company',
+            'pickup_address' => 'Unit 5, Netmax Building, 456 Store Road, Taguig City',
                 'address' => '123 Test Street, Taguig City',
+                'pickup_address' => 'Unit 5, Netmax Building, 456 Store Road, Taguig City',
                 'email' => 'billing@example.test',
                 'phone' => '02-8000-0000',
                 'tin' => '000-000-000-000',
@@ -57,13 +59,20 @@ class InvoiceSettingsTest extends TestCase
         $this->assertDatabaseHas('invoice_settings', [
             'id' => 1,
             'registered_name' => 'SecureView Test Company',
-            'vat_status' => 'non_vat',
-            'invoice_number_prefix' => 'TEST-',
+            'pickup_address' => 'Unit 5, Netmax Building, 456 Store Road, Taguig City',
+            'vat_status' => 'non_vat',            'invoice_number_prefix' => 'TEST-',
             'first_invoice_number' => 1,
             'last_invoice_number' => 999,
             'next_invoice_number' => 1,
             'updated_by' => $admin->id,
         ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.invoice-settings.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Admin/InvoiceSettings')
+                ->where('settings.pickup_address', 'Unit 5, Netmax Building, 456 Store Road, Taguig City'));
     }
 
     public function test_invoice_series_rejects_a_last_number_below_the_first_number(): void

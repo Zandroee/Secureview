@@ -255,7 +255,7 @@ export default function AdminRefunds({ refunds = {}, filters = {}, summary = {} 
                                                                 {refund.invoice_record_number ? <div className="small mb-2">Invoice {refund.invoice_record_number} · Issued {refund.invoice_issued_at || "—"}</div> : <div className="small text-muted mb-2">No issued invoice record is attached yet. The order invoice can still be opened below.</div>}
                                                                 {refund.invoice_url && <a href={refund.invoice_url} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-primary">OPEN ORDER INVOICE</a>}
                                                             </div>
-                                                            <div className="col-12"><div className="small text-muted">{refund.order_fulfillment_method === "pickup" ? "FULFILLMENT" : "DELIVERY ADDRESS"}</div><div className="small">{refund.order_fulfillment_method === "pickup" ? "Shop pickup at Netmax Trading" : (refund.order_address || "—")}</div></div>
+                                                            <div className="col-12"><div className="small text-muted">{refund.order_fulfillment_method === "pickup" ? "FULFILLMENT" : "DELIVERY ADDRESS"}</div><div className="small">{refund.order_fulfillment_method === "pickup" ? (refund.order_pickup_address || "Pickup location not recorded on this order") : (refund.order_address || "—")}</div></div>
                                                         </div>
                                                     </details>
                                                     {refund.admin_notes && <div className="small text-muted mt-1">Admin notes: {refund.admin_notes}</div>}

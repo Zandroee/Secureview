@@ -28,6 +28,8 @@ class PurchaseController extends Controller
                 return [
                     'id' => $order->id,
                     'order_number' => $order->order_number,
+                    'fulfillment_method' => $order->fulfillment_method ?? 'delivery',
+                    'pickup_address' => $order->pickup_address,
                     'subtotal' => (float) $order->subtotal,
                 'voucher_code' => $order->voucher_code,
                 'discount_amount' => (float) $order->discount_amount,
@@ -145,6 +147,7 @@ class PurchaseController extends Controller
                 'customer_phone' => $order->customer_phone,
                 'customer_email' => $order->customer_email,
                 'fulfillment_method' => $order->fulfillment_method ?? 'delivery',
+                'pickup_address' => $order->pickup_address,
                 'delivery_address' => $order->delivery_address,
                 'delivery_address_details' => $order->delivery_address_details,
                 'delivery_city' => $order->delivery_city,
