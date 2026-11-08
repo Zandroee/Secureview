@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BlockedBookingDate;
+use App\Models\CustomerNotification;
 use App\Models\BlockedBookingTimeSlot;
 use App\Models\Inquiry;
 use App\Models\InventoryAdjustment;
@@ -54,7 +55,17 @@ class WalkInController extends Controller
             ->sortBy('name')
             ->values();
 
+        $customers = User::query()->where('role', 'user')->orderBy('name')
+            ->get(['id', 'name', 'email', 'phone'])
+            ->map(fn (User $customer) => [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'email' => $customer->email,
+                'phone' => $customer->phone,
+            ])->values();
+
         return Inertia::render('Admin/WalkIn', [
+            'customers' => $customers,
             'catalogItems' => $catalogItems,
             'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
             'todayDate' => today()->toDateString(),
@@ -65,6 +76,7 @@ class WalkInController extends Controller
     public function storeSale(Request $request, InventoryService $inventory)
     {
         $validated = $request->validate([
+            'customer_user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'user'))],
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
             'customer_email' => ['nullable', 'email', 'max:255'],
@@ -79,7 +91,7 @@ class WalkInController extends Controller
         $order = DB::transaction(function () use ($request, $validated, $inventory) {
             $number = $this->uniqueReference('SV-WI-');
             $order = Order::create([
-                'user_id' => null,
+                'user_id' => $validated['customer_user_id'] ?? null,
                 'order_number' => $number,
                 'subtotal' => 0,
                 'discount_amount' => 0,
@@ -152,16 +164,34 @@ class WalkInController extends Controller
                 'metadata' => ['sales_channel' => 'walk_in'],
             ]);
 
+            if ($order->user_id) {
+                CustomerNotification::firstOrCreate(
+                    ['dedupe_key' => 'walk-in-sale:' . $order->id . ':' . $order->user_id],
+                    [
+                        'user_id' => $order->user_id,
+                        'type' => 'order',
+                        'title' => 'In-store purchase recorded',
+                        'message' => 'Your in-store purchase ' . $order->order_number . ' has been recorded as paid.',
+                        'action_url' => route('purchases.show', $order),
+                        'related_type' => Order::class,
+                        'related_id' => $order->id,
+                    ]
+                );
+            }
+
             return $order;
         });
 
         return redirect()->route('admin.walk-in.index')
-            ->with('success', 'Walk-in sale ' . $order->order_number . ' was recorded, payment marked paid, and inventory updated.');
+            ->with('success', 'Walk-in sale ' . $order->order_number . ' was recorded, payment marked paid, and inventory updated.')
+            ->with('sale_invoice_url', route('admin.purchases.invoice', $order))
+            ->with('sale_order_number', $order->order_number);
     }
 
     public function storeService(Request $request, JobNotificationService $notifications)
     {
         $validated = $request->validate([
+            'customer_user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'user'))],
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['required', 'regex:/^09\d{9}$/'],
             'customer_email' => ['nullable', 'email', 'max:255'],
@@ -190,7 +220,7 @@ class WalkInController extends Controller
         $isInShop = $validated['service_location_type'] === 'in_shop';
 
         $inquiry = Inquiry::create([
-            'user_id' => null,
+            'user_id' => $validated['customer_user_id'] ?? null,
             'inquiry_number' => $inquiryNumber,
             'item_name' => filled($validated['item_name'] ?? null) ? trim($validated['item_name']) : null,
             'customer_name' => trim($validated['customer_name']),
@@ -211,6 +241,21 @@ class WalkInController extends Controller
         ]);
 
         $notifications->notifyNewInquirySubmitted($inquiry);
+
+        if ($inquiry->user_id) {
+            CustomerNotification::firstOrCreate(
+                ['dedupe_key' => 'walk-in-service:' . $inquiry->id . ':' . $inquiry->user_id],
+                [
+                    'user_id' => $inquiry->user_id,
+                    'type' => 'inquiry_status',
+                    'title' => 'Walk-in service request registered',
+                    'message' => 'Your service request ' . $inquiry->inquiry_number . ' has been registered and is waiting for review.',
+                    'action_url' => route('inquiries.show', $inquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $inquiry->id,
+                ]
+            );
+        }
 
         return redirect()->route('admin.walk-in.index')
             ->with('success', 'Walk-in service ' . $inquiry->inquiry_number . ' was recorded and sent to the existing service review and scheduling workflow.');
