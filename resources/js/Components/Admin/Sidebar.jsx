@@ -51,6 +51,12 @@ const menuGroups = [
             icon: "bi-shield-check",
         },
         {
+            label: "Walk-in POS",
+            href: "/admin/walk-in",
+            key: "walk-in",
+            icon: "bi-shop",
+        },
+        {
             label: "Orders",
             href: "/admin/purchases",
             key: "purchases",
