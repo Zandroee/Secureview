@@ -276,6 +276,8 @@ class ScheduleController extends Controller
                 'id' => $inquiry->id,
                 'inquiry_number' => $inquiry->inquiry_number,
                 'item_name' => $inquiry->item_name,
+                'intake_channel' => $inquiry->intake_channel ?? 'online',
+                'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                 'item_type' => $inquiry->inquirable_type
                     ? class_basename($inquiry->inquirable_type)
                     : null,
@@ -302,6 +304,8 @@ class ScheduleController extends Controller
                 'service_longitude' => $inquiry->service_longitude,
                 'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
+                'intake_channel' => $inquiry->intake_channel ?? 'online',
+                'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                 'urgency' => $inquiry->urgency,
                 'urgency_fee' => (float) $inquiry->urgency_fee,
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
@@ -378,6 +382,8 @@ class ScheduleController extends Controller
                     'customer_email' => $inquiry->customer_email,
                     'service_type' => $inquiry->service_type,
                     'item_name' => $inquiry->item_name,
+                    'intake_channel' => $inquiry->intake_channel ?? 'online',
+                    'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                     'urgency' => $inquiry->urgency,
                     'urgency_fee' => (float) $inquiry->urgency_fee,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
