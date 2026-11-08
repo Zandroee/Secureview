@@ -1,26 +1,26 @@
 <?php
 
-namespace App\\Http\\Controllers\\Admin;
+namespace App\Http\Controllers\Admin;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\BlockedBookingDate;
-use App\\Models\\BlockedBookingTimeSlot;
-use App\\Models\\Inquiry;
-use App\\Models\\Order;
-use App\\Models\\OrderItem;
-use App\\Models\\OrderEvent;
-use App\\Models\\Package;
-use App\\Models\\Product;
-use App\\Models\\ServiceBookingFeeSetting;
-use App\\Models\\User;
-use App\\Services\\InventoryService;
-use App\\Services\\JobNotificationService;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Str;
-use Illuminate\\Validation\\Rule;
-use Illuminate\\Validation\\ValidationException;
-use Inertia\\Inertia;
+use App\Http\Controllers\Controller;
+use App\Models\BlockedBookingDate;
+use App\Models\BlockedBookingTimeSlot;
+use App\Models\Inquiry;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\OrderEvent;
+use App\Models\Package;
+use App\Models\Product;
+use App\Models\ServiceBookingFeeSetting;
+use App\Models\User;
+use App\Services\InventoryService;
+use App\Services\JobNotificationService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class WalkInController extends Controller
 {
@@ -161,7 +161,7 @@ class WalkInController extends Controller
     {
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
-            'customer_phone' => ['required', 'regex:/^09\\d{9}$/'],
+            'customer_phone' => ['required', 'regex:/^09\d{9}$/'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'service_type' => ['required', Rule::in(['Installation', 'Site Inspection', 'Maintenance', 'Repair', 'Consultation', 'Other'])],
             'service_location_type' => ['required', Rule::in(['in_shop', 'customer_site'])],
