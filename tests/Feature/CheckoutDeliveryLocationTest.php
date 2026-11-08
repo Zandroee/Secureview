@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Cart;
+use App\Models\InvoiceSetting;
 use App\Models\Order;
 use App\Models\Package;
 use App\Models\PackageItem;
@@ -383,6 +384,12 @@ class CheckoutDeliveryLocationTest extends TestCase
 
     public function test_customer_can_choose_shop_pickup_without_providing_a_delivery_address(): void
     {
+        $pickupAddress = 'Unit 5, Netmax Building, 456 Store Road, Taguig City';
+        InvoiceSetting::create([
+            'business_name' => 'Netmax Trading',
+            'pickup_address' => $pickupAddress,
+        ]);
+
         $customer = User::factory()->create([
             'role' => 'user',
             'email_verified_at' => now(),
@@ -409,6 +416,13 @@ class CheckoutDeliveryLocationTest extends TestCase
         ]);
 
         $this->actingAs($customer)
+            ->get(route('checkout'))
+            ->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('checkout')
+                ->where('pickupAddress', $pickupAddress));
+
+        $this->actingAs($customer)
             ->post(route('checkout.store'), [
                 'customer_name' => $customer->name,
                 'customer_phone' => '09171234567',
@@ -427,10 +441,54 @@ class CheckoutDeliveryLocationTest extends TestCase
 
         $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
         $this->assertSame('pickup', $order->fulfillment_method);
+        $this->assertSame($pickupAddress, $order->pickup_address);
         $this->assertNull($order->delivery_address);
         $this->assertNull($order->delivery_city);
         $this->assertNull($order->delivery_latitude);
         $this->assertSame('pending', $order->payment_status);
+        $invoice = app(\App\Services\InvoiceDocumentService::class)->buildSnapshot($order);
+        $this->assertSame($pickupAddress, $invoice['customer']['address']);
+    }
+
+
+    public function test_shop_pickup_cannot_be_selected_until_admin_configures_a_pickup_address(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+            'phone' => '09171234567',
+        ]);
+        $product = Product::create([
+            'name' => 'Pickup Not Configured Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 800,
+            'stock_quantity' => 4,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => 800,
+        ]);
+
+        $this->actingAs($customer)
+            ->post(route('checkout.store'), [
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'fulfillment_method' => 'pickup',
+                'payment_method' => 'cash',
+            ])
+            ->assertSessionHasErrors('fulfillment_method');
+
+        $this->assertSame(0, Order::query()->where('user_id', $customer->id)->count());
     }
 
 
