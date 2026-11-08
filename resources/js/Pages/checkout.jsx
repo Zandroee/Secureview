@@ -52,6 +52,8 @@ export default function Checkout({
     orderNumber,
     paymentMethod,
     pickupAddress = "",
+    successPickupAddress = null,
+    fulfillmentMethod = "delivery",
 }) {
     const { props: pageProps } = usePage();
     const pageErrors = pageProps.errors ?? {};
@@ -172,6 +174,14 @@ export default function Checkout({
                                     </span>
                                 </div>
                             </div>
+
+                            {fulfillmentMethod === "pickup" && successPickupAddress && (
+                                <div className="alert alert-info text-start mt-3">
+                                    <div className="fw-bold mb-1"><i className="bi bi-shop me-2" />SHOP PICKUP ADDRESS</div>
+                                    <div className="small">{successPickupAddress}</div>
+                                    <div className="small mt-2">Please collect your order from this location. Keep your order number for reference.</div>
+                                </div>
+                            )}
 
                             <p className="small text-muted mb-4">
                                 Online payment processing for GCash, Card, and
