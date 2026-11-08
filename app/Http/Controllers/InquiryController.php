@@ -952,6 +952,7 @@ class InquiryController extends Controller
                         'action' => $item->action,
                         'quantity' => (int) $item->quantity,
                         'unit_price' => (float) $item->unit_price,
+                            'is_warranty_covered' => (bool) $item->is_warranty_covered,
                         'notes' => $item->notes,
                     ])->values(),
                     'invoice_url' => $inquiry->serviceRecord->invoiceRecord
