@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomerNotification;
 use App\Models\Order;
+use App\Models\InvoiceSetting;
 use App\Models\Inquiry;
 use App\Models\PendingInquiryCheckout;
 use App\Models\Product;
@@ -180,6 +181,8 @@ class CheckoutController extends Controller
 
     public function index(Request $request, InventoryService $inventory)
     {
+        $pickupAddress = trim((string) (InvoiceSetting::query()->value('pickup_address') ?? ''));
+
         $orderNumber = $request->session()->get('orderNumber');
 
         if ($orderNumber) {
@@ -196,6 +199,7 @@ class CheckoutController extends Controller
                     'total' => 0,
                 ],
                 'success' => true,
+                'pickupAddress' => $pickupAddress,
                 'orderNumber' => $orderNumber,
                 'paymentMethod' => $request->session()->get('paymentMethod'),
             ]);
@@ -264,6 +268,7 @@ class CheckoutController extends Controller
                     'total' => (float) round($subtotal + $shippingFee - (float) $voucherQuote['discount_amount'], 2),
                 ],
                 'success' => false,
+                'pickupAddress' => $pickupAddress,
                 'orderNumber' => null,
                 'paymentMethod' => null,
             ]);
@@ -357,6 +362,15 @@ class CheckoutController extends Controller
         ]);
 
         $fulfillmentMethod = $validated['fulfillment_method'];
+        $pickupAddress = null;
+        if ($fulfillmentMethod === 'pickup') {
+            $pickupAddress = trim((string) (InvoiceSetting::query()->value('pickup_address') ?? ''));
+            if ($pickupAddress === '') {
+                throw ValidationException::withMessages([
+                    'fulfillment_method' => 'Shop pickup is not available yet. Please choose delivery or contact Netmax Trading.',
+                ]);
+            }
+        }
         $deliveryStreet = $fulfillmentMethod === 'delivery' ? trim((string) ($validated['delivery_street_address'] ?? '')) : '';
         $deliveryDetails = $fulfillmentMethod === 'delivery' ? trim((string) ($validated['delivery_address_details'] ?? '')) : '';
         $deliveryCity = $fulfillmentMethod === 'delivery' ? trim((string) ($validated['delivery_city'] ?? '')) : '';
@@ -455,7 +469,7 @@ class CheckoutController extends Controller
             }
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $checkoutItems, $deliveryDetails, $deliveryCity, $fulfillmentMethod, $vouchers) {
+        $order = DB::transaction(function () use ($request, $validated, $checkoutItems, $deliveryDetails, $deliveryCity, $fulfillmentMethod, $pickupAddress, $vouchers) {
             $subtotal = 0;
 
             foreach ($checkoutItems as $checkoutItem) {
@@ -502,6 +516,7 @@ class CheckoutController extends Controller
                 'customer_phone' => $validated['customer_phone'],
                 'customer_email' => $validated['customer_email'],
                 'fulfillment_method' => $fulfillmentMethod,
+                'pickup_address' => $fulfillmentMethod === 'pickup' ? $pickupAddress : null,
                 'delivery_address' => $validated['delivery_address'],
                 'delivery_address_details' => $deliveryDetails !== '' ? $deliveryDetails : null,
                 'delivery_city' => $deliveryCity !== '' ? $deliveryCity : null,
