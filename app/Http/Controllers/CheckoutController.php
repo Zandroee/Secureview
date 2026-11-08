@@ -331,6 +331,7 @@ class CheckoutController extends Controller
                 'total' => (float) round($subtotal + $shippingFee - (float) $voucherQuote['discount_amount'], 2),
             ],
             'success' => false,
+            'pickupAddress' => $pickupAddress,
             'orderNumber' => null,
             'paymentMethod' => null,
         ]);
