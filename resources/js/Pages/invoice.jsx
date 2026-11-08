@@ -327,6 +327,12 @@ export default function Invoice({ invoice }) {
                                     <span className="text-muted">{invoice.document_type === "service_invoice" ? "Service reference" : "Order reference"}</span>
                                     <span className="fw-semibold text-end">{invoice.reference_number}</span>
                                 </div>
+                                {invoice.document_type !== "service_invoice" && (
+                                    <div className="d-flex justify-content-between gap-3 mb-2">
+                                        <span className="text-muted">Sales channel</span>
+                                        <span className="fw-semibold text-end">{invoice.sales_channel === "walk_in" ? "Walk-in / in-store" : "Online"}</span>
+                                    </div>
+                                )}
                                 <div className="d-flex justify-content-between gap-3 mb-2">
                                     <span className="text-muted">Payment method</span>
                                     <span className="fw-semibold text-end">{methodLabel(invoice.payment_method)}</span>
