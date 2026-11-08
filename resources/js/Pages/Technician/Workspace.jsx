@@ -433,7 +433,7 @@ function JobCard({ job, open = false, products = [] }) {
                     {(job.service_record.items ?? []).length > 0 && (
                         <ul className="small mt-2 mb-0 ps-3">
                             {job.service_record.items.map((item, index) => (
-                                <li key={index}>{item.action === "used" ? "Used" : "Removed"}: {item.product_name} × {item.quantity}</li>
+                                <li key={index}>{item.action === "used" ? (item.is_warranty_covered ? "Warranty-covered replacement (no customer charge)" : "Used") : "Removed"}: {item.product_name} × {item.quantity}</li>
                             ))}
                         </ul>
                     )}
