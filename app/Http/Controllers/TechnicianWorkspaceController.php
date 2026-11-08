@@ -614,8 +614,21 @@ class TechnicianWorkspaceController extends Controller
                 ]);
             }
 
+            // Walk-in priority fees are collected with the service invoice,
+            // so include them in the same service-income ledger. Online booking
+            // fees already belong to their separate checkout order.
+            $walkInPriorityFee = ($lockedInquiry->intake_channel ?? 'online') === 'walk_in'
+                ? (float) $lockedInquiry->urgency_fee
+                : 0.0;
+
             $record->update([
-                'total_income' => round((float) $record->labor_charge + (float) $record->additional_charge + $partsIncome, 2),
+                'total_income' => round(
+                    (float) $record->labor_charge
+                    + (float) $record->additional_charge
+                    + $partsIncome
+                    + $walkInPriorityFee,
+                    2
+                ),
             ]);
             $lockedInquiry->update(['status' => 'completed']);
             $lockedInquiry->load('technicians');
