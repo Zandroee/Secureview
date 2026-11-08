@@ -50,10 +50,10 @@ return new class extends Migration
         // A rollback must never silently discard walk-in sales, walk-in service
         // intake, or service invoice records. Migrate those records deliberately
         // before rolling back this schema change.
-        if (\\Illuminate\\Support\\Facades\\DB::table('orders')->whereNull('user_id')->exists()
-            || \\Illuminate\\Support\\Facades\\DB::table('inquiries')->whereNull('user_id')->exists()
-            || \\Illuminate\\Support\\Facades\\DB::table('invoice_records')->whereNotNull('service_record_id')->exists()) {
-            throw new \\RuntimeException(
+        if (\Illuminate\Support\Facades\DB::table('orders')->whereNull('user_id')->exists()
+            || \Illuminate\Support\Facades\DB::table('inquiries')->whereNull('user_id')->exists()
+            || \Illuminate\Support\Facades\DB::table('invoice_records')->whereNotNull('service_record_id')->exists()) {
+            throw new \RuntimeException(
                 'Cannot roll back walk-in POS/service invoicing while walk-in orders, walk-in services, or service invoices exist.'
             );
         }
