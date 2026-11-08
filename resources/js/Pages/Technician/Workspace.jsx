@@ -98,6 +98,7 @@ function JobCard({ job, open = false, products = [] }) {
                 quantity: "1",
                 unit_price: "0",
                 notes: "",
+                is_warranty_covered: false,
             }],
         }));
     };
@@ -107,7 +108,15 @@ function JobCard({ job, open = false, products = [] }) {
             const items = current.items.map((item, itemIndex) => {
                 if (itemIndex !== index) return item;
                 if (field === "action") {
-                    return { ...item, action: value, product_id: "", product_name: "", unit_price: "0" };
+                    return { ...item, action: value, product_id: "", product_name: "", unit_price: "0", is_warranty_covered: false };
+                }
+                if (field === "is_warranty_covered") {
+                    const selected = products.find((product) => String(product.id) === String(item.product_id));
+                    return {
+                        ...item,
+                        is_warranty_covered: Boolean(value),
+                        unit_price: value ? "0" : String(selected?.price ?? item.unit_price ?? 0),
+                    };
                 }
                 if (field === "product_id") {
                     const selected = products.find((product) => String(product.id) === String(value));
@@ -360,10 +369,36 @@ function JobCard({ job, open = false, products = [] }) {
                                     <input className="form-control form-control-sm" type="number" min="1" max="10000" step="1" required value={item.quantity} onChange={(event) => updateReportItem(index, "quantity", event.target.value)} />
                                 </div>
                                 {item.action === "used" && (
-                                    <div className="col-6 col-md-3">
-                                        <label className="form-label small fw-semibold">Charge per unit (₱)</label>
-                                        <input className="form-control form-control-sm" type="number" min="0" max="10000000" step="0.01" value={item.unit_price} onChange={(event) => updateReportItem(index, "unit_price", event.target.value)} />
-                                    </div>
+                                    <>
+                                        <div className="col-12">
+                                            <div className="form-check">
+                                                <input
+                                                    id={"warranty-covered-" + index}
+                                                    className="form-check-input"
+                                                    type="checkbox"
+                                                    checked={Boolean(item.is_warranty_covered)}
+                                                    onChange={(event) => updateReportItem(index, "is_warranty_covered", event.target.checked)}
+                                                />
+                                                <label className="form-check-label small fw-semibold" htmlFor={"warranty-covered-" + index}>
+                                                    Covered under warranty — no customer charge
+                                                </label>
+                                            </div>
+                                            <div className="small text-muted">Only select this after verifying the part is covered by the customer's warranty. The replacement still deducts from shop stock.</div>
+                                        </div>
+                                        <div className="col-6 col-md-3">
+                                            <label className="form-label small fw-semibold">Charge per unit (₱)</label>
+                                            <input
+                                                className="form-control form-control-sm"
+                                                type="number"
+                                                min="0"
+                                                max="10000000"
+                                                step="0.01"
+                                                value={item.is_warranty_covered ? "0" : item.unit_price}
+                                                disabled={Boolean(item.is_warranty_covered)}
+                                                onChange={(event) => updateReportItem(index, "unit_price", event.target.value)}
+                                            />
+                                        </div>
+                                    </>
                                 )}
                                 <div className="col-12 col-md">
                                     <label className="form-label small fw-semibold">Part notes (optional)</label>
