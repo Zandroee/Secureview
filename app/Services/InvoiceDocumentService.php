@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\InvoiceSetting;
 use App\Models\Order;
+use App\Models\ServiceRecord;
 
 class InvoiceDocumentService
 {
