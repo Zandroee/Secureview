@@ -36,6 +36,10 @@ return new class extends Migration
             $table->timestamp('paid_at')->nullable();
         });
 
+        Schema::table('service_record_items', function (Blueprint $table) {
+            $table->boolean('is_warranty_covered')->default(false)->after('unit_price');
+        });
+
         Schema::table('invoice_records', function (Blueprint $table) {
             $table->dropForeign(['order_id']);
             $table->dropUnique(['order_id']);
@@ -66,6 +70,10 @@ return new class extends Migration
             $table->unsignedBigInteger('order_id')->nullable(false)->change();
             $table->foreign('order_id')->references('id')->on('orders')->restrictOnDelete();
             $table->unique('order_id');
+        });
+
+        Schema::table('service_record_items', function (Blueprint $table) {
+            $table->dropColumn('is_warranty_covered');
         });
 
         Schema::table('service_records', function (Blueprint $table) {
