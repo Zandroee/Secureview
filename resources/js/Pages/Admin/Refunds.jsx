@@ -218,12 +218,46 @@ export default function AdminRefunds({ refunds = {}, filters = {}, summary = {} 
                                                     <div className="small text-muted">{refund.order_number} · {refund.customer_name} · {refund.customer_email}</div>
                                                     {refund.inquiry_number && <div className="small text-muted">Linked service: {refund.inquiry_number}</div>}
                                                     <div className="d-flex flex-wrap gap-3 mt-2">
-                                                        <div><div className="small text-muted">REQUESTED</div><strong>{money(refund.amount_requested)}</strong></div>
+                                                        <div><div className="small text-muted">Amount Requested</div><strong>{money(refund.amount_requested)}</strong></div>
                                                         {refund.amount_approved !== null && <div><div className="small text-muted">APPROVED</div><strong>{money(refund.amount_approved)}</strong></div>}
                                                         <div><div className="small text-muted">METHOD</div><strong className="text-capitalize">{refund.provider === "paymongo" ? "PayMongo" : "Manual"}</strong></div>
-                                                        <div><div className="small text-muted">REQUESTED</div><strong>{refund.requested_at}</strong></div>
+                                                        <div><div className="small text-muted">Date Requested</div><strong>{refund.requested_at}</strong></div>
                                                     </div>
                                                     <div className="small mt-2">{refund.reason}</div>
+                                                    <details className="border rounded-3 p-3 mt-3 bg-light">
+                                                        <summary className="fw-semibold small" style={{ cursor: "pointer" }}>VIEW ORDER & INVOICE DETAILS</summary>
+                                                        <div className="row g-3 mt-1">
+                                                            <div className="col-md-6">
+                                                                <div className="small text-muted">ORDER</div>
+                                                                <div className="fw-semibold">{refund.order_number || "—"}</div>
+                                                                <div className="small text-muted">Placed: {refund.order_created_at || "—"}</div>
+                                                                <div className="small text-muted">Status: <span className="text-capitalize">{String(refund.order_status || "—").replace(/_/g, " ")}</span></div>
+                                                            </div>
+                                                            <div className="col-md-6">
+                                                                <div className="small text-muted">PAYMENT</div>
+                                                                <div className="fw-semibold text-capitalize">{refund.order_payment_method || "—"} · {String(refund.order_payment_status || "—").replace(/_/g, " ")}</div>
+                                                                <div className="small">Order total: <strong>{money(refund.order_total)}</strong></div>
+                                                                <div className="small">Subtotal: {money(refund.order_subtotal)} · Discount: {money(refund.order_discount)} · Shipping: {money(refund.order_shipping_fee)}</div>
+                                                            </div>
+                                                            <div className="col-12">
+                                                                <div className="small text-muted mb-1">PURCHASED ITEMS</div>
+                                                                {(refund.order_items || []).length ? (
+                                                                    <div className="table-responsive">
+                                                                        <table className="table table-sm align-middle mb-0">
+                                                                            <thead><tr><th>Item</th><th className="text-end">Qty</th><th className="text-end">Unit price</th><th className="text-end">Subtotal</th></tr></thead>
+                                                                            <tbody>{refund.order_items.map((item, index) => <tr key={index}><td>{item.name}{item.warranty_period && <div className="small text-muted">Warranty: {item.warranty_period}</div>}</td><td className="text-end">{item.quantity}</td><td className="text-end">{money(item.price)}</td><td className="text-end">{money(item.subtotal)}</td></tr>)}</tbody>
+                                                                        </table>
+                                                                    </div>
+                                                                ) : <div className="small text-muted">No item lines are attached to this order.</div>}
+                                                            </div>
+                                                            <div className="col-12">
+                                                                <div className="small text-muted">INVOICE</div>
+                                                                {refund.invoice_record_number ? <div className="small mb-2">Invoice {refund.invoice_record_number} · Issued {refund.invoice_issued_at || "—"}</div> : <div className="small text-muted mb-2">No issued invoice record is attached yet. The order invoice can still be opened below.</div>}
+                                                                {refund.invoice_url && <a href={refund.invoice_url} target="_blank" rel="noreferrer" className="btn btn-sm btn-outline-primary">OPEN ORDER INVOICE</a>}
+                                                            </div>
+                                                            <div className="col-12"><div className="small text-muted">{refund.order_fulfillment_method === "pickup" ? "FULFILLMENT" : "DELIVERY ADDRESS"}</div><div className="small">{refund.order_fulfillment_method === "pickup" ? "Shop pickup at Netmax Trading" : (refund.order_address || "—")}</div></div>
+                                                        </div>
+                                                    </details>
                                                     {refund.admin_notes && <div className="small text-muted mt-1">Admin notes: {refund.admin_notes}</div>}
                                                     {refund.rejection_reason && <div className="small text-danger mt-1">Rejection reason: {refund.rejection_reason}</div>}
                                                     {refund.provider_refund_id && <div className="small text-muted mt-1">PayMongo refund ID: {refund.provider_refund_id}</div>}

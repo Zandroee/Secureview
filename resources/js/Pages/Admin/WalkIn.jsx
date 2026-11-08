@@ -351,7 +351,7 @@ const emptyService = () => ({
     customer_phone: "",
     customer_email: "",
     service_type: "Installation",
-    service_location_type: "in_shop",
+    service_location_type: "customer_site",
     street_address: "",
     address_details: "",
     city: "",
@@ -734,27 +734,7 @@ export default function WalkIn({
 
                                         <div className="border-top pt-3 mb-3">
                                             <div className="small fw-bold text-uppercase text-secondary mb-2">Service location</div>
-                                            <label className="form-label fw-semibold">Where will the service take place? *</label>
-                                            <select
-                                                className="form-select mb-2"
-                                                value={service.service_location_type}
-                                                onChange={(event) => {
-                                                    const value = event.target.value;
-                                                    setService((current) => ({
-                                                        ...current,
-                                                        service_location_type: value,
-                                                        street_address: "",
-                                                        address_details: "",
-                                                        city: "",
-                                                        service_latitude: "",
-                                                        service_longitude: "",
-                                                        google_place_id: "",
-                                                    }));
-                                                }}
-                                            >
-                                                <option value="in_shop">In-shop drop-off</option>
-                                                <option value="customer_site">Customer site visit</option>
-                                            </select>
+                                            <div className="small text-muted mb-2">Customer site visit is selected for this booking. Enter the service address and pin the exact location on the map.</div>
                                             {service.service_location_type === "customer_site" ? (
                                                 <>
                                                     <div className="row g-2">

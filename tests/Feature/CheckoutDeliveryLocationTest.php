@@ -338,4 +338,52 @@ class CheckoutDeliveryLocationTest extends TestCase
         }
     }
 
+    public function test_customer_can_choose_shop_pickup_without_providing_a_delivery_address(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+            'phone' => '09171234567',
+        ]);
+        $product = Product::create([
+            'name' => 'Shop Pickup Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 1200,
+            'stock_quantity' => 5,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => 1200,
+        ]);
+
+        $this->actingAs($customer)
+            ->post(route('checkout.store'), [
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'fulfillment_method' => 'pickup',
+                'payment_method' => 'cash',
+                'notes' => 'I will collect this at the shop.',
+            ])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHasNoErrors();
+
+        $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
+        $this->assertSame('pickup', $order->fulfillment_method);
+        $this->assertNull($order->delivery_address);
+        $this->assertNull($order->delivery_city);
+        $this->assertNull($order->delivery_latitude);
+        $this->assertSame('pending', $order->payment_status);
+    }
+
+
 }

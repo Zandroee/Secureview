@@ -61,6 +61,7 @@ export default function Checkout({
         customer_name: customer?.name ?? "",
         customer_phone: customer?.phone ?? "",
         customer_email: customer?.email ?? "",
+        fulfillment_method: "delivery",
         delivery_street_address: "",
         delivery_address_details: "",
         delivery_city: "",
@@ -336,98 +337,52 @@ export default function Checkout({
                                     </div>
 
                                     <div className="mb-4">
-                                        <div style={sectionTitleStyle}>
-                                            CUSTOMER'S DELIVERY ADDRESS
-                                        </div>
-
-                                        <div className="row g-3">
-                                            <div className="col-12">
-                                                <label htmlFor="checkout-delivery-street" className="form-label small fw-semibold">
-                                                    Street address / Barangay <span className="text-danger">*</span>
+                                        <div style={sectionTitleStyle}>FULFILLMENT METHOD</div>
+                                        <div className="row g-2 mb-3">
+                                            <div className="col-sm-6">
+                                                <label className={"border rounded-3 p-3 d-flex gap-2 align-items-start h-100 w-100 " + (data.fulfillment_method === "delivery" ? "border-primary bg-primary-subtle" : "bg-white")} style={{ cursor: "pointer" }}>
+                                                    <input type="radio" name="fulfillment_method" value="delivery" checked={data.fulfillment_method === "delivery"} onChange={() => setData("fulfillment_method", "delivery")} className="form-check-input mt-1" />
+                                                    <span><strong className="d-block">Deliver to my address</strong><span className="small text-muted">Provide your complete address and pin the delivery entrance on the map.</span></span>
                                                 </label>
-                                                <input
-                                                    id="checkout-delivery-street"
-                                                    type="text"
-                                                    maxLength={500}
-                                                    autoComplete="street-address"
-                                                    className={`form-control ${errors.delivery_street_address ? "is-invalid" : ""}`}
-                                                    style={fieldStyle}
-                                                    placeholder="House number, street, barangay"
-                                                    value={data.delivery_street_address}
-                                                    onChange={(event) => setData("delivery_street_address", event.target.value)}
-                                                />
-                                                {errors.delivery_street_address && (
-                                                    <div className="invalid-feedback">{errors.delivery_street_address}</div>
-                                                )}
                                             </div>
-
-                                            <div className="col-12">
-                                                <label htmlFor="checkout-delivery-details" className="form-label small fw-semibold">
-                                                    Unit / Building / Landmark <span className="text-muted fw-normal">(optional)</span>
+                                            <div className="col-sm-6">
+                                                <label className={"border rounded-3 p-3 d-flex gap-2 align-items-start h-100 w-100 " + (data.fulfillment_method === "pickup" ? "border-primary bg-primary-subtle" : "bg-white")} style={{ cursor: "pointer" }}>
+                                                    <input type="radio" name="fulfillment_method" value="pickup" checked={data.fulfillment_method === "pickup"} onChange={() => setData("fulfillment_method", "pickup")} className="form-check-input mt-1" />
+                                                    <span><strong className="d-block">Shop pickup</strong><span className="small text-muted">Collect your order at the Netmax Trading physical store. No delivery address needed.</span></span>
                                                 </label>
-                                                <input
-                                                    id="checkout-delivery-details"
-                                                    type="text"
-                                                    maxLength={500}
-                                                    className={`form-control ${errors.delivery_address_details ? "is-invalid" : ""}`}
-                                                    style={fieldStyle}
-                                                    placeholder="Unit, floor, gate, or nearby landmark"
-                                                    value={data.delivery_address_details}
-                                                    onChange={(event) => setData("delivery_address_details", event.target.value)}
-                                                />
-                                                {errors.delivery_address_details && (
-                                                    <div className="invalid-feedback">{errors.delivery_address_details}</div>
-                                                )}
-                                            </div>
-
-                                            <div className="col-12">
-                                                <label htmlFor="checkout-delivery-city" className="form-label small fw-semibold">
-                                                    City / Municipality and Province <span className="text-danger">*</span>
-                                                </label>
-                                                <input
-                                                    id="checkout-delivery-city"
-                                                    type="text"
-                                                    maxLength={180}
-                                                    autoComplete="address-level2"
-                                                    className={`form-control ${errors.delivery_city ? "is-invalid" : ""}`}
-                                                    style={fieldStyle}
-                                                    placeholder="City / Municipality, Province"
-                                                    value={data.delivery_city}
-                                                    onChange={(event) => setData("delivery_city", event.target.value)}
-                                                />
-                                                {errors.delivery_city && (
-                                                    <div className="invalid-feedback">{errors.delivery_city}</div>
-                                                )}
                                             </div>
                                         </div>
-
-                                        <div className="small text-muted mt-2 mb-3">
-                                            Search your address on OpenStreetMap, then drag the marker or click the map to pin the exact delivery entrance.
-                                        </div>
-
-                                        <ServiceLocationPicker
-                                            locationType="delivery"
-                                            streetAddress={data.delivery_street_address}
-                                            city={data.delivery_city}
-                                            latitude={data.delivery_latitude}
-                                            longitude={data.delivery_longitude}
-                                            apiErrors={{
-                                                service_location: errors.delivery_latitude || errors.delivery_longitude || errors.delivery_location,
-                                            }}
-                                            onChange={(changes) =>
-                                                setData((current) => ({
-                                                    ...current,
-                                                    delivery_latitude: changes.service_latitude ?? current.delivery_latitude,
-                                                    delivery_longitude: changes.service_longitude ?? current.delivery_longitude,
-                                                }))
-                                            }
-                                        />
-
-                                        {errors.delivery_location && (
-                                            <div className="small text-danger mt-2">{errors.delivery_location}</div>
-                                        )}
-                                        {errors.delivery_address && (
-                                            <div className="small text-danger mt-2">{errors.delivery_address}</div>
+                                        {errors.fulfillment_method && <div className="small text-danger mb-2">{errors.fulfillment_method}</div>}
+                                        {data.fulfillment_method === "delivery" ? (
+                                            <>
+                                                <div className="fw-bold small mb-2">DELIVERY ADDRESS</div>
+                                                <div className="row g-3">
+                                                    <div className="col-12">
+                                                        <label htmlFor="checkout-delivery-street" className="form-label small fw-semibold">Street address / Barangay <span className="text-danger">*</span></label>
+                                                        <input id="checkout-delivery-street" type="text" maxLength={500} autoComplete="street-address" className={"form-control " + (errors.delivery_street_address ? "is-invalid" : "")} style={fieldStyle} placeholder="House number, street, barangay" value={data.delivery_street_address} onChange={(event) => setData("delivery_street_address", event.target.value)} />
+                                                        {errors.delivery_street_address && <div className="invalid-feedback">{errors.delivery_street_address}</div>}
+                                                    </div>
+                                                    <div className="col-12">
+                                                        <label htmlFor="checkout-delivery-details" className="form-label small fw-semibold">Unit / Building / Landmark <span className="text-muted fw-normal">(optional)</span></label>
+                                                        <input id="checkout-delivery-details" type="text" maxLength={500} className={"form-control " + (errors.delivery_address_details ? "is-invalid" : "")} style={fieldStyle} placeholder="Unit, floor, gate, or nearby landmark" value={data.delivery_address_details} onChange={(event) => setData("delivery_address_details", event.target.value)} />
+                                                        {errors.delivery_address_details && <div className="invalid-feedback">{errors.delivery_address_details}</div>}
+                                                    </div>
+                                                    <div className="col-12">
+                                                        <label htmlFor="checkout-delivery-city" className="form-label small fw-semibold">City / Municipality and Province <span className="text-danger">*</span></label>
+                                                        <input id="checkout-delivery-city" type="text" maxLength={180} autoComplete="address-level2" className={"form-control " + (errors.delivery_city ? "is-invalid" : "")} style={fieldStyle} placeholder="City / Municipality, Province" value={data.delivery_city} onChange={(event) => setData("delivery_city", event.target.value)} />
+                                                        {errors.delivery_city && <div className="invalid-feedback">{errors.delivery_city}</div>}
+                                                    </div>
+                                                </div>
+                                                <div className="small text-muted mt-2 mb-3">Search your address on OpenStreetMap, then drag the marker or click the map to pin the exact delivery entrance.</div>
+                                                <ServiceLocationPicker locationType="delivery" streetAddress={data.delivery_street_address} city={data.delivery_city} latitude={data.delivery_latitude} longitude={data.delivery_longitude} apiErrors={{ service_location: errors.delivery_latitude || errors.delivery_longitude || errors.delivery_location }} onChange={(changes) => setData((current) => ({ ...current, delivery_latitude: changes.service_latitude ?? current.delivery_latitude, delivery_longitude: changes.service_longitude ?? current.delivery_longitude }))} />
+                                                {errors.delivery_location && <div className="small text-danger mt-2">{errors.delivery_location}</div>}
+                                                {errors.delivery_address && <div className="small text-danger mt-2">{errors.delivery_address}</div>}
+                                            </>
+                                        ) : (
+                                            <div className="alert alert-info small mb-0">
+                                                <i className="bi bi-shop me-2" />
+                                                You selected shop pickup. Your order will be marked for collection at Netmax Trading; delivery address and map details are not required.
+                                            </div>
                                         )}
                                     </div>
 

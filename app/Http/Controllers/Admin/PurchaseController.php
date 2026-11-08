@@ -442,6 +442,7 @@ class PurchaseController extends Controller
             'customer_name' => $order->customer_name,
             'customer_email' => $order->customer_email,
             'customer_phone' => $order->customer_phone,
+            'fulfillment_method' => $order->fulfillment_method ?? 'delivery',
             'delivery_address' => $order->delivery_address,
             'delivery_address_details' => $order->delivery_address_details,
             'delivery_city' => $order->delivery_city,

@@ -211,6 +211,7 @@ jobs:
           cp database/migrations/2026_11_08_000001_add_walk_in_channels_and_service_invoice_fields.php hostinger-release/database/migrations/2026_11_08_000001_add_walk_in_channels_and_service_invoice_fields.php
           cp database/migrations/2026_11_08_000002_create_service_record_payments_table.php hostinger-release/database/migrations/2026_11_08_000002_create_service_record_payments_table.php
           cp database/migrations/2026_11_08_000003_add_walk_in_payment_preference_to_inquiries.php hostinger-release/database/migrations/2026_11_08_000003_add_walk_in_payment_preference_to_inquiries.php
+          cp database/migrations/2026_11_08_000004_add_fulfillment_method_to_orders_table.php hostinger-release/database/migrations/2026_11_08_000004_add_fulfillment_method_to_orders_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php

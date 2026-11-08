@@ -340,10 +340,10 @@ export default function PurchaseDetails({ order }) {
 
                                     <div className="col-12">
                                         <div className="small text-muted mb-1">
-                                            DELIVERY ADDRESS
+                                            {order.fulfillment_method === "pickup" ? "FULFILLMENT" : "DELIVERY ADDRESS"}
                                         </div>
                                         <div className="fw-semibold">
-                                            {order.delivery_address}
+                                            {order.fulfillment_method === "pickup" ? "Shop pickup at Netmax Trading" : order.delivery_address}
                                         </div>
                                         {order.delivery_latitude != null && order.delivery_longitude != null && (
                                             <a

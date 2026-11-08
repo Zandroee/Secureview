@@ -21,7 +21,7 @@ class RefundController extends Controller
         ]);
 
         $query = Refund::query()
-            ->with(['order', 'inquiry', 'customer', 'processor'])
+            ->with(['order.items', 'order.invoiceRecord', 'inquiry', 'customer', 'processor'])
             ->latest();
 
         if (!empty($filters['search'])) {
@@ -46,6 +46,27 @@ class RefundController extends Controller
                 'id' => $refund->id,
                 'order_id' => $refund->order_id,
                 'order_number' => $refund->order?->order_number,
+                'order_total' => $refund->order ? (float) $refund->order->total : null,
+                'order_subtotal' => $refund->order ? (float) $refund->order->subtotal : null,
+                'order_discount' => $refund->order ? (float) $refund->order->discount_amount : null,
+                'order_shipping_fee' => $refund->order ? (float) $refund->order->shipping_fee : null,
+                'order_payment_method' => $refund->order?->payment_method,
+                'order_payment_status' => $refund->order?->payment_status,
+                'order_status' => $refund->order?->order_status,
+                'order_fulfillment_method' => $refund->order?->fulfillment_method ?? 'delivery',
+                'order_address' => $refund->order?->delivery_address,
+                'order_created_at' => $refund->order?->created_at?->format('M d, Y h:i A'),
+                'order_items' => $refund->order?->items?->map(fn ($item) => [
+                    'name' => $item->name,
+                    'quantity' => (int) $item->quantity,
+                    'price' => (float) $item->price,
+                    'subtotal' => (float) $item->subtotal,
+                    'warranty_period' => $item->warranty_period,
+                ])->values() ?? [],
+                'invoice_record_number' => $refund->order?->invoiceRecord?->record_number,
+                'invoice_issued_at' => $refund->order?->invoiceRecord?->issued_at?->format('M d, Y h:i A'),
+                'invoice_url' => $refund->order ? route('admin.purchases.invoice', $refund->order) : null,
+                'invoice_snapshot' => $refund->order?->invoiceRecord?->snapshot,
                 'customer_name' => $refund->customer?->name ?? $refund->order?->customer_name,
                 'customer_email' => $refund->customer?->email ?? $refund->order?->customer_email,
                 'inquiry_number' => $refund->inquiry?->inquiry_number,
