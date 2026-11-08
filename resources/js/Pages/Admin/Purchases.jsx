@@ -784,11 +784,11 @@ export default function AdminPurchases({
 
                                 <div className="col-md-6">
                                     <div className="small text-muted">
-                                        DELIVERY ADDRESS
+                                        {viewingOrder.fulfillment_method === "pickup" ? "FULFILLMENT" : "DELIVERY ADDRESS"}
                                     </div>
 
                                     <div className="fw-semibold">
-                                        {viewingOrder.delivery_address}
+                                        {viewingOrder.fulfillment_method === "pickup" ? "Shop pickup at Netmax Trading" : viewingOrder.delivery_address}
                                     </div>
                                     {viewingOrder.delivery_latitude != null && viewingOrder.delivery_longitude != null && (
                                         <a
