@@ -208,6 +208,11 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                                         <div>
                                                             <div className="fw-bold text-success">₱{Number(service.service_record.total_income ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                                             <div className="small text-muted">{service.service_record.items?.length ?? 0} part line(s)</div>
+                                                            {service.service_record.invoice_record && (
+                                                                <div className="small text-muted">
+                                                                    {service.service_record.payment_count ?? 0} payment(s) · Paid ₱{Number(service.service_record.amount_paid ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · Balance ₱{Number(service.service_record.balance_due ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                </div>
+                                                            )}
                                                             <div className="small text-break" title={service.service_record.work_summary}>{service.service_record.work_summary}</div>
                                                         </div>
                                                     ) : (
@@ -246,12 +251,16 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                                                     type="button"
                                                                     className="btn btn-outline-secondary btn-sm"
                                                                     onClick={() => {
-                                                                        const current = Number(service.service_record.amount_paid || 0);
-                                                                        const amount = window.prompt("Enter the cumulative amount received to date (PHP). Current recorded amount: " + current.toFixed(2), current.toFixed(2));
+                                                                        const balance = Number(service.service_record.balance_due ?? 0);
+                                                                        if (balance <= 0) {
+                                                                            window.alert("This service invoice is already fully paid.");
+                                                                            return;
+                                                                        }
+                                                                        const amount = window.prompt("Enter the payment received now (PHP). Remaining balance: ₱" + balance.toFixed(2), balance.toFixed(2));
                                                                         if (amount === null) return;
                                                                         const parsed = Number(amount);
-                                                                        if (!Number.isFinite(parsed) || parsed < 0) {
-                                                                            window.alert("Enter a valid amount.");
+                                                                        if (!Number.isFinite(parsed) || parsed <= 0 || parsed > balance) {
+                                                                            window.alert("Enter a payment greater than zero and no more than the remaining balance.");
                                                                             return;
                                                                         }
                                                                         const method = window.prompt("Payment method: cash, gcash, card, or maya", service.service_record.payment_method || "cash");
@@ -260,9 +269,12 @@ export default function ServiceHistory({ services = [], filters = {}, serviceInc
                                                                             window.alert("Choose cash, gcash, card, or maya.");
                                                                             return;
                                                                         }
+                                                                        const reference = window.prompt("Payment reference (optional). Add a GCash/Maya/card reference when available.", "");
+                                                                        if (reference === null) return;
                                                                         router.patch("/admin/service-records/" + service.service_record.id + "/payment", {
-                                                                            amount_paid: parsed,
+                                                                            payment_amount: parsed,
                                                                             payment_method: method.toLowerCase(),
+                                                                            reference: reference.trim() || null,
                                                                         }, { preserveScroll: true });
                                                                     }}
                                                                 >
