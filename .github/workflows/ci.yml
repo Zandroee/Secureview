@@ -118,6 +118,8 @@ jobs:
           cp app/Http/Controllers/Admin/ActivityLogController.php hostinger-release/app/Http/Controllers/Admin/ActivityLogController.php
           cp app/Http/Controllers/Admin/PurchaseController.php hostinger-release/app/Http/Controllers/Admin/PurchaseController.php
           cp app/Http/Controllers/Admin/RefundController.php hostinger-release/app/Http/Controllers/Admin/RefundController.php
+          cp app/Http/Controllers/Admin/WalkInController.php hostinger-release/app/Http/Controllers/Admin/WalkInController.php
+          cp app/Http/Controllers/Admin/ServiceInvoiceIssuanceController.php hostinger-release/app/Http/Controllers/Admin/ServiceInvoiceIssuanceController.php
           cp app/Http/Controllers/Admin/VoucherController.php hostinger-release/app/Http/Controllers/Admin/VoucherController.php
           cp app/Http/Controllers/Admin/PromoSaleController.php hostinger-release/app/Http/Controllers/Admin/PromoSaleController.php
           cp app/Http/Controllers/Admin/CustomerConversationsController.php hostinger-release/app/Http/Controllers/Admin/CustomerConversationsController.php
@@ -130,6 +132,7 @@ jobs:
           cp app/Http/Controllers/CartController.php hostinger-release/app/Http/Controllers/CartController.php
           cp app/Http/Controllers/PayMongoWebhookController.php hostinger-release/app/Http/Controllers/PayMongoWebhookController.php
           cp app/Http/Controllers/InquiryController.php hostinger-release/app/Http/Controllers/InquiryController.php
+          cp app/Http/Controllers/InvoiceController.php hostinger-release/app/Http/Controllers/InvoiceController.php
           cp app/Http/Controllers/AuthController.php hostinger-release/app/Http/Controllers/AuthController.php
           cp app/Http/Controllers/SettingsController.php hostinger-release/app/Http/Controllers/SettingsController.php
           cp app/Http/Controllers/EmailVerificationController.php hostinger-release/app/Http/Controllers/EmailVerificationController.php
@@ -153,6 +156,7 @@ jobs:
           cp app/Models/SupportConversation.php hostinger-release/app/Models/SupportConversation.php
           cp app/Models/SupportMessage.php hostinger-release/app/Models/SupportMessage.php
           cp app/Models/Order.php hostinger-release/app/Models/Order.php
+          cp app/Models/InvoiceRecord.php hostinger-release/app/Models/InvoiceRecord.php
           cp app/Models/Refund.php hostinger-release/app/Models/Refund.php
           cp app/Models/OrderEvent.php hostinger-release/app/Models/OrderEvent.php
           cp app/Models/Voucher.php hostinger-release/app/Models/Voucher.php
@@ -203,6 +207,7 @@ jobs:
           cp database/migrations/2026_11_05_000001_create_support_conversations_tables.php hostinger-release/database/migrations/2026_11_05_000001_create_support_conversations_tables.php
           cp database/migrations/2026_11_07_000001_create_refunds_table.php hostinger-release/database/migrations/2026_11_07_000001_create_refunds_table.php
           cp database/migrations/2026_11_07_000002_add_marketing_email_preferences_to_users_table.php hostinger-release/database/migrations/2026_11_07_000002_add_marketing_email_preferences_to_users_table.php
+          cp database/migrations/2026_11_08_000001_add_walk_in_channels_and_service_invoice_fields.php hostinger-release/database/migrations/2026_11_08_000001_add_walk_in_channels_and_service_invoice_fields.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php
