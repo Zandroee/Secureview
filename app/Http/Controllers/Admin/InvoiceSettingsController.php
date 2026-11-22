@@ -118,6 +118,31 @@ class InvoiceSettingsController extends Controller
         return back()->with('success', 'Invoice profile settings saved.');
     }
 
+    /**
+     * Pickup address is an independent shop setting. Saving it must not depend
+     * on unrelated invoice profile or serial number validation errors.
+     */
+    public function updatePickupAddress(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'pickup_address' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $address = trim($validated['pickup_address']);
+        if ($address === '') {
+            throw ValidationException::withMessages([
+                'pickup_address' => 'Enter the physical store address before enabling shop pickup.',
+            ]);
+        }
+
+        $settings = $this->settings();
+        $settings->pickup_address = $address;
+        $settings->updated_by = $request->user()->id;
+        $settings->save();
+
+        return back()->with('success', 'Shop pickup address saved. Customers can now choose Shop Pickup at checkout.');
+    }
+
     private function settings(): InvoiceSetting
     {
         return InvoiceSetting::query()->firstOrCreate(
