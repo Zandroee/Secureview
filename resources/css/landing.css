@@ -1,0 +1,348 @@
+
+/* Soft image transition for product and package detail galleries. */
+.catalog-detail-main-image {
+    animation: catalog-image-fade 700ms ease both;
+    will-change: opacity, transform;
+}
+
+@keyframes catalog-image-fade {
+    from {
+        opacity: 0.2;
+        transform: scale(1.012);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .catalog-detail-main-image {
+        animation: none;
+        will-change: auto;
+    }
+}
+
+
+/* Homepage hero: editorial split layout with theme-aware colors and independent CTA styling. */
+.home-hero {
+    --hero-panel: #111c2d;
+    --hero-title: #ffffff;
+    --hero-eyebrow: #8dbaff;
+    --hero-copy: #c5d0df;
+    --hero-accent: #75aaff;
+    --hero-outline-border: rgba(205, 219, 239, 0.55);
+    --hero-outline-text: #eef4fc;
+    --hero-outline-hover: rgba(255, 255, 255, 0.08);
+
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "content media";
+    width: 100%;
+    height: clamp(380px, 31vw, 470px);
+    margin: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: var(--hero-panel);
+    color: var(--hero-title);
+    box-shadow: none;
+}
+
+/* The public site follows the guest's browser preference; the hero must follow
+   the same resolved Bootstrap theme rather than remaining dark unconditionally. */
+html[data-bs-theme="light"] .home-hero {
+    --hero-panel: #f3f6fb;
+    --hero-title: #14243a;
+    --hero-eyebrow: #1768d8;
+    --hero-copy: #536278;
+    --hero-accent: #1768d8;
+    --hero-outline-border: rgba(20, 36, 58, 0.42);
+    --hero-outline-text: #14243a;
+    --hero-outline-hover: rgba(20, 36, 58, 0.07);
+}
+
+html[data-bs-theme="dark"] .home-hero {
+    --hero-panel: #111c2d;
+    --hero-title: #ffffff;
+    --hero-eyebrow: #8dbaff;
+    --hero-copy: #c5d0df;
+    --hero-accent: #75aaff;
+    --hero-outline-border: rgba(205, 219, 239, 0.55);
+    --hero-outline-text: #eef4fc;
+    --hero-outline-hover: rgba(255, 255, 255, 0.08);
+}
+
+.home-hero-content {
+    grid-area: content;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 0;
+    min-height: 0;
+    padding: clamp(2rem, 4.4vw, 4.75rem);
+}
+
+.home-hero-copy {
+    width: 100%;
+    max-width: 560px;
+    margin: 0;
+    text-align: left;
+    font-family: "Outfit", sans-serif;
+}
+
+.home-hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin: 0 0 1.1rem;
+    color: var(--hero-eyebrow);
+    font-family: "Outfit", sans-serif;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1.4;
+    text-transform: uppercase;
+}
+
+.home-hero-eyebrow::before {
+    display: block;
+    width: 25px;
+    height: 2px;
+    flex: 0 0 25px;
+    background: #3788ff;
+    content: "";
+}
+
+.home-hero-copy h1 {
+    max-width: 12ch;
+    margin: 0 0 1rem;
+    color: var(--hero-title);
+    font-size: clamp(2.55rem, 3.65vw, 4.15rem);
+    font-weight: 750;
+    line-height: 1.04;
+    letter-spacing: -0.045em;
+    text-wrap: balance;
+}
+
+.home-hero-accent {
+    color: var(--hero-accent);
+}
+
+.home-hero-copy p {
+    max-width: 34rem;
+    margin: 0 0 1.8rem;
+    color: var(--hero-copy);
+    font-size: clamp(1rem, 1.15vw, 1.12rem);
+    line-height: 1.65;
+    text-wrap: pretty;
+}
+
+.home-hero-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+/* These are standalone links, not Bootstrap .btn controls. Keeping the
+   component self-contained prevents CSS import order from hiding its labels. */
+.home-hero .home-hero-button {
+    appearance: none;
+    display: inline-flex;
+    min-height: 48px;
+    min-width: 174px;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem 1.2rem;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    font-family: "Outfit", sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    opacity: 1;
+    visibility: visible;
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.home-hero .home-hero-button:hover {
+    transform: translateY(-1px);
+}
+
+.home-hero .home-hero-button-primary,
+html[data-bs-theme="light"] .home-hero .home-hero-button-primary,
+html[data-bs-theme="dark"] .home-hero .home-hero-button-primary {
+    border-color: #2878f0;
+    background: #2878f0;
+    color: #ffffff;
+}
+
+.home-hero .home-hero-button-primary:hover,
+.home-hero .home-hero-button-primary:focus-visible {
+    border-color: #4b91ff;
+    background: #4b91ff;
+    color: #ffffff;
+}
+
+.home-hero .home-hero-button-outline,
+html[data-bs-theme="light"] .home-hero .home-hero-button-outline,
+html[data-bs-theme="dark"] .home-hero .home-hero-button-outline {
+    border-color: var(--hero-outline-border);
+    background: transparent;
+    color: var(--hero-outline-text);
+}
+
+.home-hero .home-hero-button-outline:hover,
+.home-hero .home-hero-button-outline:focus-visible {
+    border-color: var(--hero-outline-text);
+    background: var(--hero-outline-hover);
+    color: var(--hero-outline-text);
+}
+
+.home-hero .home-hero-button:focus-visible {
+    outline: 3px solid rgba(55, 136, 255, 0.55);
+    outline-offset: 3px;
+}
+
+.home-hero-media {
+    grid-area: media;
+    display: block;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: #1a2b40;
+}
+
+.home-hero-media picture {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+}
+
+.home-hero-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    object-fit: cover;
+    object-position: center 48%;
+}
+
+@media (max-width: 1100px) {
+    .home-hero {
+        grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+        height: 410px;
+    }
+
+    .home-hero-content {
+        padding: 2rem 2.25rem;
+    }
+
+    .home-hero-copy h1 {
+        font-size: clamp(2.3rem, 4vw, 3.25rem);
+    }
+
+    .home-hero .home-hero-button {
+        min-width: 155px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .home-hero {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: clamp(190px, 54vw, 280px) auto;
+        grid-template-areas:
+            "media"
+            "content";
+        width: 100%;
+        height: auto;
+        margin: 0;
+        border-right: 0;
+        border-left: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .home-hero-content {
+        padding: 1.8rem 1.25rem 2rem;
+    }
+
+    .home-hero-copy {
+        max-width: 560px;
+    }
+
+    .home-hero-eyebrow {
+        margin-bottom: 0.85rem;
+        font-size: 0.7rem;
+    }
+
+    .home-hero-copy h1 {
+        max-width: 13ch;
+        margin-bottom: 0.8rem;
+        font-size: clamp(2.15rem, 8vw, 2.8rem);
+        line-height: 1.06;
+    }
+
+    .home-hero-copy p {
+        max-width: 36rem;
+        margin-bottom: 1.35rem;
+        font-size: 0.98rem;
+        line-height: 1.55;
+    }
+
+    .home-hero-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem;
+    }
+
+    .home-hero .home-hero-button {
+        width: 100%;
+        min-width: 0;
+        min-height: 46px;
+        padding-inline: 0.75rem;
+        font-size: 0.82rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .home-hero-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .home-hero .home-hero-button {
+        min-height: 48px;
+    }
+}
+
+@media (max-width: 359.98px) {
+    .home-hero-content {
+        padding-inline: 1rem;
+    }
+
+    .home-hero-copy h1 {
+        font-size: 2rem;
+    }
+
+    .home-hero-copy p {
+        font-size: 0.94rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-hero .home-hero-button {
+        transition: none;
+    }
+
+    .home-hero .home-hero-button:hover {
+        transform: none;
+    }
+}

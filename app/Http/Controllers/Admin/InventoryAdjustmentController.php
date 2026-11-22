@@ -13,6 +13,9 @@ class InventoryAdjustmentController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'direction' => ['nullable', 'in:increase,decrease'],
         ]);
 
         $query = InventoryAdjustment::query()
@@ -26,6 +29,20 @@ class InventoryAdjustmentController extends Controller
                     ->orWhere('reason', 'like', '%' . $search . '%')
                     ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', '%' . $search . '%'));
             });
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
+        if (($filters['direction'] ?? null) === 'increase') {
+            $query->where('quantity_change', '>', 0);
+        } elseif (($filters['direction'] ?? null) === 'decrease') {
+            $query->where('quantity_change', '<', 0);
         }
 
         $adjustments = $query->paginate(20)->withQueryString()->through(fn (InventoryAdjustment $adjustment) => [
@@ -42,7 +59,12 @@ class InventoryAdjustmentController extends Controller
 
         return Inertia::render('Admin/InventoryAdjustments', [
             'adjustments' => $adjustments,
-            'filters' => ['search' => $filters['search'] ?? ''],
+            'filters' => [
+                'search' => $filters['search'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
+                'direction' => $filters['direction'] ?? '',
+            ],
         ]);
     }
 }

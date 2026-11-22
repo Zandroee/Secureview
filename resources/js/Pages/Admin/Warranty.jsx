@@ -35,7 +35,6 @@ function coverageClass(status) {
 }
 
 export default function AdminWarranty({
-    claims = [],
     warranties = [],
     filters = {},
     summary = {},
@@ -44,16 +43,28 @@ export default function AdminWarranty({
     const { props } = usePage();
     const [search, setSearch] = useState(filters.search ?? "");
     const [status, setStatus] = useState(filters.status ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
     const [editingClaim, setEditingClaim] = useState(null);
+    const [viewingRecord, setViewingRecord] = useState(null);
     const [saving, setSaving] = useState(false);
-    const rows = claims.data ?? (Array.isArray(claims) ? claims : []);
     const coverageRows = warranties.data ?? (Array.isArray(warranties) ? warranties : []);
+    const combinedRows = coverageRows.map((warranty) => {
+        const associatedClaims = Array.isArray(warranty.claims) ? warranty.claims : [];
+        return {
+            type: "coverage",
+            key: "coverage-" + warranty.id,
+            warranty,
+            claims: associatedClaims,
+            claim: associatedClaims[0] ?? null,
+        };
+    });
 
     const applyFilters = (event) => {
         event.preventDefault();
         router.get(
             "/admin/warranty",
-            { search, status },
+            { search, status, date_from: dateFrom, date_to: dateTo },
             { preserveState: true, preserveScroll: true, replace: true }
         );
     };
@@ -61,6 +72,8 @@ export default function AdminWarranty({
     const clearFilters = () => {
         setSearch("");
         setStatus("");
+        setDateFrom("");
+        setDateTo("");
         router.get(
             "/admin/warranty",
             {},
@@ -69,6 +82,7 @@ export default function AdminWarranty({
     };
 
     const openEditor = (claim) => {
+        setViewingRecord(null);
         setEditingClaim({
             ...claim,
             admin_notes: claim.admin_notes ?? "",
@@ -154,12 +168,12 @@ export default function AdminWarranty({
                         <section className="bg-white border rounded-3 p-3 mb-3" style={{ boxShadow: "0 3px 12px rgba(0,0,0,0.04)" }}>
                             <form className="row g-2 align-items-end" onSubmit={applyFilters}>
                                 <div className="col-lg-7">
-                                    <label className="form-label small fw-semibold mb-1">SEARCH CLAIMS</label>
+                                    <label className="form-label small fw-semibold mb-1">SEARCH WARRANTIES & CLAIMS</label>
                                     <input
                                         className="form-control"
                                         value={search}
                                         onChange={(event) => setSearch(event.target.value)}
-                                        placeholder="Claim number, customer, order number, or product"
+                                        placeholder="Claim or order number, customer, or product"
                                     />
                                 </div>
                                 <div className="col-sm-8 col-lg-3">
@@ -171,6 +185,14 @@ export default function AdminWarranty({
                                         ))}
                                     </select>
                                 </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">CLAIM FROM</label>
+                                    <input type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label className="form-label small fw-semibold mb-1">CLAIM TO</label>
+                                    <input type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
+                                </div>
                                 <div className="col-6 col-lg-1 d-grid">
                                     <button type="submit" className="btn btn-primary fw-bold">FILTER</button>
                                 </div>
@@ -180,14 +202,17 @@ export default function AdminWarranty({
                             </form>
                         </section>
 
-                        <section className="bg-white border rounded-3 overflow-hidden mb-3" style={{ boxShadow: "0 3px 12px rgba(0,0,0,0.04)" }}>
+                        <section className="bg-white border rounded-3 overflow-hidden" style={{ boxShadow: "0 3px 12px rgba(0,0,0,0.04)" }}>
                             <div className="p-3 p-md-4 border-bottom">
-                                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-1">
+                                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
                                     <div>
-                                        <h2 className="h5 fw-bold mb-1">Warranty Coverage Register</h2>
-                                        <p className="small text-muted mb-0">Paid purchases and their calculated coverage period, including items that have not needed service yet.</p>
+                                        <h2 className="h5 fw-bold mb-1">Warranty Claims</h2>
+                                        <p className="small text-muted mb-0">Only purchases with a submitted warranty claim appear here. Use View to check coverage and manage the claim.</p>
                                     </div>
-                                    <span className="small text-muted">{warranties.total ?? coverageRows.length} purchase records</span>
+                                    <div className="small text-muted text-md-end">
+                                        <div>{warranties.total ?? coverageRows.length} claimed purchase items</div>
+                                        <div>{summary.total ?? 0} service claims</div>
+                                    </div>
                                 </div>
                             </div>
                             <div className="table-responsive">
@@ -195,136 +220,208 @@ export default function AdminWarranty({
                                     <thead className="table-light">
                                         <tr>
                                             <th className="ps-3">CUSTOMER / ORDER</th>
-                                            <th>PURCHASED ITEM</th>
-                                            <th>WARRANTY</th>
-                                            <th>LATEST CLAIM</th>
-                                            <th>COVERAGE</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {coverageRows.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="5" className="text-center py-5 text-muted">
-                                                    <i className="bi bi-shield-check fs-2 d-block mb-2" />
-                                                    No paid purchase records found.
-                                                </td>
-                                            </tr>
-                                        ) : coverageRows.map((warranty) => (
-                                            <tr key={warranty.id}>
-                                                <td className="ps-3">
-                                                    <div className="fw-semibold">{warranty.customer_name}</div>
-                                                    <div className="small text-muted text-break">{warranty.customer_email}</div>
-                                                    <div className="small text-primary mt-1">{warranty.order_number || "—"}</div>
-                                                </td>
-                                                <td>
-                                                    <div className="fw-semibold">{warranty.item_name}</div>
-                                                    <div className="small text-muted">Quantity: {warranty.quantity}</div>
-                                                </td>
-                                                <td>
-                                                    <div className="fw-semibold">{warranty.warranty_period || "Not specified"}</div>
-                                                    <div className="small text-muted">Started {warranty.warranty_start_date || "—"}</div>
-                                                    <div className="small text-muted">
-                                                        {warranty.warranty_expiry_date
-                                                            ? "Expires " + warranty.warranty_expiry_date
-                                                            : /lifetime/i.test(warranty.warranty_period ?? "") ? "No expiration (lifetime)" : "Expiry unavailable"}
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    {warranty.latest_claim_number ? (
-                                                        <>
-                                                            <div className="small fw-semibold">{warranty.latest_claim_number}</div>
-                                                            <span className={"badge rounded-pill text-capitalize px-2 py-1 " + statusClass(warranty.latest_claim_status)}>
-                                                                {statusLabel(warranty.latest_claim_status)}
-                                                            </span>
-                                                        </>
-                                                    ) : (
-                                                        <span className="small text-muted">No claim submitted</span>
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    <span className={"badge rounded-pill text-capitalize px-2 py-2 " + coverageClass(warranty.coverage_status)}>
-                                                        {statusLabel(warranty.coverage_status)}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <AdminPagination pagination={warranties} label="warranty records" insideCard />
-                        </section>
-
-                        <section className="bg-white border rounded-3 overflow-hidden" style={{ boxShadow: "0 3px 12px rgba(0,0,0,0.04)" }}>
-                            <div className="p-3 p-md-4 border-bottom">
-                                <h2 className="h5 fw-bold mb-1">Warranty Service Claims</h2>
-                                <p className="small text-muted mb-0">Review customer reports and record decisions, repairs, and resolution notes.</p>
-                            </div>
-                            <div className="table-responsive">
-                                <table className="table table-hover align-middle mb-0">
-                                    <thead className="table-light">
-                                        <tr>
-                                            <th className="ps-3">CLAIM</th>
-                                            <th>CUSTOMER</th>
-                                            <th>ITEM & COVERAGE</th>
-                                            <th>ISSUE</th>
-                                            <th>STATUS</th>
+                                            <th>PURCHASED ITEM / ISSUE</th>
+                                            <th>WARRANTY / COVERAGE</th>
+                                            <th>CLAIM STATUS</th>
                                             <th className="text-end pe-3">ACTION</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {rows.length === 0 ? (
+                                        {combinedRows.length === 0 ? (
                                             <tr>
-                                                <td colSpan="6" className="text-center py-5 text-muted">
+                                                <td colSpan="5" className="text-center py-5 text-muted">
                                                     <i className="bi bi-shield-check fs-2 d-block mb-2" />
-                                                    No warranty claims found.
-                                                    <div className="small mt-1">Customer requests will appear here after they are submitted.</div>
+                                                    No submitted warranty claims found.
+                                                    <div className="small mt-1">Purchases without claims remain available in Orders History, order details, and invoices.</div>
                                                 </td>
                                             </tr>
-                                        ) : rows.map((claim) => (
-                                            <tr key={claim.id}>
-                                                <td className="ps-3">
-                                                    <div className="fw-bold text-primary">{claim.claim_number}</div>
-                                                    <div className="small text-muted">{claim.submitted_at || "—"}</div>
-                                                    <div className="small text-muted">Order {claim.order_number || "—"}</div>
-                                                </td>
-                                                <td>
-                                                    <div className="fw-semibold">{claim.customer_name}</div>
-                                                    <div className="small text-muted text-break">{claim.customer_email}</div>
-                                                </td>
-                                                <td>
-                                                    <div className="fw-semibold">{claim.item_name}</div>
-                                                    <div className="small text-muted">Warranty: {claim.warranty_period || "Not specified"}</div>
-                                                    <div className="small text-muted">
-                                                        {claim.warranty_expiry_date
-                                                            ? "Expires " + claim.warranty_expiry_date
-                                                            : /lifetime/i.test(claim.warranty_period ?? "") ? "Lifetime coverage" : "Expiry unavailable"}
-                                                    </div>
-                                                </td>
-                                                <td style={{ minWidth: "210px", maxWidth: "300px" }}>
-                                                    <div className="small" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{claim.issue_description}</div>
-                                                    {claim.admin_notes && <div className="small text-muted mt-1">Note: {claim.admin_notes}</div>}
-                                                </td>
-                                                <td>
-                                                    <span className={"badge rounded-pill text-capitalize px-2 py-2 " + statusClass(claim.status)}>
-                                                        {statusLabel(claim.status)}
-                                                    </span>
-                                                </td>
-                                                <td className="text-end pe-3">
-                                                    <button type="button" className="btn btn-sm btn-outline-primary fw-semibold" onClick={() => openEditor(claim)}>
-                                                        Manage
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        ) : combinedRows.map((record) => {
+                                            const warranty = record.warranty;
+                                            const claim = record.claim;
+                                            return (
+                                                <tr key={record.key}>
+                                                    <td className="ps-3">
+                                                        <div className="fw-semibold">{warranty?.customer_name ?? claim?.customer_name ?? "Unknown customer"}</div>
+                                                        <div className="small text-muted text-break">{warranty?.customer_email ?? claim?.customer_email ?? "—"}</div>
+                                                        <div className="small text-primary mt-1">{warranty?.order_number ?? claim?.order_number ?? "—"}</div>
+                                                            </td>
+                                                    <td>
+                                                        <div className="fw-semibold">{warranty.item_name}</div>
+                                                        <div className="small text-muted">Quantity: {warranty.quantity}</div>
+                                                        {record.claims.length > 0 && (
+                                                            <div className="small text-muted mt-1">
+                                                                {record.claims.length} service {record.claims.length === 1 ? "claim" : "claims"}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        <div className="fw-semibold">{warranty?.warranty_period ?? claim?.warranty_period ?? "Not specified"}</div>
+                                                        {warranty ? (
+                                                            <>
+                                                                <div className="small text-muted">Started {warranty.warranty_start_date || "—"}</div>
+                                                                <div className="small text-muted">
+                                                                    {warranty.warranty_expiry_date
+                                                                        ? "Expires " + warranty.warranty_expiry_date
+                                                                        : /lifetime/i.test(warranty.warranty_period ?? "") ? "No expiration (lifetime)" : "Expiry unavailable"}
+                                                                </div>
+                                                                <span className={"badge rounded-pill text-capitalize px-2 py-1 mt-1 " + coverageClass(warranty.coverage_status)}>
+                                                                    {statusLabel(warranty.coverage_status)}
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <div className="small text-muted">
+                                                                {claim.warranty_expiry_date
+                                                                    ? "Expires " + claim.warranty_expiry_date
+                                                                    : /lifetime/i.test(claim.warranty_period ?? "") ? "Lifetime coverage" : "Expiry unavailable"}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td>
+                                                        {claim ? (
+                                                            <>
+                                                                <div className="small fw-semibold">{claim.claim_number}</div>
+                                                                <span className={"badge rounded-pill text-capitalize px-2 py-1 " + statusClass(claim.status)}>
+                                                                    {statusLabel(claim.status)}
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="small text-muted">No claim submitted</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="text-end pe-3">
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-sm btn-outline-primary fw-semibold"
+                                                            onClick={() => setViewingRecord(record)}
+                                                        >
+                                                            VIEW
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
-                            <AdminPagination pagination={claims} label="claims" insideCard />
+                            <div className="border-top">
+                                <AdminPagination pagination={warranties} label="warranty records" insideCard />
+                            </div>
                         </section>
+
                     </main>
                 </div>
             </div>
             <Footer />
+
+            {viewingRecord && (
+                <div
+                    className="admin-warranty-detail-modal position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                    style={{ backgroundColor: "rgba(15, 23, 42, 0.5)", zIndex: 2999, padding: "1rem" }}
+                    onClick={() => setViewingRecord(null)}
+                >
+                    <div
+                        className="bg-white border rounded-4 p-3 p-md-4 w-100"
+                        style={{ maxWidth: "850px", maxHeight: "calc(100dvh - 2rem)", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="d-flex justify-content-between align-items-start gap-3 mb-3">
+                            <div>
+                                <div className="small text-primary fw-bold">{viewingRecord.warranty.order_number}</div>
+                                <h2 className="h5 fw-bold mb-1">Warranty record details</h2>
+                                <div className="small text-muted">
+                                    {viewingRecord.warranty.customer_name} · {viewingRecord.warranty.item_name}
+                                </div>
+                            </div>
+                            <button type="button" className="btn-close" aria-label="Close" onClick={() => setViewingRecord(null)} />
+                        </div>
+
+                        <div className="row g-3 mb-3">
+                            <div className="col-md-6">
+                                <div className="border rounded-3 p-3 h-100">
+                                    <div className="small text-muted mb-1">CUSTOMER / ORDER</div>
+                                    <div className="fw-semibold">{viewingRecord.warranty.customer_name}</div>
+                                    <div className="small text-muted text-break">{viewingRecord.warranty.customer_email || "—"}</div>
+                                    <div className="small text-primary mt-1">{viewingRecord.warranty.order_number || "—"}</div>
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="border rounded-3 p-3 h-100">
+                                    <div className="small text-muted mb-1">PURCHASED ITEM</div>
+                                    <div className="fw-semibold">{viewingRecord.warranty.item_name}</div>
+                                    <div className="small text-muted">Quantity: {viewingRecord.warranty.quantity}</div>
+                                    <div className="small text-muted mt-1">Warranty: {viewingRecord.warranty.warranty_period || "Not specified"}</div>
+                                    <div className="small text-muted">
+                                        {viewingRecord.warranty.warranty_start_date ? "Started " + viewingRecord.warranty.warranty_start_date : ""}
+                                    </div>
+                                    <div className="small text-muted">
+                                        {viewingRecord.warranty.warranty_expiry_date
+                                            ? "Expires " + viewingRecord.warranty.warranty_expiry_date
+                                            : /lifetime/i.test(viewingRecord.warranty.warranty_period ?? "") ? "Lifetime coverage" : "Expiry unavailable"}
+                                    </div>
+                                    <span className={"badge rounded-pill text-capitalize px-2 py-1 mt-2 " + coverageClass(viewingRecord.warranty.coverage_status)}>
+                                        {statusLabel(viewingRecord.warranty.coverage_status)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="d-flex justify-content-between align-items-center gap-2 mb-2">
+                            <h3 className="h6 fw-bold mb-0">SERVICE CLAIMS ({viewingRecord.warranty.claims?.length ?? 0})</h3>
+                        </div>
+
+                        {(viewingRecord.warranty.claims ?? []).length > 0 ? (
+                            <div className="d-flex flex-column gap-3 mb-3">
+                                {viewingRecord.warranty.claims.map((claim) => (
+                                    <div className="border rounded-3 p-3" key={claim.id}>
+                                        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                            <div>
+                                                <div className="small text-primary fw-bold">{claim.claim_number}</div>
+                                                <div className="small text-muted">{claim.submitted_at || "—"}</div>
+                                            </div>
+                                            <span className={"badge rounded-pill text-capitalize px-2 py-2 " + statusClass(claim.status)}>
+                                                {statusLabel(claim.status)}
+                                            </span>
+                                        </div>
+                                        <div className="small fw-bold mb-1">CUSTOMER REPORTED ISSUE</div>
+                                        <div className="small mb-3" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                                            {claim.issue_description || "No issue details provided."}
+                                        </div>
+                                        <div className="small fw-bold mb-1">ADMIN NOTES / CUSTOMER UPDATE</div>
+                                        <div className="small text-muted mb-3" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                                            {claim.admin_notes || "No admin notes recorded."}
+                                        </div>
+                                        <div className="d-flex justify-content-end">
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-primary fw-semibold"
+                                                onClick={() => openEditor({
+                                                    ...claim,
+                                                    customer_name: viewingRecord.warranty.customer_name,
+                                                    customer_email: viewingRecord.warranty.customer_email,
+                                                    order_number: viewingRecord.warranty.order_number,
+                                                    item_name: viewingRecord.warranty.item_name,
+                                                    warranty_period: viewingRecord.warranty.warranty_period,
+                                                    warranty_expiry_date: viewingRecord.warranty.warranty_expiry_date,
+                                                })}
+                                            >
+                                                MANAGE CLAIM
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="alert alert-light border">No warranty service claim has been submitted for this purchase.</div>
+                        )}
+
+                        <div className="d-flex justify-content-end">
+                            <button type="button" className="btn btn-outline-secondary" onClick={() => setViewingRecord(null)}>
+                                CLOSE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {editingClaim && (
                 <div

@@ -4,13 +4,19 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ChatbotController;
+use App\Http\Controllers\CustomerSupportConversationController;
+use App\Http\Controllers\Admin\CustomerConversationsController as AdminCustomerConversationsController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\PackageController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\RefundRequestController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\InquiryController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\NotificationController;
@@ -30,17 +36,24 @@ use App\Http\Controllers\Admin\InventoryAdjustmentController as AdminInventoryAd
 use App\Http\Controllers\Admin\WarrantyController as AdminWarrantyController;
 use App\Http\Controllers\Admin\InvoiceSettingsController as AdminInvoiceSettingsController;
 use App\Http\Controllers\Admin\InvoiceIssuanceController as AdminInvoiceIssuanceController;
+use App\Http\Controllers\Admin\VoucherController as AdminVoucherController;
+use App\Http\Controllers\Admin\PromoSaleController as AdminPromoSaleController;
+use App\Http\Controllers\Admin\RefundController as AdminRefundController;
+use App\Http\Controllers\Admin\WalkInController as AdminWalkInController;
+use App\Http\Controllers\Admin\ServiceInvoiceIssuanceController as AdminServiceInvoiceIssuanceController;
 use App\Http\Controllers\WarrantyClaimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Str;
-use App\Models\User;
 
 Route::get('/', [LandingController::class, 'index']);
+
+Route::get('/search/suggestions', [SearchController::class, 'suggestions'])
+    ->middleware('throttle:catalog-search')
+    ->name('search.suggestions');
 
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
@@ -60,58 +73,50 @@ Route::post('/chatbot/message', [ChatbotController::class, 'reply'])
     ->middleware('throttle:10,1')
     ->name('chatbot.reply');
 
+Route::get('/chatbot/conversation', [CustomerSupportConversationController::class, 'current'])
+    ->middleware('throttle:30,1')
+    ->name('chatbot.conversation.current');
+Route::post('/chatbot/handoff', [CustomerSupportConversationController::class, 'start'])
+    ->middleware('throttle:5,1')
+    ->name('chatbot.conversation.handoff');
+Route::get('/chatbot/conversations/{conversation}', [CustomerSupportConversationController::class, 'show'])
+    ->middleware('throttle:60,1')
+    ->name('chatbot.conversation.show');
+Route::post('/chatbot/conversations/{conversation}/messages', [CustomerSupportConversationController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('chatbot.conversation.messages.store');
+
 Route::get('/login', function () {
     return Inertia::render('login');
 })->name('login');
 
-Route::get('/signup', function (Request $request) {
-    return Inertia::render('signup', [
-        'verificationSent' => $request->session()->get('verificationSent', false),
-        'verificationEmail' => $request->session()->get('verificationEmail', ''),
-    ]);
+Route::get('/signup', function () {
+    return Inertia::render('signup');
 })->name('signup');
 
 Route::post('/login', [AuthController::class, 'authenticate'])->middleware('throttle:login')->name('login.authenticate');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register')->name('register');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-Route::get('/email/verify', function () {
-    return redirect()->route('signup');
-})->name('verification.notice');
+Route::get('/email/verify', [EmailVerificationController::class, 'show'])
+    ->name('verification.notice');
 
-Route::get('/email/verify/{id}/{hash}', function (Request $request, $id, $hash) {
-    $user = User::findOrFail($id);
+Route::post('/email/verify', [EmailVerificationController::class, 'verify'])
+    ->middleware('throttle:10,1')
+    ->name('verification.code.verify');
 
-    if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
-        abort(403);
-    }
+Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'redirectLegacyLink'])
+    ->middleware('signed')
+    ->name('verification.verify');
 
-    if (!$user->hasVerifiedEmail()) {
-        $user->markEmailAsVerified();
-    }
+Route::post('/email/verification-code/resend', [EmailVerificationController::class, 'resend'])
+    ->middleware('throttle:5,1')
+    ->name('verification.code.resend');
 
-    return redirect()->route('login')->with([
-        'status' => 'Your email has been verified successfully. You can now log in.',
-    ]);
-})->middleware('signed')->name('verification.verify');
-
-Route::post('/email/verification-notification', function (Request $request) {
-    $validated = $request->validate([
-        'email' => ['required', 'email'],
-    ]);
-
-    $user = User::where('email', $validated['email'])->first();
-
-    if ($user && !$user->hasVerifiedEmail()) {
-        $cooldownKey = 'verification-email-cooldown:' . $user->id;
-
-        if (Cache::add($cooldownKey, true, now()->addSeconds(60))) {
-            $user->sendEmailVerificationNotification();
-        }
-    }
-
-    return back()->with('message', 'Verification link sent!');
-})->middleware('throttle:1,1')->name('verification.send');
+// Keep the previous resend URL working for customers with a cached older page.
+Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
+    ->middleware('throttle:5,1')
+    ->name('verification.send');
 
 Route::get('/auth/google', [AuthController::class, 'redirectGoogle'])
     ->name('auth.google');
@@ -143,7 +148,7 @@ Route::post('/forgot-password', function (Request $request) {
         : back()->withErrors([
             'email' => __($status),
         ]);
-})->middleware(['guest', 'throttle:1,1'])->name('password.email');
+})->middleware(['guest', 'throttle:20,1'])->name('password.email');
 
 Route::get('/reset-password/{token}', function (Request $request, string $token) {
     return Inertia::render('reset-password', [
@@ -190,7 +195,7 @@ Route::post('/reset-password', function (Request $request) {
         ]);
 })->middleware(['guest', 'throttle:5,1'])->name('password.update');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'inertia.encrypt'])->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::patch('/settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile.update');
     Route::patch('/settings/preferences', [SettingsController::class, 'updatePreferences'])->name('settings.preferences.update');
@@ -203,14 +208,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/checkout/voucher', [CheckoutController::class, 'applyVoucher'])->name('checkout.voucher');
+    Route::post('/checkout/buy-now', [CheckoutController::class, 'buyNow'])->name('checkout.buy-now');
     Route::get('/checkout/payment/{order}/success', [CheckoutController::class, 'paymentSuccess'])->name('checkout.payment.success');
     Route::get('/checkout/payment/{order}/cancel', [CheckoutController::class, 'paymentCancel'])->name('checkout.payment.cancel');
 
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/purchases/{order}/invoice', [InvoiceController::class, 'customer'])->name('purchases.invoice');
+    Route::get('/service-records/{serviceRecord}/invoice', [InvoiceController::class, 'customerService'])->name('service-records.invoice');
+    Route::get('/purchases/{order}/items/{orderItem}/review', [ReviewController::class, 'create'])->name('purchases.items.review');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
     Route::patch('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
+    Route::post('/purchases/{order}/refunds', [RefundRequestController::class, 'store'])->name('purchases.refunds.store');
+    Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
 
     Route::get('/warranty-claims', [WarrantyClaimController::class, 'index'])->name('warranty-claims.index');
     Route::post('/warranty-claims', [WarrantyClaimController::class, 'store'])->name('warranty-claims.store');
@@ -224,19 +235,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::delete('/notifications', [NotificationController::class, 'destroySelected'])->name('notifications.destroy-selected');
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
 
 });
 
-Route::middleware(['auth', 'verified', 'technician'])->prefix('technician')->name('technician.')->group(function () {
-    Route::get('/dashboard', [TechnicianWorkspaceController::class, 'index'])->name('dashboard');
+Route::middleware(['auth', 'verified', 'technician', 'inertia.encrypt'])->prefix('technician')->name('technician.')->group(function () {
+    Route::get('/dashboard', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'dashboard')->name('dashboard');
+    Route::get('/services', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'services')->name('services');
+    Route::get('/available-jobs', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'available-jobs')->name('available-jobs');
+    Route::get('/post-service-records', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'post-service-records')->name('post-service-records');
+    Route::get('/service-history', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'service-history')->name('service-history');
+    Route::get('/products', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'products')->name('products');
+    Route::get('/schedule', [TechnicianWorkspaceController::class, 'index'])->defaults('page', 'schedule')->name('schedule');
     Route::post('/jobs/{inquiry}/claim', [TechnicianWorkspaceController::class, 'claimJob'])->name('jobs.claim');
     Route::patch('/jobs/{inquiry}/status', [TechnicianWorkspaceController::class, 'updateJobStatus'])->name('jobs.status');
+    Route::post('/jobs/{inquiry}/post-service-record', [TechnicianWorkspaceController::class, 'storePostServiceRecord'])->name('jobs.post-service-record');
     Route::patch('/jobs/{inquiry}/schedule', [TechnicianWorkspaceController::class, 'updateJobSchedule'])->name('jobs.schedule');
     Route::patch('/jobs/{inquiry}/reschedule/{decision}', [TechnicianWorkspaceController::class, 'reviewReschedule'])->whereIn('decision', ['approve', 'decline'])->name('jobs.reschedule.review');
     Route::patch('/inventory/{product}', [TechnicianWorkspaceController::class, 'adjustStock'])->name('inventory.adjust');
 });
 
-Route::middleware(['auth', 'verified', 'admin'])->group(function () {
+Route::middleware(['auth', 'verified', 'admin', 'inertia.encrypt'])->group(function () {
     Route::post('/admin/announcements', [NotificationController::class, 'storeAnnouncement'])
         ->name('admin.announcements.store');
     Route::post('/admin/catalog-options', [AdminCatalogOptionController::class, 'store'])
@@ -246,6 +266,17 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
         ->name('admin.catalog-options.destroy');
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/admin/customer-conversations', [AdminCustomerConversationsController::class, 'index'])
+        ->name('admin.customer-conversations.index');
+    Route::get('/admin/customer-conversations/list', [AdminCustomerConversationsController::class, 'list'])
+        ->name('admin.customer-conversations.list');
+    Route::get('/admin/customer-conversations/{conversation}', [AdminCustomerConversationsController::class, 'show'])
+        ->name('admin.customer-conversations.show');
+    Route::post('/admin/customer-conversations/{conversation}/messages', [AdminCustomerConversationsController::class, 'reply'])
+        ->name('admin.customer-conversations.reply');
+    Route::patch('/admin/customer-conversations/{conversation}/status', [AdminCustomerConversationsController::class, 'updateStatus'])
+        ->name('admin.customer-conversations.status');
 
     Route::get('/admin/activity-logs', [AdminActivityLogController::class, 'index'])
         ->name('admin.activity-logs.index');
@@ -262,6 +293,20 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::delete('/admin/packages/{package}', [AdminPackageController::class, 'destroy'])
         ->name('admin.packages.destroy');
 
+    Route::get('/admin/vouchers', [AdminVoucherController::class, 'index'])->name('admin.vouchers.index');
+    Route::post('/admin/vouchers', [AdminVoucherController::class, 'store'])->name('admin.vouchers.store');
+    Route::patch('/admin/vouchers/{voucher}', [AdminVoucherController::class, 'update'])->name('admin.vouchers.update');
+    Route::delete('/admin/vouchers/{voucher}', [AdminVoucherController::class, 'destroy'])->name('admin.vouchers.destroy');
+    Route::patch('/admin/promotions/products/{product}/sale', [AdminPromoSaleController::class, 'updateProduct'])->name('admin.promotions.products.sale.update');
+    Route::patch('/admin/promotions/packages/{package}/sale', [AdminPromoSaleController::class, 'updatePackage'])->name('admin.promotions.packages.sale.update');
+
+    Route::get('/admin/walk-in', [AdminWalkInController::class, 'index'])->name('admin.walk-in.index');
+    Route::post('/admin/service-records/{serviceRecord}/invoice-record', [AdminServiceInvoiceIssuanceController::class, 'store'])->name('admin.service-records.invoice-record.store');
+    Route::patch('/admin/service-records/{serviceRecord}/payment', [AdminServiceInvoiceIssuanceController::class, 'updatePayment'])->name('admin.service-records.payment.update');
+    Route::get('/admin/service-records/{serviceRecord}/invoice', [InvoiceController::class, 'adminService'])->name('admin.service-records.invoice');
+    Route::post('/admin/walk-in/sales', [AdminWalkInController::class, 'storeSale'])->name('admin.walk-in.sales.store');
+    Route::post('/admin/walk-in/services', [AdminWalkInController::class, 'storeService'])->name('admin.walk-in.services.store');
+
     Route::get('/admin/transactions', [AdminTransactionController::class, 'index'])
         ->name('admin.transactions.index');
     Route::get('/admin/invoice-settings', [AdminInvoiceSettingsController::class, 'index'])
@@ -271,6 +316,8 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/inquiries', [AdminInquiryController::class, 'index'])
         ->name('admin.inquiries.index');
+    Route::patch('/admin/service-booking-fees', [AdminInquiryController::class, 'updateBookingFees'])
+        ->name('admin.service-booking-fees.update');
 
     Route::get('/admin/products', [AdminProductController::class, 'index'])
         ->name('admin.products.index');
@@ -329,8 +376,18 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::delete('/admin/booking-time-slots/{blockedBookingTimeSlot}', [AdminScheduleController::class, 'destroyBookingTimeSlot'])
         ->name('admin.booking-time-slots.destroy');
 
+    Route::get('/admin/refunds', [AdminRefundController::class, 'index'])->name('admin.refunds.index');
+    Route::patch('/admin/refunds/{refund}/approve', [AdminRefundController::class, 'approve'])->name('admin.refunds.approve');
+    Route::patch('/admin/refunds/{refund}/reject', [AdminRefundController::class, 'reject'])->name('admin.refunds.reject');
+    Route::patch('/admin/refunds/{refund}/complete-manual', [AdminRefundController::class, 'completeManual'])->name('admin.refunds.complete-manual');
+    Route::patch('/admin/refunds/{refund}/retry', [AdminRefundController::class, 'retry'])->name('admin.refunds.retry');
+    Route::patch('/admin/refunds/{refund}/reconcile', [AdminRefundController::class, 'reconcile'])->name('admin.refunds.reconcile');
+    Route::patch('/admin/refunds/{refund}/convert-to-manual', [AdminRefundController::class, 'convertToManual'])->name('admin.refunds.convert-to-manual');
+
     Route::get('/admin/purchases', [AdminPurchaseController::class, 'index'])
         ->name('admin.purchases.index');
+    Route::get('/admin/order-history', [AdminPurchaseController::class, 'history'])
+        ->name('admin.order-history.index');
     Route::get('/admin/purchases/{order}/invoice', [InvoiceController::class, 'admin'])
         ->name('admin.purchases.invoice');
     Route::post('/admin/purchases/{order}/invoice-record', [AdminInvoiceIssuanceController::class, 'store'])

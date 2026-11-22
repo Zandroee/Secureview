@@ -1,7 +1,9 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import { router, usePage } from "@inertiajs/react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import catalogImageUrl from "../Components/catalogImageUrl";
+import ReviewPhotoPicker, { reviewPhotoUrl } from "../Components/ReviewPhotoPicker";
 
 function Stars({ rating }) {
     return (
@@ -64,22 +66,91 @@ function ReviewSummary({ reviews, rating }) {
     );
 }
 
-export default function PackageDetails({ package: packageData, reviews = [] }) {
+export default function PackageDetails({ package: packageData, reviews = [], canReview = false, userReview = null }) {
     const { props } = usePage();
     const user = props.auth?.user;
 
     const [amount, setAmount] = useState(1);
     const [cartMessage, setCartMessage] = useState("");
     const [cartError, setCartError] = useState("");
-    const galleryImages = Array.isArray(packageData.images) && packageData.images.length
-        ? packageData.images
-        : (packageData.image ? [packageData.image] : []);
+    const galleryImages = useMemo(() => {
+        const rawImages = Array.isArray(packageData.images) && packageData.images.length
+            ? packageData.images
+            : (packageData.image ? [packageData.image] : []);
+
+        return rawImages.map(catalogImageUrl).filter(Boolean);
+    }, [packageData.images, packageData.image]);
+
     const [selectedImage, setSelectedImage] = useState(galleryImages[0] ?? "");
+    const [failedImageUrls, setFailedImageUrls] = useState([]);
+    const isImageFailed = (url) => failedImageUrls.includes(url);
+    const markImageFailed = (url) => setFailedImageUrls((current) =>
+        current.includes(url) ? current : [...current, url]
+    );
     const displayedImage = galleryImages.includes(selectedImage) ? selectedImage : (galleryImages[0] ?? "");
+
+    // Rotate through the gallery slowly. Selecting a thumbnail resets the timer;
+    // images that already failed to load are skipped automatically.
+    useEffect(() => {
+        if (galleryImages.length < 2) return undefined;
+
+        const timer = window.setTimeout(() => {
+            setSelectedImage((current) => {
+                const currentIndex = galleryImages.indexOf(current);
+                const startIndex = currentIndex < 0 ? 0 : currentIndex;
+
+                for (let step = 1; step <= galleryImages.length; step += 1) {
+                    const candidate = galleryImages[(startIndex + step) % galleryImages.length];
+
+                    if (!failedImageUrls.includes(candidate)) {
+                        return candidate;
+                    }
+                }
+
+                return current;
+            });
+        }, 5000);
+
+        return () => window.clearTimeout(timer);
+    }, [galleryImages, selectedImage, failedImageUrls]);
 
     const availableStock = Math.max(0, Number(packageData.available_stock ?? 0));
     const [reviewPage, setReviewPage] = useState(1);
     const [reviewFilter, setReviewFilter] = useState("all");
+    const [reviewRating, setReviewRating] = useState(Number(userReview?.rating || 5));
+    const [reviewComment, setReviewComment] = useState(userReview?.comment || "");
+    const [reviewSubmitting, setReviewSubmitting] = useState(false);
+    const [reviewSubmitError, setReviewSubmitError] = useState("");
+    const [reviewSubmitSuccess, setReviewSubmitSuccess] = useState("");
+    const [reviewPhotos, setReviewPhotos] = useState([]);
+    const [removeReviewPhotos, setRemoveReviewPhotos] = useState([]);
+
+    const handleSubmitReview = (event) => {
+        event.preventDefault();
+        setReviewSubmitError("");
+        setReviewSubmitSuccess("");
+        setReviewSubmitting(true);
+
+        router.post("/reviews", {
+            item_type: "package",
+            item_id: packageData.id,
+            rating: reviewRating,
+            comment: reviewComment.trim(),
+            images: reviewPhotos,
+            remove_images: removeReviewPhotos,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setReviewSubmitSuccess(userReview ? "Your review has been updated." : "Thank you for reviewing this package.");
+                setReviewPhotos([]);
+                setRemoveReviewPhotos([]);
+            },
+            onError: (errors) => {
+                setReviewSubmitError(errors.review || errors.rating || errors.comment || errors.images || errors["images.0"] || "Unable to save your review. Please try again.");
+            },
+            onFinish: () => setReviewSubmitting(false),
+        });
+    };
 
     const specifications = Array.isArray(packageData.specifications) ? packageData.specifications : [];
     const filteredReviews = reviewFilter === "all" ? reviews : reviews.filter((review) => Number(review.rating) === Number(reviewFilter));
@@ -88,14 +159,32 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
     const startIndex = (reviewPage - 1) * reviewsPerPage;
     const currentReviews = filteredReviews.slice(startIndex, startIndex + reviewsPerPage);
 
-    const handleInquiry = () => {
+    const handleBuyNow = () => {
         if (!user?.email_verified_at) {
             router.visit("/login");
             return;
         }
 
-        router.visit(
-            "/inquiry?item_type=package&item_id=" + packageData.id
+        setCartMessage("");
+        setCartError("");
+
+        router.post(
+            "/checkout/buy-now",
+            {
+                item_type: "package",
+                item_id: packageData.id,
+                quantity: amount,
+            },
+            {
+                preserveScroll: true,
+                onError: (serverErrors) => {
+                    setCartError(
+                        serverErrors.stock ||
+                        serverErrors.cart ||
+                        "Unable to start checkout for this item."
+                    );
+                },
+            }
         );
     };
 
@@ -138,8 +227,15 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
                     <div className="row g-3">
 
                         <div className="col-lg-6">
-                            {displayedImage ? (
-                                <img src={displayedImage} alt={packageData.name} className="img-fluid w-100 rounded-2" style={{ height: "330px", objectFit: "contain", backgroundColor: "#f8f9fa" }} />
+                            {displayedImage && !isImageFailed(displayedImage) ? (
+                                <img
+                                    key={displayedImage}
+                                    src={displayedImage}
+                                    alt={packageData.name}
+                                    className="img-fluid w-100 rounded-2 catalog-detail-main-image"
+                                    onError={() => markImageFailed(displayedImage)}
+                                    style={{ height: "330px", objectFit: "contain", objectPosition: "center", backgroundColor: "#f8f9fa" }}
+                                />
                             ) : (
                                 <div className="bg-secondary-subtle d-flex align-items-center justify-content-center" style={{ height: "330px" }}>
                                     <i className="bi bi-box-seam text-secondary" style={{ fontSize: "5rem" }}></i>
@@ -156,7 +252,18 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
                                             aria-label={"View package image " + (index + 1)}
                                             onClick={() => setSelectedImage(image)}
                                         >
-                                            <img src={image} alt={packageData.name + " view " + (index + 1)} style={{ width: "68px", height: "68px", objectFit: "cover" }} />
+                                            {isImageFailed(image) ? (
+                                                <div className="bg-secondary-subtle d-flex align-items-center justify-content-center rounded" style={{ width: "68px", height: "68px" }}>
+                                                    <i className="bi-box-seam text-secondary" />
+                                                </div>
+                                            ) : (
+                                                <img
+                                                    src={image}
+                                                    alt={packageData.name + " view " + (index + 1)}
+                                                    onError={() => markImageFailed(image)}
+                                                    style={{ width: "68px", height: "68px", objectFit: "contain", backgroundColor: "#f8f9fa", padding: "3px" }}
+                                                />
+                                            )}
                                         </button>
                                     ))}
                                 </div>
@@ -175,7 +282,7 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
                                 {packageData.name}
                             </h2>
 
-                            <ul className="ps-3 mb-3" style={{ fontSize: "0.8rem" }}>
+                            <ul className="ps-3 mb-3" style={{ fontSize: "1.05rem", lineHeight: "1.65", overflowWrap: "anywhere" }}>
                                 {specifications.map((specification, index) => (
                                     <li key={index} className="mb-1">
                                         {specification}
@@ -183,21 +290,25 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
                                 ))}
                             </ul>
 
-                            <div className="d-flex flex-wrap align-items-center justify-content-start gap-2 gap-md-3 mb-2" style={{ fontSize: "0.8rem" }}>
+                            <div className="d-flex flex-wrap align-items-center justify-content-start gap-2 gap-md-3 mb-3" style={{ fontSize: "0.95rem", lineHeight: "1.5" }}>
                                 <strong>Category: {packageData.category}</strong>
-                                <span className="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2 py-2">
-                                    Installation: {Number(packageData.installation_fee ?? 0) > 0
-                                        ? "₱" + Number(packageData.installation_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                                        : "Free"}
-                                </span>
+                                <strong>Installation: {Number(packageData.installation_fee ?? 0) > 0
+                                    ? "₱" + Number(packageData.installation_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                    : "Free"}</strong>
                                 <strong>Warranty: {packageData.warranty}</strong>
                             </div>
 
-                            <div className="d-flex align-items-center gap-3 mb-2">
+                            <div className="d-flex align-items-center gap-3 mb-2 flex-wrap">
 
-                                <h2 className="text-primary fw-bold mb-0">
+                                <h2 className={(packageData.sale_active ? "text-danger" : "text-primary") + " fw-bold mb-0"}>
                                     ₱{Number(packageData.price).toLocaleString()}
                                 </h2>
+                                {packageData.sale_active && (
+                                    <>
+                                        <span className="badge bg-danger">{Number(packageData.sale_discount_percent)}% OFF</span>
+                                        <span className="text-muted text-decoration-line-through">₱{Number(packageData.original_price).toLocaleString()}</span>
+                                    </>
+                                )}
 
                                 <span className="text-warning fw-bold">
                                     {Number(packageData.rating || 0).toFixed(1)} <Stars rating={packageData.rating} />
@@ -205,15 +316,12 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
 
                             </div>
 
-                            <div
-                                className={
-                                    "small fw-semibold mb-2 " +
-                                    (availableStock > 0 ? "text-success" : "text-danger")
-                                }
-                            >
-                                {availableStock > 0
-                                    ? `${availableStock.toLocaleString()} IN STOCK`
-                                    : "OUT OF STOCK"}
+                            <div className={"catalog-detail-stock mb-3 " + (availableStock > 0 ? "is-in-stock" : "is-out-of-stock")} role="status">
+                                <i className={"bi " + (availableStock > 0 ? "bi-check-circle-fill" : "bi-x-circle-fill")} aria-hidden="true" />
+                                <span>
+                                    <strong>{availableStock > 0 ? availableStock.toLocaleString() : "0"} {availableStock > 0 ? "IN STOCK" : "OUT OF STOCK"}</strong>
+                                    <small>{availableStock > 0 ? "Ready to order" : "This item is currently unavailable"}</small>
+                                </span>
                             </div>
 
                             <div className="fw-bold mb-3">
@@ -232,23 +340,25 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
                                 </button>
                             </div>
 
-                            <div className="d-flex gap-2">
+                            <div className="d-flex flex-column flex-sm-row gap-2 catalog-detail-actions">
                                 <button
                                     type="button"
-                                    className="btn btn-outline-primary fw-bold"
-                                    onClick={handleInquiry}
+                                    className="btn fw-bold catalog-buy-now-btn"
+                                    onClick={handleBuyNow}
+                                    disabled={availableStock < amount || availableStock === 0}
                                 >
-                                    Inquire
+                                    <i className="bi bi-lightning-charge me-2"></i>
+                                    Buy Now
                                 </button>
 
                                 <button
                                     type="button"
-                                    className="btn btn-primary fw-bold"
+                                    className="btn fw-bold catalog-add-to-cart-btn"
                                     onClick={handleAddToCart}
-                                    disabled={availableStock === 0}
+                                    disabled={availableStock < amount || availableStock === 0}
                                 >
                                     <i className="bi bi-cart3 me-2"></i>
-                                    Add To Cart
+                                    Add to Cart
                                 </button>
                             </div>
 
@@ -287,8 +397,14 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
                                     <div className="row align-items-center g-2">
 
                                         <div className="col-md-2">
-                                            {item.product?.image ? (
-                                                <img src={item.product.image} alt={item.product.name} className="img-fluid rounded" style={{ height: "70px", width: "100%", objectFit: "cover" }} />
+                                            {item.product?.image && !isImageFailed(catalogImageUrl(item.product.image)) ? (
+                                                <img
+                                                    src={catalogImageUrl(item.product.image)}
+                                                    alt={item.product.name}
+                                                    className="img-fluid rounded"
+                                                    onError={() => markImageFailed(catalogImageUrl(item.product.image))}
+                                                    style={{ height: "70px", width: "100%", objectFit: "cover" }}
+                                                />
                                             ) : (
                                                 <div className="bg-secondary-subtle rounded d-flex align-items-center justify-content-center" style={{ height: "70px" }}>
                                                     <i className="bi bi-camera-video text-secondary"></i>
@@ -302,9 +418,9 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
                                                 {item.product?.name}
                                             </strong>
 
-                                            <small className="text-muted">
-                                                Amount: {item.quantity}
-                                            </small>
+                                            <div className="text-muted mt-1" style={{ fontSize: "0.95rem" }}>
+                                                Quantity included: {item.quantity}
+                                            </div>
 
                                         </div>
 
@@ -342,7 +458,72 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
 
                 </section>
 
-                <section className="mt-4">
+
+                {(canReview || userReview) && (
+                    <div className="border rounded-3 p-3 p-md-4 mb-4 review-form-panel">
+                        <h3 className="fw-bold mb-1">
+                            {userReview ? "Update your review" : "Rate this package"}
+                        </h3>
+                        <p className="text-muted small mb-3">
+                            Reviews are available to customers who have paid for this package.
+                        </p>
+                        {reviewSubmitError && (
+                            <div className="alert alert-danger py-2" role="alert">{reviewSubmitError}</div>
+                        )}
+                        {reviewSubmitSuccess && (
+                            <div className="alert alert-success py-2" role="status">{reviewSubmitSuccess}</div>
+                        )}
+                        <form onSubmit={handleSubmitReview}>
+                            <label className="form-label fw-semibold d-block">Your rating</label>
+                            <div className="d-flex align-items-center gap-2 mb-3" role="group" aria-label="Choose a rating from one to five stars">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        className="btn btn-link p-0 text-decoration-none"
+                                        style={{ color: star <= reviewRating ? "#f0ad00" : "#adb5bd", fontSize: "1.6rem" }}
+                                        onClick={() => setReviewRating(star)}
+                                        aria-label={star + " star" + (star === 1 ? "" : "s")}
+                                        aria-pressed={reviewRating === star}
+                                    >
+                                        <i className={star <= reviewRating ? "bi bi-star-fill" : "bi bi-star"}></i>
+                                    </button>
+                                ))}
+                                <span className="small text-muted ms-1">{reviewRating}/5</span>
+                            </div>
+                            <label htmlFor="customer-review-comment" className="form-label fw-semibold">Your review</label>
+                            <textarea
+                                id="customer-review-comment"
+                                className="form-control mb-3"
+                                value={reviewComment}
+                                onChange={(event) => setReviewComment(event.target.value)}
+                                minLength={3}
+                                maxLength={2000}
+                                rows={3}
+                                required
+                                placeholder="Share your experience with this item..."
+                            />
+                            <ReviewPhotoPicker
+                                id="package-review-photos"
+                                files={reviewPhotos}
+                                onFilesChange={setReviewPhotos}
+                                existingImages={userReview?.images ?? []}
+                                removedImages={removeReviewPhotos}
+                                onRemovedImagesChange={setRemoveReviewPhotos}
+                                maxPhotos={5}
+                            />
+                            <button
+                                type="submit"
+                                className="btn btn-primary fw-semibold"
+                                disabled={reviewSubmitting || reviewComment.trim().length < 3}
+                            >
+                                {reviewSubmitting ? "Saving review..." : (userReview ? "Update review" : "Submit review")}
+                            </button>
+                        </form>
+                    </div>
+                )}
+
+                <section className="mt-4" id="reviews">
 
                     <div className="row align-items-center g-4">
 
@@ -404,6 +585,15 @@ export default function PackageDetails({ package: packageData, reviews = [] }) {
                                     <p className="small text-muted mb-0">
                                         {review.comment}
                                     </p>
+                                    {review.images?.length > 0 && (
+                                        <div className="d-flex flex-wrap gap-2 mt-3">
+                                            {review.images.map((image, index) => (
+                                                <a key={image} href={reviewPhotoUrl(image)} target="_blank" rel="noreferrer" className="review-photo-link">
+                                                    <img src={reviewPhotoUrl(image)} alt={"Customer review photo " + (index + 1)} loading="lazy" className="review-public-photo" />
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
 
                                 </div>
                             ))

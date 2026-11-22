@@ -21,6 +21,7 @@ class PackageController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:120'],
+            'brand' => ['nullable', 'string', 'max:120'],
             'featured' => ['nullable', 'in:yes,no'],
         ]);
 
@@ -34,6 +35,7 @@ class PackageController extends Controller
             $query->where(function ($builder) use ($search) {
                 $builder
                     ->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('brand', 'like', '%' . $search . '%')
                     ->orWhere('category', 'like', '%' . $search . '%')
                     ->orWhere('badge', 'like', '%' . $search . '%')
                     ->orWhereHas('packageItems.product', function ($productQuery) use ($search) {
@@ -44,6 +46,10 @@ class PackageController extends Controller
 
         if (!empty($filters['category'])) {
             $query->where('category', $filters['category']);
+        }
+
+        if (!empty($filters['brand'])) {
+            $query->where('brand', $filters['brand']);
         }
 
         if (($filters['featured'] ?? '') === 'yes') {
@@ -63,9 +69,13 @@ class PackageController extends Controller
                 return [
                     'id' => $package->id,
                     'name' => $package->name,
+                    'brand' => $package->brand,
                     'category' => $package->category,
                     'warranty' => $package->warranty,
                     'price' => (float) $package->price,
+                    'sale_price' => $package->sale_price === null ? null : (float) $package->sale_price,
+                    'sale_starts_at' => $package->sale_starts_at,
+                    'sale_ends_at' => $package->sale_ends_at,
                     'installation_fee' => $package->installation_fee === null ? null : (float) $package->installation_fee,
                     'badge' => $package->badge,
                     'image' => $package->image,
@@ -102,7 +112,7 @@ class PackageController extends Controller
 
         $allPackages = Package::with('packageItems.product')->get();
 
-        $allProductsForOptions = Product::query()->get(['category', 'warranty', 'badge']);
+        $allProductsForOptions = Product::query()->get(['brand', 'category', 'warranty', 'badge']);
 
         // Include values already in the catalog and explicitly-added options, except
         // options that an admin has removed from the shared dropdown.
@@ -146,11 +156,13 @@ class PackageController extends Controller
                 ->values(),
             'categories' => $categories,
             'categoryOptions' => $catalogOptions('category'),
+            'brandOptions' => $catalogOptions('brand'),
             'warrantyOptions' => $catalogOptions('warranty'),
             'badgeOptions' => $catalogOptions('badge'),
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'category' => $filters['category'] ?? '',
+                'brand' => $filters['brand'] ?? '',
                 'featured' => $filters['featured'] ?? '',
             ],
             'summary' => [
@@ -223,7 +235,7 @@ class PackageController extends Controller
 
         $componentsChanged = $oldComposition !== $newComposition;
 
-        if ($componentsChanged && $this->hasReferences($package)) {
+        if ($componentsChanged && ($package->orderItems()->exists() || $this->hasReferences($package))) {
             return back()->withErrors([
                 'items' => 'This package has existing purchase, cart, inquiry, or review history. Its bundle contents are locked. Create a new package to use different components.',
             ]);
@@ -293,7 +305,7 @@ class PackageController extends Controller
     {
         if ($this->hasReferences($package)) {
             return back()->withErrors([
-                'package' => 'This package has purchase, cart, inquiry, or review history and cannot be deleted. Edit the package instead.',
+                'package' => 'This package is still referenced by a cart, inquiry, or review. Run the catalog reference cleanup before removing the old catalog.',
             ]);
         }
 
@@ -305,7 +317,7 @@ class PackageController extends Controller
             $activityLogger->record(
                 $request,
                 'package_deleted',
-                "Deleted package {$package->name} and its components [{$oldComponents}].",
+                "Deleted package {$package->name} and its live components [{$oldComponents}]; historical order line items were retained.",
                 $package,
                 $oldSnapshot,
                 []
@@ -400,8 +412,9 @@ class PackageController extends Controller
 
     private function hasReferences(Package $package): bool
     {
-        return $package->orderItems()->exists()
-            || $package->cartItems()->exists()
+        // Historical order-item rows contain their own name, price, quantity and subtotal.
+        // Keep these snapshots for invoices and transactions without blocking catalog removal.
+        return $package->cartItems()->exists()
             || $package->inquiryReferences()->exists()
             || $package->reviews()->exists();
     }
@@ -410,9 +423,13 @@ class PackageController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'brand' => ['nullable', 'string', 'max:120'],
             'category' => ['required', 'string', 'max:120'],
             'warranty' => ['required', 'string', 'max:120'],
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'sale_price' => ['nullable', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'sale_starts_at' => ['nullable', 'date'],
+            'sale_ends_at' => ['nullable', 'date'],
             'installation_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'badge' => ['nullable', 'string', 'max:80'],
             'image' => ['nullable', 'string', 'max:2048'],
@@ -439,9 +456,10 @@ class PackageController extends Controller
             ->values()
             ->all();
 
-        return [
+        $fields = [
             'name' => $validated['name'],
-            'category' => $validated['category'],
+            'brand' => filled($validated['brand'] ?? null) ? trim($validated['brand']) : null,
+            'category' => trim(preg_replace('/\\s+/u', ' ', $validated['category']) ?? ''),
             'warranty' => $validated['warranty'],
             'price' => $validated['price'],
             'installation_fee' => filled($validated['installation_fee'] ?? null) ? (float) $validated['installation_fee'] : null,
@@ -450,6 +468,36 @@ class PackageController extends Controller
             'specifications' => $specifications ?: null,
             'is_featured' => (bool) $validated['is_featured'],
         ];
+
+        // Promo sales are managed in Promotions & Vouchers. Preserve existing sale
+        // settings when the normal package editor does not submit those fields.
+        if (array_intersect(['sale_price', 'sale_starts_at', 'sale_ends_at'], array_keys($validated))) {
+            $timezone = config('app.timezone', 'UTC');
+            $salePrice = filled($validated['sale_price'] ?? null) ? (float) $validated['sale_price'] : null;
+            $saleStartsAt = filled($validated['sale_starts_at'] ?? null)
+                ? \Illuminate\Support\Carbon::parse($validated['sale_starts_at'], $timezone)
+                : null;
+            $saleEndsAt = filled($validated['sale_ends_at'] ?? null)
+                ? \Illuminate\Support\Carbon::parse($validated['sale_ends_at'], $timezone)
+                : null;
+
+            if ($salePrice !== null && $salePrice >= (float) $validated['price']) {
+                throw ValidationException::withMessages([
+                    'sale_price' => 'The sale price must be lower than the regular price.',
+                ]);
+            }
+            if ($saleStartsAt && $saleEndsAt && $saleEndsAt->lessThanOrEqualTo($saleStartsAt)) {
+                throw ValidationException::withMessages([
+                    'sale_ends_at' => 'The sale end must be after the start date.',
+                ]);
+            }
+
+            $fields['sale_price'] = $salePrice;
+            $fields['sale_starts_at'] = $saleStartsAt?->format('Y-m-d H:i:s');
+            $fields['sale_ends_at'] = $saleEndsAt?->format('Y-m-d H:i:s');
+        }
+
+        return $fields;
     }
 
     private function replaceItems(Package $package, array $items): void
@@ -481,6 +529,7 @@ class PackageController extends Controller
     {
         return [
             'name' => $package->name,
+            'brand' => $package->brand,
             'category' => $package->category,
             'warranty' => $package->warranty,
             'price' => (float) $package->price,

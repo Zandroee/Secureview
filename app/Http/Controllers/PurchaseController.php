@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CustomerNotification;
 use App\Models\Order;
+use App\Models\PendingInquiryCheckout;
+use App\Models\Refund;
 use App\Services\InventoryService;
+use App\Services\PayMongoLineItemBuilder;
 use App\Services\OrderCancellationService;
+use App\Services\PendingInquiryCheckoutService;
+use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class PurchaseController extends Controller
@@ -16,20 +21,37 @@ class PurchaseController extends Controller
     {
         $orders = $request->user()
             ->orders()
-            ->with(['items.purchasable'])
+            ->with(['items.purchasable', 'refunds', 'pendingInquiryCheckout.inquiry'])
             ->latest()
             ->get()
             ->map(function (Order $order) {
                 return [
                     'id' => $order->id,
                     'order_number' => $order->order_number,
+                    'fulfillment_method' => $order->fulfillment_method ?? 'delivery',
+                    'pickup_address' => $order->pickup_address,
                     'subtotal' => (float) $order->subtotal,
+                'voucher_code' => $order->voucher_code,
+                'discount_amount' => (float) $order->discount_amount,
                     'installation_fee' => (float) $order->installation_fee,
+                    'service_priority_fee' => (float) $order->service_priority_fee,
                     'shipping_fee' => (float) $order->shipping_fee,
                     'total' => (float) $order->total,
                     'payment_method' => $order->payment_method,
                     'payment_status' => $order->payment_status,
                     'order_status' => $order->order_status,
+                    'refunded_total' => (float) $order->refunds->where('status', 'completed')->sum('amount_approved'),
+                    'service_booking' => $order->pendingInquiryCheckout?->inquiry
+                        ? [
+                            'inquiry_id' => $order->pendingInquiryCheckout->inquiry->id,
+                            'inquiry_number' => $order->pendingInquiryCheckout->inquiry->inquiry_number,
+                            'service_type' => $order->pendingInquiryCheckout->inquiry->service_type,
+                            'status' => $order->pendingInquiryCheckout->inquiry->status,
+                            'preferred_date' => $order->pendingInquiryCheckout->inquiry->preferred_date,
+                            'preferred_time' => $order->pendingInquiryCheckout->inquiry->preferred_time,
+                            'url' => route('inquiries.show', $order->pendingInquiryCheckout->inquiry),
+                        ]
+                        : null,
                     'cancellation_reason' => $order->cancellation_reason,
                     'can_cancel' => $this->canCancel($order),
                     'created_at' => $order->created_at?->format('M d, Y h:i A'),
@@ -37,12 +59,15 @@ class PurchaseController extends Controller
                         return [
                             'id' => $item->id,
                             'name' => $item->name,
+                            'warranty_period' => $item->warranty_period,
                             'price' => (float) $item->price,
                             'quantity' => (int) $item->quantity,
                             'subtotal' => (float) $item->subtotal,
                             'type' => $item->purchasable_type === \App\Models\Package::class
                                 ? 'package'
                                 : 'product',
+                            'purchasable_id' => (int) $item->purchasable_id,
+                            'can_review' => $item->purchasable !== null,
                             'image' => $item->purchasable?->image,
                         ];
                     })->values(),
@@ -60,7 +85,7 @@ class PurchaseController extends Controller
             abort(404);
         }
 
-        $order->load(['items.purchasable', 'events.actor']);
+        $order->load(['items.purchasable', 'events.actor', 'refunds', 'pendingInquiryCheckout.inquiry']);
 
         return Inertia::render('purchase_details', [
             'order' => [
@@ -68,11 +93,40 @@ class PurchaseController extends Controller
                 'order_number' => $order->order_number,
                 'subtotal' => (float) $order->subtotal,
                 'installation_fee' => (float) $order->installation_fee,
+                'service_priority_fee' => (float) $order->service_priority_fee,
                 'shipping_fee' => (float) $order->shipping_fee,
                 'total' => (float) $order->total,
                 'payment_method' => $order->payment_method,
                 'payment_status' => $order->payment_status,
                 'order_status' => $order->order_status,
+                'refunded_total' => (float) $order->refunds->where('status', 'completed')->sum('amount_approved'),
+                'service_booking' => $order->pendingInquiryCheckout?->inquiry
+                    ? [
+                        'inquiry_id' => $order->pendingInquiryCheckout->inquiry->id,
+                        'inquiry_number' => $order->pendingInquiryCheckout->inquiry->inquiry_number,
+                        'service_type' => $order->pendingInquiryCheckout->inquiry->service_type,
+                        'status' => $order->pendingInquiryCheckout->inquiry->status,
+                        'preferred_date' => $order->pendingInquiryCheckout->inquiry->preferred_date,
+                        'preferred_time' => $order->pendingInquiryCheckout->inquiry->preferred_time,
+                        'url' => route('inquiries.show', $order->pendingInquiryCheckout->inquiry),
+                    ]
+                    : null,
+                'refundable_remaining' => app(RefundService::class)->availableAmount($order),
+                'can_request_refund' => in_array($order->payment_status, ['paid', 'partially_refunded'], true)
+                    && $order->paid_at !== null
+                    && $order->order_status !== 'cancelled',
+                'refunds' => $order->refunds->sortByDesc('created_at')->map(fn (Refund $refund) => [
+                    'id' => $refund->id,
+                    'amount_requested' => (float) $refund->amount_requested,
+                    'amount_approved' => $refund->amount_approved === null ? null : (float) $refund->amount_approved,
+                    'source' => $refund->source,
+                    'status' => $refund->status,
+                    'reason' => $refund->reason,
+                    'rejection_reason' => $refund->rejection_reason,
+                    'provider' => $refund->provider,
+                    'created_at' => $refund->created_at?->format('M d, Y h:i A'),
+                    'completed_at' => $refund->completed_at?->format('M d, Y h:i A'),
+                ])->values(),
                 'cancellation_reason' => $order->cancellation_reason,
                 'timeline' => $order->events->map(fn ($event) => [
                     'id' => $event->id,
@@ -84,27 +138,36 @@ class PurchaseController extends Controller
                     'order_status_before' => $event->order_status_before,
                     'order_status_after' => $event->order_status_after,
                     'actor_label' => $event->actor?->role === 'admin'
-                        ? 'SecureView'
-                        : ($event->actor?->name ?? 'SecureView system'),
+                        ? 'Netmax Trading'
+                        : ($event->actor?->name ?? 'Netmax Trading system'),
                     'created_at' => $event->created_at?->format('M d, Y h:i A'),
                 ])->values(),
                 'can_cancel' => $this->canCancel($order),
                 'customer_name' => $order->customer_name,
                 'customer_phone' => $order->customer_phone,
                 'customer_email' => $order->customer_email,
+                'fulfillment_method' => $order->fulfillment_method ?? 'delivery',
+                'pickup_address' => $order->pickup_address,
                 'delivery_address' => $order->delivery_address,
+                'delivery_address_details' => $order->delivery_address_details,
+                'delivery_city' => $order->delivery_city,
+                'delivery_latitude' => $order->delivery_latitude,
+                'delivery_longitude' => $order->delivery_longitude,
                 'notes' => $order->notes,
                 'created_at' => $order->created_at?->format('M d, Y h:i A'),
                 'items' => $order->items->map(function ($item) {
                     return [
                         'id' => $item->id,
                         'name' => $item->name,
+                        'warranty_period' => $item->warranty_period,
                         'price' => (float) $item->price,
                         'quantity' => (int) $item->quantity,
                         'subtotal' => (float) $item->subtotal,
                         'type' => $item->purchasable_type === \App\Models\Package::class
                             ? 'package'
                             : 'product',
+                        'purchasable_id' => (int) $item->purchasable_id,
+                        'can_review' => $item->purchasable !== null,
                         'image' => $item->purchasable?->image,
                     ];
                 })->values(),
@@ -140,7 +203,7 @@ class PurchaseController extends Controller
             && in_array($order->order_status, ['pending', 'awaiting_payment', 'payment_failed'], true);
     }
 
-    public function pay(Request $request, Order $order, InventoryService $inventory)
+    public function pay(Request $request, Order $order, InventoryService $inventory, PayMongoLineItemBuilder $payMongoLineItems)
     {
         if ($order->user_id !== $request->user()->id) {
             abort(404);
@@ -223,29 +286,115 @@ class PurchaseController extends Controller
                         $order->paymongo_checkout_session_id
                     );
 
-                if ($existingResponse->successful()) {
-                    $existingSession = $existingResponse->json('data');
-                    $existingStatus = $existingSession['attributes']['status'] ?? null;
-                    $existingCheckoutUrl = $existingSession['attributes']['checkout_url'] ?? null;
+                if (!$existingResponse->successful()) {
+                    return back()->withErrors([
+                        'payment' => 'We could not verify the existing checkout session. To prevent a duplicate payment, no replacement checkout was created. Please retry shortly or contact Netmax Trading support.',
+                    ]);
+                }
 
-                    if ($existingStatus === 'active' && $existingCheckoutUrl) {
-                        return Inertia::location($existingCheckoutUrl);
+                $existingSession = $existingResponse->json('data');
+                $existingAttributes = is_array($existingSession)
+                    ? ($existingSession['attributes'] ?? [])
+                    : [];
+                $existingStatus = $existingAttributes['status'] ?? null;
+                $existingCheckoutUrl = $existingAttributes['checkout_url'] ?? null;
+                $paidPayment = null;
+
+                foreach (($existingAttributes['payments'] ?? []) as $existingPayment) {
+                    if (($existingPayment['attributes']['status'] ?? null) === 'paid') {
+                        $paidPayment = $existingPayment;
+                        break;
                     }
+                }
+
+                // A checkout revisit must reconcile an already-paid session before
+                // considering a new session. Otherwise a late webhook could make a
+                // second checkout available for the same priority surcharge.
+                if ($paidPayment !== null) {
+                    $order->update([
+                        'payment_status' => 'paid',
+                        'order_status' => 'processing',
+                        'paymongo_payment_id' => $paidPayment['id'] ?? null,
+                        'paid_at' => $order->paid_at ?? now(),
+                    ]);
+
+                    try {
+                        $inventory->deductForOrder($order);
+                    } catch (\Throwable $exception) {
+                        report($exception);
+                    }
+
+                    CustomerNotification::create([
+                        'user_id' => $order->user_id,
+                        'type' => 'payment_paid',
+                        'title' => 'Payment successful',
+                        'message' => 'Payment for order ' . $order->order_number . ' was successful.',
+                        'action_url' => route('purchases.show', $order),
+                        'related_type' => Order::class,
+                        'related_id' => $order->id,
+                    ]);
+
+                    if (PendingInquiryCheckout::query()->where('order_id', $order->id)->exists()) {
+                        $inquiry = app(PendingInquiryCheckoutService::class)->completePaidOrder($order);
+                        if ($inquiry) {
+                            return redirect()->route('inquiries.show', $inquiry)->with(
+                                'success',
+                                'Payment confirmed. Your ' . strtolower($inquiry->service_type) . ' service request ' . $inquiry->inquiry_number . ' is awaiting review.'
+                            );
+                        }
+                    }
+
+                    return redirect()->route('purchases.show', $order)
+                        ->with('success', 'Payment confirmed for order ' . $order->order_number . '.');
+                }
+
+                if ($existingStatus === 'active' && $existingCheckoutUrl) {
+                    return Inertia::location($existingCheckoutUrl);
+                }
+
+                if ($existingStatus !== 'expired') {
+                    return back()->withErrors([
+                        'payment' => 'The existing checkout is not confirmed expired. No replacement checkout was created, to avoid a possible duplicate payment. Please refresh your order or contact Netmax Trading support.',
+                    ]);
                 }
             }
 
             $order->load('items');
 
-            $lineItems = $order->items->map(function ($item) {
-                return [
-                    'name' => $item->name,
-                    'amount' => (int) round($item->price * 100),
-                    'currency' => 'PHP',
-                    'quantity' => (int) $item->quantity,
-                ];
-            })->values()->all();
+            $pendingCheckout = PendingInquiryCheckout::query()
+                ->with('inquiry')
+                ->where('order_id', $order->id)
+                ->first();
+            $linkedInquiry = $pendingCheckout?->inquiry;
+            $isInstallationBooking = $linkedInquiry?->service_type === 'Installation';
+            $isPriorityServiceFeeOnly = $linkedInquiry
+                && !$isInstallationBooking
+                && (float) $order->service_priority_fee > 0
+                && $order->items->isEmpty();
 
-            if ((float) $order->installation_fee > 0) {
+            $lineItems = (float) $order->discount_amount > 0
+                ? $payMongoLineItems->buildDiscounted($order)
+                : $order->items->map(function ($item) {
+                    return [
+                        'name' => $item->name,
+                        'amount' => (int) round($item->price * 100),
+                        'currency' => 'PHP',
+                        'quantity' => (int) $item->quantity,
+                    ];
+                })->values()->all();
+
+            if ($isInstallationBooking && (float) $order->installation_fee > 0) {
+                $installationItem = $order->items->first();
+                $installationQuantity = max(1, (int) ($installationItem?->quantity ?? 1));
+                $installationFeePerUnit = (float) $order->installation_fee / $installationQuantity;
+
+                $lineItems[] = [
+                    'name' => 'Installation fee — ' . ($installationItem?->name ?? 'Service installation'),
+                    'amount' => (int) round($installationFeePerUnit * 100),
+                    'currency' => 'PHP',
+                    'quantity' => $installationQuantity,
+                ];
+            } elseif (!$isInstallationBooking && (float) $order->installation_fee > 0) {
                 $lineItems[] = [
                     'name' => 'Installation fee',
                     'amount' => (int) round((float) $order->installation_fee * 100),
@@ -254,11 +403,50 @@ class PurchaseController extends Controller
                 ];
             }
 
+            if ((float) $order->service_priority_fee > 0) {
+                $lineItems[] = [
+                    'name' => $isInstallationBooking
+                        ? ucfirst($linkedInquiry->urgency) . ' service booking fee'
+                        : ($isPriorityServiceFeeOnly
+                            ? ucfirst($linkedInquiry->urgency) . ' service booking fee — ' . $linkedInquiry->service_type
+                            : 'Service booking priority fee'),
+                    'amount' => (int) round((float) $order->service_priority_fee * 100),
+                    'currency' => 'PHP',
+                    'quantity' => 1,
+                ];
+            }
+
+            $idempotencyKey = $order->paymongo_checkout_session_id
+                ? 'secureview-retry-' . $order->id . '-' . $order->paymongo_checkout_session_id
+                : ($isInstallationBooking
+                    ? 'secureview-installation-' . $order->order_number
+                    : ($isPriorityServiceFeeOnly
+                        ? 'secureview-priority-service-' . $order->order_number
+                        : 'secureview-retry-' . $order->id . '-initial'));
+
+            $checkoutDescription = $isInstallationBooking
+                ? 'Netmax Trading Installation Booking ' . $order->order_number
+                : ($isPriorityServiceFeeOnly
+                    ? 'Netmax Trading ' . ucfirst($linkedInquiry->urgency) . ' Service Booking Fee ' . $order->order_number
+                    : 'Netmax Trading Order ' . $order->order_number);
+
+            $checkoutMetadata = [
+                'order_id' => (string) $order->id,
+                'order_number' => $order->order_number,
+            ];
+
+            if ($isInstallationBooking) {
+                $checkoutMetadata['booking_type'] = 'installation_inquiry';
+            } elseif ($isPriorityServiceFeeOnly) {
+                $checkoutMetadata['booking_type'] = 'priority_service_inquiry';
+                $checkoutMetadata['inquiry_id'] = (string) $linkedInquiry->id;
+            }
+
             $response = Http::withBasicAuth($secretKey, '')
                 ->acceptJson()
                 ->asJson()
                 ->withHeaders([
-                    'Idempotency-Key' => 'secureview-retry-' . $order->id . '-' . Str::lower(Str::random(12)),
+                    'Idempotency-Key' => $idempotencyKey,
                 ])
                 ->post(
                     $baseUrl . '/v2/checkout_sessions',
@@ -266,18 +454,15 @@ class PurchaseController extends Controller
                         'data' => [
                             'attributes' => [
                                 'line_items' => $lineItems,
-                                'payment_method_types' => [$paymentMethod],
+                                'payment_method_types' => [$paymentMethod === 'maya' ? 'paymaya' : $paymentMethod],
                                 'billing' => [
                                     'name' => $order->customer_name,
                                     'email' => $order->customer_email,
                                     'phone' => $order->customer_phone,
                                 ],
-                                'description' => 'SecureView Order ' . $order->order_number,
+                                'description' => $checkoutDescription,
                                 'reference_number' => $order->order_number,
-                                'metadata' => [
-                                    'order_id' => (string) $order->id,
-                                    'order_number' => $order->order_number,
-                                ],
+                                'metadata' => $checkoutMetadata,
                                 'send_email_receipt' => true,
                                 'show_description' => true,
                                 'show_line_items' => true,

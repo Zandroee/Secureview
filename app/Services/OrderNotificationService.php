@@ -9,7 +9,8 @@ use App\Models\User;
 class OrderNotificationService
 {
     /**
-     * Notify every administrator and technician when a new order is created.
+     * Notify administrators when a new order is created.
+     * Technicians receive service assignment alerts rather than order/payment notifications.
      * The recipient-specific dedupe key prevents duplicate alerts for the same order.
      */
     public function notifyNewOrderPlaced(Order $order): int
@@ -20,10 +21,9 @@ class OrderNotificationService
         $sent = 0;
 
         User::query()
-            ->whereIn('role', ['admin', 'technician'])
+            ->where('role', 'admin')
             ->get()
             ->each(function (User $recipient) use ($order, $paymentMethod, $paymentStatus, $total, &$sent) {
-                $isAdmin = $recipient->role === 'admin';
                 $dedupeKey = 'new-order:' . $order->id . ':' . $recipient->id;
 
                 $notification = CustomerNotification::firstOrCreate(
@@ -31,13 +31,9 @@ class OrderNotificationService
                     [
                         'user_id' => $recipient->id,
                         'type' => 'new_order',
-                        'title' => $isAdmin ? 'New order received' : 'New customer order placed',
-                        'message' => $isAdmin
-                            ? "Order {$order->order_number} from {$order->customer_name} was placed. Total: {$total}. Payment method: {$paymentMethod}. Payment status: {$paymentStatus}."
-                            : "Order {$order->order_number} was placed. Total: {$total}. Payment method: {$paymentMethod}. Payment status: {$paymentStatus}.",
-                        'action_url' => $isAdmin
-                            ? route('admin.purchases.index')
-                            : route('technician.dashboard'),
+                        'title' => 'New order received',
+                        'message' => "Order {$order->order_number} from {$order->customer_name} was placed. Total: {$total}. Payment method: {$paymentMethod}. Payment status: {$paymentStatus}.",
+                        'action_url' => route('admin.purchases.index'),
                         'related_type' => Order::class,
                         'related_id' => $order->id,
                     ]

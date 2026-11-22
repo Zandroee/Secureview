@@ -50,8 +50,202 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm ci
 
+      - name: Report npm audit details (informational)
+        run: |
+          npm audit --json > npm-audit.json || true
+          node <<'NODE'
+          const fs = require('fs');
+          const audit = JSON.parse(fs.readFileSync('npm-audit.json', 'utf8'));
+          const summary = audit.metadata?.vulnerabilities ?? {};
+          console.log('npm audit summary:', JSON.stringify(summary));
+          for (const [name, vuln] of Object.entries(audit.vulnerabilities ?? {})) {
+            console.log(
+              `PACKAGE: ${name} | SEVERITY: ${vuln.severity} | DIRECT: ${vuln.isDirect} | RANGE: ${vuln.range} | FIX: ${JSON.stringify(vuln.fixAvailable)}`
+            );
+            for (const issue of vuln.via ?? []) {
+              if (typeof issue === 'object') {
+                console.log(`  ADVISORY: ${issue.title} | ${issue.url} | RANGE: ${issue.range}`);
+              }
+            }
+          }
+          NODE
+
       - name: Build Vite assets
         run: npm run build
 
+      - name: Validate Hostinger deployment script syntax
+        run: bash -n scripts/deploy-hostinger-release.sh
+
       - name: Run Laravel feature and unit tests
-        run: php artisan test
+        run: |
+          # Laravel's env bootstrap reads the root .env on each test app boot.
+          # CI injects its configuration as environment variables, so an empty file is sufficient.
+          touch .env
+          php artisan test
+
+      - name: Upload production Vite assets for Hostinger
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@v4
+        with:
+          name: secureview-hostinger-vite-${{ github.sha }}
+          path: public/build/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Assemble Hostinger release bundle
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
+        run: |
+          mkdir -p public/images
+          cat deploy-assets/netmax-logo.webp.b64.part-* | base64 --decode > public/images/netmax-logo.webp
+          test -s public/images/netmax-logo.webp
+          echo "46767c74c4795fea846cd355c32e199852ca3fdc110f1524a3064e57a535e3dd  public/images/netmax-logo.webp" | sha256sum --check
+          php -r '$image = getimagesize("public/images/netmax-logo.webp"); if (!$image || $image[2] !== IMAGETYPE_WEBP) { fwrite(STDERR, "Invalid Netmax Trading WebP logo.\n"); exit(1); }'
+          test -s public/images/netmax-logo-transparent.png
+          php -r '$path = "public/images/netmax-logo-transparent.png"; $info = getimagesize($path); if (!$info || $info[2] !== IMAGETYPE_PNG) { fwrite(STDERR, "Invalid transparent Netmax Trading PNG logo.\n"); exit(1); } $logo = imagecreatefrompng($path); if (!$logo) { fwrite(STDERR, "Cannot decode transparent Netmax Trading PNG logo.\n"); exit(1); } $pixel = imagecolorsforindex($logo, imagecolorat($logo, 0, 0)); if (($pixel["alpha"] ?? 0) < 120) { fwrite(STDERR, "Netmax Trading logo background is not transparent.\n"); exit(1); } echo "PASS: transparent Netmax Trading logo verified.\n";'
+          mkdir -p hostinger-release/build hostinger-release/public/images hostinger-release/config hostinger-release/app/Providers hostinger-release/app/Console/Commands hostinger-release/app/Http/Controllers/Admin hostinger-release/app/Http/Controllers hostinger-release/app/Http/Middleware hostinger-release/app/Services hostinger-release/app/Mail hostinger-release/app/Models hostinger-release/database/migrations hostinger-release/database/seeders hostinger-release/resources/views/emails hostinger-release/resources/views/errors hostinger-release/bootstrap hostinger-release/routes
+          cp -a public/build/. hostinger-release/build/
+          cp config/services.php hostinger-release/config/services.php
+          cp config/filesystems.php hostinger-release/config/filesystems.php
+          cp config/app.php hostinger-release/config/app.php
+          cp config/session.php hostinger-release/config/session.php
+          cp config/invoice.php hostinger-release/config/invoice.php
+          cp app/Http/Controllers/Admin/WarrantyController.php hostinger-release/app/Http/Controllers/Admin/WarrantyController.php
+          cp app/Http/Controllers/Admin/InventoryAdjustmentController.php hostinger-release/app/Http/Controllers/Admin/InventoryAdjustmentController.php
+          cp app/Http/Controllers/Admin/UserController.php hostinger-release/app/Http/Controllers/Admin/UserController.php
+          cp app/Http/Controllers/Admin/ProductController.php hostinger-release/app/Http/Controllers/Admin/ProductController.php
+          cp app/Http/Controllers/Admin/PackageController.php hostinger-release/app/Http/Controllers/Admin/PackageController.php
+          cp app/Http/Controllers/Admin/DashboardController.php hostinger-release/app/Http/Controllers/Admin/DashboardController.php
+          cp app/Http/Controllers/Admin/ActivityLogController.php hostinger-release/app/Http/Controllers/Admin/ActivityLogController.php
+          cp app/Http/Controllers/Admin/PurchaseController.php hostinger-release/app/Http/Controllers/Admin/PurchaseController.php
+          cp app/Http/Controllers/Admin/RefundController.php hostinger-release/app/Http/Controllers/Admin/RefundController.php
+          cp app/Http/Controllers/Admin/WalkInController.php hostinger-release/app/Http/Controllers/Admin/WalkInController.php
+          cp app/Http/Controllers/Admin/ServiceInvoiceIssuanceController.php hostinger-release/app/Http/Controllers/Admin/ServiceInvoiceIssuanceController.php
+          cp app/Http/Controllers/Admin/VoucherController.php hostinger-release/app/Http/Controllers/Admin/VoucherController.php
+          cp app/Http/Controllers/Admin/PromoSaleController.php hostinger-release/app/Http/Controllers/Admin/PromoSaleController.php
+          cp app/Http/Controllers/Admin/CustomerConversationsController.php hostinger-release/app/Http/Controllers/Admin/CustomerConversationsController.php
+          cp app/Http/Controllers/Admin/InvoiceSettingsController.php hostinger-release/app/Http/Controllers/Admin/InvoiceSettingsController.php
+          cp app/Http/Controllers/Admin/TransactionController.php hostinger-release/app/Http/Controllers/Admin/TransactionController.php
+          cp app/Http/Controllers/Admin/ScheduleController.php hostinger-release/app/Http/Controllers/Admin/ScheduleController.php
+          cp app/Http/Controllers/Admin/InquiryController.php hostinger-release/app/Http/Controllers/Admin/InquiryController.php
+          cp app/Http/Controllers/CheckoutController.php hostinger-release/app/Http/Controllers/CheckoutController.php
+          cp app/Http/Controllers/SearchController.php hostinger-release/app/Http/Controllers/SearchController.php
+          cp app/Http/Controllers/CartController.php hostinger-release/app/Http/Controllers/CartController.php
+          cp app/Http/Controllers/PayMongoWebhookController.php hostinger-release/app/Http/Controllers/PayMongoWebhookController.php
+          cp app/Http/Controllers/InquiryController.php hostinger-release/app/Http/Controllers/InquiryController.php
+          cp app/Http/Controllers/InvoiceController.php hostinger-release/app/Http/Controllers/InvoiceController.php
+          cp app/Http/Controllers/AuthController.php hostinger-release/app/Http/Controllers/AuthController.php
+          cp app/Http/Controllers/SettingsController.php hostinger-release/app/Http/Controllers/SettingsController.php
+          cp app/Http/Controllers/EmailVerificationController.php hostinger-release/app/Http/Controllers/EmailVerificationController.php
+          cp app/Http/Controllers/NotificationController.php hostinger-release/app/Http/Controllers/NotificationController.php
+          cp app/Http/Controllers/LandingController.php hostinger-release/app/Http/Controllers/LandingController.php
+          cp app/Http/Controllers/ProductController.php hostinger-release/app/Http/Controllers/ProductController.php
+          cp app/Http/Controllers/PackageController.php hostinger-release/app/Http/Controllers/PackageController.php
+          cp app/Http/Controllers/TechnicianWorkspaceController.php hostinger-release/app/Http/Controllers/TechnicianWorkspaceController.php
+          cp app/Http/Controllers/PurchaseController.php hostinger-release/app/Http/Controllers/PurchaseController.php
+          cp app/Http/Controllers/RefundRequestController.php hostinger-release/app/Http/Controllers/RefundRequestController.php
+          cp app/Http/Controllers/ReviewController.php hostinger-release/app/Http/Controllers/ReviewController.php
+          cp app/Http/Controllers/ReviewController.php hostinger-release/app/Http/Controllers/ReviewController.php
+          cp app/Http/Controllers/ReviewController.php hostinger-release/app/Http/Controllers/ReviewController.php
+          cp app/Console/Commands/ClearProductPackageReferences.php hostinger-release/app/Console/Commands/ClearProductPackageReferences.php
+          cp app/Http/Controllers/ChatbotController.php hostinger-release/app/Http/Controllers/ChatbotController.php
+          cp app/Http/Controllers/CustomerSupportConversationController.php hostinger-release/app/Http/Controllers/CustomerSupportConversationController.php
+          cp app/Services/EmailVerificationCodeService.php hostinger-release/app/Services/EmailVerificationCodeService.php
+          cp app/Mail/EmailVerificationCodeMail.php hostinger-release/app/Mail/EmailVerificationCodeMail.php
+          cp app/Mail/PendingPaymentReminderMail.php hostinger-release/app/Mail/PendingPaymentReminderMail.php
+          cp app/Models/User.php hostinger-release/app/Models/User.php
+          cp app/Models/SupportConversation.php hostinger-release/app/Models/SupportConversation.php
+          cp app/Models/SupportMessage.php hostinger-release/app/Models/SupportMessage.php
+          cp app/Models/Order.php hostinger-release/app/Models/Order.php
+          cp app/Models/InvoiceRecord.php hostinger-release/app/Models/InvoiceRecord.php
+          cp app/Models/Refund.php hostinger-release/app/Models/Refund.php
+          cp app/Models/OrderEvent.php hostinger-release/app/Models/OrderEvent.php
+          cp app/Models/Voucher.php hostinger-release/app/Models/Voucher.php
+          cp app/Models/PendingInquiryCheckout.php hostinger-release/app/Models/PendingInquiryCheckout.php
+          cp app/Models/Product.php hostinger-release/app/Models/Product.php
+          cp app/Models/Package.php hostinger-release/app/Models/Package.php
+          cp app/Models/Inquiry.php hostinger-release/app/Models/Inquiry.php
+          cp app/Models/ServiceBookingFeeSetting.php hostinger-release/app/Models/ServiceBookingFeeSetting.php
+          cp app/Models/ServiceRecord.php hostinger-release/app/Models/ServiceRecord.php
+          cp app/Models/ServiceRecordItem.php hostinger-release/app/Models/ServiceRecordItem.php
+          cp app/Models/ServiceRecordPayment.php hostinger-release/app/Models/ServiceRecordPayment.php
+          cp app/Models/Review.php hostinger-release/app/Models/Review.php
+          cp app/Models/Review.php hostinger-release/app/Models/Review.php
+          cp app/Http/Controllers/Admin/CatalogOptionController.php hostinger-release/app/Http/Controllers/Admin/CatalogOptionController.php
+          cp database/migrations/2026_10_23_200000_add_brand_to_products_and_packages_table.php hostinger-release/database/migrations/2026_10_23_200000_add_brand_to_products_and_packages_table.php
+          cp database/migrations/2026_10_23_210000_backfill_explicit_catalog_brands.php hostinger-release/database/migrations/2026_10_23_210000_backfill_explicit_catalog_brands.php
+          cp database/seeders/CatalogExpansionSeeder.php hostinger-release/database/seeders/CatalogExpansionSeeder.php
+          cp resources/views/app.blade.php hostinger-release/resources/views/app.blade.php
+          cp public/images/netmax-logo.png hostinger-release/public/images/netmax-logo.png
+          cp public/images/netmax-logo.webp hostinger-release/public/images/netmax-logo.webp
+          cp public/images/netmax-logo-transparent.png hostinger-release/public/images/netmax-logo-transparent.png
+          cp public/images/netmax-favicon.png hostinger-release/public/images/netmax-favicon.png
+          cp resources/views/errors/404.blade.php hostinger-release/resources/views/errors/404.blade.php
+          cp resources/views/errors/419.blade.php hostinger-release/resources/views/errors/419.blade.php
+          cp resources/views/errors/429.blade.php hostinger-release/resources/views/errors/429.blade.php
+          cp resources/views/emails/email-verification-code.blade.php hostinger-release/resources/views/emails/email-verification-code.blade.php
+          cp resources/views/emails/pending-payment-reminder.blade.php hostinger-release/resources/views/emails/pending-payment-reminder.blade.php
+          cp app/Providers/AppServiceProvider.php hostinger-release/app/Providers/AppServiceProvider.php
+          cp app/Http/Middleware/EnforceSingleLoginSession.php hostinger-release/app/Http/Middleware/EnforceSingleLoginSession.php
+          cp app/Http/Middleware/HandleInertiaRequests.php hostinger-release/app/Http/Middleware/HandleInertiaRequests.php
+          cp app/Services/SingleLoginSessionService.php hostinger-release/app/Services/SingleLoginSessionService.php
+          cp app/Services/InventoryService.php hostinger-release/app/Services/InventoryService.php
+          cp app/Services/InvoiceDocumentService.php hostinger-release/app/Services/InvoiceDocumentService.php
+          cp app/Services/VoucherService.php hostinger-release/app/Services/VoucherService.php
+          cp app/Services/PayMongoLineItemBuilder.php hostinger-release/app/Services/PayMongoLineItemBuilder.php
+          cp app/Services/JobNotificationService.php hostinger-release/app/Services/JobNotificationService.php
+          cp app/Services/PendingInquiryCheckoutService.php hostinger-release/app/Services/PendingInquiryCheckoutService.php
+          cp app/Services/OrderCancellationService.php hostinger-release/app/Services/OrderCancellationService.php
+          cp app/Services/OrderNotificationService.php hostinger-release/app/Services/OrderNotificationService.php
+          cp app/Services/RefundService.php hostinger-release/app/Services/RefundService.php
+          cp routes/console.php hostinger-release/routes/console.php
+          cp database/migrations/2026_10_23_230000_create_service_records_tables.php hostinger-release/database/migrations/2026_10_23_230000_create_service_records_tables.php
+          cp database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php hostinger-release/database/migrations/2026_10_24_010000_sync_cancelled_order_payment_status.php
+          cp database/migrations/2026_10_25_060000_add_booking_priority_fees_to_orders_and_inquiries.php hostinger-release/database/migrations/2026_10_25_060000_add_booking_priority_fees_to_orders_and_inquiries.php
+          cp database/migrations/2026_10_25_070000_create_service_booking_fee_settings_table.php hostinger-release/database/migrations/2026_10_25_070000_create_service_booking_fee_settings_table.php
+          cp database/migrations/2026_10_27_000001_create_vouchers_and_add_order_discounts.php hostinger-release/database/migrations/2026_10_27_000001_create_vouchers_and_add_order_discounts.php
+          cp database/migrations/2026_10_27_000002_change_voucher_schedule_fields_to_local_datetime.php hostinger-release/database/migrations/2026_10_27_000002_change_voucher_schedule_fields_to_local_datetime.php
+          cp database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php hostinger-release/database/migrations/2026_10_28_000001_add_promo_sales_to_products_and_packages.php
+          cp database/migrations/2026_11_05_000001_create_support_conversations_tables.php hostinger-release/database/migrations/2026_11_05_000001_create_support_conversations_tables.php
+          cp database/migrations/2026_11_07_000001_create_refunds_table.php hostinger-release/database/migrations/2026_11_07_000001_create_refunds_table.php
+          cp database/migrations/2026_11_07_000002_add_marketing_email_preferences_to_users_table.php hostinger-release/database/migrations/2026_11_07_000002_add_marketing_email_preferences_to_users_table.php
+          cp database/migrations/2026_11_08_000001_add_walk_in_channels_and_service_invoice_fields.php hostinger-release/database/migrations/2026_11_08_000001_add_walk_in_channels_and_service_invoice_fields.php
+          cp database/migrations/2026_11_08_000002_create_service_record_payments_table.php hostinger-release/database/migrations/2026_11_08_000002_create_service_record_payments_table.php
+          cp database/migrations/2026_11_08_000003_add_walk_in_payment_preference_to_inquiries.php hostinger-release/database/migrations/2026_11_08_000003_add_walk_in_payment_preference_to_inquiries.php
+          cp database/migrations/2026_11_08_000004_add_fulfillment_method_to_orders_table.php hostinger-release/database/migrations/2026_11_08_000004_add_fulfillment_method_to_orders_table.php
+          cp database/migrations/2026_11_08_000005_add_shop_pickup_address_to_settings_and_orders.php hostinger-release/database/migrations/2026_11_08_000005_add_shop_pickup_address_to_settings_and_orders.php
+          cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
+          cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
+          cp bootstrap/app.php hostinger-release/bootstrap/app.php
+          cp routes/web.php hostinger-release/routes/web.php
+
+      - name: Upload complete Hostinger release bundle
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@v4
+        with:
+          name: secureview-hostinger-release-${{ github.sha }}
+          path: hostinger-release/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Package Hostinger release ZIP and SHA-256
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
+        shell: bash
+        run: |
+          ZIP_NAME="secureview-hostinger-release-${GITHUB_SHA}.zip"
+          (cd hostinger-release && zip -qr "../${ZIP_NAME}" .)
+          cp scripts/deploy-hostinger-release.sh ./deploy-hostinger-release.sh
+          sha256sum "${ZIP_NAME}" > "${ZIP_NAME}.sha256"
+          sha256sum --check "${ZIP_NAME}.sha256"
+          unzip -t "${ZIP_NAME}" | tail -n 2
+
+      - name: Upload ready-to-deploy Hostinger package
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/dev') || (github.event_name == 'pull_request' && github.base_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@v4
+        with:
+          name: secureview-hostinger-release-zip-${{ github.sha }}
+          path: |
+            secureview-hostinger-release-${{ github.sha }}.zip
+            secureview-hostinger-release-${{ github.sha }}.zip.sha256
+            deploy-hostinger-release.sh
+          if-no-files-found: error
+          retention-days: 7

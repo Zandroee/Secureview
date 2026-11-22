@@ -9,6 +9,7 @@ class InvoiceRecord extends Model
 {
     protected $fillable = [
         'order_id',
+        'service_record_id',
         'record_number',
         'snapshot',
         'issued_at',
@@ -23,6 +24,11 @@ class InvoiceRecord extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function serviceRecord(): BelongsTo
+    {
+        return $this->belongsTo(ServiceRecord::class);
     }
 
     public function issuedBy(): BelongsTo

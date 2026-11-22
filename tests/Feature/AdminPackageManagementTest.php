@@ -86,6 +86,31 @@ class AdminPackageManagementTest extends TestCase
         $this->assertSame(1, $log->new_values['items_count']);
     }
 
+    public function test_package_category_whitespace_is_normalized_when_created(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Category Normalization Camera', 20);
+
+        $this->actingAs($admin)
+            ->post(route('admin.packages.store'), [
+                'name' => 'Category Normalization Kit',
+                'category' => "  CCTV   System  ",
+                'warranty' => '1 year',
+                'price' => '12999.00',
+                'is_featured' => false,
+                'items' => [
+                    ['product_id' => $product->id, 'quantity' => 1],
+                ],
+            ])
+            ->assertRedirect(route('admin.packages.index'));
+
+        $package = Package::query()
+            ->where('name', 'Category Normalization Kit')
+            ->firstOrFail();
+
+        $this->assertSame('CCTV System', $package->category);
+    }
+
     public function test_admin_can_update_package_metadata_and_bundle_components(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -143,7 +168,7 @@ class AdminPackageManagementTest extends TestCase
         $this->assertSame(2, $log->new_values['items_count']);
     }
 
-    public function test_package_with_review_history_cannot_be_deleted(): void
+        public function test_package_with_review_history_cannot_be_deleted(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = User::factory()->create(['role' => 'user']);
@@ -168,7 +193,7 @@ class AdminPackageManagementTest extends TestCase
         ]);
     }
 
-    public function test_package_with_order_history_cannot_be_deleted(): void
+        public function test_package_with_order_history_can_be_deleted_while_snapshot_is_retained(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = User::factory()->create(['role' => 'user']);
@@ -189,7 +214,7 @@ class AdminPackageManagementTest extends TestCase
             'delivery_address' => '123 Test Street, Taguig',
         ]);
 
-        $order->items()->create([
+        $orderItem = $order->items()->create([
             'purchasable_type' => Package::class,
             'purchasable_id' => $package->id,
             'name' => $package->name,
@@ -202,10 +227,21 @@ class AdminPackageManagementTest extends TestCase
             ->from(route('admin.packages.index'))
             ->delete(route('admin.packages.destroy', $package))
             ->assertRedirect(route('admin.packages.index'))
-            ->assertSessionHasErrors('package');
+            ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseHas('packages', ['id' => $package->id]);
-        $this->assertDatabaseMissing('admin_activity_logs', [
+        $this->assertDatabaseMissing('packages', ['id' => $package->id]);
+        $this->assertDatabaseHas('order_items', [
+            'id' => $orderItem->id,
+            'order_id' => $order->id,
+            'purchasable_type' => Package::class,
+            'purchasable_id' => $package->id,
+            'name' => 'Purchased Kit',
+            'price' => '9999.00',
+            'quantity' => 1,
+            'subtotal' => '9999.00',
+        ]);
+        $this->assertDatabaseHas('admin_activity_logs', [
+            'admin_id' => $admin->id,
             'action' => 'package_deleted',
             'subject_id' => $package->id,
         ]);
@@ -441,4 +477,41 @@ class AdminPackageManagementTest extends TestCase
             'is_featured' => false,
         ]);
     }
+
+    public function test_admin_can_schedule_a_package_promo_sale_in_manila_time(): void
+    {
+        config(['app.timezone' => 'Asia/Manila']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Promo Package Camera', 2500);
+        $package = $this->createPackage('Scheduled Promo Package');
+
+        $this->actingAs($admin)
+            ->patch(route('admin.packages.update', $package), [
+                'name' => 'Scheduled Promo Package',
+                'category' => 'CCTV',
+                'warranty' => '1 year',
+                'price' => '5000.00',
+                'sale_price' => '4250.00',
+                'sale_starts_at' => '2026-10-29T10:30',
+                'sale_ends_at' => '2026-10-30T18:00',
+                'badge' => null,
+                'image' => null,
+                'specifications' => [],
+                'is_featured' => false,
+                'items' => [
+                    ['product_id' => $product->id, 'quantity' => 1],
+                ],
+            ])
+            ->assertRedirect(route('admin.packages.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('packages', [
+            'id' => $package->id,
+            'price' => '5000.00',
+            'sale_price' => '4250.00',
+            'sale_starts_at' => '2026-10-29 10:30:00',
+            'sale_ends_at' => '2026-10-30 18:00:00',
+        ]);
+    }
+
 }

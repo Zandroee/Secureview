@@ -194,6 +194,8 @@ class AdminProductManagementTest extends TestCase
         ]);
     }
 
+    
+
     public function test_product_form_rejects_invalid_price_and_stock(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -205,9 +207,33 @@ class AdminProductManagementTest extends TestCase
             ]))
             ->assertSessionHasErrors(['price', 'stock_quantity']);
 
+        $this->actingAs($admin)
+            ->post(route('admin.products.store'), $this->validProduct([
+                'stock_quantity' => 100001,
+            ]))
+            ->assertSessionHasErrors(['stock_quantity']);
+
         $this->assertDatabaseCount('products', 0);
     }
 
+
+    public function test_product_category_whitespace_is_normalized_when_created(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.products.store'), $this->validProduct([
+                'name' => 'Category Normalization Camera',
+                'category' => "  IP   Cameras  ",
+            ]))
+            ->assertRedirect(route('admin.products.index'));
+
+        $product = Product::query()
+            ->where('name', 'Category Normalization Camera')
+            ->firstOrFail();
+
+        $this->assertSame('IP Cameras', $product->category);
+    }
 
     public function test_admin_cannot_delete_a_product_referenced_by_a_cart(): void
     {
@@ -232,7 +258,7 @@ class AdminProductManagementTest extends TestCase
         $this->assertDatabaseHas('products', ['id' => $product->id]);
     }
 
-    public function test_admin_cannot_delete_a_product_referenced_by_an_order(): void
+        public function test_admin_can_delete_a_product_referenced_by_an_order_and_preserve_snapshot(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = User::factory()->create(['role' => 'user']);
@@ -253,7 +279,7 @@ class AdminProductManagementTest extends TestCase
             'delivery_address' => '123 Test Street, Taguig',
         ]);
 
-        $order->items()->create([
+        $orderItem = $order->items()->create([
             'purchasable_type' => Product::class,
             'purchasable_id' => $product->id,
             'name' => $product->name,
@@ -266,9 +292,18 @@ class AdminProductManagementTest extends TestCase
             ->from(route('admin.products.index'))
             ->delete(route('admin.products.destroy', $product))
             ->assertRedirect(route('admin.products.index'))
-            ->assertSessionHasErrors('product');
+            ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseHas('products', ['id' => $product->id]);
+        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+        $this->assertDatabaseHas('order_items', [
+            'id' => $orderItem->id,
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'name' => 'Purchased Camera',
+            'price' => $product->price,
+            'quantity' => 1,
+            'subtotal' => $product->price,
+        ]);
     }
 
     public function test_admin_cannot_delete_a_product_with_reviews(): void
@@ -514,4 +549,51 @@ class AdminProductManagementTest extends TestCase
             'is_featured' => false,
         ]);
     }
+
+    public function test_admin_can_schedule_a_product_promo_sale_in_manila_time(): void
+    {
+        config(['app.timezone' => 'Asia/Manila']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Scheduled Sale Camera', 1000);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.products.update', $product), $this->validProduct([
+                'price' => '1000.00',
+                'sale_price' => '750.00',
+                'sale_starts_at' => '2026-10-29T10:30',
+                'sale_ends_at' => '2026-10-30T18:00',
+            ]))
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'price' => '1000.00',
+            'sale_price' => '750.00',
+            'sale_starts_at' => '2026-10-29 10:30:00',
+            'sale_ends_at' => '2026-10-30 18:00:00',
+        ]);
+    }
+
+    public function test_product_promo_sale_price_must_be_below_regular_price(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $product = $this->createProduct('Invalid Sale Camera', 1000);
+
+        $this->actingAs($admin)
+            ->from(route('admin.products.index'))
+            ->patch(route('admin.products.update', $product), $this->validProduct([
+                'price' => '1000.00',
+                'sale_price' => '1000.00',
+            ]))
+            ->assertRedirect(route('admin.products.index'))
+            ->assertSessionHasErrors('sale_price');
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'price' => '2500.00',
+            'sale_price' => null,
+        ]);
+    }
+
 }

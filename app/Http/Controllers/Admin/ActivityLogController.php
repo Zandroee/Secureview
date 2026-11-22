@@ -19,7 +19,7 @@ class ActivityLogController extends Controller
         'product_updated' => 'Product updated',
         'product_deleted' => 'Product deleted',
         'inquiry_technician_assigned' => 'Technician assignment changed',
-        'inquiry_status_updated' => 'Inquiry status updated',
+        'inquiry_status_updated' => 'Service status updated',
         'package_created' => 'Package created',
         'package_updated' => 'Package updated',
         'package_deleted' => 'Package deleted',

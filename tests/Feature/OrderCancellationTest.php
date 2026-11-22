@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Inquiry;
 use App\Models\Order;
+use App\Models\PendingInquiryCheckout;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
@@ -34,13 +36,70 @@ class OrderCancellationTest extends TestCase
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
             'order_status' => 'cancelled',
-            'payment_status' => 'pending',
+            'payment_status' => 'cancelled',
             'stock_deducted_at' => null,
             'cancellation_reason' => 'Cancelled by customer.',
         ]);
         $this->assertDatabaseHas('products', [
             'id' => $product->id,
             'stock_quantity' => 5,
+        ]);
+    }
+
+    public function test_cancelling_an_installation_order_cancels_its_linked_service_and_checkout(): void
+    {
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(5);
+        $order = $this->createOrder($customer, $product, [
+            'payment_method' => 'cash',
+            'payment_status' => 'pending',
+            'order_status' => 'pending',
+        ]);
+
+        $inquiry = Inquiry::create([
+            'user_id' => $customer->id,
+            'inquirable_type' => Product::class,
+            'inquirable_id' => $product->id,
+            'inquiry_number' => 'INQ-CANCEL-LINKED-TEST',
+            'item_name' => $product->name,
+            'customer_name' => $customer->name,
+            'customer_phone' => '09123456789',
+            'customer_email' => $customer->email,
+            'street_address' => '31 Molave Street',
+            'city' => 'Taguig',
+            'service_type' => 'Installation',
+            'urgency' => 'normal',
+            'preferred_date' => today()->addDays(5)->toDateString(),
+            'preferred_time' => '08:00 AM - 11:00 AM',
+            'status' => 'pending',
+        ]);
+
+        PendingInquiryCheckout::create([
+            'user_id' => $customer->id,
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'payload' => [],
+            'status' => 'pending_payment',
+        ]);
+
+        $this->actingAs($customer)
+            ->patch(route('purchases.cancel', $order))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'payment_status' => 'cancelled',
+            'order_status' => 'cancelled',
+        ]);
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'status' => 'cancelled',
+        ]);
+        $this->assertDatabaseHas('inquiries', [
+            'id' => $inquiry->id,
+            'status' => 'cancelled',
         ]);
     }
 
@@ -119,7 +178,7 @@ class OrderCancellationTest extends TestCase
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
             'order_status' => 'cancelled',
-            'payment_status' => 'pending',
+            'payment_status' => 'cancelled',
         ]);
     }
 
@@ -170,6 +229,53 @@ class OrderCancellationTest extends TestCase
         ]);
     }
 
+    public function test_order_is_not_cancelled_when_paymongo_reports_payment_succeeded_during_cancellation(): void
+    {
+        config([
+            'services.paymongo.secret_key' => 'sk_test_secureview',
+            'services.paymongo.base_url' => 'https://api.paymongo.com',
+        ]);
+
+        Http::fake([
+            'https://api.paymongo.com/v1/checkout_sessions/cs_paid_race_test/expire' => Http::response([
+                'errors' => [['detail' => 'The checkout session cannot be expired.']],
+            ], 400),
+            'https://api.paymongo.com/v1/checkout_sessions/cs_paid_race_test' => Http::response([
+                'data' => [
+                    'id' => 'cs_paid_race_test',
+                    'attributes' => [
+                        'status' => 'active',
+                        'payments' => [[
+                            'id' => 'pay_paid_race_test',
+                            'attributes' => ['status' => 'paid'],
+                        ]],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(5);
+        $order = $this->createOrder($customer, $product, [
+            'payment_method' => 'gcash',
+            'payment_status' => 'pending',
+            'order_status' => 'awaiting_payment',
+            'paymongo_checkout_session_id' => 'cs_paid_race_test',
+        ]);
+
+        $this->actingAs($customer)
+            ->from(route('purchases.show', $order))
+            ->patch(route('purchases.cancel', $order))
+            ->assertRedirect(route('purchases.show', $order))
+            ->assertSessionHasErrors('order');
+
+        $freshOrder = $order->fresh();
+        $this->assertSame('paid', $freshOrder->payment_status);
+        $this->assertSame('processing', $freshOrder->order_status);
+        $this->assertNotNull($freshOrder->paid_at);
+        $this->assertSame('pay_paid_race_test', $freshOrder->paymongo_payment_id);
+    }
+
     public function test_admin_can_cancel_an_unpaid_order_and_action_is_logged(): void
     {
         $admin = User::factory()->create([
@@ -194,7 +300,7 @@ class OrderCancellationTest extends TestCase
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
             'order_status' => 'cancelled',
-            'payment_status' => 'failed',
+            'payment_status' => 'cancelled',
             'cancellation_reason' => 'Payment failed and customer did not proceed.',
         ]);
         $this->assertDatabaseHas('admin_activity_logs', [
@@ -274,7 +380,10 @@ class OrderCancellationTest extends TestCase
             'order_status' => 'awaiting_payment',
         ]);
         $staleOrder->timestamps = false;
-        $staleOrder->forceFill(['updated_at' => now()->subHours(30)])->save();
+        $staleOrder->forceFill([
+            'created_at' => now()->subHours(50),
+            'updated_at' => now()->subHours(50),
+        ])->save();
 
         $this->actingAs($admin)
             ->get(route('admin.purchases.index'))
@@ -298,6 +407,97 @@ class OrderCancellationTest extends TestCase
                 ->where('filters.attention', 'stale')
                 ->has('orders.data', 1)
                 ->where('orders.data.0.order_number', 'ORD-ATTN-STALE'));
+    }
+
+    public function test_scheduled_command_auto_cancels_unpaid_orders_after_48_hours_only(): void
+    {
+        config(['services.secureview.unpaid_order_expiry_hours' => 48]);
+
+        $customer = $this->createCustomer();
+        $product = $this->createProduct(20);
+
+        $oldCashOrder = $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-AUTO-CANCEL-CASH',
+            'payment_method' => 'cash',
+            'payment_status' => 'pending',
+            'order_status' => 'pending',
+        ]);
+        $oldFailedOrder = $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-AUTO-CANCEL-FAILED',
+            'payment_method' => 'gcash',
+            'payment_status' => 'failed',
+            'order_status' => 'payment_failed',
+        ]);
+        $recentOrder = $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-AUTO-CANCEL-RECENT',
+            'payment_method' => 'gcash',
+            'payment_status' => 'pending',
+            'order_status' => 'awaiting_payment',
+        ]);
+        $paidOrder = $this->createOrder($customer, $product, [
+            'order_number' => 'ORD-AUTO-CANCEL-PAID',
+            'payment_method' => 'gcash',
+            'payment_status' => 'paid',
+            'order_status' => 'processing',
+            'paid_at' => now()->subHours(60),
+        ]);
+
+        $ageOrder = function (Order $order, int $hours): void {
+            $order->timestamps = false;
+            $order->forceFill([
+                'created_at' => now()->subHours($hours),
+                'updated_at' => now()->subHours($hours),
+            ])->save();
+            $order->timestamps = true;
+        };
+
+        $ageOrder($oldCashOrder, 49);
+        // Activity updates must not reset the 48-hour order-placement deadline.
+        $oldCashOrder->timestamps = false;
+        $oldCashOrder->forceFill(['updated_at' => now()])->save();
+        $oldCashOrder->timestamps = true;
+
+        $ageOrder($oldFailedOrder, 72);
+        $ageOrder($recentOrder, 47);
+        $ageOrder($paidOrder, 72);
+
+        $this->artisan('secureview:cancel-expired-unpaid-orders')
+            ->expectsOutput('Expired unpaid orders: 2 cancelled; 0 deferred. Deadline: 48 hours.')
+            ->assertExitCode(0);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $oldCashOrder->id,
+            'order_status' => 'cancelled',
+            'payment_status' => 'cancelled',
+            'cancellation_reason' => 'Automatically cancelled after 48 hours without confirmed payment.',
+        ]);
+        $this->assertDatabaseHas('orders', [
+            'id' => $oldFailedOrder->id,
+            'order_status' => 'cancelled',
+            'payment_status' => 'cancelled',
+        ]);
+        $this->assertDatabaseHas('orders', [
+            'id' => $recentOrder->id,
+            'order_status' => 'awaiting_payment',
+            'payment_status' => 'pending',
+        ]);
+        $this->assertDatabaseHas('orders', [
+            'id' => $paidOrder->id,
+            'order_status' => 'processing',
+            'payment_status' => 'paid',
+        ]);
+
+        $this->assertDatabaseHas('customer_notifications', [
+            'user_id' => $customer->id,
+            'type' => 'order_cancelled',
+            'related_id' => $oldCashOrder->id,
+            'title' => 'Unpaid order automatically cancelled',
+        ]);
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $oldCashOrder->id,
+            'event_key' => 'unpaid_order_auto_cancelled',
+            'description' => 'Automatically cancelled after 48 hours without confirmed payment.',
+        ]);
     }
 
     public function test_admin_order_management_is_paginated_and_filters_by_status(): void

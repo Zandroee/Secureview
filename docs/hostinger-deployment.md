@@ -82,7 +82,7 @@ $app = require_once __DIR__.'/../secureview_app/bootstrap/app.php';
 
 Also update the maintenance-file path in that copied file, if present, to `__DIR__.'/../secureview_app/storage/framework/maintenance.php'`. Keep the rest of Laravel's front controller intact. Do not blindly replace the source `public/index.php`; only edit the public web-root copy for this layout.
 
-Create `public_html/storage` and make it writable by the PHP process. In the app's private `.env`, set `PUBLIC_STORAGE_PATH` to the absolute path of that directory, for example `/home/u12345678/domains/YOUR_DOMAIN/public_html/storage`. SecureView's public catalog disk will then write public product/package images to that path. Transfer existing uploaded images into it and confirm their database paths still match. Do not run `storage:link` for this split-directory setup; that command would create a link under the app's private `public/` folder, not the actual `public_html/`.
+Create `public_html/storage` and make it writable by the PHP process. When `secureview_app` is a sibling of `public_html` and `PUBLIC_STORAGE_PATH` is unset, SecureView's public disk now defaults to that public folder automatically. If `PUBLIC_STORAGE_PATH` is explicitly set in the external environment, ensure it points to the absolute path `/home/<account>/domains/<domain>/public_html/storage`; an explicit value overrides the default. Copy existing images from `secureview_app/storage/app/public/` into `public_html/storage/` without deleting the originals, preserving the `products/` and `packages/` subfolders. Confirm image URLs load over HTTPS. Do not run `storage:link` for this split-directory setup; that command would create a link under the app's private `public/` folder, not the actual `public_html/`.
 
 ### Hostinger VPS
 
@@ -130,7 +130,7 @@ PAYMONGO_BASE_URL=https://api.paymongo.com
 
 Generate a new `APP_KEY` for a fresh production installation and keep it unchanged afterward. With SSH, from the application root run `php artisan key:generate` once after the private `.env` exists. If the application already has encrypted production data/sessions, do not replace its existing key. Never commit the production `.env` or paste any secret into GitHub, logs, screenshots, or chat.
 
-The project code accepts an `APP_TIMEZONE` value. Set the timezone that matches your actual business and booking operations; this guide uses `Asia/Manila` as the Philippines example. If you operate in another timezone, change it deliberately and test booking dates and scheduled tasks.
+SecureView now defaults to `APP_TIMEZONE=Asia/Manila` (Philippines time, UTC+08:00). In production, also set `APP_TIMEZONE=Asia/Manila` in the external Hostinger environment file at `domains/secureviewcctv.shop/hbuilds/config/.env`; an existing environment value overrides the code default. After changing it, clear Laravel's configuration cache using the established Hostinger deployment procedure, then test booking dates, notification timestamps, urgency escalation, and scheduled tasks.
 
 Use PayMongo **test** credentials first. Configure OAuth callback URLs in Google/Facebook developer settings to match the new domain, if those login providers are enabled. Configure the exact production HTTPS webhook URL as `https://YOUR_DOMAIN/api/webhooks/paymongo` for the `checkout_session.payment.paid` event. Do not mark an order paid from a browser return URL; PayMongo server-side confirmation remains required.
 

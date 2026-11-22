@@ -36,7 +36,7 @@ const services = [
     {
         title: "Other",
         description:
-            "Have a service request that does not fit the options above? Let us know.",
+            "Examples include relocating existing cameras, troubleshooting DVR/NVR or network connections, replacing damaged cables or power adapters, adjusting camera angles, restoring remote viewing, or adding a camera to an existing system. Describe the exact issue when booking so we can prepare the right tools and parts.",
         icon: "bi-three-dots",
     },
 ];
@@ -58,7 +58,7 @@ export default function Services() {
                         <div className="row justify-content-center text-center">
                             <div className="col-lg-8">
                                 <div className="small fw-bold mb-2">
-                                    SECUREVIEW
+                                    NETMAX TRADING
                                 </div>
 
                                 <h1 className="fw-bold display-5 mb-3">
@@ -123,7 +123,7 @@ export default function Services() {
 
                         <div className="text-center mt-5">
                             <p className="text-muted mb-3">
-                                Need a CCTV service? Submit an inquiry and
+                                Need a CCTV service? Submit a service request and
                                 choose your preferred schedule.
                             </p>
 
@@ -131,7 +131,7 @@ export default function Services() {
                                 href="/inquiry"
                                 className="btn btn-primary fw-bold px-4"
                             >
-                                MAKE AN INQUIRY
+                                REQUEST A SERVICE
                             </Link>
                         </div>
                     </div>

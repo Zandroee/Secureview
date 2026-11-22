@@ -48,7 +48,7 @@ export default function ManageTechnicianTeamModal({ inquiry, technicians = [], t
                 role="dialog" aria-modal="true" aria-labelledby="team-modal-title">
                 <div className="p-4 border-bottom d-flex justify-content-between gap-3">
                     <div>
-                        <div className="small text-primary fw-bold">INQUIRY {inquiry.inquiry_number}</div>
+                        <div className="small text-primary fw-bold">SERVICE {inquiry.inquiry_number}</div>
                         <h2 className="h4 fw-bold mb-1" id="team-modal-title">Manage Technician Team</h2>
                         <p className="small text-muted mb-0">Choose which technicians are assigned to this job.</p>
                     </div>

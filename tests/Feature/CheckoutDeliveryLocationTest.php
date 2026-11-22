@@ -1,0 +1,495 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Cart;
+use App\Models\InvoiceSetting;
+use App\Models\Order;
+use App\Models\Package;
+use App\Models\PackageItem;
+use App\Models\Product;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class CheckoutDeliveryLocationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_checkout_saves_the_openstreetmap_delivery_address_and_pin(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+            'phone' => '09171234567',
+        ]);
+
+        $product = Product::create([
+            'name' => 'Test CCTV Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 500,
+            'stock_quantity' => 5,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => 500,
+        ]);
+
+        $this->actingAs($customer)
+            ->post(route('checkout.store'), [
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'delivery_street_address' => '123 Sample Street, Barangay San Miguel',
+                'delivery_address_details' => 'Unit 4B, blue gate',
+                'delivery_city' => 'Taguig, Metro Manila',
+                'delivery_latitude' => 14.5176001,
+                'delivery_longitude' => 121.0509002,
+                'payment_method' => 'cash',
+                'notes' => '',
+            ])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHasNoErrors();
+
+        $order = Order::query()
+            ->where('user_id', $customer->id)
+            ->firstOrFail();
+
+        $this->assertSame(
+            '123 Sample Street, Barangay San Miguel, Unit 4B, blue gate, Taguig, Metro Manila',
+            $order->delivery_address
+        );
+        $this->assertSame('Unit 4B, blue gate', $order->delivery_address_details);
+        $this->assertSame('Taguig, Metro Manila', $order->delivery_city);
+        $this->assertEquals(14.5176001, $order->delivery_latitude);
+        $this->assertEquals(121.0509002, $order->delivery_longitude);
+    }
+
+    public function test_checkout_preserves_legacy_single_field_delivery_address_requests(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+            'phone' => '09171234567',
+        ]);
+        $product = Product::create([
+            'name' => 'Legacy Address Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 900,
+            'stock_quantity' => 4,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => 900,
+        ]);
+
+        $this->actingAs($customer)
+            ->post(route('checkout.store'), [
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'delivery_address' => '12 Legacy Street, Barangay San Miguel, Taguig',
+                'payment_method' => 'cash',
+            ])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHasNoErrors();
+
+        $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
+        $this->assertSame('delivery', $order->fulfillment_method);
+        $this->assertSame('12 Legacy Street, Barangay San Miguel, Taguig', $order->delivery_address);
+    }
+
+    public function test_checkout_requires_a_complete_delivery_pin_when_coordinates_are_started(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+
+        $this->actingAs($customer)
+            ->post(route('checkout.store'), [
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'delivery_street_address' => '123 Sample Street',
+                'delivery_city' => 'Taguig',
+                'delivery_latitude' => 14.5176,
+                'payment_method' => 'cash',
+            ])
+            ->assertSessionHasErrors('delivery_longitude');
+
+        $this->assertSame(0, Order::query()->where('user_id', $customer->id)->count());
+    }
+    public function test_buy_now_checks_out_only_the_selected_product_and_preserves_the_existing_cart(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+            'phone' => '09171234567',
+        ]);
+
+        $selectedProduct = Product::create([
+            'name' => 'Selected Buy Now Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 800,
+            'stock_quantity' => 8,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+        $cartProduct = Product::create([
+            'name' => 'Keep in Cart Camera',
+            'category' => 'dome',
+            'warranty' => '1 year',
+            'price' => 500,
+            'stock_quantity' => 8,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cartItem = $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $cartProduct->id,
+            'quantity' => 3,
+            'price' => 500,
+        ]);
+
+        $this->actingAs($customer)
+            ->post(route('checkout.buy-now'), [
+                'item_type' => 'product',
+                'item_id' => $selectedProduct->id,
+                'quantity' => 2,
+            ])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHas('buy_now', [
+                'item_type' => 'product',
+                'item_id' => $selectedProduct->id,
+                'quantity' => 2,
+            ]);
+
+        $this->actingAs($customer)
+            ->get(route('checkout'))
+            ->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('checkout')
+                ->has('cart.items', 1)
+                ->where('cart.items.0.type', 'product')
+                ->where('cart.items.0.name', 'Selected Buy Now Camera')
+                ->where('cart.items.0.quantity', 2)
+                ->where('cart.subtotal', 1600));
+
+        $this->actingAs($customer)
+            ->post(route('checkout.store'), [
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'delivery_street_address' => '123 Sample Street, Barangay San Miguel',
+                'delivery_city' => 'Taguig, Metro Manila',
+                'payment_method' => 'cash',
+                'notes' => '',
+            ])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHasNoErrors();
+
+        $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
+        $this->assertSame(1, $order->items()->count());
+        $this->assertDatabaseHas('order_items', [
+            'order_id' => $order->id,
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $selectedProduct->id,
+            'quantity' => 2,
+            'price' => 800,
+        ]);
+        $this->assertDatabaseHas('cart_items', [
+            'id' => $cartItem->id,
+            'cart_id' => $cart->id,
+            'purchasable_id' => $cartProduct->id,
+            'quantity' => 3,
+        ]);
+        $this->assertDatabaseHas('products', [
+            'id' => $selectedProduct->id,
+            'stock_quantity' => 6,
+        ]);
+        $this->assertDatabaseHas('products', [
+            'id' => $cartProduct->id,
+            'stock_quantity' => 8,
+        ]);
+    }
+
+    public function test_buy_now_can_open_checkout_for_a_package(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+            'phone' => '09171234567',
+        ]);
+
+        $product = Product::create([
+            'name' => 'Package Included Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 700,
+            'stock_quantity' => 10,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+        $package = Package::create([
+            'name' => 'Buy Now Test Package',
+            'category' => 'Home Security',
+            'warranty' => '1 year',
+            'price' => 2500,
+            'installation_fee' => 0,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+        PackageItem::create([
+            'package_id' => $package->id,
+            'product_id' => $product->id,
+            'quantity' => 2,
+            'price' => 700,
+        ]);
+
+        $this->actingAs($customer)
+            ->post(route('checkout.buy-now'), [
+                'item_type' => 'package',
+                'item_id' => $package->id,
+                'quantity' => 1,
+            ])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($customer)
+            ->get(route('checkout'))
+            ->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('checkout')
+                ->has('cart.items', 1)
+                ->where('cart.items.0.type', 'package')
+                ->where('cart.items.0.name', 'Buy Now Test Package')
+                ->where('cart.items.0.quantity', 1)
+                ->where('cart.subtotal', 2500));
+    }
+
+
+    public function test_checkout_uses_active_promo_sale_price_and_preserves_order_price_snapshot(): void
+    {
+        config(['app.timezone' => 'Asia/Manila']);
+        \Illuminate\Support\Carbon::setTestNow(
+            \Illuminate\Support\Carbon::parse('2026-10-28 18:30:00', 'Asia/Manila')
+        );
+
+        try {
+            $customer = User::factory()->create([
+                'role' => 'user',
+                'email_verified_at' => now(),
+                'phone' => '09171234567',
+            ]);
+
+            $product = Product::create([
+                'name' => 'Promo Sale Checkout Camera',
+                'category' => 'CCTV',
+                'warranty' => '1 year',
+                'price' => 1000,
+                'sale_price' => 750,
+                'sale_starts_at' => '2026-10-28 18:00:00',
+                'sale_ends_at' => '2026-10-28 19:00:00',
+                'stock_quantity' => 5,
+                'badge' => null,
+                'image' => null,
+                'specifications' => [],
+                'rating' => 0,
+                'is_featured' => false,
+            ]);
+
+            $cart = Cart::create(['user_id' => $customer->id]);
+            $cart->items()->create([
+                'purchasable_type' => Product::class,
+                'purchasable_id' => $product->id,
+                'quantity' => 2,
+                'price' => 1000,
+            ]);
+
+            $this->actingAs($customer)
+                ->get(route('checkout'))
+                ->assertOk()
+                ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                    ->component('checkout')
+                    ->where('cart.items.0.price', 750)
+                    ->where('cart.items.0.subtotal', 1500)
+                    ->where('cart.subtotal', 1500)
+                    ->where('cart.total', 1500));
+
+            $this->actingAs($customer)
+                ->post(route('checkout.store'), [
+                    'customer_name' => $customer->name,
+                    'customer_phone' => '09171234567',
+                    'customer_email' => $customer->email,
+                    'delivery_street_address' => '123 Sample Street',
+                    'delivery_city' => 'Taguig, Metro Manila',
+                    'payment_method' => 'cash',
+                    'notes' => '',
+                ])
+                ->assertRedirect(route('checkout'))
+                ->assertSessionHasNoErrors();
+
+            $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
+
+            $this->assertEquals(1500, $order->subtotal);
+            $this->assertEquals(1500, $order->total);
+            $this->assertDatabaseHas('order_items', [
+                'order_id' => $order->id,
+                'purchasable_type' => Product::class,
+                'purchasable_id' => $product->id,
+                'price' => '750.00',
+                'quantity' => 2,
+                'subtotal' => '1500.00',
+            ]);
+            $this->assertEquals(1000, $product->fresh()->price);
+        } finally {
+            \Illuminate\Support\Carbon::setTestNow();
+        }
+    }
+
+    public function test_customer_can_choose_shop_pickup_without_providing_a_delivery_address(): void
+    {
+        $pickupAddress = 'Unit 5, Netmax Building, 456 Store Road, Taguig City';
+        InvoiceSetting::create([
+            'business_name' => 'Netmax Trading',
+            'pickup_address' => $pickupAddress,
+        ]);
+
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+            'phone' => '09171234567',
+        ]);
+        $product = Product::create([
+            'name' => 'Shop Pickup Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 1200,
+            'stock_quantity' => 5,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => 1200,
+        ]);
+
+        $this->actingAs($customer)
+            ->get(route('checkout'))
+            ->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('checkout')
+                ->where('pickupAddress', $pickupAddress));
+
+        $this->actingAs($customer)
+            ->post(route('checkout.store'), [
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'fulfillment_method' => 'pickup',
+                // Simulate switching from delivery after an address and map pin were entered.
+                'delivery_street_address' => 'Old delivery address that must not be saved',
+                'delivery_city' => 'Old delivery city',
+                'delivery_latitude' => 14.5176,
+                'delivery_longitude' => 121.0509,
+                'payment_method' => 'cash',
+                'notes' => 'I will collect this at the shop.',
+            ])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHasNoErrors();
+
+        $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
+        $this->assertSame('pickup', $order->fulfillment_method);
+        $this->assertSame($pickupAddress, $order->pickup_address);
+        $this->assertNull($order->delivery_address);
+        $this->assertNull($order->delivery_city);
+        $this->assertNull($order->delivery_latitude);
+        $this->assertSame('pending', $order->payment_status);
+        $invoice = app(\App\Services\InvoiceDocumentService::class)->buildSnapshot($order);
+        $this->assertSame($pickupAddress, $invoice['customer']['address']);
+    }
+
+
+    public function test_shop_pickup_cannot_be_selected_until_admin_configures_a_pickup_address(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+            'phone' => '09171234567',
+        ]);
+        $product = Product::create([
+            'name' => 'Pickup Not Configured Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 800,
+            'stock_quantity' => 4,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => 800,
+        ]);
+
+        $this->actingAs($customer)
+            ->post(route('checkout.store'), [
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'fulfillment_method' => 'pickup',
+                'payment_method' => 'cash',
+            ])
+            ->assertSessionHasErrors('fulfillment_method');
+
+        $this->assertSame(0, Order::query()->where('user_id', $customer->id)->count());
+    }
+
+
+}

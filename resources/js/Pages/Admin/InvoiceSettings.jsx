@@ -8,6 +8,7 @@ const emptyForm = {
     business_name: "",
     registered_name: "",
     address: "",
+    pickup_address: "",
     email: "",
     phone: "",
     tin: "",
@@ -61,7 +62,7 @@ export default function InvoiceSettings({ settings = {}, profile_ready: profileR
     return (
         <div>
             <Navbar />
-            <div className="container-fluid py-4" style={{ fontFamily: "Outfit, sans-serif", background: "#f7f7f8", minHeight: "70vh" }}>
+            <div className="invoice-settings-page container-fluid py-4" style={{ fontFamily: "Outfit, sans-serif", background: "#f7f7f8", minHeight: "70vh" }}>
                 <div className="row g-0">
                     <div className="col-lg-3 col-xl-2 mb-4 mb-lg-0">
                         <Sidebar active="invoice-settings" />
@@ -80,7 +81,7 @@ export default function InvoiceSettings({ settings = {}, profile_ready: profileR
 
                         {props.flash?.success && <div className="alert alert-success">{props.flash.success}</div>}
                         <div className="alert alert-warning">
-                            These settings prepare the invoice profile only. They do not register SecureView with the BIR, authorize a serial-number series, calculate taxes, or enable BIR electronic transmission. Enter only details confirmed by the business's registration documents and accountant.
+                            These settings prepare the invoice profile only. They do not register Netmax Trading with the BIR, authorize a serial-number series, calculate taxes, or enable BIR electronic transmission. Enter only details confirmed by the business's registration documents and accountant.
                         </div>
 
                         <div className="row g-3 mb-4">
@@ -131,6 +132,26 @@ export default function InvoiceSettings({ settings = {}, profile_ready: profileR
                                         <div className="col-md-6"><TextField label="Business phone" name="phone" value={form.phone} onChange={update} error={errors.phone} /></div>
                                         <div className="col-md-6"><TextField label="Business email" name="email" value={form.email} onChange={update} error={errors.email} type="email" /></div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <div className="card border-0 shadow-sm mb-4">
+                                <div className="card-body p-4">
+                                    <h2 className="h5 fw-bold mb-1">Customer shop pickup location</h2>
+                                    <p className="small text-muted mb-3">Enter the exact physical store address where customers should collect online orders. This address is shown when customers choose Shop Pickup and is saved with each pickup order, so later address changes do not alter existing orders.</p>
+                                    <label htmlFor="pickup_address" className="form-label fw-semibold">Shop pickup address</label>
+                                    <textarea
+                                        id="pickup_address"
+                                        name="pickup_address"
+                                        rows={3}
+                                        maxLength={1000}
+                                        value={form.pickup_address ?? ""}
+                                        onChange={(event) => update("pickup_address", event.target.value)}
+                                        className={"form-control" + (errors.pickup_address ? " is-invalid" : "")}
+                                        placeholder="Building / unit, street, barangay, city / municipality, province"
+                                    />
+                                    {errors.pickup_address && <div className="invalid-feedback">{errors.pickup_address}</div>}
+                                    <div className="form-text">Include enough detail for a customer to find the store. This is separate from the registered business address used for invoice records.</div>
                                 </div>
                             </div>
 

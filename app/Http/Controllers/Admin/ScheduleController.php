@@ -7,7 +7,10 @@ use App\Models\BlockedBookingDate;
 use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
+use App\Models\ServiceRecord;
+use App\Models\ServiceRecordItem;
 use App\Models\User;
+use App\Services\InvoiceDocumentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +33,10 @@ class ScheduleController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:confirmed,in_progress'],
             'technician' => ['nullable', 'integer', 'exists:users,id'],
+            'service_type' => ['nullable', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'urgency' => ['nullable', 'in:normal,urgent,emergency'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $query = Inquiry::with(['user', 'technicians'])
@@ -56,6 +63,22 @@ class ScheduleController extends Controller
             $query->whereHas('technicians', fn ($builder) => $builder->where('users.id', $filters['technician']));
         }
 
+        if (!empty($filters['service_type'])) {
+            $query->where('service_type', $filters['service_type']);
+        }
+
+        if (!empty($filters['urgency'])) {
+            $query->where('urgency', $filters['urgency']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('preferred_date', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('preferred_date', '<=', $filters['date_to']);
+        }
+
         $schedules = $query
             ->orderByRaw("CASE urgency WHEN 'emergency' THEN 1 WHEN 'urgent' THEN 2 ELSE 3 END")
             ->orderBy('preferred_date')
@@ -71,7 +94,10 @@ class ScheduleController extends Controller
                     'customer_phone' => $inquiry->customer_phone,
                     'service_type' => $inquiry->service_type,
                     'item_name' => $inquiry->item_name,
+                    'intake_channel' => $inquiry->intake_channel ?? 'online',
+                    'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                     'urgency' => $inquiry->urgency,
+                    'urgency_fee' => (float) $inquiry->urgency_fee,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                     'preferred_time' => $inquiry->preferred_time,
@@ -218,6 +244,10 @@ class ScheduleController extends Controller
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
                 'technician' => $filters['technician'] ?? '',
+                'service_type' => $filters['service_type'] ?? '',
+                'urgency' => $filters['urgency'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
                 'active' => Inquiry::whereIn('status', ['confirmed', 'in_progress'])->count(),
@@ -247,6 +277,8 @@ class ScheduleController extends Controller
                 'id' => $inquiry->id,
                 'inquiry_number' => $inquiry->inquiry_number,
                 'item_name' => $inquiry->item_name,
+                'intake_channel' => $inquiry->intake_channel ?? 'online',
+                'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                 'item_type' => $inquiry->inquirable_type
                     ? class_basename($inquiry->inquirable_type)
                     : null,
@@ -273,12 +305,16 @@ class ScheduleController extends Controller
                 'service_longitude' => $inquiry->service_longitude,
                 'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
+                'intake_channel' => $inquiry->intake_channel ?? 'online',
+                'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                 'urgency' => $inquiry->urgency,
+                'urgency_fee' => (float) $inquiry->urgency_fee,
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                 'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                 'preferred_time' => $inquiry->preferred_time,
                 'notes' => $inquiry->notes,
                 'status' => $inquiry->status,
+                'service_record_exists' => $inquiry->serviceRecord()->exists(),
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
                 'user_id' => $inquiry->user_id,
             ],
@@ -290,16 +326,20 @@ class ScheduleController extends Controller
         ]);
     }
 
-    public function history(Request $request)
+    public function history(Request $request, InvoiceDocumentService $documents)
     {
         Inquiry::escalateOverdueUrgency();
 
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
+            'service_type' => ['nullable', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'urgency' => ['nullable', 'in:normal,urgent,emergency'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         $query = Inquiry::query()
-            ->with('technicians')
+            ->with(['technicians', 'serviceRecord.technician', 'serviceRecord.items', 'serviceRecord.invoiceRecord', 'serviceRecord.payments.recordedBy'])
             ->where('status', 'completed');
 
         if (!empty($filters['search'])) {
@@ -314,12 +354,42 @@ class ScheduleController extends Controller
             });
         }
 
+        if (!empty($filters['service_type'])) {
+            $query->where('service_type', $filters['service_type']);
+        }
+
+        if (!empty($filters['urgency'])) {
+            $query->where('urgency', $filters['urgency']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('preferred_date', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('preferred_date', '<=', $filters['date_to']);
+        }
+
         $services = $query
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->paginate(10)
             ->withQueryString()
-            ->through(function (Inquiry $inquiry) {
+            ->through(function (Inquiry $inquiry) use ($documents) {
+                $serviceRecord = $inquiry->serviceRecord;
+                $invoiceSnapshot = $serviceRecord?->invoiceRecord?->snapshot;
+                $invoiceTotal = $serviceRecord
+                    ? (float) (is_array($invoiceSnapshot) && array_key_exists('total', $invoiceSnapshot)
+                        ? $invoiceSnapshot['total']
+                        : $documents->buildServiceSnapshot($serviceRecord)['total'])
+                    : 0.0;
+                $amountPaid = $serviceRecord
+                    ? (float) $serviceRecord->payments->sum('amount')
+                    : 0.0;
+                $paymentStatus = $invoiceTotal <= 0 || $amountPaid >= $invoiceTotal
+                    ? 'paid'
+                    : ($amountPaid <= 0 ? 'pending' : 'partially_paid');
+
                 return [
                     'id' => $inquiry->id,
                     'inquiry_number' => $inquiry->inquiry_number,
@@ -327,7 +397,10 @@ class ScheduleController extends Controller
                     'customer_email' => $inquiry->customer_email,
                     'service_type' => $inquiry->service_type,
                     'item_name' => $inquiry->item_name,
+                    'intake_channel' => $inquiry->intake_channel ?? 'online',
+                    'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                     'urgency' => $inquiry->urgency,
+                    'urgency_fee' => (float) $inquiry->urgency_fee,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                     'preferred_time' => $inquiry->preferred_time,
@@ -335,14 +408,63 @@ class ScheduleController extends Controller
                         'id' => $technician->id,
                         'name' => $technician->name,
                     ])->values(),
-                    'completed_at' => $inquiry->updated_at?->format('M d, Y h:i A'),
+                    'completed_at' => $inquiry->serviceRecord?->completed_at?->format('M d, Y h:i A')
+                        ?? $inquiry->updated_at?->format('M d, Y h:i A'),
+                    'service_record' => $inquiry->serviceRecord ? [
+                        'id' => $inquiry->serviceRecord->id,
+                        'invoice_record' => $inquiry->serviceRecord->invoiceRecord ? [
+                            'record_number' => $inquiry->serviceRecord->invoiceRecord->record_number,
+                            'issued_at' => $inquiry->serviceRecord->invoiceRecord->issued_at?->format('M d, Y h:i A'),
+                            'url' => route('admin.service-records.invoice', $inquiry->serviceRecord),
+                        ] : null,
+                        'invoice_total' => $invoiceTotal,
+                        'amount_paid' => $amountPaid,
+                        'balance_due' => max(0, round($invoiceTotal - $amountPaid, 2)),
+                        'payment_status' => $paymentStatus,
+                        'payment_method' => $inquiry->serviceRecord->payments->last()?->payment_method
+                            ?? $inquiry->serviceRecord->payment_method,
+                        'payment_count' => $inquiry->serviceRecord->payments->count(),
+                        'payments' => $inquiry->serviceRecord->payments->map(fn ($payment) => [
+                            'id' => $payment->id,
+                            'amount' => (float) $payment->amount,
+                            'payment_method' => $payment->payment_method,
+                            'reference' => $payment->reference,
+                            'paid_at' => $payment->paid_at?->format('M d, Y h:i A'),
+                            'recorded_by' => $payment->recordedBy?->name
+                                ?? ($payment->is_legacy_import ? 'Historical balance (legacy import)' : 'Staff account unavailable'),
+                            'is_legacy_import' => (bool) $payment->is_legacy_import,
+                        ])->values(),
+                        'technician_name' => $inquiry->serviceRecord->technician?->name,
+                        'work_summary' => $inquiry->serviceRecord->work_summary,
+                        'labor_charge' => (float) $inquiry->serviceRecord->labor_charge,
+                        'additional_charge' => (float) $inquiry->serviceRecord->additional_charge,
+                        'total_income' => (float) $inquiry->serviceRecord->total_income,
+                        'items' => $inquiry->serviceRecord->items->map(fn ($item) => [
+                            'product_name' => $item->product_name,
+                            'action' => $item->action,
+                            'quantity' => (int) $item->quantity,
+                            'unit_price' => (float) $item->unit_price,
+                            'is_warranty_covered' => (bool) $item->is_warranty_covered,
+                        ])->values(),
+                    ] : null,
                 ];
             });
 
         return Inertia::render('Admin/ServiceHistory', [
             'services' => $services,
+            'serviceIncomeSummary' => [
+                'recorded_service_income' => (float) ServiceRecord::query()->sum('total_income'),
+                'service_records' => ServiceRecord::query()->count(),
+                'completed_without_record' => Inquiry::query()->where('status', 'completed')->whereDoesntHave('serviceRecord')->count(),
+                'parts_revenue' => (float) (ServiceRecordItem::query()->where('action', 'used')
+                    ->selectRaw('COALESCE(SUM(quantity * unit_price), 0) as amount')->value('amount') ?? 0),
+            ],
             'filters' => [
                 'search' => $filters['search'] ?? '',
+                'service_type' => $filters['service_type'] ?? '',
+                'urgency' => $filters['urgency'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
         ]);
     }

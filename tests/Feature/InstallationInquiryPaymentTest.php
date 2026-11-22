@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -63,7 +64,7 @@ class InstallationInquiryPaymentTest extends TestCase
         $this->assertDatabaseCount('pending_inquiry_checkouts', 0);
     }
 
-    public function test_installation_inquiry_is_created_only_after_paymongo_confirms_payment_and_fee_is_charged(): void
+    public function test_installation_inquiry_is_saved_before_paymongo_confirms_payment_and_fee_is_charged(): void
     {
         $customer = User::factory()->create([
             'role' => 'user',
@@ -79,6 +80,8 @@ class InstallationInquiryPaymentTest extends TestCase
             'stock_quantity' => 4,
             'is_featured' => false,
         ]);
+
+        $this->addItemToCart($customer, $product);
 
         Http::fake([
             'https://api.paymongo.com/v2/checkout_sessions' => Http::response([
@@ -106,11 +109,48 @@ class InstallationInquiryPaymentTest extends TestCase
                 'item_id' => $product->id,
             ]));
 
-        // Checkout preparation is not a submitted inquiry yet.
-        $this->assertDatabaseCount('inquiries', 0);
+        // The service must be visible in Service History while payment is pending.
+        $this->assertDatabaseCount('inquiries', 1);
         $this->assertDatabaseCount('pending_inquiry_checkouts', 1);
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'status' => 'pending_payment',
+            'inquiry_id' => Inquiry::query()->value('id'),
+        ]);
 
         $order = Order::query()->where('order_number', 'like', 'SV-%')->firstOrFail();
+        $inquiry = Inquiry::query()->firstOrFail();
+
+        // A service record may be visible in history before payment, but it must
+        // not be claimable by a technician until the linked order is paid.
+        $technician = User::factory()->create(['role' => 'technician']);
+        $this->actingAs($technician)
+            ->post(route('technician.jobs.claim', $inquiry))
+            ->assertRedirect()
+            ->assertSessionHasErrors('job');
+
+        $this->assertDatabaseMissing('inquiry_technician', [
+            'inquiry_id' => $inquiry->id,
+            'technician_id' => $technician->id,
+        ]);
+
+        $this->actingAs($customer)
+            ->get(route('inquiries.show', $inquiry))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('inquiry_details')
+                ->where('inquiry.order_id', $order->id)
+                ->where('inquiry.order_number', $order->order_number)
+                ->where('inquiry.payment_status', 'pending')
+                ->where('inquiry.created_date', $inquiry->created_at->format('M d, Y'))
+                ->where('inquiry.created_time', $inquiry->created_at->format('h:i A')));
+
+        $this->actingAs($customer)
+            ->get(route('inquiries.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('inquiries')
+                ->has('inquiries', 1)
+                ->where('inquiries.0.payment_status', 'pending'));
         $this->assertEquals(1000.00, (float) $order->subtotal);
         $this->assertEquals(250.00, (float) $order->installation_fee);
         $this->assertEquals(1250.00, (float) $order->total);
@@ -143,7 +183,7 @@ class InstallationInquiryPaymentTest extends TestCase
         $this->assertSame('paid', $order->fresh()->payment_status);
     }
 
-    public function test_an_unpaid_paymongo_return_does_not_create_an_installation_inquiry(): void
+    public function test_an_unpaid_paymongo_return_keeps_the_installation_inquiry_visible(): void
     {
         $customer = User::factory()->create([
             'role' => 'user',
@@ -159,6 +199,8 @@ class InstallationInquiryPaymentTest extends TestCase
             'stock_quantity' => 4,
             'is_featured' => false,
         ]);
+
+        $this->addItemToCart($customer, $product);
 
         Http::fake([
             'https://api.paymongo.com/v2/checkout_sessions' => Http::response([
@@ -200,17 +242,17 @@ class InstallationInquiryPaymentTest extends TestCase
                 && (int) $lineItems[0]['amount'] === 250000;
         });
 
-        $this->assertDatabaseCount('inquiries', 0);
+        $this->assertDatabaseCount('inquiries', 1);
         $this->assertSame('pending', $order->fresh()->payment_status);
         $this->assertDatabaseHas('pending_inquiry_checkouts', [
             'order_id' => $order->id,
             'status' => 'pending_payment',
-            'inquiry_id' => null,
+            'inquiry_id' => Inquiry::query()->value('id'),
         ]);
         $this->assertEquals(2500.00, (float) $order->fresh()->total);
     }
 
-    public function test_paid_installation_webhook_creates_inquiry_without_customer_returning_and_keeps_cart_items(): void
+    public function test_paid_installation_webhook_finalizes_existing_inquiry_without_customer_returning_and_keeps_cart_items(): void
     {
         $customer = User::factory()->create([
             'role' => 'user',
@@ -250,7 +292,7 @@ class InstallationInquiryPaymentTest extends TestCase
         ]));
 
         $order = Order::query()->where('order_number', 'like', 'SV-%')->firstOrFail();
-        $this->assertDatabaseCount('inquiries', 0);
+        $this->assertDatabaseCount('inquiries', 1);
         $this->assertSame('pending', $order->fresh()->payment_status);
 
         $webhookSecret = 'whsec_secureview_installation_test';
@@ -258,14 +300,23 @@ class InstallationInquiryPaymentTest extends TestCase
 
         $rawBody = json_encode([
             'data' => [
-                'type' => 'checkout_session.payment.paid',
-                'data' => [
-                    'id' => 'cs_installation_webhook_test',
-                    'type' => 'checkout_session',
-                    'attributes' => [
-                        'reference_number' => $order->order_number,
-                        'payments' => [
-                            ['id' => 'pay_installation_webhook_test'],
+                'id' => 'evt_installation_webhook_test',
+                'type' => 'event',
+                'attributes' => [
+                    'type' => 'checkout_session.payment.paid',
+                    'livemode' => false,
+                    'data' => [
+                        'id' => 'cs_installation_webhook_test',
+                        'type' => 'checkout_session',
+                        'attributes' => [
+                            'reference_number' => $order->order_number,
+                            'payments' => [
+                                [
+                                    'id' => 'pay_installation_webhook_test',
+                                    'type' => 'payment',
+                                    'attributes' => ['status' => 'paid'],
+                                ],
+                            ],
                         ],
                     ],
                 ],
@@ -310,9 +361,252 @@ class InstallationInquiryPaymentTest extends TestCase
         $this->assertDatabaseCount('inquiries', 1);
     }
 
+    public function test_cash_installation_creates_a_pending_service_without_redirecting_to_paymongo(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+        $product = Product::create([
+            'name' => 'Cash Installation Camera',
+            'category' => 'CCTV',
+            'warranty' => '1 year',
+            'price' => 1500,
+            'installation_fee' => 200,
+            'stock_quantity' => 3,
+            'is_featured' => false,
+        ]);
+
+        $this->addItemToCart($customer, $product);
+
+        Http::fake();
+
+        $this->actingAs($customer)
+            ->post('/inquiries', $this->inquiryPayload([
+                'item_type' => 'product',
+                'item_id' => $product->id,
+                'payment_method' => 'cash',
+                'urgency' => 'normal',
+            ]))
+            ->assertRedirect();
+
+        $order = Order::query()->where('payment_method', 'cash')->firstOrFail();
+        $inquiry = Inquiry::query()->firstOrFail();
+
+        $this->assertSame('pending', $order->payment_status);
+        $this->assertSame('pending', $order->order_status);
+        $this->assertSame('Installation', $inquiry->service_type);
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'status' => 'pending_payment',
+        ]);
+        Http::assertNothingSent();
+    }
+
+    private function addItemToCart(User $customer, Product $product, int $quantity = 1): void
+    {
+        $cart = $customer->cart()->create();
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => $quantity,
+            'price' => $product->price,
+        ]);
+    }
+
+    public function test_installation_cannot_use_a_catalog_item_that_is_not_in_the_customer_cart(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+
+        $product = Product::create([
+            'name' => 'Not In Cart Camera',
+            'category' => 'CCTV',
+            'warranty' => '1 year',
+            'price' => 1000,
+            'installation_fee' => 250,
+            'stock_quantity' => 4,
+            'is_featured' => false,
+        ]);
+
+        $this->actingAs($customer)
+            ->from('/inquiry?service_type=Installation')
+            ->post('/inquiries', $this->inquiryPayload([
+                'item_type' => 'product',
+                'item_id' => $product->id,
+            ]))
+            ->assertSessionHasErrors(['item_id']);
+
+        $this->assertDatabaseCount('inquiries', 0);
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('pending_inquiry_checkouts', 0);
+    }
+
+    public function test_urgent_installation_fee_is_calculated_server_side_and_charged_once_per_booking(): void
+    {
+        config(['services.secureview.booking_fees.urgent' => 500]);
+
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+
+        $product = Product::create([
+            'name' => 'Urgent Installation Camera',
+            'category' => 'CCTV',
+            'warranty' => '1 year',
+            'price' => 1000,
+            'installation_fee' => 250,
+            'stock_quantity' => 4,
+            'is_featured' => false,
+        ]);
+
+        $this->addItemToCart($customer, $product, 2);
+
+        Http::fake([
+            'https://api.paymongo.com/v2/checkout_sessions' => Http::response([
+                'data' => [
+                    'id' => 'cs_urgent_installation_test',
+                    'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_urgent_installation_test'],
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs($customer)->post('/inquiries', $this->inquiryPayload([
+            'item_type' => 'product',
+            'item_id' => $product->id,
+            'item_quantity' => 99,
+            'urgency' => 'urgent',
+            'urgency_fee' => 1,
+        ]));
+
+        $order = Order::query()->where('order_number', 'like', 'SV-%')->firstOrFail();
+        $inquiry = Inquiry::query()->firstOrFail();
+
+        $this->assertSame(2, (int) $order->items()->firstOrFail()->quantity);
+        $this->assertEquals(2000.00, (float) $order->subtotal);
+        $this->assertEquals(500.00, (float) $order->installation_fee);
+        $this->assertEquals(500.00, (float) $order->service_priority_fee);
+        $this->assertEquals(3000.00, (float) $order->total);
+        $this->assertEquals(500.00, (float) $inquiry->urgency_fee);
+
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
+            if (!str_ends_with($request->url(), '/v2/checkout_sessions')) {
+                return false;
+            }
+
+            $lineItems = $request['data']['attributes']['line_items'] ?? [];
+
+            return count($lineItems) === 3
+                && (int) $lineItems[0]['amount'] === 100000
+                && (int) $lineItems[0]['quantity'] === 2
+                && (int) $lineItems[1]['amount'] === 25000
+                && (int) $lineItems[1]['quantity'] === 2
+                && (int) $lineItems[2]['amount'] === 50000
+                && (int) $lineItems[2]['quantity'] === 1;
+        });
+    }
+
+    public function test_repeated_priority_booking_submission_reuses_the_existing_fee_order(): void
+    {
+        config(['services.secureview.booking_fees.emergency' => 1500]);
+
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://api.paymongo.com/v2/checkout_sessions' => Http::response([
+                'data' => [
+                    'id' => 'cs_duplicate_priority_test',
+                    'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_duplicate_priority_test'],
+                ],
+            ], 200),
+        ]);
+
+        $payload = $this->inquiryPayload([
+            'service_type' => 'Repair',
+            'urgency' => 'emergency',
+            'payment_method' => 'gcash',
+        ]);
+
+        $this->actingAs($customer)->post('/inquiries', $payload);
+        $this->actingAs($customer)->post('/inquiries', $payload)->assertRedirect();
+
+        $this->assertDatabaseCount('inquiries', 1);
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertDatabaseCount('pending_inquiry_checkouts', 1);
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'booking_request_token' => $payload['booking_request_token'],
+            'status' => 'pending_payment',
+        ]);
+        $this->assertEquals(1500.00, (float) Order::query()->firstOrFail()->total);
+
+        // Only the first submission may create a hosted checkout session.
+        Http::assertSentCount(1);
+    }
+
+    public function test_emergency_noninstallation_booking_creates_a_fee_only_order_without_a_catalog_item(): void
+    {
+        config(['services.secureview.booking_fees.emergency' => 1500]);
+
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+
+        Http::fake([
+            'https://api.paymongo.com/v2/checkout_sessions' => Http::response([
+                'data' => [
+                    'id' => 'cs_emergency_service_test',
+                    'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_emergency_service_test'],
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs($customer)->post('/inquiries', $this->inquiryPayload([
+            'service_type' => 'Repair',
+            'urgency' => 'emergency',
+            'payment_method' => 'gcash',
+            'urgency_fee' => 1,
+        ]));
+
+        $order = Order::query()->where('order_number', 'like', 'SV-%')->firstOrFail();
+        $inquiry = Inquiry::query()->firstOrFail();
+
+        $this->assertSame('Repair', $inquiry->service_type);
+        $this->assertEquals(1500.00, (float) $inquiry->urgency_fee);
+        $this->assertEquals(1500.00, (float) $order->service_priority_fee);
+        $this->assertEquals(1500.00, (float) $order->total);
+        $this->assertSame(0, $order->items()->count());
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'status' => 'pending_payment',
+        ]);
+
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
+            if (!str_ends_with($request->url(), '/v2/checkout_sessions')) {
+                return false;
+            }
+
+            $lineItems = $request['data']['attributes']['line_items'] ?? [];
+
+            return count($lineItems) === 1
+                && str_contains($lineItems[0]['name'] ?? '', 'Emergency')
+                && (int) $lineItems[0]['amount'] === 150000
+                && (int) $lineItems[0]['quantity'] === 1;
+        });
+    }
+
     private function inquiryPayload(array $overrides = []): array
     {
         return array_merge([
+            'booking_request_token' => (string) Str::uuid(),
             'customer_name' => 'SecureView Test Customer',
             'customer_phone' => '09123456789',
             'customer_email' => 'customer@example.com',

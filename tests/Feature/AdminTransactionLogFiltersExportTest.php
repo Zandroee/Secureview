@@ -95,7 +95,7 @@ class AdminTransactionLogFiltersExportTest extends TestCase
 
         $csv = $response->streamedContent();
 
-        $this->assertStringContainsString('"Order Number","Payment Transaction ID","Checkout Session ID"', $csv);
+        $this->assertStringContainsString('"Order Number","Sales Channel","Payment Transaction ID","Checkout Session ID"', $csv);
         $this->assertStringContainsString('ORD-CSV-MATCH', $csv);
         $this->assertStringContainsString('cs_test_session_123', $csv);
         $this->assertStringContainsString("'=2+2", $csv);

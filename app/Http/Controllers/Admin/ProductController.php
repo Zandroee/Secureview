@@ -22,6 +22,8 @@ class ProductController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:80'],
+            'brand' => ['nullable', 'string', 'max:120'],
+            'stock_status' => ['nullable', 'in:in_stock,low_stock,out_of_stock'],
         ]);
 
         $query = Product::query()
@@ -33,12 +35,25 @@ class ProductController extends Controller
             $query->where(function ($builder) use ($search) {
                 $builder
                     ->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('brand', 'like', '%' . $search . '%')
                     ->orWhere('category', 'like', '%' . $search . '%');
             });
         }
 
         if (!empty($filters['category'])) {
             $query->where('category', $filters['category']);
+        }
+
+        if (!empty($filters['brand'])) {
+            $query->where('brand', $filters['brand']);
+        }
+
+        if (($filters['stock_status'] ?? null) === 'in_stock') {
+            $query->where('stock_quantity', '>', 5);
+        } elseif (($filters['stock_status'] ?? null) === 'low_stock') {
+            $query->whereBetween('stock_quantity', [1, 5]);
+        } elseif (($filters['stock_status'] ?? null) === 'out_of_stock') {
+            $query->where('stock_quantity', '<=', 0);
         }
 
         $products = $query
@@ -50,7 +65,6 @@ class ProductController extends Controller
                     'can_delete',
                     (int) $product->package_items_count === 0
                         && (int) $product->reviews_count === 0
-                        && (int) $product->order_items_count === 0
                         && (int) $product->cart_items_count === 0
                 );
 
@@ -66,7 +80,7 @@ class ProductController extends Controller
 
         $allProducts = Product::all();
 
-        $allPackagesForOptions = Package::query()->get(['category', 'warranty', 'badge']);
+        $allPackagesForOptions = Package::query()->get(['brand', 'category', 'warranty', 'badge']);
 
         // Include values already in the catalog and explicitly-added options, except
         // options that an admin has removed from the shared dropdown.
@@ -111,6 +125,7 @@ class ProductController extends Controller
             'products' => $products,
             'categories' => $categories,
             'categoryOptions' => $catalogOptions('category'),
+            'brandOptions' => $catalogOptions('brand'),
             'warrantyOptions' => $catalogOptions('warranty'),
             'badgeOptions' => $catalogOptions('badge'),
             'packages' => $packages,
@@ -123,6 +138,8 @@ class ProductController extends Controller
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'category' => $filters['category'] ?? '',
+                'brand' => $filters['brand'] ?? '',
+                'stock_status' => $filters['stock_status'] ?? '',
             ],
             'success' => $request->session()->get('success'),
         ]);
@@ -239,7 +256,7 @@ class ProductController extends Controller
     ) {
         if ($this->hasReferences($product)) {
             return back()->withErrors([
-                'product' => 'This product is used by a package, cart, order, or review and cannot be deleted. Remove or resolve those references first.',
+                'product' => 'This product is still used by a package, cart, or review. Run the catalog reference cleanup before removing the old catalog.',
             ]);
         }
 
@@ -257,10 +274,16 @@ class ProductController extends Controller
 
             $oldSnapshot = $this->snapshot($lockedProduct);
 
+            // Stock adjustments are catalog maintenance records; purchase line items remain as
+            // historical snapshots so invoices and transaction records keep their descriptions.
+            InventoryAdjustment::query()
+                ->where('product_id', $lockedProduct->id)
+                ->delete();
+
             $activityLogger->record(
                 $request,
                 'product_deleted',
-                "Deleted product {$lockedProduct->name}.",
+                "Deleted product {$lockedProduct->name}; historical order line items were retained.",
                 $lockedProduct,
                 $oldSnapshot,
                 []
@@ -284,7 +307,7 @@ class ProductController extends Controller
         AdminActivityLogger $activityLogger
     ) {
         $validated = $request->validate([
-            'stock_quantity' => ['required', 'integer', 'min:0'],
+            'stock_quantity' => ['required', 'integer', 'min:0', 'max:100000'],
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -337,11 +360,15 @@ class ProductController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'brand' => ['nullable', 'string', 'max:120'],
             'category' => ['required', 'string', 'max:120'],
             'warranty' => ['required', 'string', 'max:120'],
             'price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'sale_price' => ['nullable', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'sale_starts_at' => ['nullable', 'date'],
+            'sale_ends_at' => ['nullable', 'date'],
             'installation_fee' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
-            'stock_quantity' => ['required', 'integer', 'min:0'],
+            'stock_quantity' => ['required', 'integer', 'min:0', 'max:100000'],
             'stock_reason' => ['nullable', 'string', 'max:255'],
             'badge' => ['nullable', 'string', 'max:80'],
             'image' => ['nullable', 'string', 'max:2048'],
@@ -365,9 +392,10 @@ class ProductController extends Controller
             ->values()
             ->all();
 
-        return [
+        $fields = [
             'name' => trim($validated['name']),
-            'category' => trim($validated['category']),
+            'brand' => filled($validated['brand'] ?? null) ? trim($validated['brand']) : null,
+            'category' => trim(preg_replace('/\\s+/u', ' ', $validated['category']) ?? ''),
             'warranty' => trim($validated['warranty']),
             'price' => $validated['price'],
             'installation_fee' => filled($validated['installation_fee'] ?? null) ? (float) $validated['installation_fee'] : null,
@@ -377,6 +405,36 @@ class ProductController extends Controller
             'specifications' => $specifications ?: null,
             'is_featured' => (bool) $validated['is_featured'],
         ];
+
+        // Promo sales are managed in Promotions & Vouchers. Preserve existing sale
+        // settings when the normal product editor does not submit those fields.
+        if (array_intersect(['sale_price', 'sale_starts_at', 'sale_ends_at'], array_keys($validated))) {
+            $timezone = config('app.timezone', 'UTC');
+            $salePrice = filled($validated['sale_price'] ?? null) ? (float) $validated['sale_price'] : null;
+            $saleStartsAt = filled($validated['sale_starts_at'] ?? null)
+                ? \Illuminate\Support\Carbon::parse($validated['sale_starts_at'], $timezone)
+                : null;
+            $saleEndsAt = filled($validated['sale_ends_at'] ?? null)
+                ? \Illuminate\Support\Carbon::parse($validated['sale_ends_at'], $timezone)
+                : null;
+
+            if ($salePrice !== null && $salePrice >= (float) $validated['price']) {
+                throw ValidationException::withMessages([
+                    'sale_price' => 'The sale price must be lower than the regular price.',
+                ]);
+            }
+            if ($saleStartsAt && $saleEndsAt && $saleEndsAt->lessThanOrEqualTo($saleStartsAt)) {
+                throw ValidationException::withMessages([
+                    'sale_ends_at' => 'The sale end must be after the start date.',
+                ]);
+            }
+
+            $fields['sale_price'] = $salePrice;
+            $fields['sale_starts_at'] = $saleStartsAt?->format('Y-m-d H:i:s');
+            $fields['sale_ends_at'] = $saleEndsAt?->format('Y-m-d H:i:s');
+        }
+
+        return $fields;
     }
 
     /**
@@ -462,7 +520,6 @@ class ProductController extends Controller
     {
         return $product->packageItems()->exists()
             || $product->reviews()->exists()
-            || $product->orderItems()->exists()
             || $product->cartItems()->exists();
     }
 
@@ -470,9 +527,13 @@ class ProductController extends Controller
     {
         return [
             'name' => $product->name,
+            'brand' => $product->brand,
             'category' => $product->category,
             'warranty' => $product->warranty,
             'price' => (float) $product->price,
+            'sale_price' => $product->sale_price === null ? null : (float) $product->sale_price,
+            'sale_starts_at' => $product->sale_starts_at,
+            'sale_ends_at' => $product->sale_ends_at,
             'installation_fee' => $product->installation_fee === null ? null : (float) $product->installation_fee,
             'stock_quantity' => (int) $product->stock_quantity,
             'badge' => $product->badge,

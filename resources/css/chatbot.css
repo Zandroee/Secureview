@@ -37,7 +37,8 @@
     flex-direction: column;
     width: min(380px, calc(100vw - 32px));
     height: min(560px, calc(100dvh - 120px));
-    min-height: 360px;
+    min-height: min(360px, calc(100dvh - 140px));
+    max-height: calc(100dvh - 90px);
     overflow: hidden;
     border: 1px solid #e3e9f2;
     border-radius: 18px;
@@ -88,6 +89,7 @@
 
 .sv-chat-messages {
     display: flex;
+    min-height: 0;
     flex: 1;
     flex-direction: column;
     gap: 12px;
@@ -167,5 +169,351 @@
 @media (max-width: 575.98px) {
     .secureview-chatbot { right: 12px; bottom: 12px; }
     .sv-chat-launcher { min-height: 50px; padding: 0 16px; }
-    .sv-chat-panel { right: -4px; bottom: 62px; width: calc(100vw - 24px); height: min(560px, calc(100dvh - 90px)); }
+    .sv-chat-panel {
+        right: -4px;
+        bottom: 62px;
+        width: calc(100vw - 24px);
+        height: min(560px, calc(100dvh - 90px));
+        min-height: min(320px, calc(100dvh - 110px));
+        max-height: calc(100dvh - 80px);
+    }
+}
+
+/* Make the floating help widget stand out from the site footer. */
+.sv-chat-launcher {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, .7);
+    box-shadow: 0 10px 28px rgba(234, 88, 12, .34);
+}
+
+.sv-chat-launcher:hover {
+    box-shadow: 0 14px 32px rgba(234, 88, 12, .44);
+}
+
+.sv-chat-header {
+    background: linear-gradient(120deg, #f97316 0%, #c2410c 100%);
+}
+
+.sv-chat-form button {
+    background: #ea580c;
+}
+
+.sv-chat-form button:hover:not(:disabled) {
+    background: #c2410c;
+}
+
+.sv-chat-form input {
+    min-width: 0;
+    background: #fff;
+    color: #172033;
+}
+
+html[data-bs-theme="dark"] .sv-chat-launcher {
+    background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+    color: #082f49;
+    border-color: rgba(165, 243, 252, .8);
+    box-shadow: 0 10px 32px rgba(6, 182, 212, .32);
+}
+
+html[data-bs-theme="dark"] .sv-chat-launcher:hover {
+    box-shadow: 0 14px 36px rgba(6, 182, 212, .45);
+}
+
+html[data-bs-theme="dark"] .sv-chat-panel {
+    background: #111827;
+    border-color: #334155;
+    color: #e5e7eb;
+    box-shadow: 0 22px 70px rgba(0, 0, 0, .48);
+}
+
+html[data-bs-theme="dark"] .sv-chat-header {
+    background: linear-gradient(120deg, #0e7490 0%, #075985 100%);
+    color: #f0f9ff;
+}
+
+html[data-bs-theme="dark"] .sv-chat-messages {
+    background: #111827;
+}
+
+html[data-bs-theme="dark"] .sv-chat-bubble {
+    background: #1f2937;
+    color: #e5e7eb;
+    border-color: #3b4a5f;
+}
+
+html[data-bs-theme="dark"] .sv-chat-bubble-user {
+    background: #075985;
+    color: #f0f9ff;
+    border-color: #0891b2;
+}
+
+html[data-bs-theme="dark"] .sv-chat-typing,
+html[data-bs-theme="dark"] .sv-chat-suggestions > span {
+    color: #b7c5d8;
+}
+
+html[data-bs-theme="dark"] .sv-chat-suggestions button {
+    background: #1e293b;
+    color: #bae6fd;
+    border-color: #155e75;
+}
+
+html[data-bs-theme="dark"] .sv-chat-suggestions button:hover:not(:disabled) {
+    background: #164e63;
+    color: #f0f9ff;
+}
+
+html[data-bs-theme="dark"] .sv-chat-form,
+html[data-bs-theme="dark"] .sv-chat-privacy {
+    background: #18212f;
+    border-color: #334155;
+    color: #b7c5d8;
+}
+
+html[data-bs-theme="dark"] .sv-chat-form input {
+    background: #0b1220;
+    color: #f3f6fb;
+    border-color: #475569;
+}
+
+html[data-bs-theme="dark"] .sv-chat-form input::placeholder {
+    color: #94a3b8;
+}
+
+html[data-bs-theme="dark"] .sv-chat-form input:focus {
+    border-color: #22d3ee;
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, .16);
+}
+
+html[data-bs-theme="dark"] .sv-chat-form button {
+    background: #06b6d4;
+    color: #082f49;
+}
+
+html[data-bs-theme="dark"] .sv-chat-form button:hover:not(:disabled) {
+    background: #22d3ee;
+}
+
+html[data-bs-theme="dark"] .sv-chat-error {
+    background: #451a1a;
+    border: 1px solid #7f1d1d;
+    color: #fecaca;
+}
+
+@media (max-width: 575.98px) {
+    .secureview-chatbot {
+        z-index: 2050;
+    }
+}
+
+
+
+/* Phase B: keep the floating chat within phone safe areas and improve text contrast. */
+.sv-chat-typing {
+    color: #475569;
+}
+
+.sv-chat-suggestions > span {
+    color: #4b5563;
+}
+
+.sv-chat-privacy {
+    color: #596579;
+    font-size: .72rem;
+    line-height: 1.4;
+}
+
+.sv-chat-launcher:focus-visible,
+.sv-chat-close:focus-visible,
+.sv-chat-suggestions button:focus-visible,
+.sv-chat-form input:focus-visible,
+.sv-chat-form button:focus-visible {
+    outline: 3px solid #1d4ed8;
+    outline-offset: 3px;
+}
+
+html[data-bs-theme="dark"] .sv-chat-launcher:focus-visible,
+html[data-bs-theme="dark"] .sv-chat-close:focus-visible,
+html[data-bs-theme="dark"] .sv-chat-suggestions button:focus-visible,
+html[data-bs-theme="dark"] .sv-chat-form input:focus-visible,
+html[data-bs-theme="dark"] .sv-chat-form button:focus-visible {
+    outline-color: #67e8f9;
+}
+
+@media (max-width: 575.98px) {
+    .secureview-chatbot {
+        right: max(12px, env(safe-area-inset-right, 0px));
+        bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    }
+
+    .sv-chat-launcher {
+        width: 48px;
+        min-width: 48px;
+        min-height: 48px;
+        padding: 0;
+    }
+
+    .sv-chat-launcher > span {
+        display: none;
+    }
+
+    .sv-chat-panel {
+        right: 0;
+        bottom: 60px;
+        width: min(420px, calc(100vw - 24px));
+        height: min(560px, calc(100dvh - 104px - env(safe-area-inset-top, 0px)));
+        min-height: min(260px, calc(100dvh - 120px));
+        max-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px));
+        border-radius: 16px;
+    }
+
+    .sv-chat-header,
+    .sv-chat-messages {
+        padding: 12px;
+    }
+
+    .sv-chat-privacy {
+        padding-right: 10px;
+        padding-left: 10px;
+    }
+}
+
+
+/* Netmax Trading live-support handoff */
+.sv-chat-launcher {
+    background: linear-gradient(135deg, #087cff 0%, #073b9b 100%);
+    border-color: rgba(255, 255, 255, .82);
+    box-shadow: 0 12px 30px rgba(7, 79, 190, .3);
+}
+
+.sv-chat-launcher:hover {
+    background: linear-gradient(135deg, #1689ff 0%, #0644ad 100%);
+    box-shadow: 0 15px 34px rgba(7, 79, 190, .4);
+}
+
+.sv-chat-header {
+    background: linear-gradient(120deg, #0756c7 0%, #082f73 100%);
+}
+
+.sv-chat-status-waiting {
+    background: #fbbf24;
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, .16);
+}
+
+.sv-chat-handoff-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 13px;
+    border: 1px solid #bfd7ff;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #eff6ff 0%, #ffffff 100%);
+    color: #17345f;
+}
+
+.sv-chat-handoff-card > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sv-chat-handoff-card strong {
+    font-size: .87rem;
+}
+
+.sv-chat-handoff-card span {
+    color: #52657e;
+    font-size: .78rem;
+    line-height: 1.45;
+}
+
+.sv-chat-handoff-button {
+    align-self: flex-start;
+    min-height: 38px;
+    padding: 8px 13px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #087cff 0%, #0756c7 100%);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 700;
+    box-shadow: 0 5px 13px rgba(7, 79, 190, .2);
+}
+
+.sv-chat-handoff-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0668df 0%, #073b9b 100%);
+    transform: translateY(-1px);
+}
+
+.sv-chat-handoff-button:disabled {
+    cursor: wait;
+    opacity: .65;
+}
+
+.sv-chat-row-admin {
+    justify-content: flex-start;
+}
+
+.sv-chat-bubble-admin {
+    border-color: #bfd7ff;
+    border-radius: 14px 14px 14px 4px;
+    background: #eef5ff;
+    color: #18345d;
+}
+
+.sv-chat-sender-name {
+    display: block;
+    margin-bottom: 4px;
+    color: #0756c7;
+    font-size: .72rem;
+}
+
+.sv-chat-support-notice {
+    padding: 10px 12px;
+    border: 1px solid #c7d7ee;
+    border-radius: 10px;
+    background: #edf4ff;
+    color: #25456f;
+    font-size: .78rem;
+    line-height: 1.45;
+}
+
+.sv-chat-support-notice button {
+    display: block;
+    margin-top: 7px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #0756c7;
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+html[data-bs-theme="dark"] .sv-chat-handoff-card,
+html[data-bs-theme="dark"] .sv-chat-bubble-admin,
+html[data-bs-theme="dark"] .sv-chat-support-notice {
+    border-color: #1e5797;
+    background: #102b4f;
+    color: #e5f0ff;
+}
+
+html[data-bs-theme="dark"] .sv-chat-handoff-card span {
+    color: #b7cce8;
+}
+
+html[data-bs-theme="dark"] .sv-chat-sender-name,
+html[data-bs-theme="dark"] .sv-chat-support-notice button {
+    color: #93c5fd;
+}
+
+html[data-bs-theme="dark"] .sv-chat-header {
+    background: linear-gradient(120deg, #0756c7 0%, #082f73 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sv-chat-launcher,
+    .sv-chat-handoff-button {
+        transition: none;
+    }
 }

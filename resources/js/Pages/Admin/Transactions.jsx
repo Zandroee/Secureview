@@ -6,11 +6,15 @@ import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
 function paymentClass(status) {
-    if (status === "paid") {
+    if (status === "paid" || status === "refunded") {
         return "bg-success-subtle text-success";
     }
 
-    if (status === "failed") {
+    if (status === "partially_refunded") {
+        return "bg-info-subtle text-info-emphasis";
+    }
+
+    if (status === "failed" || status === "cancelled") {
         return "bg-danger-subtle text-danger";
     }
 
@@ -57,6 +61,7 @@ export default function AdminTransactions({
     const [paymentMethod, setPaymentMethod] = useState(
         filters.payment_method ?? ""
     );
+    const [salesChannel, setSalesChannel] = useState(filters.sales_channel ?? "");
     const [orderStatus, setOrderStatus] = useState(filters.order_status ?? "");
     const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
     const [dateTo, setDateTo] = useState(filters.date_to ?? "");
@@ -80,6 +85,7 @@ export default function AdminTransactions({
                 search,
                 payment_status: paymentStatus,
                 payment_method: paymentMethod,
+                sales_channel: salesChannel,
                 order_status: orderStatus,
                 date_from: dateFrom,
                 date_to: dateTo,
@@ -96,6 +102,7 @@ export default function AdminTransactions({
         setSearch("");
         setPaymentStatus("");
         setPaymentMethod("");
+        setSalesChannel("");
         setOrderStatus("");
         setDateFrom("");
         setDateTo("");
@@ -131,7 +138,7 @@ export default function AdminTransactions({
                     >
                         <div className="mb-4">
                             <div className="small text-primary fw-bold">
-                                SECUREVIEW ADMIN
+                                NETMAX TRADING ADMIN
                             </div>
 
                             <h1 className="fw-bold mb-1">
@@ -192,6 +199,12 @@ export default function AdminTransactions({
                                         ).toLocaleString()}
                                     </div>
 
+                                    {Number(summary.refunded_amount ?? 0) > 0 && (
+                                        <div className="small text-danger mt-1">
+                                            {summary.refunded ?? 0} refunded orders · ₱{Number(summary.refunded_amount).toLocaleString()} returned
+                                        </div>
+                                    )}
+
                                     {summary.failed > 0 && (
                                         <div className="small text-danger mt-1">
                                             {summary.failed} failed
@@ -237,7 +250,10 @@ export default function AdminTransactions({
                                             <option value="">All payment</option>
                                             <option value="pending">Pending</option>
                                             <option value="paid">Paid</option>
+                                            <option value="partially_refunded">Partially refunded</option>
+                                            <option value="refunded">Refunded</option>
                                             <option value="failed">Failed</option>
+                                            <option value="cancelled">Cancelled</option>
                                         </select>
                                     </div>
 
@@ -255,6 +271,15 @@ export default function AdminTransactions({
                                             <option value="gcash">GCash</option>
                                             <option value="card">Card</option>
                                             <option value="maya">Maya</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="col-sm-6 col-lg-2">
+                                        <label className="form-label small fw-semibold mb-1">SALES CHANNEL</label>
+                                        <select className="form-select" value={salesChannel} onChange={(event) => setSalesChannel(event.target.value)}>
+                                            <option value="">All channels</option>
+                                            <option value="online">Online</option>
+                                            <option value="walk_in">Walk-in / in-store</option>
                                         </select>
                                     </div>
 
@@ -385,6 +410,7 @@ export default function AdminTransactions({
                                                         <div className="small text-muted">
                                                             {transaction.order_number}
                                                         </div>
+                                                        <span className={"badge mt-1 " + (transaction.sales_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{transaction.sales_channel === "walk_in" ? "Walk-in sale" : "Online order"}</span>
                                                         {transaction.invoice_record && (
                                                             <div className="small text-success mt-1">
                                                                 <i className="bi bi-file-earmark-check me-1"></i>
@@ -586,6 +612,11 @@ export default function AdminTransactions({
                                 </div>
 
                                 <div className="col-md-6">
+                                    <div className="small text-muted">SALES CHANNEL</div>
+                                    <div className="fw-semibold">{viewingTransaction.sales_channel === "walk_in" ? "Walk-in / in-store" : "Online"}</div>
+                                </div>
+
+                                <div className="col-md-6">
                                     <div className="small text-muted">
                                         PAYMENT METHOD
                                     </div>
@@ -667,7 +698,7 @@ export default function AdminTransactions({
                                 </div>
                             ) : (
                                 <div className="small text-muted">
-                                    No earlier event history is available for this order. SecureView cannot reconstruct status changes from before timeline logging was enabled.
+                                    No earlier event history is available for this order. Netmax Trading cannot reconstruct status changes from before timeline logging was enabled.
                                 </div>
                             )}
                         </div>

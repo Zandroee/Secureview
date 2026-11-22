@@ -3,7 +3,7 @@ import Footer from "../Components/footer";
 import PackageCard from "../Components/PackageCard";
 import ProductCard from "../Components/ProductCard";
 
-import { Link, router } from "@inertiajs/react";
+import { Link } from "@inertiajs/react";
 import { useState } from "react";
 
 function FeaturedNavigation({ currentPage, totalPages, onPrevious, onNext }) {
@@ -41,25 +41,45 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
         <>
             <Navbar />
 
-            <header className="bg-primary text-white">
-                <div className="container-fluid px-0">
-                    <div className="row g-0">
-                        <div className="col-lg-6">
-                            <img src="/images/cctv-cameras.jpg" alt="CCTV Cameras" className="img-fluid w-100" style={{ height: "600px", objectFit: "cover", objectPosition: "center" }} />
-                        </div>
-
-                        <div className="col-lg-6 d-flex align-items-center">
-                            <div className="w-100 text-center px-4 px-md-5 py-5" style={{ fontFamily: "Outfit, sans-serif" }}>
-                                <h1 className="display-3 fw-bold mb-4">Secure your home or your business</h1>
-                                <p className="display-6 mb-5">Secure them with our optimal CCTV packages offers just for you!</p>
-
-                                <div className="d-flex flex-column flex-sm-row justify-content-center gap-3">
-                                    <a href="#featured-packages" className="btn btn-light text-primary fw-bold fs-5 px-5 py-2">VIEW PACKAGES</a>
-                                    <Link href="/products" className="btn btn-outline-light fw-bold fs-5 px-5 py-2">BROWSE CAMERAS</Link>
-                                </div>
-                            </div>
+            <header className="home-hero" aria-labelledby="home-hero-title">
+                <div className="home-hero-content">
+                    <div className="home-hero-copy">
+                        <div className="home-hero-eyebrow">CCTV &amp; Security Solutions</div>
+                        <h1 id="home-hero-title">
+                            Protect what <span className="home-hero-accent">matters.</span>
+                        </h1>
+                        <p>
+                            Reliable CCTV cameras, complete security packages, and installation support for homes and businesses.
+                        </p>
+                        <div className="home-hero-actions">
+                            <a href="#featured-packages" className="home-hero-button home-hero-button-primary">
+                                VIEW PACKAGES
+                            </a>
+                            <Link href="/products" className="home-hero-button home-hero-button-outline">
+                                BROWSE CAMERAS
+                            </Link>
                         </div>
                     </div>
+                </div>
+
+                <div className="home-hero-media">
+                    <picture>
+                        <source
+                            media="(max-width: 767px)"
+                            srcSet="https://images.unsplash.com/photo-1758514475000-f7d515078c81?fm=webp&fit=crop&w=1000&q=80"
+                        />
+                        <img
+                            src="https://images.unsplash.com/photo-1758514475000-f7d515078c81?fm=webp&fit=crop&w=1800&q=85"
+                            srcSet="https://images.unsplash.com/photo-1758514475000-f7d515078c81?fm=webp&fit=crop&w=900&q=78 900w, https://images.unsplash.com/photo-1758514475000-f7d515078c81?fm=webp&fit=crop&w=1400&q=82 1400w, https://images.unsplash.com/photo-1758514475000-f7d515078c81?fm=webp&fit=crop&w=1800&q=85 1800w"
+                            sizes="(max-width: 767px) 100vw, 56vw"
+                            alt="Outdoor CCTV camera mounted on a building with trees in the background"
+                            className="home-hero-image"
+                            width="1800"
+                            height="1200"
+                            fetchPriority="high"
+                            decoding="async"
+                        />
+                    </picture>
                 </div>
             </header>
 
@@ -78,7 +98,7 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
                     <div className="row g-3 g-md-4">
                         {currentPackages.map((pkg) => (
                             <div className="col-sm-6 col-lg-4" key={pkg.id}>
-                                <PackageCard name={pkg.name} image={pkg.image} price={pkg.price} badge={pkg.badge} specifications={pkg.specifications} rating={pkg.rating} onDetails={() => router.visit(`/packages/${pkg.id}`)} />
+                                <PackageCard name={pkg.name} brand={pkg.brand} reviewsCount={pkg.reviews_count} image={pkg.image} price={pkg.price} badge={pkg.badge} specifications={pkg.specifications} inclusions={pkg.inclusions} rating={pkg.rating} href={`/packages/${pkg.id}`} />
                             </div>
                         ))}
                     </div>
@@ -102,7 +122,7 @@ export default function Landing({ cctvPackages = [], cameras = [] }) {
                     <div className="row g-3 g-md-4">
                         {currentCameras.map((product) => (
                             <div className="col-sm-6 col-xl-3" key={product.id}>
-                                <ProductCard name={product.name} image={product.image} price={product.price} badge={product.badge} specifications={product.specifications} rating={product.rating} onDetails={() => router.visit(`/products/${product.id}`)} />
+                                <ProductCard name={product.name} brand={product.brand} reviewsCount={product.reviews_count} image={product.image} price={product.price} badge={product.badge} specifications={product.specifications} rating={product.rating} href={`/products/${product.id}`} />
                             </div>
                         ))}
                     </div>

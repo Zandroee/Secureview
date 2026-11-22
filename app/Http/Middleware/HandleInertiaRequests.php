@@ -3,6 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Models\CustomerNotification;
+use App\Models\SupportConversation;
+use Closure;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -16,6 +18,27 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
+
+    /**
+     * Prevent authenticated page payloads from being restored from browser or
+     * intermediary caches after logout.
+     */
+    public function handle(Request $request, Closure $next)
+    {
+        $isAuthenticated = $request->user() !== null;
+        $response = parent::handle($request, $next);
+
+        if ($isAuthenticated) {
+            $response->headers->set(
+                'Cache-Control',
+                'private, no-store, no-cache, must-revalidate, max-age=0'
+            );
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', '0');
+        }
+
+        return $response;
+    }
 
     /**
      * Determines the current asset version.
@@ -41,14 +64,28 @@ class HandleInertiaRequests extends Middleware
         $cartCount = 0;
         $notificationCount = 0;
         $latestNotification = null;
+        $supportConversationCount = 0;
 
         if ($user) {
+            if ($user->role === 'admin') {
+                $supportConversationCount = SupportConversation::query()
+                    ->whereIn('status', ['waiting', 'active'])
+                    ->whereHas('messages', fn ($query) => $query
+                        ->where('sender_type', 'customer')
+                        ->whereNull('read_at'))
+                    ->count();
+            }
             $cartCount = $user->cart?->items()->sum('quantity') ?? 0;
-            $notificationCount = $user->customerNotifications()
+            $visibleNotifications = $user->customerNotifications();
+            if ($user->role === 'technician') {
+                $visibleNotifications->where('type', '!=', 'new_order');
+            }
+
+            $notificationCount = (clone $visibleNotifications)
                 ->whereNull('read_at')
                 ->count();
 
-            $latestNotification = $user->customerNotifications()
+            $latestNotification = (clone $visibleNotifications)
                 ->whereNull('read_at')
                 ->latest('id')
                 ->first(['id', 'title', 'message', 'action_url']);
@@ -61,8 +98,15 @@ class HandleInertiaRequests extends Middleware
             'cartCount' => $cartCount,
             'notificationCount' => $notificationCount,
             'latestNotification' => $latestNotification,
+            'supportConversationCount' => $supportConversationCount,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                'serviceNotification' => fn () => $request->session()->get('serviceNotification'),
+                'status' => fn () => $request->session()->get('status'),
+                'message' => fn () => $request->session()->get('message'),
+                'rateLimitMessage' => fn () => $request->session()->get('rateLimitMessage'),
+                'verificationRequired' => fn () => $request->session()->get('verificationRequired', false),
+                'verificationEmail' => fn () => $request->session()->get('verificationEmail'),
             ],
         ]);
     }

@@ -41,6 +41,11 @@ export default function Invoice({ invoice }) {
         business.bir_atp_number &&
         business.serial_number_range
     );
+    const invoiceItemCount = Array.isArray(invoice.items) ? invoice.items.length : 0;
+    const printZoom = Math.max(
+        0.58,
+        Math.min(0.88, 0.88 - Math.max(0, invoiceItemCount - 3) * 0.025)
+    );
 
     return (
         <div className="invoice-page bg-light min-vh-100">
@@ -86,27 +91,123 @@ export default function Invoice({ invoice }) {
                     padding-top: 16px;
                     color: #64748b;
                     font-size: 12px;
+                    line-height: 1.4;
                 }
                 @media print {
-                    @page { size: A4; margin: 12mm; }
+                    @page { size: A4 portrait; margin: 5mm; }
                     html, body, #app, .invoice-page {
+                        width: 100% !important;
+                        height: auto !important;
+                        min-height: 0 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        overflow: visible !important;
                         background: #fff !important;
+                        color: #20252b !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    .no-print, .site-footer, .secureview-chatbot { display: none !important; }
+                    .invoice-page > main.container {
+                        width: 100% !important;
+                        max-width: none !important;
                         margin: 0 !important;
                         padding: 0 !important;
                     }
-                    .no-print { display: none !important; }
                     .invoice-sheet {
+                        zoom: var(--invoice-print-zoom, .82);
+                        width: calc(100% / var(--invoice-print-zoom, .82)) !important;
                         max-width: none !important;
-                        width: 100% !important;
+                        margin: 0 !important;
                         padding: 0 !important;
                         border: 0 !important;
                         border-radius: 0 !important;
                         box-shadow: none !important;
+                        background: #fff !important;
+                        color: #20252b !important;
+                        font-size: 8.5pt !important;
+                        line-height: 1.15 !important;
                     }
-                    .invoice-table { page-break-inside: auto; }
-                    .invoice-table tr { page-break-inside: avoid; page-break-after: auto; }
+                    .invoice-sheet * {
+                        line-height: 1.18 !important;
+                        overflow-wrap: anywhere;
+                    }
+                    .invoice-masthead {
+                        gap: 10px !important;
+                        padding-bottom: 7px !important;
+                        border-bottom-width: 1px !important;
+                    }
+                    .invoice-masthead .display-6 { font-size: 1.55rem !important; }
+                    .invoice-masthead .h4 { font-size: 12pt !important; }
+                    .invoice-sheet .row {
+                        --bs-gutter-x: .55rem;
+                        --bs-gutter-y: .3rem;
+                    }
+                    .invoice-sheet .my-4 {
+                        margin-top: .45rem !important;
+                        margin-bottom: .45rem !important;
+                    }
+                    .invoice-sheet .mt-4 { margin-top: .4rem !important; }
+                    .invoice-sheet .mb-3 { margin-bottom: .35rem !important; }
+                    .invoice-sheet .mt-3 { margin-top: .35rem !important; }
+                    .invoice-sheet .mt-2 { margin-top: .2rem !important; }
+                    .invoice-sheet .py-2 {
+                        padding-top: 2px !important;
+                        padding-bottom: 2px !important;
+                    }
+                    .invoice-sheet .py-3 {
+                        padding-top: 4px !important;
+                        padding-bottom: 4px !important;
+                    }
+                    .invoice-meta {
+                        padding: 6px !important;
+                        border-radius: 5px !important;
+                    }
+                    .invoice-meta .mb-3 { margin-bottom: .3rem !important; }
+                    .invoice-table {
+                        width: 100% !important;
+                        margin-bottom: 4px !important;
+                        font-size: 7.5pt !important;
+                        page-break-inside: auto;
+                    }
+                    .invoice-table th {
+                        font-size: 7pt !important;
+                        padding: 3px 5px !important;
+                        white-space: nowrap;
+                    }
+                    .invoice-table td {
+                        font-size: 7.5pt !important;
+                        padding: 3px 5px !important;
+                    }
+                    .invoice-table tr {
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                        page-break-after: auto;
+                    }
+                    .invoice-sheet .table-responsive { overflow: visible !important; }
+                    .invoice-total-row {
+                        font-size: 9.5pt !important;
+                        border-top-width: 1px !important;
+                    }
+                    .invoice-disclaimer {
+                        margin-top: 5px !important;
+                        padding-top: 5px !important;
+                        font-size: 6.2pt !important;
+                        line-height: 1.12 !important;
+                    }
+                    .invoice-sheet .small,
+                    .invoice-sheet small { font-size: 7.2pt !important; }
+                    .invoice-sheet .badge {
+                        margin-top: 3px !important;
+                        padding: 2px 5px !important;
+                        font-size: 7pt !important;
+                    }
+                    .invoice-print-note {
+                        display: block !important;
+                        margin-top: 4px !important;
+                        font-size: 6.5pt !important;
+                    }
                     a { color: inherit !important; text-decoration: none !important; }
-                    .invoice-print-note { display: block !important; }
                 }
             `}</style>
 
@@ -117,12 +218,12 @@ export default function Invoice({ invoice }) {
             <main className="container py-4 py-md-5">
                 <div className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4 no-print">
                     <div>
-                        <div className="small text-uppercase fw-bold text-primary mb-1">SecureView</div>
+                        <div className="small text-uppercase fw-bold text-primary mb-1">Netmax Trading</div>
                         <h1 className="h3 fw-bold mb-1" style={{ fontFamily: "Outfit, sans-serif" }}>
                             INVOICE
                         </h1>
                         <div className="text-muted small">
-                            Order reference {invoice.reference_number}
+                            {invoice.document_type === "service_invoice" ? "Service reference " : "Order reference "}{invoice.reference_number}
                         </div>
                         {invoice.is_recorded && (
                             <div className="small text-success fw-semibold mt-1">
@@ -132,9 +233,9 @@ export default function Invoice({ invoice }) {
                     </div>
                     <div className="d-flex flex-wrap gap-2">
                         <Link
-                            href={invoice.viewer_role === "admin"
-                                ? "/admin/purchases"
-                                : "/purchases/" + invoice.order_id}
+                            href={invoice.document_type === "service_invoice"
+                                ? (invoice.viewer_role === "admin" ? "/admin/service-history" : "/inquiries/" + invoice.inquiry_id)
+                                : (invoice.viewer_role === "admin" ? "/admin/purchases" : "/purchases/" + invoice.order_id)}
                             className="btn btn-outline-primary fw-semibold"
                         >
                             BACK
@@ -149,7 +250,7 @@ export default function Invoice({ invoice }) {
                     <div className="alert alert-info no-print" role="status">
                         <strong>Saved internal invoice record:</strong> {invoice.record_number}
                         {invoice.record_issued_at ? " · Saved " + invoice.record_issued_at : ""}.
-                        This page uses the preserved snapshot, so later order or seller-profile changes will not rewrite it.
+                        This page uses the preserved snapshot, so later order or service-record changes will not rewrite its original charges.
                         The reference is internal only; it is not a BIR-authorized serial number or a BIR-registered tax invoice.
                     </div>
                 ) : (
@@ -161,7 +262,7 @@ export default function Invoice({ invoice }) {
                     )
                 )}
 
-                <article className="invoice-sheet">
+                <article className="invoice-sheet" style={{ "--invoice-print-zoom": printZoom }}>
                     <div className="invoice-masthead d-flex flex-column flex-md-row justify-content-between gap-4">
                         <div>
                             <div className="d-flex align-items-center gap-2 mb-3">
@@ -171,9 +272,9 @@ export default function Invoice({ invoice }) {
                                 </div>
                                 <div>
                                     <div className="h4 fw-bold mb-0" style={{ fontFamily: "Outfit, sans-serif" }}>
-                                        {business.name || "SecureView"}
+                                        {business.name || "Netmax Trading"}
                                     </div>
-                                    <div className="text-muted small">ORDER INVOICE</div>
+                                    <div className="text-muted small">{invoice.document_type === "service_invoice" ? "SERVICE INVOICE" : "ORDER INVOICE"}</div>
                                 </div>
                             </div>
                             {business.registered_name && <div className="fw-semibold">{business.registered_name}</div>}
@@ -195,7 +296,7 @@ export default function Invoice({ invoice }) {
                             {invoice.is_recorded && (
                                 <div className="small fw-semibold mt-1">Internal record: {invoice.record_number}</div>
                             )}
-                            <div className="small text-muted mt-1">Order placed: {invoice.document_date || "—"}</div>
+                            <div className="small text-muted mt-1">{invoice.document_type === "service_invoice" ? "Service completed: " : "Order placed: "}{invoice.document_date || "—"}</div>
                             {invoice.is_recorded && invoice.record_issued_at && (
                                 <div className="small text-muted mt-1">Record saved: {invoice.record_issued_at}</div>
                             )}
@@ -221,22 +322,38 @@ export default function Invoice({ invoice }) {
                         </div>
                         <div className="col-md-5">
                             <div className="invoice-meta">
-                                <div className="small text-uppercase text-muted fw-bold mb-3">Order details</div>
+                                <div className="small text-uppercase text-muted fw-bold mb-3">{invoice.document_type === "service_invoice" ? "Service details" : "Order details"}</div>
                                 <div className="d-flex justify-content-between gap-3 mb-2">
-                                    <span className="text-muted">Order reference</span>
+                                    <span className="text-muted">{invoice.document_type === "service_invoice" ? "Service reference" : "Order reference"}</span>
                                     <span className="fw-semibold text-end">{invoice.reference_number}</span>
                                 </div>
+                                {invoice.document_type !== "service_invoice" && (
+                                    <div className="d-flex justify-content-between gap-3 mb-2">
+                                        <span className="text-muted">Sales channel</span>
+                                        <span className="fw-semibold text-end">{invoice.sales_channel === "walk_in" ? "Walk-in / in-store" : "Online"}</span>
+                                    </div>
+                                )}
                                 <div className="d-flex justify-content-between gap-3 mb-2">
                                     <span className="text-muted">Payment method</span>
                                     <span className="fw-semibold text-end">{methodLabel(invoice.payment_method)}</span>
                                 </div>
                                 <div className="d-flex justify-content-between gap-3">
-                                    <span className="text-muted">Order status</span>
+                                    <span className="text-muted">{invoice.document_type === "service_invoice" ? "Service status" : "Order status"}</span>
                                     <span className="fw-semibold text-end text-capitalize">{humanize(invoice.order_status)}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    {invoice.document_type === "service_invoice" && invoice.service && (
+                        <section className="border rounded-3 p-3 mb-4">
+                            <div className="small text-uppercase text-muted fw-bold mb-2">Service performed</div>
+                            <div className="fw-semibold mb-2">{invoice.service.type}{invoice.service.item_name ? " · " + invoice.service.item_name : ""}</div>
+                            <div style={{ whiteSpace: "pre-wrap" }}>{invoice.service.work_summary}</div>
+                            {invoice.service.technician && <div className="small text-muted mt-2">Technician: {invoice.service.technician}</div>}
+                            {invoice.service.customer_notes && <div className="small text-muted mt-2">Notes: {invoice.service.customer_notes}</div>}
+                        </section>
+                    )}
 
                     <div className="table-responsive">
                         <table className="table invoice-table align-middle">
@@ -249,9 +366,9 @@ export default function Invoice({ invoice }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {invoice.items.map((item) => (
-                                    <tr key={item.id}>
-                                        <td className="fw-semibold">{item.name}</td>
+                                {invoice.items.map((item, index) => (
+                                    <tr key={item.id ?? index}>
+                                        <td><div className="fw-semibold">{item.name}</div>{item.notes && <div className="small text-muted mt-1">{item.notes}</div>}</td>
                                         <td className="text-end">{item.quantity}</td>
                                         <td className="text-end text-nowrap">{peso(item.unit_price)}</td>
                                         <td className="text-end text-nowrap">{peso(item.amount)}</td>
@@ -264,19 +381,33 @@ export default function Invoice({ invoice }) {
                     <div className="row justify-content-end mt-4">
                         <div className="col-sm-8 col-md-6 col-lg-5">
                             <div className="d-flex justify-content-between py-2">
-                                <span className="text-muted">Items subtotal</span>
+                                <span className="text-muted">{invoice.document_type === "service_invoice" ? "Service charges subtotal" : "Items subtotal"}</span>
                                 <span>{peso(invoice.subtotal)}</span>
                             </div>
+                            {Number(invoice.discount_amount) > 0 && (
+                                <div className="d-flex justify-content-between py-2 text-success">
+                                    <span className="text-muted">Voucher discount{invoice.voucher_code ? " (" + invoice.voucher_code + ")" : ""}</span>
+                                    <span>−{peso(invoice.discount_amount)}</span>
+                                </div>
+                            )}
                             {Number(invoice.installation_fee) > 0 && (
                                 <div className="d-flex justify-content-between py-2">
                                     <span className="text-muted">Installation fee</span>
                                     <span>{peso(invoice.installation_fee)}</span>
                                 </div>
                             )}
-                            <div className="d-flex justify-content-between py-2">
-                                <span className="text-muted">Shipping</span>
-                                <span>{peso(invoice.shipping_fee)}</span>
-                            </div>
+                            {Number(invoice.service_priority_fee) > 0 && (
+                                <div className="d-flex justify-content-between py-2">
+                                    <span className="text-muted">Urgent / emergency booking fee</span>
+                                    <span>{peso(invoice.service_priority_fee)}</span>
+                                </div>
+                            )}
+                            {invoice.document_type !== "service_invoice" && (
+                                <div className="d-flex justify-content-between py-2">
+                                    <span className="text-muted">Shipping</span>
+                                    <span>{peso(invoice.shipping_fee)}</span>
+                                </div>
+                            )}
                             <div className="invoice-total-row d-flex justify-content-between gap-3 py-3 fw-bold">
                                 <span>Total</span>
                                 <span className="text-nowrap">{peso(invoice.total)}</span>
@@ -294,14 +425,51 @@ export default function Invoice({ invoice }) {
                         </div>
                     </div>
 
+                    {invoice.document_type === "service_invoice" && Array.isArray(invoice.payments) && invoice.payments.length > 0 && (
+                        <section className="mt-4">
+                            <h2 className="h6 fw-bold mb-2">Payment history</h2>
+                            <div className="table-responsive">
+                                <table className="table table-sm invoice-table align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Date received</th>
+                                            <th>Method / reference</th>
+                                            <th>Recorded by</th>
+                                            <th className="text-end">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {invoice.payments.map((payment) => (
+                                            <tr key={payment.id}>
+                                                <td>
+                                                    {payment.paid_at || "—"}
+                                                    {payment.is_legacy_import && <div className="small text-muted">Legacy balance imported</div>}
+                                                    {payment.notes && <div className="small text-muted">{payment.notes}</div>}
+                                                </td>
+                                                <td>
+                                                    <div className="fw-semibold">{methodLabel(payment.payment_method)}</div>
+                                                    <div className="small text-muted">{payment.reference || "No reference supplied"}</div>
+                                                </td>
+                                                <td>{payment.recorded_by || "—"}</td>
+                                                <td className="text-end text-nowrap fw-semibold">{peso(payment.amount)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    )}
+
                     <div className="invoice-disclaimer">
                         <div className="fw-semibold mb-1">
-                            {invoice.is_recorded ? "Saved SecureView internal invoice record" : "SecureView order document"}
+                            {invoice.is_recorded
+                                ? (invoice.document_type === "service_invoice" ? "Saved Netmax Trading internal service invoice" : "Saved Netmax Trading internal invoice record")
+                                : (invoice.document_type === "service_invoice" ? "Netmax Trading service document" : "Netmax Trading order document")}
                         </div>
-                        This document is an internal order document, not a BIR-registered tax invoice.
+                        This document is an internal {invoice.document_type === "service_invoice" ? "service" : "order"} document, not a BIR-registered tax invoice.
                         {invoice.is_recorded
-                            ? " The saved version preserves the order, customer, item, and seller details as recorded on " + (invoice.record_issued_at || "the saved date") + ". Its internal reference is not a BIR-authorized invoice serial number."
-                            : " It reflects the order and payment details currently stored in SecureView."}
+                            ? " The saved version preserves the customer, itemized charges, and seller details as recorded on " + (invoice.record_issued_at || "the saved date") + ". Its internal reference is not a BIR-authorized invoice serial number."
+                            : " It reflects the service charges or order details currently stored in Netmax Trading."}
                         {" "}No VAT, withholding tax, or other tax amount is calculated by this document. The authorized BIR serial-number series is not consumed by saving an internal record. Confirm applicable tax treatment, required invoice information, and electronic-invoicing obligations with your accountant before using an invoice for tax purposes.
                     </div>
                     <div className="small text-muted mt-3 invoice-print-note">

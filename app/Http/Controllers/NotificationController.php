@@ -9,13 +9,54 @@ use Inertia\Inertia;
 
 class NotificationController extends Controller
 {
+    private const NOTIFICATIONS_PER_PAGE = 10;
+
     public function index(Request $request)
     {
-        $notifications = $request->user()
-            ->customerNotifications()
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:120'],
+            'type' => ['nullable', 'string', 'max:60'],
+            'read_status' => ['nullable', 'in:read,unread'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+        ]);
+
+        // Scope every filter and result to the signed-in account. Historical order
+        // notifications are hidden from technicians because product order/payment
+        // administration is outside their role.
+        $notificationsQuery = $this->visibleNotificationsFor($request->user());
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $notificationsQuery->where(function ($query) use ($search) {
+                $query->where('title', 'like', '%' . $search . '%')
+                    ->orWhere('message', 'like', '%' . $search . '%');
+            });
+        }
+
+        if (!empty($filters['type'])) {
+            $notificationsQuery->where('type', $filters['type']);
+        }
+
+        if (($filters['read_status'] ?? null) === 'read') {
+            $notificationsQuery->whereNotNull('read_at');
+        } elseif (($filters['read_status'] ?? null) === 'unread') {
+            $notificationsQuery->whereNull('read_at');
+        }
+
+        if (!empty($filters['date_from'])) {
+            $notificationsQuery->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $notificationsQuery->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
+        $notifications = $notificationsQuery
             ->latest()
-            ->get()
-            ->map(function (CustomerNotification $notification) {
+            ->paginate(self::NOTIFICATIONS_PER_PAGE)
+            ->withQueryString()
+            ->through(function (CustomerNotification $notification) {
                 return [
                     'id' => $notification->id,
                     'type' => $notification->type,
@@ -25,12 +66,41 @@ class NotificationController extends Controller
                     'read' => $notification->read_at !== null,
                     'created_at' => $notification->created_at?->format('M d, Y h:i A'),
                 ];
-            })
-            ->values();
+            });
 
         return Inertia::render('notifications', [
             'notifications' => $notifications,
+            'unreadCount' => $this->visibleNotificationsFor($request->user())->whereNull('read_at')->count(),
+            'filters' => [
+                'search' => $filters['search'] ?? '',
+                'type' => $filters['type'] ?? '',
+                'read_status' => $filters['read_status'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
+            ],
+            'notificationTypes' => $this->visibleNotificationsFor($request->user())
+                ->select('type')
+                ->distinct()
+                ->orderBy('type')
+                ->pluck('type')
+                ->values(),
         ]);
+    }
+
+
+    /**
+     * Hide historical product-order notifications from technician accounts.
+     * New order notifications are now delivered to administrators only.
+     */
+    private function visibleNotificationsFor(User $user)
+    {
+        $query = $user->customerNotifications();
+
+        if ($user->role === 'technician') {
+            $query->where('type', '!=', 'new_order');
+        }
+
+        return $query;
     }
 
     public function storeAnnouncement(Request $request)
@@ -43,13 +113,13 @@ class NotificationController extends Controller
         ]);
 
         $recipients = User::query()
-            ->where('role', 'user')
+            ->whereIn('role', ['user', 'technician'])
             ->select('id')
             ->get();
 
         if ($recipients->isEmpty()) {
             return back()->withErrors([
-                'announcement' => 'There are no customer accounts to receive this announcement yet.',
+                'announcement' => 'There are no customer or technician accounts to receive this announcement yet.',
             ]);
         }
 
@@ -64,7 +134,7 @@ class NotificationController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Announcement sent to ' . $recipients->count() . ' customer account(s).');
+        return back()->with('success', 'Announcement sent to ' . $recipients->count() . ' customer and technician account(s).');
     }
 
     public function markAsRead(Request $request, CustomerNotification $notification)
@@ -79,17 +149,133 @@ class NotificationController extends Controller
             ]);
         }
 
-        if ($notification->action_url) {
-            return redirect($notification->action_url);
+        $destination = $this->internalNotificationDestination(
+            $notification->action_url,
+            $request
+        );
+
+        if ($destination !== null) {
+            return redirect()->to($destination);
         }
 
         return back();
     }
 
+    public function destroy(Request $request, CustomerNotification $notification)
+    {
+        if ((int) $notification->user_id !== (int) $request->user()->id) {
+            abort(404);
+        }
+
+        $notification->delete();
+
+        return $this->redirectToValidNotificationPage(
+            $request,
+            'Notification deleted.'
+        );
+    }
+
+    public function destroySelected(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'distinct'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+        ]);
+
+        $user = $request->user();
+        $requestedIds = array_map('intval', $validated['ids']);
+        $ownedIds = $user->customerNotifications()
+            ->whereIn('id', $requestedIds)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        // Never delete another account's notifications, even if IDs are tampered with.
+        if (count($ownedIds) !== count($requestedIds)) {
+            abort(404);
+        }
+
+        $deletedCount = $user->customerNotifications()
+            ->whereIn('id', $ownedIds)
+            ->delete();
+
+        return $this->redirectToValidNotificationPage(
+            $request,
+            $deletedCount . ' notification(s) deleted.'
+        );
+    }
+
+    private function redirectToValidNotificationPage(Request $request, string $message)
+    {
+        $total = $this->visibleNotificationsFor($request->user())->count();
+        $requestedPage = max(1, (int) $request->input('page', $request->query('page', 1)));
+        $lastPage = max(1, (int) ceil($total / self::NOTIFICATIONS_PER_PAGE));
+        $page = min($requestedPage, $lastPage);
+
+        return redirect()
+            ->route('notifications.index', ['page' => $page])
+            ->with('success', $message);
+    }
+
+    /**
+     * Keep notification actions on this application.
+     *
+     * Some legacy rows may contain absolute URLs generated on a local
+     * development machine (for example, https://localhost:8000/...). Convert
+     * those to same-origin paths when a customer clicks them in production.
+     * Also refuse unrelated external URLs to avoid open redirects.
+     */
+    private function internalNotificationDestination(?string $actionUrl, Request $request): ?string
+    {
+        if (!is_string($actionUrl) || trim($actionUrl) === '') {
+            return null;
+        }
+
+        $actionUrl = trim($actionUrl);
+
+        if (str_starts_with($actionUrl, '/') && !str_starts_with($actionUrl, '//')) {
+            return $actionUrl;
+        }
+
+        $parts = parse_url($actionUrl);
+
+        if (
+            !is_array($parts)
+            || !isset($parts['scheme'], $parts['host'])
+            || !in_array(strtolower($parts['scheme']), ['http', 'https'], true)
+        ) {
+            return null;
+        }
+
+        $host = strtolower($parts['host']);
+        $currentHost = strtolower($request->getHost());
+        $developmentHosts = ['localhost', '127.0.0.1', '::1'];
+
+        if ($host !== $currentHost && !in_array($host, $developmentHosts, true)) {
+            return null;
+        }
+
+        $path = $parts['path'] ?? '/';
+
+        if (!str_starts_with($path, '/') || str_starts_with($path, '//')) {
+            return null;
+        }
+
+        if (isset($parts['query'])) {
+            $path .= '?' . $parts['query'];
+        }
+
+        if (isset($parts['fragment'])) {
+            $path .= '#' . $parts['fragment'];
+        }
+
+        return $path;
+    }
+
     public function markAllAsRead(Request $request)
     {
-        $request->user()
-            ->customerNotifications()
+        $this->visibleNotificationsFor($request->user())
             ->whereNull('read_at')
             ->update([
                 'read_at' => now(),

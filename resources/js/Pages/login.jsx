@@ -1,17 +1,23 @@
-import { Link, useForm } from "@inertiajs/react";
+import { Link, router, useForm, usePage } from "@inertiajs/react";
 import { useState } from "react";
 
 import Navbar from "../Components/navbar";
+import GoogleLoginButton from "../Components/GoogleLoginButton";
+import RateLimitNotice from "../Components/RateLimitNotice";
 import "../../css/login.css";
 
 export default function Login() {
+    const { props } = usePage();
     const [showPassword, setShowPassword] = useState(false);
     const [emailError, setEmailError] = useState("");
     const [passwordError, setPasswordError] = useState("");
+    const [resendingVerification, setResendingVerification] = useState(false);
+    const [verificationActionError, setVerificationActionError] = useState("");
 
     const { data, setData, post, processing } = useForm({
         email: "",
         password: "",
+        remember: false,
     });
 
     const handleSubmit = (e) => {
@@ -64,6 +70,32 @@ export default function Login() {
         });
     };
 
+    const resendVerification = () => {
+        const email = String(props.flash?.verificationEmail || data.email || "").trim();
+
+        if (!email) {
+            setVerificationActionError("Enter the email address used to create your account.");
+            return;
+        }
+
+        setVerificationActionError("");
+        setResendingVerification(true);
+
+        router.post(
+            "/email/verification-code/resend",
+            { email },
+            {
+                preserveScroll: true,
+                onError: (errors) => {
+                    setVerificationActionError(
+                        errors.email || "We could not resend the verification email. Please try again shortly."
+                    );
+                },
+                onFinish: () => setResendingVerification(false),
+            }
+        );
+    };
+
     const emailHasError = Boolean(emailError);
     const passwordHasError = Boolean(passwordError);
 
@@ -76,6 +108,53 @@ export default function Login() {
                 className="container-fluid px-3 px-md-4 py-5"
                 style={{ minHeight: "calc(100vh - 75px)" }}
             >
+                <RateLimitNotice className="mx-auto mb-4" />
+
+                {props.flash?.verificationRequired && (
+                    <div className="alert alert-warning mx-auto mb-4" role="alert" style={{ maxWidth: "820px" }}>
+                        <div className="fw-bold mb-1">
+                            <i className="bi bi-envelope-exclamation me-2"></i>
+                            Email verification required
+                        </div>
+                        <p className="mb-2">
+                            Your password is correct, but this account has not verified its email address yet.
+                            {props.flash.verificationEmail ? (
+                                <> We are checking <strong>{props.flash.verificationEmail}</strong>. Please check your inbox and spam folder for the six-digit verification code before logging in.</>
+                            ) : (
+                                <> Please check the inbox and spam folder for the six-digit verification code before logging in.</>
+                            )}
+                        </p>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-outline-dark fw-semibold"
+                            onClick={resendVerification}
+                            disabled={resendingVerification}
+                        >
+                            {resendingVerification ? "Sending..." : "Resend verification code"}
+                        </button>
+                        {props.flash?.message && (
+                            <div className="small mt-2" role="status">{props.flash.message}</div>
+                        )}
+                        {verificationActionError && (
+                            <div className="small text-danger mt-2" role="alert">{verificationActionError}</div>
+                        )}
+                    </div>
+                )}
+                {!props.flash?.verificationRequired && props.flash?.message && (
+                    <div className="alert alert-info mx-auto mb-4" role="status" style={{ maxWidth: "820px" }}>
+                        {props.flash.message}
+                    </div>
+                )}
+                {props.flash?.status && (
+                    <div
+                        className="alert alert-info mx-auto mb-4"
+                        role="status"
+                        style={{ maxWidth: "820px" }}
+                    >
+                        {props.flash.status}
+                    </div>
+                )}
+
                 <h1
                     className="text-center fw-bold mb-5"
                     style={{
@@ -83,7 +162,7 @@ export default function Login() {
                         fontSize: "clamp(2rem, 4vw, 3rem)",
                     }}
                 >
-                    SECUREVIEW
+                    NETMAX TRADING
                 </h1>
 
                 <div
@@ -203,13 +282,24 @@ export default function Login() {
                                 )}
                             </div>
 
-                            {/* FORGOT PASSWORD */}
-                            <div className="mb-4">
+                            {/* REMEMBER ME / FORGOT PASSWORD */}
+                            <div className="login-options-row">
+                                <label htmlFor="login-remember" className="login-remember-control">
+                                    <input
+                                        id="login-remember"
+                                        name="remember"
+                                        type="checkbox"
+                                        className="login-remember-checkbox"
+                                        checked={Boolean(data.remember)}
+                                        onChange={(event) => setData("remember", event.target.checked)}
+                                    />
+                                    <span className="login-remember-label">Remember Me</span>
+                                </label>
                                 <Link
                                     href="/forgot-password"
-                                    className="text-primary text-decoration-none small"
+                                    className="login-forgot-password"
                                 >
-                                    Forgot Password
+                                    Forgot Password?
                                 </Link>
                             </div>
 
@@ -239,13 +329,7 @@ export default function Login() {
                             </div>
 
                             <div className="d-flex flex-column gap-2">
-                                <a
-                                    href="/auth/google"
-                                    className="btn btn-outline-dark fw-semibold py-2"
-                                >
-                                    <i className="bi bi-google me-2"></i>
-                                    Continue with Google
-                                </a>
+                                <GoogleLoginButton />
 
                                 <a
                                     href="/auth/facebook"

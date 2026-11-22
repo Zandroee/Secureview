@@ -1,6 +1,5 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
-import CustomerSidebar from "../Components/customerSidebar";
 import { Link, router, usePage } from "@inertiajs/react";
 import { useState } from "react";
 
@@ -15,9 +14,14 @@ function statusClass(status) {
     if (
         status === "paid" ||
         status === "delivered" ||
-        status === "completed"
+        status === "completed" ||
+        status === "refunded"
     ) {
         return "bg-success-subtle text-success";
+    }
+
+    if (status === "partially_refunded") {
+        return "bg-info-subtle text-info-emphasis";
     }
 
     if (
@@ -40,6 +44,19 @@ export default function Purchases({ orders = [] }) {
     const [payingOrderId, setPayingOrderId] = useState(null);
     const [cancellingOrderId, setCancellingOrderId] = useState(null);
     const [viewingOrder, setViewingOrder] = useState(null);
+    const [search, setSearch] = useState("");
+    const [orderStatusFilter, setOrderStatusFilter] = useState("");
+    const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
+    const [paymentMethodFilter, setPaymentMethodFilter] = useState("");
+    const filteredOrders = orders.filter((order) => {
+        const query = search.trim().toLowerCase();
+        const searchable = [order.order_number, ...(order.items ?? []).map((item) => item.name), order.order_status, order.payment_status]
+            .filter(Boolean).join(" ").toLowerCase();
+        return (!query || searchable.includes(query))
+            && (!orderStatusFilter || order.order_status === orderStatusFilter)
+            && (!paymentStatusFilter || order.payment_status === paymentStatusFilter)
+            && (!paymentMethodFilter || order.payment_method === paymentMethodFilter);
+    });
 
     const payNow = (order) => {
         setPayingOrderId(order.id);
@@ -102,11 +119,7 @@ export default function Purchases({ orders = [] }) {
             >
                 <div className="container py-4">
                     <div className="row g-3 align-items-start">
-                        <div className="col-lg-3">
-                            <CustomerSidebar active="purchases" />
-                        </div>
-
-                        <div className="col-lg-8">
+                        <div className="col-12">
                             <div
                                 className="bg-white border rounded-3 p-3"
                                 style={{
@@ -116,7 +129,7 @@ export default function Purchases({ orders = [] }) {
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <div>
                                         <div className="small text-primary fw-bold">
-                                            SECUREVIEW
+                                            NETMAX TRADING
                                         </div>
 
                                         <h2
@@ -126,7 +139,7 @@ export default function Purchases({ orders = [] }) {
                                                 fontSize: "1.05rem",
                                             }}
                                         >
-                                            PURCHASES
+                                            ORDER HISTORY
                                         </h2>
                                     </div>
                                 </div>
@@ -143,7 +156,38 @@ export default function Purchases({ orders = [] }) {
                                     <div className="alert alert-danger small">{props.errors.order}</div>
                                 )}
 
-                                {orders.length === 0 ? (
+                                <div className="row g-2 mb-3">
+                                    <div className="col-md-4">
+                                        <label className="form-label small fw-semibold" htmlFor="orders-search">Search order history</label>
+                                        <input id="orders-search" type="search" className="form-control form-control-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Order number, item, or status" />
+                                    </div>
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-semibold" htmlFor="orders-status">Order status</label>
+                                        <select id="orders-status" className="form-select form-select-sm" value={orderStatusFilter} onChange={(event) => setOrderStatusFilter(event.target.value)}>
+                                            <option value="">All statuses</option>
+                                            {Array.from(new Set(orders.map((order) => order.order_status).filter(Boolean))).sort().map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-semibold" htmlFor="orders-payment-status">Payment status</label>
+                                        <select id="orders-payment-status" className="form-select form-select-sm" value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)}>
+                                            <option value="">All payment statuses</option>
+                                            {Array.from(new Set(orders.map((order) => order.payment_status).filter(Boolean))).sort().map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="col-md-2">
+                                        <label className="form-label small fw-semibold" htmlFor="orders-payment-method">Payment method</label>
+                                        <select id="orders-payment-method" className="form-select form-select-sm" value={paymentMethodFilter} onChange={(event) => setPaymentMethodFilter(event.target.value)}>
+                                            <option value="">All methods</option>
+                                            <option value="cash">Cash</option>
+                                            <option value="gcash">GCash</option>
+                                            <option value="card">Card</option>
+                                            <option value="maya">Maya</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {filteredOrders.length === 0 ? (
                                     <div
                                         className="border rounded-3 p-5 text-center"
                                         style={{
@@ -162,11 +206,11 @@ export default function Purchases({ orders = [] }) {
                                                     "Outfit, sans-serif",
                                             }}
                                         >
-                                            NO PURCHASES YET
+                                            {orders.length === 0 ? "NO ORDERS YET" : "NO MATCHING ORDERS"}
                                         </h5>
 
                                         <p className="small text-muted mb-3">
-                                            Your order history will appear here.
+                                            {orders.length === 0 ? "Your order history will appear here." : "Try changing or clearing your filters."}
                                         </p>
 
                                         <Link
@@ -178,7 +222,7 @@ export default function Purchases({ orders = [] }) {
                                     </div>
                                 ) : (
                                     <div className="d-flex flex-column gap-2">
-                                        {orders.map((order) => (
+                                        {filteredOrders.map((order) => (
                                             <div
                                                 key={order.id}
                                                 className="border rounded-3 p-2"
@@ -220,6 +264,13 @@ export default function Purchases({ orders = [] }) {
                                                                 )[2]
                                                             }
                                                         </div>
+
+                                                        {order.fulfillment_method === "pickup" && (
+                                                            <div className="small text-success fw-semibold mt-2">
+                                                                <i className="bi bi-shop me-1" />SHOP PICKUP
+                                                                <div className="small fw-normal text-muted">{order.pickup_address || "Pickup location will be confirmed by Netmax Trading"}</div>
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                     <div className="col-md-3">
@@ -285,8 +336,15 @@ export default function Purchases({ orders = [] }) {
                                                                     )
                                                                 }
                                                             >
-                                                                VIEW ITEMS
+                                                                {order.items.length === 0 && order.service_booking ? "VIEW SERVICE & REFUND" : "VIEW ITEMS"}
                                                             </button>
+
+                                                            <Link
+                                                                href={"/purchases/" + order.id}
+                                                                className="btn btn-outline-primary btn-sm fw-bold"
+                                                            >
+                                                                {order.service_booking ? "VIEW SERVICE & REFUND" : "ORDER DETAILS / REFUND"}
+                                                            </Link>
 
                                                             {canPay(order) && (
                                                                 <button
@@ -465,6 +523,10 @@ export default function Purchases({ orders = [] }) {
                                                     item.price
                                                 ).toLocaleString()}
                                             </div>
+
+                                            <div className="small text-muted mt-1">
+                                                Warranty: {item.warranty_period || "Not specified"}
+                                            </div>
                                         </div>
 
                                         <Link
@@ -485,6 +547,22 @@ export default function Purchases({ orders = [] }) {
                             ))}
                         </div>
 
+                        {viewingOrder.service_booking && (
+                            <div className="border rounded-3 p-3 mt-3">
+                                <div className="small text-primary fw-bold">SERVICE BOOKING</div>
+                                <div className="fw-semibold">{viewingOrder.service_booking.service_type} · {viewingOrder.service_booking.inquiry_number}</div>
+                                <div className="small text-muted text-capitalize mt-1">Status: {viewingOrder.service_booking.status.replace(/_/g, " ")}</div>
+                                <div className="small text-muted">Preferred schedule: {viewingOrder.service_booking.preferred_date || "To be arranged"} · {viewingOrder.service_booking.preferred_time || "Flexible"}</div>
+                                <Link href={viewingOrder.service_booking.url} className="btn btn-outline-primary btn-sm mt-2" onClick={() => setViewingOrder(null)}>VIEW SERVICE DETAILS</Link>
+                            </div>
+                        )}
+
+                        {Number(viewingOrder.service_priority_fee ?? 0) > 0 && (
+                            <div className="d-flex justify-content-between align-items-center mt-3 small">
+                                <span className="text-muted">Urgent / emergency booking fee</span>
+                                <span className="fw-semibold">₱{Number(viewingOrder.service_priority_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                        )}
                         <div className="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
                             <span className="small text-muted">
                                 {viewingOrder.items.length} item

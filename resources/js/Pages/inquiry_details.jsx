@@ -32,9 +32,9 @@ function urgencyClass(urgency) {
     return "bg-success-subtle text-success";
 }
 
-export default function InquiryDetails({ inquiry, success }) {
-    const [rescheduleDate, setRescheduleDate] = useState(inquiry.reschedule_requested_date || "");
-    const [rescheduleTime, setRescheduleTime] = useState(inquiry.reschedule_requested_time || "08:00 AM - 11:00 AM");
+export default function ServiceDetails({ inquiry: service, success }) {
+    const [rescheduleDate, setRescheduleDate] = useState(service.reschedule_requested_date || "");
+    const [rescheduleTime, setRescheduleTime] = useState(service.reschedule_requested_time || "08:00 AM - 11:00 AM");
     const [rescheduleNote, setRescheduleNote] = useState("");
     const [rescheduleErrors, setRescheduleErrors] = useState({});
     const [rescheduleBusy, setRescheduleBusy] = useState(false);
@@ -43,7 +43,7 @@ export default function InquiryDetails({ inquiry, success }) {
         event.preventDefault();
         setRescheduleBusy(true);
         setRescheduleErrors({});
-        router.post("/inquiries/" + inquiry.id + "/reschedule", {
+        router.post("/inquiries/" + service.id + "/reschedule", {
             preferred_date: rescheduleDate,
             preferred_time: rescheduleTime,
             note: rescheduleNote,
@@ -77,11 +77,11 @@ export default function InquiryDetails({ inquiry, success }) {
                                     fontFamily: "Outfit, sans-serif",
                                 }}
                             >
-                                INQUIRY DETAILS
+                                SERVICE DETAILS
                             </h1>
 
                             <div className="text-muted">
-                                {inquiry.inquiry_number} · {inquiry.created_at}
+                                {service.inquiry_number} · {service.created_date || "Date unavailable"} at {service.created_time || "Time unavailable"}
                             </div>
                         </div>
 
@@ -89,7 +89,7 @@ export default function InquiryDetails({ inquiry, success }) {
                             href="/inquiries"
                             className="btn btn-outline-primary fw-bold"
                         >
-                            BACK TO INQUIRIES
+                            BACK TO SERVICES
                         </Link>
                     </div>
 
@@ -108,6 +108,10 @@ export default function InquiryDetails({ inquiry, success }) {
                                         "0 8px 24px rgba(0,0,0,0.04)",
                                 }}
                             >
+                                <div className="d-flex flex-wrap gap-2 mb-3">
+                                    <span className={"badge " + (service.intake_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{service.intake_channel === "walk_in" ? "Walk-in booking" : "Online booking"}</span>
+                                    <span className="badge text-bg-light text-dark">{service.service_location_type === "in_shop" ? "In-shop drop-off" : "Customer site visit"}</span>
+                                </div>
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <h4
                                         className="fw-bold mb-0"
@@ -121,10 +125,10 @@ export default function InquiryDetails({ inquiry, success }) {
                                     <span
                                         className={
                                             "badge rounded-pill px-3 py-2 " +
-                                            statusClass(inquiry.status)
+                                            statusClass(service.status)
                                         }
                                     >
-                                        {inquiry.status.replace(/_/g, " ")}
+                                        {service.status.replace(/_/g, " ")}
                                     </span>
                                 </div>
 
@@ -135,12 +139,12 @@ export default function InquiryDetails({ inquiry, success }) {
                                     }}
                                 >
                                     <div className="small text-primary text-uppercase fw-bold">
-                                        {inquiry.service_type}
+                                        {service.service_type}
                                     </div>
 
                                     <div className="fw-bold fs-5">
-                                        {inquiry.item_name ||
-                                            "General Service Inquiry"}
+                                        {service.item_name ||
+                                            "General Service"}
                                     </div>
 
                                     <div className="small text-muted mt-3">
@@ -150,18 +154,33 @@ export default function InquiryDetails({ inquiry, success }) {
                                     <span
                                         className={
                                             "badge rounded-pill text-capitalize " +
-                                            urgencyClass(inquiry.urgency)
+                                            urgencyClass(service.urgency)
                                         }
                                     >
-                                        {inquiry.urgency}
+                                        {service.urgency}
                                     </span>
+                                    {Number(service.urgency_fee ?? 0) > 0 && (
+                                        <div className="small text-warning-emphasis fw-semibold mt-1">
+                                            Booking fee: ₱{Number(service.urgency_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </div>
+                                    )}
+
+                                    {service.payment_status && service.payment_status !== "not_applicable" && (
+                                        <div className="small text-muted mt-3">
+                                            Payment Status
+                                            <span className={"badge rounded-pill ms-2 text-capitalize " + (["paid", "partially_refunded", "refunded"].includes(service.payment_status) ? "bg-success-subtle text-success" : service.payment_status === "cancelled" || service.payment_status === "failed" ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning-emphasis")}>
+                                                {service.payment_status.replaceAll("_", " ")}
+                                            </span>
+                                            {service.payment_method && <span className="ms-2">({service.payment_method.toUpperCase()})</span>}
+                                        </div>
+                                    )}
 
                                     <div className="small text-muted mt-2">
                                         Preferred Date
                                     </div>
 
                                     <div className="fw-semibold">
-                                        {inquiry.preferred_date}
+                                        {service.preferred_date}
                                     </div>
 
                                     <div className="small text-muted mt-2">
@@ -169,16 +188,16 @@ export default function InquiryDetails({ inquiry, success }) {
                                     </div>
 
                                     <div className="fw-semibold">
-                                        {inquiry.preferred_time}
+                                        {service.preferred_time}
                                     </div>
 
-                                    {inquiry.status === "confirmed" && (
+                                    {service.status === "confirmed" && (
                                         <div className="mt-3 border rounded-3 p-3 bg-white">
                                             <div className="fw-bold mb-1">Reschedule appointment</div>
                                             <div className="small text-muted mb-3">Your current appointment stays active until a technician or administrator approves the change.</div>
-                                            {inquiry.reschedule_request_status === "pending" ? (
+                                            {service.reschedule_request_status === "pending" ? (
                                                 <div className="alert alert-warning mb-0">
-                                                    Request pending: {inquiry.reschedule_requested_date} · {inquiry.reschedule_requested_time}
+                                                    Request pending: {service.reschedule_requested_date} · {service.reschedule_requested_time}
                                                 </div>
                                             ) : (
                                                 <form onSubmit={submitReschedule}>
@@ -204,15 +223,15 @@ export default function InquiryDetails({ inquiry, success }) {
                                     </div>
 
                                     <div className="fw-semibold">
-                                        {(inquiry.technicians ?? []).length
-                                            ? inquiry.technicians.map((technician) => technician.name).join(", ")
+                                        {(service.technicians ?? []).length
+                                            ? service.technicians.map((technician) => technician.name).join(", ")
                                             : "Not assigned yet"}
                                     </div>
 
-                                    {inquiry.item_image && (
+                                    {service.item_image && (
                                         <img
-                                            src={inquiry.item_image}
-                                            alt={inquiry.item_name}
+                                            src={service.item_image}
+                                            alt={service.item_name}
                                             className="rounded-3 mt-3"
                                             style={{
                                                 width: "110px",
@@ -223,6 +242,56 @@ export default function InquiryDetails({ inquiry, success }) {
                                     )}
                                 </div>
                             </div>
+
+                            {service.service_record && (
+                                <section className="bg-white border rounded-4 p-3 p-md-4 mb-4" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}>
+                                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-3">
+                                        <div>
+                                            <div className="small text-primary fw-bold">COMPLETED SERVICE</div>
+                                            <h4 className="fw-bold mb-1">POST-SERVICE REPORT</h4>
+                                            <div className="small text-muted">Completed {service.service_record.completed_at || ""}</div>
+                                        </div>
+                                        {service.service_record.invoice_url ? (
+                                            <Link href={service.service_record.invoice_url} className="btn btn-primary fw-bold">VIEW SERVICE INVOICE</Link>
+                                        ) : (
+                                            <span className="badge text-bg-warning align-self-start">Invoice pending review</span>
+                                        )}
+                                    </div>
+                                    <div className="mb-3">
+                                        <div className="small text-muted fw-semibold mb-1">WORK PERFORMED</div>
+                                        <div className="fw-medium" style={{ whiteSpace: "pre-wrap" }}>{service.service_record.work_summary}</div>
+                                    </div>
+                                    {service.service_record.customer_notes && (
+                                        <div className="mb-3">
+                                            <div className="small text-muted fw-semibold mb-1">TECHNICIAN NOTES</div>
+                                            <div>{service.service_record.customer_notes}</div>
+                                        </div>
+                                    )}
+                                    {service.service_record.items?.length > 0 && (
+                                        <div className="table-responsive">
+                                            <table className="table table-sm align-middle mb-0">
+                                                <thead><tr><th>PART / COMPONENT</th><th>ACTION</th><th className="text-end">QTY</th><th className="text-end">UNIT PRICE</th></tr></thead>
+                                                <tbody>
+                                                    {service.service_record.items.map((item, index) => (
+                                                        <tr key={index}>
+                                                            <td><div className="fw-semibold">{item.product_name}</div>{item.notes && <div className="small text-muted">{item.notes}</div>}</td>
+                                                            <td><span className={"badge " + (item.is_warranty_covered ? "text-bg-success" : item.action === "used" ? "text-bg-primary" : "text-bg-secondary")}>{item.action === "used" ? (item.is_warranty_covered ? "Used · Warranty-covered" : "Used / replaced") : "Removed"}</span></td>
+                                                            <td className="text-end">{item.quantity}</td>
+                                                            <td className="text-end">{item.action === "used" ? (item.is_warranty_covered ? "No charge" : "₱" + Number(item.unit_price).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : "—"}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                    <div className="row g-2 mt-3">
+                                        <div className="col-sm-4"><div className="small text-muted">LABOR</div><div className="fw-semibold">₱{Number(service.service_record.labor_charge).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+                                        <div className="col-sm-4"><div className="small text-muted">ADDITIONAL CHARGES</div><div className="fw-semibold">₱{Number(service.service_record.additional_charge).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+                                        <div className="col-sm-4"><div className="small text-muted">RECORDED SERVICE TOTAL</div><div className="fw-bold text-primary">₱{Number(service.service_record.total_income).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+                                    </div>
+                                    {!service.service_record.invoice_url && <div className="small text-muted mt-3">The service report is available. Netmax Trading will review the charges and issue the invoice when it is ready.</div>}
+                                </section>
+                            )}
 
                             <div
                                 className="bg-white border rounded-4 p-3 p-md-4"
@@ -247,7 +316,7 @@ export default function InquiryDetails({ inquiry, success }) {
                                         </div>
 
                                         <div className="fw-semibold">
-                                            {inquiry.customer_name}
+                                            {service.customer_name}
                                         </div>
                                     </div>
 
@@ -257,7 +326,7 @@ export default function InquiryDetails({ inquiry, success }) {
                                         </div>
 
                                         <div className="fw-semibold">
-                                            {inquiry.customer_phone}
+                                            {service.customer_phone}
                                         </div>
                                     </div>
 
@@ -267,17 +336,17 @@ export default function InquiryDetails({ inquiry, success }) {
                                         </div>
 
                                         <div className="fw-semibold">
-                                            {inquiry.customer_email}
+                                            {service.customer_email}
                                         </div>
                                     </div>
 
                                     <div className="col-md-7">
                                         <div className="small text-muted mb-1">
-                                            STREET ADDRESS
+                                            {service.service_location_type === "in_shop" ? "SERVICE LOCATION" : "STREET ADDRESS"}
                                         </div>
 
                                         <div className="fw-semibold">
-                                            {inquiry.street_address}
+                                            {service.service_location_type === "in_shop" ? "In-shop drop-off at Netmax Trading" : service.street_address}
                                         </div>
                                     </div>
 
@@ -287,39 +356,39 @@ export default function InquiryDetails({ inquiry, success }) {
                                         </div>
 
                                         <div className="fw-semibold">
-                                            {inquiry.city}
+                                            {service.city}
                                         </div>
                                     </div>
 
-                                    {inquiry.address_details && (
+                                    {service.address_details && (
                                         <div className="col-12">
                                             <div className="small text-muted mb-1">HOUSE / UNIT / LANDMARK</div>
-                                            <div className="fw-semibold">{inquiry.address_details}</div>
+                                            <div className="fw-semibold">{service.address_details}</div>
                                         </div>
                                     )}
 
-                                    {(inquiry.street_address || inquiry.city || inquiry.google_place_id || inquiry.service_latitude !== null && inquiry.service_latitude !== undefined) && (
+                                    {(service.service_location_type !== "in_shop" && (service.street_address || service.city || service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined)) && (
                                         <div className="col-12">
                                             <div className="small text-muted fw-semibold mb-2">SERVICE LOCATION MAP</div>
                                             <ServiceLocationMap
-                                                latitude={inquiry.service_latitude}
-                                                longitude={inquiry.service_longitude}
-                                                placeId={inquiry.google_place_id}
-                                                streetAddress={inquiry.street_address}
-                                                city={inquiry.city}
-                                                addressDetails={inquiry.address_details}
+                                                latitude={service.service_latitude}
+                                                longitude={service.service_longitude}
+                                                placeId={service.google_place_id}
+                                                streetAddress={service.street_address}
+                                                city={service.city}
+                                                addressDetails={service.address_details}
                                             />
                                         </div>
                                     )}
 
-                                    {inquiry.notes && (
+                                    {service.notes && (
                                         <div className="col-12">
                                             <div className="small text-muted mb-1">
                                                 ADDITIONAL NOTES
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.notes}
+                                                {service.notes}
                                             </div>
                                         </div>
                                     )}
@@ -342,16 +411,16 @@ export default function InquiryDetails({ inquiry, success }) {
                                         fontFamily: "Outfit, sans-serif",
                                     }}
                                 >
-                                    INQUIRY SUMMARY
+                                    SERVICE SUMMARY
                                 </h4>
 
                                 <div className="d-flex justify-content-between mb-2">
                                     <span className="text-muted">
-                                        Inquiry Number
+                                        Service Number
                                     </span>
 
                                     <span className="fw-semibold text-end">
-                                        {inquiry.inquiry_number}
+                                        {service.inquiry_number}
                                     </span>
                                 </div>
 
@@ -361,7 +430,7 @@ export default function InquiryDetails({ inquiry, success }) {
                                     </span>
 
                                     <span className="fw-semibold text-end">
-                                        {inquiry.service_type}
+                                        {service.service_type}
                                     </span>
                                 </div>
 
@@ -371,7 +440,7 @@ export default function InquiryDetails({ inquiry, success }) {
                                     </span>
 
                                     <span className="fw-semibold text-end">
-                                        {inquiry.preferred_date}
+                                        {service.preferred_date}
                                     </span>
                                 </div>
 
@@ -381,7 +450,7 @@ export default function InquiryDetails({ inquiry, success }) {
                                     </span>
 
                                     <span className="fw-semibold text-end">
-                                        {inquiry.preferred_time}
+                                        {service.preferred_time}
                                     </span>
                                 </div>
 
@@ -399,17 +468,28 @@ export default function InquiryDetails({ inquiry, success }) {
                                     </div>
 
                                     <div className="small text-muted">
-                                        Our team can review your inquiry and
+                                        Our team can review your service request and
                                         contact you regarding availability,
                                         scheduling, and the next steps.
                                     </div>
                                 </div>
 
+                                {service.order_id && (
+                                    <Link
+                                        href={"/purchases/" + service.order_id}
+                                        className="btn btn-outline-primary fw-bold w-100 mt-3"
+                                    >
+                                        {service.payment_status === "pending" || service.payment_status === "failed"
+                                            ? "VIEW ORDER / COMPLETE PAYMENT"
+                                            : "VIEW RELATED ORDER"}
+                                    </Link>
+                                )}
+
                                 <Link
                                     href="/inquiry"
                                     className="btn btn-outline-primary fw-bold w-100 mt-3"
                                 >
-                                    NEW INQUIRY
+                                    REQUEST ANOTHER SERVICE
                                 </Link>
                             </div>
                         </div>
@@ -463,11 +543,11 @@ export default function InquiryDetails({ inquiry, success }) {
                             className="fw-bold mb-2"
                             style={{ fontFamily: "Outfit, sans-serif" }}
                         >
-                            Inquiry Sent!
+                            Service Request Sent!
                         </h4>
 
                         <p className="small text-muted mb-3">
-                            Your inquiry has been submitted. We will review
+                            Your service request has been submitted. We will review
                             your request and contact you regarding the next
                             steps.
                         </p>

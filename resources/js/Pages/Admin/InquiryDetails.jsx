@@ -40,8 +40,11 @@ function statusClass(status) {
 }
 
 export default function AdminInquiryDetails({
-    inquiry,
+    inquiry: service,
     technicians = [],
+    technicianBookings = [],
+    blockedBookingDates = [],
+    blockedBookingTimeSlots = [],
     bookingTimeSlots = [],
     todayDate = "",
     fromSchedule = false,
@@ -49,26 +52,60 @@ export default function AdminInquiryDetails({
 }) {
     const [confirming, setConfirming] = useState(false);
     const [managingTeam, setManagingTeam] = useState(false);
+    const [updatingStatus, setUpdatingStatus] = useState(false);
+    const [statusError, setStatusError] = useState("");
+    const [statusSuccess, setStatusSuccess] = useState("");
+
+    const statusOptions = {
+        pending: [
+            { value: "pending", label: "Pending" },
+            { value: "confirmed", label: "Confirm & schedule service" },
+            { value: "cancelled", label: "Cancel service" },
+        ],
+        confirmed: [
+            { value: "confirmed", label: "Confirmed" },
+            { value: "in_progress", label: "In progress" },
+            { value: "cancelled", label: "Cancel service" },
+        ],
+        in_progress: [
+            { value: "in_progress", label: "In progress" },
+            { value: "completed", label: service.service_record_exists ? "Completed" : "Completed (Post-Service Record required)", disabled: !service.service_record_exists },
+            { value: "cancelled", label: "Cancel service" },
+        ],
+        completed: [{ value: "completed", label: "Completed" }],
+        cancelled: [{ value: "cancelled", label: "Cancelled" }],
+    };
+    const allowedStatusOptions = statusOptions[service.status] ?? [{ value: service.status, label: service.status }];
 
     const updateStatus = (event) => {
         const nextStatus = event.target.value;
-        if (nextStatus === "confirmed" && inquiry.status !== "confirmed") {
+        setStatusError("");
+        setStatusSuccess("");
+
+        if (nextStatus === service.status) return;
+        if (nextStatus === "confirmed" && service.status !== "confirmed") {
             setConfirming(true);
             return;
         }
 
+        if (nextStatus === "cancelled" && !window.confirm("Cancel this service request? The customer and assigned technicians will be notified.")) {
+            return;
+        }
+
+        setUpdatingStatus(true);
         router.patch(
-            "/admin/inquiries/" + inquiry.id + "/status",
-            {
-                status: nextStatus,
-            },
+            "/admin/inquiries/" + service.id + "/status",
+            { status: nextStatus },
             {
                 preserveScroll: true,
+                onError: (validationErrors) => setStatusError(validationErrors.status ?? "Unable to update service status."),
                 onSuccess: () => {
+                    setStatusSuccess("Service status updated successfully.");
                     if (fromSchedule && nextStatus === "completed") {
                         router.visit("/admin/service-history");
                     }
                 },
+                onFinish: () => setUpdatingStatus(false),
             }
         );
     };
@@ -81,18 +118,18 @@ export default function AdminInquiryDetails({
     const backLabel = fromHistory
         ? "BACK TO SERVICE HISTORY"
         : fromSchedule
-            ? "BACK TO SCHEDULES"
-            : "BACK TO INQUIRIES";
+            ? "BACK TO SCHEDULED SERVICES"
+            : "BACK TO SERVICES";
     const pageTitle = fromHistory
         ? "SERVICE HISTORY DETAILS"
         : fromSchedule
-            ? "SERVICE SCHEDULE DETAILS"
-            : "INQUIRY DETAILS";
+            ? "SCHEDULED SERVICE DETAILS"
+            : "SERVICE DETAILS";
     const activeSection = fromHistory
         ? "service-history"
         : fromSchedule
             ? "schedules"
-            : "inquiries";
+            : "services";
 
 
     return (
@@ -116,7 +153,7 @@ export default function AdminInquiryDetails({
                         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                             <div>
                                 <div className="small text-primary fw-bold">
-                                    SECUREVIEW ADMIN
+                                    NETMAX TRADING ADMIN
                                 </div>
 
                                 <h1 className="fw-bold mb-1">
@@ -124,8 +161,8 @@ export default function AdminInquiryDetails({
                                 </h1>
 
                                 <div className="text-muted small">
-                                    {inquiry.inquiry_number} ·{" "}
-                                    {inquiry.created_at}
+                                    {service.inquiry_number} ·{" "}
+                                    {service.created_at}
                                 </div>
                             </div>
 
@@ -153,12 +190,16 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-bold fs-5">
-                                                {inquiry.service_type}
+                                                {service.service_type}
                                             </div>
 
                                             <div className="small text-muted mt-1">
-                                                {inquiry.item_name ||
-                                                    "General Service Inquiry"}
+                                                {service.item_name ||
+                                                    "General Service"}
+                                            </div>
+                                            <div className="d-flex flex-wrap gap-1 mt-2">
+                                                <span className={"badge " + (service.intake_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{service.intake_channel === "walk_in" ? "Walk-in intake" : "Online request"}</span>
+                                                <span className="badge text-bg-light text-dark">{service.service_location_type === "in_shop" ? "In-shop drop-off" : "Customer site"}</span>
                                             </div>
                                         </div>
 
@@ -171,12 +212,22 @@ export default function AdminInquiryDetails({
                                                 className={
                                                     "badge rounded-pill text-capitalize px-3 py-2 " +
                                                     urgencyClass(
-                                                        inquiry.urgency
+                                                        service.urgency
                                                     )
                                                 }
                                             >
-                                                {inquiry.urgency}
+                                                {service.urgency}
                                             </span>
+                                            {Number(service.urgency_fee ?? 0) > 0 && (
+                                                <div className="small text-warning-emphasis fw-semibold mt-1">
+                                                    Booking fee: ₱{Number(service.urgency_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </div>
+                                            )}
+                                            {service.preferred_payment_method && (
+                                                <div className="small text-muted fw-semibold mt-1">
+                                                    Preferred payment: {String(service.preferred_payment_method).toUpperCase()}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -187,7 +238,7 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.preferred_date}
+                                                {service.preferred_date}
                                             </div>
                                         </div>
 
@@ -197,47 +248,47 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.preferred_time}
+                                                {service.preferred_time}
                                             </div>
                                         </div>
 
                                         <div className="col-12">
                                             <div className="small text-muted">
-                                                SERVICE ADDRESS
+                                                {service.service_location_type === "in_shop" ? "SERVICE LOCATION" : "SERVICE ADDRESS"}
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.street_address}, {inquiry.city}
+                                                {service.service_location_type === "in_shop" ? "Netmax Trading — In-shop service counter" : service.street_address + ", " + service.city}
                                             </div>
-                                            {inquiry.address_details && (
+                                            {service.address_details && (
                                                 <div className="small text-muted mt-1">
-                                                    <span className="fw-semibold">House / Unit / Landmark:</span> {inquiry.address_details}
+                                                    <span className="fw-semibold">House / Unit / Landmark:</span> {service.address_details}
                                                 </div>
                                             )}
                                         </div>
 
-                                        {(inquiry.street_address || inquiry.city || inquiry.google_place_id || inquiry.service_latitude !== null && inquiry.service_latitude !== undefined) && (
+                                        {(service.service_location_type !== "in_shop" && (service.street_address || service.city || service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined)) && (
                                             <div className="col-12">
                                                 <ServiceLocationMap
-                                                    latitude={inquiry.service_latitude}
-                                                    longitude={inquiry.service_longitude}
-                                                    placeId={inquiry.google_place_id}
-                                                    streetAddress={inquiry.street_address}
-                                                    city={inquiry.city}
-                                                    addressDetails={inquiry.address_details}
+                                                    latitude={service.service_latitude}
+                                                    longitude={service.service_longitude}
+                                                    placeId={service.google_place_id}
+                                                    streetAddress={service.street_address}
+                                                    city={service.city}
+                                                    addressDetails={service.address_details}
                                                 />
                                             </div>
                                         )}
                                     </div>
 
-                                    {inquiry.notes && (
+                                    {service.notes && (
                                         <div className="mt-4">
                                             <div className="small text-muted">
                                                 CUSTOMER NOTES
                                             </div>
 
                                             <div className="border rounded-3 p-3 mt-1 bg-light">
-                                                {inquiry.notes}
+                                                {service.notes}
                                             </div>
                                         </div>
                                     )}
@@ -265,7 +316,7 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.customer_name}
+                                                {service.customer_name}
                                             </div>
                                         </div>
 
@@ -275,7 +326,7 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-semibold">
-                                                {inquiry.customer_phone}
+                                                {service.customer_phone}
                                             </div>
                                         </div>
 
@@ -285,7 +336,7 @@ export default function AdminInquiryDetails({
                                             </div>
 
                                             <div className="fw-semibold text-break">
-                                                {inquiry.customer_email}
+                                                {service.customer_email}
                                             </div>
                                         </div>
                                     </div>
@@ -309,7 +360,7 @@ export default function AdminInquiryDetails({
                                     </h2>
 
                                     <div className="d-flex flex-column gap-2 mb-3">
-                                        {(inquiry.technicians ?? []).length > 0 ? inquiry.technicians.map((technician) => (
+                                        {(service.technicians ?? []).length > 0 ? service.technicians.map((technician) => (
                                             <div key={technician.id} className="d-flex align-items-center justify-content-between gap-2 border rounded-3 p-2">
                                                 <div>
                                                     <div className="fw-semibold">{technician.name}</div>
@@ -336,48 +387,57 @@ export default function AdminInquiryDetails({
                                     </div>
 
                                     <h2 className="h5 fw-bold mb-3">
-                                        Update inquiry status
+                                        Update service status
                                     </h2>
 
                                     <select
-                                        className="form-select mb-3 text-capitalize"
-                                        value={inquiry.status}
+                                        id="service-status"
+                                        className="form-select mb-2 text-capitalize"
+                                        value={service.status}
                                         onChange={updateStatus}
+                                        disabled={updatingStatus}
+                                        aria-label="Update service status"
                                     >
-                                        <option value="pending" disabled={inquiry.status === "confirmed" || inquiry.status === "in_progress"}>
-                                            Pending
-                                        </option>
-
-                                        <option value="confirmed" disabled={inquiry.status !== "pending" && inquiry.status !== "confirmed"}>
-                                            Confirmed
-                                        </option>
-
-                                        <option value="in_progress" disabled={inquiry.status === "pending"}>
-                                            In Progress
-                                        </option>
-
-                                        <option value="completed" disabled={inquiry.status !== "in_progress" && inquiry.status !== "completed"}>
-                                            Completed
-                                        </option>
-
-                                        <option value="cancelled" disabled={inquiry.status === "completed" || inquiry.status === "cancelled"}>
-                                            Cancelled
-                                        </option>
+                                        {allowedStatusOptions.map((option) => (
+                                            <option key={option.value} value={option.value} disabled={Boolean(option.disabled)}>
+                                                {option.label}
+                                            </option>
+                                        ))}
                                     </select>
+
+                                    {updatingStatus && (
+                                        <div className="small text-primary mb-2" role="status">
+                                            <span className="spinner-border spinner-border-sm me-2" />
+                                            Saving status and notifying the customer…
+                                        </div>
+                                    )}
+                                    {statusError && <div className="alert alert-danger py-2 small mb-2" role="alert">{statusError}</div>}
+                                    {statusSuccess && <div className="alert alert-success py-2 small mb-2" role="status">{statusSuccess}</div>}
+                                    <div className="small text-muted mb-3">
+                                        {service.status === "pending"
+                                            ? "Confirm & schedule opens the date availability and technician assignment step."
+                                            : service.status === "confirmed"
+                                                ? "Start the service when the technicians are ready. Cancel only if the job will not proceed."
+                                                : service.status === "in_progress" && !service.service_record_exists
+                                                    ? "A Post-Service Record must be saved before this service can be marked completed."
+                                                    : service.status === "in_progress"
+                                                        ? "The Post-Service Record is saved, so the service can be completed."
+                                                        : "This service is in a final state and cannot be reopened here."}
+                                    </div>
 
                                     <span
                                         className={
                                             "badge rounded-pill text-capitalize px-3 py-2 " +
-                                            statusClass(inquiry.status)
+                                            statusClass(service.status)
                                         }
                                     >
-                                        {inquiry.status.replace("_", " ")}
+                                        {service.status.replace("_", " ")}
                                     </span>
 
-                                    {inquiry.item_image && (
+                                    {service.item_image && (
                                         <img
-                                            src={inquiry.item_image}
-                                            alt={inquiry.item_name}
+                                            src={service.item_image}
+                                            alt={service.item_name}
                                             className="img-fluid rounded-3 mt-4"
                                             style={{
                                                 width: "100%",
@@ -389,7 +449,7 @@ export default function AdminInquiryDetails({
 
                                     <div className="small text-muted mt-4">
                                         Status and technician assignment changes
-                                        notify the customer in SecureView.
+                                        notify the customer in Netmax Trading.
                                     </div>
                                 </div>
                             </div>
@@ -402,8 +462,11 @@ export default function AdminInquiryDetails({
 
             {confirming && (
                 <ConfirmInquiryModal
-                    inquiry={inquiry}
+                    inquiry={service}
                     technicians={technicians}
+                    technicianBookings={technicianBookings}
+                    blockedBookingDates={blockedBookingDates}
+                    blockedBookingTimeSlots={blockedBookingTimeSlots}
                     bookingTimeSlots={bookingTimeSlots}
                     todayDate={todayDate}
                     onClose={() => setConfirming(false)}
@@ -412,7 +475,7 @@ export default function AdminInquiryDetails({
 
             {managingTeam && (
                 <ManageTechnicianTeamModal
-                    inquiry={inquiry}
+                    inquiry={service}
                     technicians={technicians}
                     onClose={() => setManagingTeam(false)}
                 />

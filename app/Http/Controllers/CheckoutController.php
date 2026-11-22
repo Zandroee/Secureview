@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomerNotification;
 use App\Models\Order;
+use App\Models\InvoiceSetting;
 use App\Models\Inquiry;
 use App\Models\PendingInquiryCheckout;
 use App\Models\Product;
 use App\Models\Package;
 use App\Services\InventoryService;
+use App\Services\VoucherService;
+use App\Services\PayMongoLineItemBuilder;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -17,11 +21,176 @@ use Inertia\Inertia;
 
 class CheckoutController extends Controller
 {
+    public function buyNow(Request $request, InventoryService $inventory)
+    {
+        $validated = $request->validate([
+            'item_type' => ['required', 'in:product,package'],
+            'item_id' => ['required', 'integer', 'min:1'],
+            'quantity' => ['required', 'integer', 'min:1', 'max:99'],
+        ]);
+
+        $modelClass = $validated['item_type'] === 'product'
+            ? Product::class
+            : Package::class;
+        $purchasable = $modelClass::findOrFail($validated['item_id']);
+
+        $stockError = $inventory->getAvailabilityError(
+            $purchasable,
+            (int) $validated['quantity']
+        );
+
+        if ($stockError) {
+            return back()->withErrors([
+                'stock' => $stockError,
+            ]);
+        }
+
+        // A Buy Now selection is session-backed and does not modify the user's cart.
+        $request->session()->forget(['orderNumber', 'paymentMethod', 'buy_now']);
+        $request->session()->put('buy_now', [
+            'item_type' => $validated['item_type'],
+            'item_id' => (int) $purchasable->id,
+            'quantity' => (int) $validated['quantity'],
+        ]);
+
+        return redirect()->route('checkout');
+    }
+
+    private function selectedBuyNowItem(Request $request): ?array
+    {
+        $selection = $request->session()->get('buy_now');
+
+        if (!is_array($selection)) {
+            return null;
+        }
+
+        $itemType = $selection['item_type'] ?? '';
+        $itemId = filter_var($selection['item_id'] ?? null, FILTER_VALIDATE_INT);
+        $quantity = filter_var($selection['quantity'] ?? null, FILTER_VALIDATE_INT);
+
+        if (
+            !in_array($itemType, ['product', 'package'], true) ||
+            $itemId === false ||
+            $itemId < 1 ||
+            $quantity === false ||
+            $quantity < 1 ||
+            $quantity > 99
+        ) {
+            return ['error' => 'Your Buy Now selection is invalid. Please select the item again.'];
+        }
+
+        $modelClass = $itemType === 'product' ? Product::class : Package::class;
+        $purchasable = $modelClass::find($itemId);
+
+        if (!$purchasable) {
+            return ['error' => 'The selected item is no longer available. Please choose it again.'];
+        }
+
+        return [
+            'item_type' => $itemType,
+            'item_id' => $itemId,
+            'quantity' => $quantity,
+            'model_class' => $modelClass,
+            'purchasable' => $purchasable,
+        ];
+    }
+
+
+    private function currentCheckoutSubtotal(Request $request): float
+    {
+        if ($request->session()->has('buy_now')) {
+            $buyNow = $this->selectedBuyNowItem($request);
+            if (!$buyNow || isset($buyNow['error'])) {
+                throw ValidationException::withMessages([
+                    'cart' => $buyNow['error'] ?? 'Your Buy Now selection is no longer available.',
+                ]);
+            }
+            return round((float) $buyNow['purchasable']->effectivePrice() * (int) $buyNow['quantity'], 2);
+        }
+
+        $cart = $request->user()->cart;
+        if (!$cart) {
+            throw ValidationException::withMessages(['cart' => 'Your cart is empty.']);
+        }
+        $cart->load('items.purchasable');
+        if ($cart->items->isEmpty()) {
+            throw ValidationException::withMessages(['cart' => 'Your cart is empty.']);
+        }
+
+        $subtotal = 0.0;
+        foreach ($cart->items as $cartItem) {
+            if (!$cartItem->purchasable) {
+                throw ValidationException::withMessages([
+                    'cart' => 'An item in your cart is no longer available.',
+                ]);
+            }
+            $subtotal += (float) $cartItem->purchasable->effectivePrice() * (int) $cartItem->quantity;
+        }
+        return round($subtotal, 2);
+    }
+
+    private function checkoutVoucherQuote(Request $request, float $subtotal): array
+    {
+        $code = trim((string) $request->session()->get('checkout_voucher_code', ''));
+        if ($code === '') {
+            return ['voucher' => null, 'discount_amount' => 0.0];
+        }
+
+        try {
+            $quote = app(VoucherService::class)->quote($code, $request->user(), $subtotal);
+        } catch (ValidationException $exception) {
+            $request->session()->forget('checkout_voucher_code');
+            throw $exception;
+        }
+
+        return [
+            'voucher' => [
+                'id' => $quote['voucher']->id,
+                'code' => $quote['voucher']->code,
+                'name' => $quote['voucher']->name,
+                'description' => $quote['voucher']->description,
+            ],
+            'discount_amount' => (float) $quote['discount_amount'],
+        ];
+    }
+
+    public function applyVoucher(Request $request, VoucherService $vouchers)
+    {
+        $validated = $request->validate([
+            'code' => ['nullable', 'string', 'max:50'],
+        ]);
+        $code = strtoupper(trim((string) ($validated['code'] ?? '')));
+
+        if ($code === '') {
+            $request->session()->forget('checkout_voucher_code');
+            return redirect()->route('checkout')->with('success', 'Voucher removed.');
+        }
+
+        // A failed replacement must not silently leave a previously valid code active.
+        $request->session()->forget('checkout_voucher_code');
+        try {
+            $subtotal = $this->currentCheckoutSubtotal($request);
+            $vouchers->quote($code, $request->user(), $subtotal);
+        } catch (ValidationException $exception) {
+            return redirect()->route('checkout')->withErrors($exception->errors());
+        }
+
+        $request->session()->put('checkout_voucher_code', $code);
+        return redirect()->route('checkout')->with('success', 'Voucher ' . $code . ' applied.');
+    }
+
     public function index(Request $request, InventoryService $inventory)
     {
+        $pickupAddress = trim((string) (InvoiceSetting::query()->value('pickup_address') ?? ''));
+
         $orderNumber = $request->session()->get('orderNumber');
 
         if ($orderNumber) {
+            $successOrder = Order::query()
+                ->where('user_id', $request->user()->id)
+                ->where('order_number', $orderNumber)
+                ->first();
+
             return Inertia::render('checkout', [
                 'customer' => [
                     'name' => $request->user()->name,
@@ -35,8 +204,80 @@ class CheckoutController extends Controller
                     'total' => 0,
                 ],
                 'success' => true,
+                'pickupAddress' => $pickupAddress,
+                'successPickupAddress' => $successOrder?->pickup_address,
+                'fulfillmentMethod' => $successOrder?->fulfillment_method ?? 'delivery',
                 'orderNumber' => $orderNumber,
                 'paymentMethod' => $request->session()->get('paymentMethod'),
+            ]);
+        }
+
+        $buyNow = $this->selectedBuyNowItem($request);
+
+        if ($buyNow !== null) {
+            if (isset($buyNow['error'])) {
+                $request->session()->forget('buy_now');
+
+                return redirect('/products')->withErrors([
+                    'cart' => $buyNow['error'],
+                ]);
+            }
+
+            $purchasable = $buyNow['purchasable'];
+            $stockError = $inventory->getAvailabilityError(
+                $purchasable,
+                (int) $buyNow['quantity']
+            );
+
+            if ($stockError) {
+                $request->session()->forget('buy_now');
+
+                return redirect(
+                    '/' . ($buyNow['item_type'] === 'package' ? 'packages/' : 'products/') . $buyNow['item_id']
+                )->withErrors([
+                    'stock' => $stockError,
+                ]);
+            }
+
+            $quantity = (int) $buyNow['quantity'];
+            $items = collect([[
+                'id' => 'buy-now-' . $purchasable->id,
+                'type' => $buyNow['item_type'],
+                'name' => $purchasable->name,
+                'image' => $purchasable->image,
+                'price' => (float) $purchasable->effectivePrice(),
+                'quantity' => $quantity,
+                'subtotal' => (float) $purchasable->effectivePrice() * $quantity,
+                'available_stock' => $inventory->getAvailableStock($purchasable),
+            ]]);
+
+            $subtotal = $items->sum('subtotal');
+            $shippingFee = 0;
+
+            try {
+                $voucherQuote = $this->checkoutVoucherQuote($request, (float) $subtotal);
+            } catch (ValidationException $exception) {
+                return redirect()->route('checkout')->withErrors($exception->errors());
+            }
+
+            return Inertia::render('checkout', [
+                'customer' => [
+                    'name' => $request->user()->name,
+                    'email' => $request->user()->email,
+                    'phone' => $request->user()->phone ?? '',
+                ],
+                'cart' => [
+                    'items' => $items,
+                    'subtotal' => (float) $subtotal,
+                    'discount_amount' => (float) $voucherQuote['discount_amount'],
+                    'voucher' => $voucherQuote['voucher'],
+                    'shipping_fee' => (float) $shippingFee,
+                    'total' => (float) round($subtotal + $shippingFee - (float) $voucherQuote['discount_amount'], 2),
+                ],
+                'success' => false,
+                'pickupAddress' => $pickupAddress,
+                'orderNumber' => null,
+                'paymentMethod' => null,
             ]);
         }
 
@@ -64,9 +305,9 @@ class CheckoutController extends Controller
                 'type' => $purchasable instanceof \App\Models\Package ? 'package' : 'product',
                 'name' => $purchasable?->name,
                 'image' => $purchasable?->image,
-                'price' => (float) $item->price,
+                'price' => (float) ($purchasable?->effectivePrice() ?? $item->price),
                 'quantity' => (int) $item->quantity,
-                'subtotal' => (float) $item->price * (int) $item->quantity,
+                'subtotal' => (float) ($purchasable?->effectivePrice() ?? $item->price) * (int) $item->quantity,
                 'available_stock' => $purchasable
                     ? $inventory->getAvailableStock($purchasable)
                     : 0,
@@ -75,6 +316,12 @@ class CheckoutController extends Controller
 
         $subtotal = $items->sum('subtotal');
         $shippingFee = 0;
+
+        try {
+            $voucherQuote = $this->checkoutVoucherQuote($request, (float) $subtotal);
+        } catch (ValidationException $exception) {
+            return redirect()->route('checkout')->withErrors($exception->errors());
+        }
 
         return Inertia::render('checkout', [
             'customer' => [
@@ -85,17 +332,23 @@ class CheckoutController extends Controller
             'cart' => [
                 'items' => $items,
                 'subtotal' => (float) $subtotal,
+                'discount_amount' => (float) $voucherQuote['discount_amount'],
+                'voucher' => $voucherQuote['voucher'],
                 'shipping_fee' => (float) $shippingFee,
-                'total' => (float) ($subtotal + $shippingFee),
+                'total' => (float) round($subtotal + $shippingFee - (float) $voucherQuote['discount_amount'], 2),
             ],
             'success' => false,
+            'pickupAddress' => $pickupAddress,
             'orderNumber' => null,
             'paymentMethod' => null,
         ]);
     }
 
-    public function store(Request $request, InventoryService $inventory)
+    public function store(Request $request, InventoryService $inventory, VoucherService $vouchers)
     {
+        // Existing clients default to delivery; new checkout clients explicitly select delivery or pickup.
+        $request->merge(['fulfillment_method' => $request->input('fulfillment_method', 'delivery')]);
+
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => [
@@ -104,10 +357,42 @@ class CheckoutController extends Controller
                 'regex:/^09\d{9}$/',
             ],
             'customer_email' => ['required', 'email', 'max:255'],
-            'delivery_address' => ['required', 'string', 'min:10', 'max:1000'],
+            'fulfillment_method' => ['required', 'in:delivery,pickup'],
+            // Address details are required only for delivery; pickup does not collect a destination.
+            'delivery_street_address' => ['exclude_if:fulfillment_method,pickup', 'required_without:delivery_address', 'nullable', 'string', 'min:5', 'max:500'],
+            'delivery_address_details' => ['nullable', 'string', 'max:500'],
+            'delivery_city' => ['exclude_if:fulfillment_method,pickup', 'required_without:delivery_address', 'nullable', 'string', 'max:180'],
+            'delivery_latitude' => ['exclude_if:fulfillment_method,pickup', 'nullable', 'numeric', 'between:-90,90', 'required_with:delivery_longitude'],
+            'delivery_longitude' => ['exclude_if:fulfillment_method,pickup', 'nullable', 'numeric', 'between:-180,180', 'required_with:delivery_latitude'],
+            'delivery_address' => ['nullable', 'string', 'min:10', 'max:1000'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['required', 'in:cash,gcash,card,maya'],
         ]);
+
+        $fulfillmentMethod = $validated['fulfillment_method'];
+        $pickupAddress = null;
+        if ($fulfillmentMethod === 'pickup') {
+            $pickupAddress = trim((string) (InvoiceSetting::query()->value('pickup_address') ?? ''));
+            if ($pickupAddress === '') {
+                throw ValidationException::withMessages([
+                    'fulfillment_method' => 'Shop pickup is not available yet. Please choose delivery or contact Netmax Trading.',
+                ]);
+            }
+        }
+        $deliveryStreet = $fulfillmentMethod === 'delivery' ? trim((string) ($validated['delivery_street_address'] ?? '')) : '';
+        $deliveryDetails = $fulfillmentMethod === 'delivery' ? trim((string) ($validated['delivery_address_details'] ?? '')) : '';
+        $deliveryCity = $fulfillmentMethod === 'delivery' ? trim((string) ($validated['delivery_city'] ?? '')) : '';
+
+        $formattedDeliveryAddress = collect([
+            $deliveryStreet,
+            $deliveryDetails,
+            $deliveryCity,
+        ])->filter(fn ($part) => $part !== '')->implode(', ');
+
+        // Maintain compatibility with older checkout clients that still send delivery_address.
+        $validated['delivery_address'] = $fulfillmentMethod === 'delivery'
+            ? ($formattedDeliveryAddress !== '' ? $formattedDeliveryAddress : trim((string) ($validated['delivery_address'] ?? '')))
+            : null;
 
         if ($validated['payment_method'] !== 'cash' && !config('services.paymongo.secret_key')) {
             return back()->withErrors([
@@ -115,34 +400,74 @@ class CheckoutController extends Controller
             ])->withInput();
         }
 
-        $cart = $request->user()->cart;
+        $isBuyNow = $request->session()->has('buy_now');
+        $buyNow = $this->selectedBuyNowItem($request);
+        $cart = null;
 
-        if (!$cart) {
-            return back()->withErrors([
-                'cart' => 'Your cart is empty.',
-            ]);
+        if ($isBuyNow) {
+            if ($buyNow === null || isset($buyNow['error'])) {
+                $request->session()->forget('buy_now');
+
+                return back()->withErrors([
+                    'cart' => $buyNow['error'] ?? 'Your Buy Now selection is no longer available. Please choose the item again.',
+                ]);
+            }
+
+            $purchasable = $buyNow['purchasable'];
+            $stockError = $inventory->getAvailabilityError(
+                $purchasable,
+                (int) $buyNow['quantity']
+            );
+
+            if ($stockError) {
+                return back()->withErrors([
+                    'stock' => $stockError,
+                ]);
+            }
+
+            $checkoutItems = collect([[
+                'purchasable' => $purchasable,
+                'purchasable_type' => $buyNow['model_class'],
+                'purchasable_id' => $purchasable->id,
+                'quantity' => (int) $buyNow['quantity'],
+            ]]);
+        } else {
+            $cart = $request->user()->cart;
+
+            if (!$cart) {
+                return back()->withErrors([
+                    'cart' => 'Your cart is empty.',
+                ]);
+            }
+
+            $cart->load('items.purchasable');
+
+            if ($cart->items->isEmpty()) {
+                return back()->withErrors([
+                    'cart' => 'Your cart is empty.',
+                ]);
+            }
+
+            $checkoutItems = $cart->items->map(fn ($cartItem) => [
+                'purchasable' => $cartItem->purchasable,
+                'purchasable_type' => $cartItem->purchasable_type,
+                'purchasable_id' => $cartItem->purchasable_id,
+                'quantity' => (int) $cartItem->quantity,
+            ])->values();
         }
 
-        $cart->load('items.purchasable');
-
-        if ($cart->items->isEmpty()) {
-            return back()->withErrors([
-                'cart' => 'Your cart is empty.',
-            ]);
-        }
-
-        foreach ($cart->items as $cartItem) {
-            $purchasable = $cartItem->purchasable;
+        foreach ($checkoutItems as $checkoutItem) {
+            $purchasable = $checkoutItem['purchasable'];
 
             if (!$purchasable) {
                 return back()->withErrors([
-                    'stock' => 'An item in your cart is no longer available.',
+                    'stock' => 'An item in your checkout is no longer available.',
                 ]);
             }
 
             $stockError = $inventory->getAvailabilityError(
                 $purchasable,
-                (int) $cartItem->quantity
+                (int) $checkoutItem['quantity']
             );
 
             if ($stockError) {
@@ -152,21 +477,30 @@ class CheckoutController extends Controller
             }
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $cart) {
+        $order = DB::transaction(function () use ($request, $validated, $checkoutItems, $deliveryDetails, $deliveryCity, $fulfillmentMethod, $pickupAddress, $vouchers) {
             $subtotal = 0;
 
-            foreach ($cart->items as $cartItem) {
-                if (!$cartItem->purchasable) {
-                    abort(422, 'An item in your cart is no longer available.');
+            foreach ($checkoutItems as $checkoutItem) {
+                $purchasable = $checkoutItem['purchasable'];
+
+                if (!$purchasable) {
+                    abort(422, 'An item in your checkout is no longer available.');
                 }
 
-                $price = (float) $cartItem->purchasable->price;
-                $quantity = (int) $cartItem->quantity;
+                $price = (float) $purchasable->effectivePrice();
+                $quantity = (int) $checkoutItem['quantity'];
 
                 $subtotal += $price * $quantity;
             }
 
             $shippingFee = 0;
+            $voucherCode = trim((string) $request->session()->get('checkout_voucher_code', ''));
+            $voucherQuote = $voucherCode !== ''
+                ? $vouchers->quote($voucherCode, $request->user(), (float) $subtotal, true)
+                : null;
+            $voucher = $voucherQuote['voucher'] ?? null;
+            $discountAmount = (float) ($voucherQuote['discount_amount'] ?? 0);
+            $total = round($subtotal + $shippingFee - $discountAmount, 2);
 
             do {
                 $orderNumber = 'SV-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
@@ -174,10 +508,13 @@ class CheckoutController extends Controller
 
             $order = Order::create([
                 'user_id' => $request->user()->id,
+                'voucher_id' => $voucher?->id,
+                'voucher_code' => $voucher?->code,
                 'order_number' => $orderNumber,
                 'subtotal' => $subtotal,
+                'discount_amount' => $discountAmount,
                 'shipping_fee' => $shippingFee,
-                'total' => $subtotal + $shippingFee,
+                'total' => $total,
                 'payment_method' => $validated['payment_method'],
                 'payment_status' => 'pending',
                 'order_status' => $validated['payment_method'] === 'cash'
@@ -186,18 +523,24 @@ class CheckoutController extends Controller
                 'customer_name' => $validated['customer_name'],
                 'customer_phone' => $validated['customer_phone'],
                 'customer_email' => $validated['customer_email'],
+                'fulfillment_method' => $fulfillmentMethod,
+                'pickup_address' => $fulfillmentMethod === 'pickup' ? $pickupAddress : null,
                 'delivery_address' => $validated['delivery_address'],
+                'delivery_address_details' => $deliveryDetails !== '' ? $deliveryDetails : null,
+                'delivery_city' => $deliveryCity !== '' ? $deliveryCity : null,
+                'delivery_latitude' => $fulfillmentMethod === 'delivery' ? ($validated['delivery_latitude'] ?? null) : null,
+                'delivery_longitude' => $fulfillmentMethod === 'delivery' ? ($validated['delivery_longitude'] ?? null) : null,
                 'notes' => $validated['notes'] ?? null,
             ]);
 
-            foreach ($cart->items as $cartItem) {
-                $purchasable = $cartItem->purchasable;
-                $price = (float) $purchasable->price;
-                $quantity = (int) $cartItem->quantity;
+            foreach ($checkoutItems as $checkoutItem) {
+                $purchasable = $checkoutItem['purchasable'];
+                $price = (float) $purchasable->effectivePrice();
+                $quantity = (int) $checkoutItem['quantity'];
 
                 $order->items()->create([
-                    'purchasable_type' => $cartItem->purchasable_type,
-                    'purchasable_id' => $cartItem->purchasable_id,
+                    'purchasable_type' => $checkoutItem['purchasable_type'],
+                    'purchasable_id' => $checkoutItem['purchasable_id'],
                     'name' => $purchasable->name,
                     'warranty_period' => $purchasable->warranty ?? null,
                     'price' => $price,
@@ -208,6 +551,10 @@ class CheckoutController extends Controller
 
             return $order;
         });
+
+        // The committed order stores its own code and discount snapshot. Clear the
+        // session so a retry or a second order cannot inherit this voucher.
+        $request->session()->forget('checkout_voucher_code');
 
         if ($validated['payment_method'] === 'cash') {
             try {
@@ -230,7 +577,13 @@ class CheckoutController extends Controller
                 'related_id' => $order->id,
             ]);
 
-            $cart->items()->delete();
+            if ($cart) {
+                $cart->items()->delete();
+            }
+
+            if ($isBuyNow) {
+                $request->session()->forget('buy_now');
+            }
 
             return redirect()->route('checkout')->with([
                 'orderNumber' => $order->order_number,
@@ -247,14 +600,16 @@ class CheckoutController extends Controller
                 'maya' => 'paymaya',
             };
 
-            $lineItems = $order->items->map(function ($item) {
-                return [
-                    'name' => $item->name,
-                    'amount' => (int) round($item->price * 100),
-                    'currency' => 'PHP',
-                    'quantity' => (int) $item->quantity,
-                ];
-            })->values()->all();
+            $lineItems = (float) $order->discount_amount > 0
+                ? app(PayMongoLineItemBuilder::class)->buildDiscounted($order)
+                : $order->items->map(function ($item) {
+                    return [
+                        'name' => $item->name,
+                        'amount' => (int) round($item->price * 100),
+                        'currency' => 'PHP',
+                        'quantity' => (int) $item->quantity,
+                    ];
+                })->values()->all();
 
             $response = Http::withBasicAuth(
                 config('services.paymongo.secret_key'),
@@ -277,7 +632,7 @@ class CheckoutController extends Controller
                                     'email' => $order->customer_email,
                                     'phone' => $order->customer_phone,
                                 ],
-                                'description' => 'SecureView Order ' . $order->order_number,
+                                'description' => 'Netmax Trading Order ' . $order->order_number,
                                 'reference_number' => $order->order_number,
                                 'metadata' => [
                                     'order_id' => (string) $order->id,
@@ -341,6 +696,19 @@ class CheckoutController extends Controller
                 'related_type' => Order::class,
                 'related_id' => $order->id,
             ]);
+
+            if ($isBuyNow) {
+                $buyNowOrderIds = array_map(
+                    'intval',
+                    (array) $request->session()->get('buy_now_order_ids', [])
+                );
+                $buyNowOrderIds[] = (int) $order->id;
+                $request->session()->put(
+                    'buy_now_order_ids',
+                    array_values(array_unique($buyNowOrderIds))
+                );
+                $request->session()->forget('buy_now');
+            }
 
             return Inertia::location($checkoutUrl);
         } catch (\Throwable $exception) {
@@ -413,17 +781,26 @@ class CheckoutController extends Controller
                             ->where('order_id', $order->id)
                             ->exists();
 
-                        CustomerNotification::create([
-                            'user_id' => $request->user()->id,
-                            'type' => 'payment_paid',
-                            'title' => 'Payment successful',
-                            'message' => 'Payment for order ' . $order->order_number . ' was successful.',
-                            'action_url' => route('purchases.show', $order),
-                            'related_type' => Order::class,
-                            'related_id' => $order->id,
-                        ]);
+                        CustomerNotification::firstOrCreate(
+                            ['dedupe_key' => 'payment-paid:order:' . $order->id],
+                            [
+                                'user_id' => $request->user()->id,
+                                'type' => 'payment_paid',
+                                'title' => 'Payment successful',
+                                'message' => 'Payment for order ' . $order->order_number . ' was successful.',
+                                'action_url' => route('purchases.show', $order),
+                                'related_type' => Order::class,
+                                'related_id' => $order->id,
+                            ]
+                        );
 
-                        if (!$isInstallationCheckout) {
+                        $buyNowOrderIds = array_map(
+                            'intval',
+                            (array) $request->session()->get('buy_now_order_ids', [])
+                        );
+                        $isBuyNowOrder = in_array((int) $order->id, $buyNowOrderIds, true);
+
+                        if (!$isInstallationCheckout && !$isBuyNowOrder) {
                             $request->user()->cart?->items()->delete();
                         }
 
@@ -437,15 +814,51 @@ class CheckoutController extends Controller
 
         $order->refresh();
 
-        // The actual Installation inquiry is created only after PayMongo confirms payment.
+        // A previous webhook or browser return may have confirmed payment while
+        // inventory deduction failed. Retry here whenever the order lacks the
+        // idempotency marker; InventoryService prevents a second deduction.
+        if ($order->payment_status === 'paid' && !$order->stock_deducted_at) {
+            try {
+                $inventory->deductForOrder($order);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+
+            $order->refresh();
+        }
+
+        if ($order->payment_status === 'paid') {
+            $buyNowOrderIds = array_map(
+                'intval',
+                (array) $request->session()->get('buy_now_order_ids', [])
+            );
+            $buyNowOrderIds = array_values(array_filter(
+                $buyNowOrderIds,
+                fn ($id) => $id !== (int) $order->id
+            ));
+
+            if ($buyNowOrderIds) {
+                $request->session()->put('buy_now_order_ids', $buyNowOrderIds);
+            } else {
+                $request->session()->forget('buy_now_order_ids');
+            }
+        }
+
+        // Finalize any linked service inquiry idempotently after PayMongo confirms payment.
         if ($order->payment_status === 'paid') {
             $inquiry = $this->completePaidInstallationInquiry($request, $order);
 
             if ($inquiry) {
-                return redirect()->route('inquiries.show', $inquiry)->with(
-                    'success',
-                    'Payment confirmed. Your installation inquiry ' . $inquiry->inquiry_number . ' has been submitted.'
-                );
+                $serviceType = strtolower($inquiry->service_type);
+                $isInstallation = $inquiry->service_type === 'Installation';
+
+                return redirect()->route('inquiries.show', $inquiry)
+                    ->with('success', 'Payment confirmed. Your ' . $serviceType . ' service request ' . $inquiry->inquiry_number . ' has been submitted for review.')
+                    ->with('serviceNotification', [
+                        'title' => $isInstallation ? 'Installation service booked' : 'Service booking fee paid',
+                        'message' => 'Payment is confirmed and service request ' . $inquiry->inquiry_number . ' is awaiting review.',
+                        'action_url' => route('inquiries.show', $inquiry),
+                    ]);
             }
         }
 
@@ -469,7 +882,7 @@ class CheckoutController extends Controller
         }
 
         // Keep the pending checkout so the customer can retry payment from order details.
-        // No Installation inquiry is created unless the gateway later confirms payment.
+        // Linked service inquiries remain visible with their payment state until finalized.
         return redirect()->route('purchases.show', $order)->with([
             'paymentCancelled' => true,
         ]);

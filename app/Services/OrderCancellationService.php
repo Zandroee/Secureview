@@ -34,6 +34,7 @@ class OrderCancellationService
 
             $lockedOrder->update([
                 'order_status' => 'cancelled',
+                'payment_status' => 'cancelled',
                 'cancellation_reason' => $reason,
             ]);
 
@@ -41,6 +42,15 @@ class OrderCancellationService
                 ->where('order_id', $lockedOrder->id)
                 ->where('status', 'pending_payment')
                 ->update(['status' => 'cancelled']);
+
+            $pendingCheckout = PendingInquiryCheckout::query()
+                ->with('inquiry')
+                ->where('order_id', $lockedOrder->id)
+                ->first();
+
+            if ($pendingCheckout?->inquiry) {
+                $pendingCheckout->inquiry->update(['status' => 'cancelled']);
+            }
 
             if ($lockedOrder->stock_deducted_at) {
                 $inventory->restoreForCancelledOrder($lockedOrder);
@@ -52,7 +62,7 @@ class OrderCancellationService
     {
         if ($order->payment_status === 'paid' || $order->paid_at !== null) {
             throw ValidationException::withMessages([
-                'order' => 'This order has already been paid. It cannot be cancelled here because refunds are not yet supported.',
+                'order' => 'This order has already been paid. Use the refund request option instead of the unpaid-order cancellation action.',
             ]);
         }
 
@@ -75,7 +85,7 @@ class OrderCancellationService
 
         if (!$secretKey) {
             throw ValidationException::withMessages([
-                'order' => 'The PayMongo secret key is not configured, so SecureView cannot safely expire this checkout session yet.',
+                'order' => 'The PayMongo secret key is not configured, so Netmax Trading cannot safely expire this checkout session yet.',
             ]);
         }
 
@@ -99,7 +109,7 @@ class OrderCancellationService
 
             if (!$sessionResponse->successful()) {
                 throw ValidationException::withMessages([
-                    'order' => 'SecureView could not verify the PayMongo checkout. The order was not cancelled; please try again.',
+                    'order' => 'Netmax Trading could not verify the PayMongo checkout. The order was not cancelled; please try again.',
                 ]);
             }
 
@@ -148,7 +158,7 @@ class OrderCancellationService
             report($exception);
 
             throw ValidationException::withMessages([
-                'order' => 'SecureView could not safely expire the PayMongo checkout. The order was not cancelled; please try again.',
+                'order' => 'Netmax Trading could not safely expire the PayMongo checkout. The order was not cancelled; please try again.',
             ]);
         }
     }

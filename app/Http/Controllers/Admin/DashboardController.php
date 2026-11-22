@@ -8,6 +8,8 @@ use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Order;
+use App\Models\Refund;
+use App\Models\ServiceRecord;
 use App\Models\Product;
 use App\Models\User;
 use Carbon\Carbon;
@@ -81,15 +83,29 @@ class DashboardController extends Controller
             ->all();
 
         $salesWindow = $this->periodWindow($metricPeriods['sales']);
+        $currentSalesRefunds = (float) Refund::query()
+            ->where('status', 'completed')
+            ->whereBetween('completed_at', [$salesWindow['start'], $salesWindow['end']])
+            ->sum('amount_approved');
         $currentSales = (float) $this->paidOrdersBetween(
             $salesWindow['start'],
             $salesWindow['end']
-        )->sum('total');
+        )->sum('total') + (float) ServiceRecord::query()
+            ->whereBetween('completed_at', [$salesWindow['start'], $salesWindow['end']])
+            ->sum('total_income') - $currentSalesRefunds;
+        $previousSalesRefunds = $salesWindow['previous_start']
+            ? (float) Refund::query()
+                ->where('status', 'completed')
+                ->whereBetween('completed_at', [$salesWindow['previous_start'], $salesWindow['previous_end']])
+                ->sum('amount_approved')
+            : 0.0;
         $previousSales = $salesWindow['previous_start']
             ? (float) $this->paidOrdersBetween(
                 $salesWindow['previous_start'],
                 $salesWindow['previous_end']
-            )->sum('total')
+            )->sum('total') + (float) ServiceRecord::query()
+                ->whereBetween('completed_at', [$salesWindow['previous_start'], $salesWindow['previous_end']])
+                ->sum('total_income') - $previousSalesRefunds
             : null;
 
         $ordersWindow = $this->periodWindow($metricPeriods['orders']);
@@ -203,7 +219,7 @@ class DashboardController extends Controller
             ->orderBy('preferred_date')
             ->orderBy('preferred_time')
             ->orderByRaw("CASE urgency WHEN 'emergency' THEN 1 WHEN 'urgent' THEN 2 ELSE 3 END")
-            ->limit(5)
+            ->limit(50)
             ->get([
                 'id',
                 'inquiry_number',
@@ -228,12 +244,12 @@ class DashboardController extends Controller
             ])
             ->values();
 
-        // Only show inquiries that still need admin attention. Confirmed and
-        // in-progress inquiries belong in Upcoming Schedule, not Recent Inquiries.
+        // Only show service requests that still need admin attention. Confirmed and
+        // in-progress services belong in Upcoming Schedule, not Recent Services.
         $recentInquiries = Inquiry::query()
             ->where('status', 'pending')
             ->latest()
-            ->limit(4)
+            ->limit(50)
             ->get([
                 'id',
                 'inquiry_number',
@@ -248,7 +264,7 @@ class DashboardController extends Controller
             ->map(fn (Inquiry $inquiry) => [
                 'id' => $inquiry->id,
                 'inquiry_number' => $inquiry->inquiry_number,
-                'title' => $inquiry->service_type ?: ('Inquiry ' . $inquiry->inquiry_number),
+                'title' => $inquiry->service_type ?: ('Service ' . $inquiry->inquiry_number),
                 'customer_name' => $inquiry->customer_name,
                 'message' => $inquiry->customer_name . ' · ' . str_replace('_', ' ', $inquiry->status),
                 'date' => $inquiry->created_at?->diffForHumans() ?? '',
@@ -261,7 +277,7 @@ class DashboardController extends Controller
 
         $recentOrders = Order::query()
             ->latest()
-            ->limit(5)
+            ->limit(50)
             ->get([
                 'id',
                 'order_number',
@@ -288,7 +304,7 @@ class DashboardController extends Controller
         $recentAnnouncements = CustomerNotification::query()
             ->where('type', 'announcement')
             ->latest()
-            ->limit(100)
+            ->limit(1000)
             ->get([
                 'id',
                 'type',
@@ -300,7 +316,7 @@ class DashboardController extends Controller
             ->unique(fn (CustomerNotification $notification) => sha1(
                 $notification->title . '|' . $notification->message
             ))
-            ->take(5)
+            ->take(50)
             ->map(fn (CustomerNotification $notification) => [
                 'id' => $notification->id,
                 'type' => $notification->type,
@@ -405,8 +421,16 @@ class DashboardController extends Controller
         $chartPeriod = $filters['chart_period'] ?? 'year';
         $chartConfiguration = $this->revenueChartConfiguration($chartPeriod);
         $chartStart = $chartConfiguration['start'];
-        $paidOrdersForChart = $this->paidOrdersBetween($chartStart, now()->copy())
+        $chartEnd = now()->copy();
+        $paidOrdersForChart = $this->paidOrdersBetween($chartStart, $chartEnd)
             ->get(['total', 'paid_at', 'created_at']);
+        $refundsForChart = Refund::query()
+            ->where('status', 'completed')
+            ->whereBetween('completed_at', [$chartStart, $chartEnd])
+            ->get(['amount_approved', 'completed_at']);
+        $serviceIncomeForChart = ServiceRecord::query()
+            ->whereBetween('completed_at', [$chartStart, now()->copy()])
+            ->get(['total_income', 'completed_at']);
 
         $revenueByBucket = [];
         foreach ($chartConfiguration['bins'] as $bin) {
@@ -430,6 +454,44 @@ class DashboardController extends Controller
 
             if (array_key_exists($bucketKey, $revenueByBucket)) {
                 $revenueByBucket[$bucketKey] += (float) $order->total;
+            }
+        }
+
+        foreach ($refundsForChart as $refund) {
+            $recognizedAt = $refund->completed_at;
+            if (!$recognizedAt) {
+                continue;
+            }
+
+            $bucketKey = match ($chartConfiguration['unit']) {
+                'hour' => $recognizedAt->format('Y-m-d H'),
+                'day' => $recognizedAt->format('Y-m-d'),
+                'week' => $recognizedAt->format('o-W'),
+                'month' => $recognizedAt->format('Y-m'),
+                default => $recognizedAt->format('Y'),
+            };
+
+            if (array_key_exists($bucketKey, $revenueByBucket)) {
+                $revenueByBucket[$bucketKey] -= (float) $refund->amount_approved;
+            }
+        }
+
+        foreach ($serviceIncomeForChart as $serviceRecord) {
+            $recognizedAt = $serviceRecord->completed_at;
+            if (!$recognizedAt) {
+                continue;
+            }
+
+            $bucketKey = match ($chartConfiguration['unit']) {
+                'hour' => $recognizedAt->format('Y-m-d H'),
+                'day' => $recognizedAt->format('Y-m-d'),
+                'week' => $recognizedAt->format('o-W'),
+                'month' => $recognizedAt->format('Y-m'),
+                default => $recognizedAt->format('Y'),
+            };
+
+            if (array_key_exists($bucketKey, $revenueByBucket)) {
+                $revenueByBucket[$bucketKey] += (float) $serviceRecord->total_income;
             }
         }
 
@@ -738,7 +800,7 @@ class DashboardController extends Controller
             case 'all_time':
                 $unit = 'year';
                 $firstPaidOrder = Order::query()
-                    ->where('payment_status', 'paid')
+                    ->whereIn('payment_status', ['paid', 'partially_refunded', 'refunded'])
                     ->orderByRaw('COALESCE(paid_at, created_at) ASC')
                     ->first(['paid_at', 'created_at']);
                 $firstPaidDate = $firstPaidOrder
@@ -797,7 +859,7 @@ class DashboardController extends Controller
     private function paidOrdersBetween(Carbon $start, Carbon $end): Builder
     {
         return Order::query()
-            ->where('payment_status', 'paid')
+            ->whereIn('payment_status', ['paid', 'partially_refunded', 'refunded'])
             ->whereRaw('DATE(COALESCE(paid_at, created_at)) BETWEEN ? AND ?', [
                 $start->toDateString(),
                 $end->toDateString(),

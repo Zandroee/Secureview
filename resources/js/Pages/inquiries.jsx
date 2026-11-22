@@ -1,8 +1,8 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
-import CustomerSidebar from "../Components/customerSidebar";
 import { googleMapsSearchUrl } from "../Components/GoogleMaps/ServiceLocation";
 import { Link } from "@inertiajs/react";
+import { useState } from "react";
 
 function statusClass(status) {
     if (status === "confirmed" || status === "completed") {
@@ -33,6 +33,20 @@ function urgencyClass(urgency) {
 }
 
 export default function Inquiries({ inquiries = [] }) {
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [serviceTypeFilter, setServiceTypeFilter] = useState("");
+    const [urgencyFilter, setUrgencyFilter] = useState("");
+    const filteredInquiries = inquiries.filter((service) => {
+        const query = search.trim().toLowerCase();
+        const searchable = [service.inquiry_number, service.item_name, service.service_type, service.status]
+            .filter(Boolean).join(" ").toLowerCase();
+        return (!query || searchable.includes(query))
+            && (!statusFilter || service.status === statusFilter)
+            && (!serviceTypeFilter || service.service_type === serviceTypeFilter)
+            && (!urgencyFilter || service.urgency === urgencyFilter);
+    });
+
     return (
         <div>
             <Navbar />
@@ -45,11 +59,7 @@ export default function Inquiries({ inquiries = [] }) {
             >
                 <div className="container py-4">
                     <div className="row g-3 align-items-start">
-                        <div className="col-lg-3">
-                            <CustomerSidebar active="inquiries" />
-                        </div>
-
-                        <div className="col-lg-8">
+                        <div className="col-12">
                             <div
                                 className="bg-white border rounded-3 p-3"
                                 style={{
@@ -59,7 +69,7 @@ export default function Inquiries({ inquiries = [] }) {
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <div>
                                         <div className="small text-primary fw-bold">
-                                            SECUREVIEW
+                                            NETMAX TRADING
                                         </div>
 
                                         <h2
@@ -69,7 +79,7 @@ export default function Inquiries({ inquiries = [] }) {
                                                 fontSize: "1.05rem",
                                             }}
                                         >
-                                            INQUIRY HISTORY
+                                            SERVICE HISTORY
                                         </h2>
                                     </div>
 
@@ -77,11 +87,45 @@ export default function Inquiries({ inquiries = [] }) {
                                         href="/inquiry"
                                         className="btn btn-primary btn-sm fw-bold"
                                     >
-                                        NEW INQUIRY
+                                        NEW SERVICE REQUEST
                                     </Link>
                                 </div>
 
-                                {inquiries.length === 0 ? (
+                                <div className="row g-2 mb-3">
+                                    <div className="col-md-4">
+                                        <label className="form-label small fw-semibold" htmlFor="service-history-search">Search services</label>
+                                        <input id="service-history-search" type="search" className="form-control form-control-sm" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Service ID, type, item, or status" />
+                                    </div>
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-semibold" htmlFor="service-history-status">Status</label>
+                                        <select id="service-history-status" className="form-select form-select-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                                            <option value="">All statuses</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="confirmed">Confirmed</option>
+                                            <option value="in_progress">In progress</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-semibold" htmlFor="service-history-type">Service type</label>
+                                        <select id="service-history-type" className="form-select form-select-sm" value={serviceTypeFilter} onChange={(event) => setServiceTypeFilter(event.target.value)}>
+                                            <option value="">All service types</option>
+                                            {Array.from(new Set(inquiries.map((service) => service.service_type).filter(Boolean))).sort().map((type) => <option key={type} value={type}>{type}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="col-md-2">
+                                        <label className="form-label small fw-semibold" htmlFor="service-history-urgency">Urgency</label>
+                                        <select id="service-history-urgency" className="form-select form-select-sm" value={urgencyFilter} onChange={(event) => setUrgencyFilter(event.target.value)}>
+                                            <option value="">All</option>
+                                            <option value="normal">Normal</option>
+                                            <option value="urgent">Urgent</option>
+                                            <option value="emergency">Emergency</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {filteredInquiries.length === 0 ? (
                                     <div
                                         className="border rounded-3 p-5 text-center"
                                         style={{
@@ -100,26 +144,25 @@ export default function Inquiries({ inquiries = [] }) {
                                                     "Outfit, sans-serif",
                                             }}
                                         >
-                                            NO INQUIRIES YET
+                                            {inquiries.length === 0 ? "NO SERVICE REQUESTS YET" : "NO MATCHING SERVICES"}
                                         </h5>
 
                                         <p className="small text-muted mb-3">
-                                            Your submitted service inquiries
-                                            will appear here.
+                                            {inquiries.length === 0 ? "Your submitted service requests will appear here." : "Try changing or clearing your filters."}
                                         </p>
 
                                         <Link
                                             href="/inquiry"
                                             className="btn btn-primary btn-sm fw-bold px-4"
                                         >
-                                            MAKE AN INQUIRY
+                                            REQUEST A SERVICE
                                         </Link>
                                     </div>
                                 ) : (
                                     <div className="d-flex flex-column gap-2">
-                                        {inquiries.map((inquiry) => (
+                                        {filteredInquiries.map((service) => (
                                             <div
-                                                key={inquiry.id}
+                                                key={service.id}
                                                 className="border rounded-3 p-2"
                                                 style={{
                                                     boxShadow:
@@ -130,34 +173,23 @@ export default function Inquiries({ inquiries = [] }) {
                                                     <div className="col-md-4">
                                                         <div className="small">
                                                             <strong>
-                                                                Inquiry ID:
+                                                                Service ID:
                                                             </strong>{" "}
                                                             {
-                                                                inquiry.inquiry_number
+                                                                service.inquiry_number
                                                             }
                                                         </div>
 
                                                         <div className="small text-muted mt-1">
                                                             DATE:{" "}
                                                             {
-                                                                inquiry.created_at?.split(
-                                                                    " "
-                                                                )[0]
+                                                                service.created_date || service.created_at
                                                             }
                                                         </div>
 
                                                         <div className="small text-muted">
                                                             TIME:{" "}
-                                                            {
-                                                                inquiry.created_at?.split(
-                                                                    " "
-                                                                )[1]
-                                                            }{" "}
-                                                            {
-                                                                inquiry.created_at?.split(
-                                                                    " "
-                                                                )[2]
-                                                            }
+                                                            {service.created_time || "—"}
                                                         </div>
                                                     </div>
 
@@ -168,9 +200,18 @@ export default function Inquiries({ inquiries = [] }) {
 
                                                         <div className="fw-semibold small">
                                                             {
-                                                                inquiry.service_type
+                                                                service.service_type
                                                             }
                                                         </div>
+
+                                                        {service.payment_status && service.payment_status !== "not_applicable" && (
+                                                            <div className="small text-muted mt-1">
+                                                                PAYMENT
+                                                                <span className={"badge rounded-pill ms-2 text-capitalize " + (["paid", "partially_refunded", "refunded"].includes(service.payment_status) ? "bg-success-subtle text-success" : service.payment_status === "cancelled" || service.payment_status === "failed" ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning-emphasis")}>
+                                                                    {service.payment_status.replaceAll("_", " ")}
+                                                                </span>
+                                                            </div>
+                                                        )}
 
                                                         <div className="small text-muted mt-1">
                                                             URGENCY
@@ -180,20 +221,25 @@ export default function Inquiries({ inquiries = [] }) {
                                                             className={
                                                                 "badge rounded-pill text-capitalize " +
                                                                 urgencyClass(
-                                                                    inquiry.urgency
+                                                                    service.urgency
                                                                 )
                                                             }
                                                         >
-                                                            {inquiry.urgency}
+                                                            {service.urgency}
                                                         </span>
+                                                        {Number(service.urgency_fee ?? 0) > 0 && (
+                                                            <div className="small text-warning-emphasis fw-semibold mt-1">
+                                                                Booking fee: ₱{Number(service.urgency_fee).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </div>
+                                                        )}
 
                                                         <div className="small text-muted mt-1">
                                                             TECHNICIAN
                                                         </div>
 
                                                         <div className="fw-semibold small">
-                                                            {(inquiry.technicians ?? []).length
-                                                                ? inquiry.technicians.map((technician) => technician.name).join(", ")
+                                                            {(service.technicians ?? []).length
+                                                                ? service.technicians.map((technician) => technician.name).join(", ")
                                                                 : "Not assigned yet"}
                                                         </div>
 
@@ -202,25 +248,25 @@ export default function Inquiries({ inquiries = [] }) {
                                                         </div>
 
                                                         <div className="fw-semibold small text-truncate">
-                                                            {inquiry.item_name ||
-                                                                "General Inquiry"}
+                                                            {service.item_name ||
+                                                                "General Service"}
                                                         </div>
 
-                                                        {(inquiry.street_address || inquiry.city) && (
+                                                        {(service.street_address || service.city) && (
                                                             <div className="small text-muted mt-2 text-truncate">
-                                                                {inquiry.street_address || inquiry.city}
+                                                                {service.street_address || service.city}
                                                             </div>
                                                         )}
 
-                                                        {(inquiry.google_place_id || inquiry.service_latitude !== null && inquiry.service_latitude !== undefined || inquiry.street_address || inquiry.city) && (
+                                                        {(service.google_place_id || service.service_latitude !== null && service.service_latitude !== undefined || service.street_address || service.city) && (
                                                             <a
                                                                 href={googleMapsSearchUrl({
-                                                                    latitude: inquiry.service_latitude,
-                                                                    longitude: inquiry.service_longitude,
-                                                                    placeId: inquiry.google_place_id,
-                                                                    streetAddress: inquiry.street_address,
-                                                                    city: inquiry.city,
-                                                                    addressDetails: inquiry.address_details,
+                                                                    latitude: service.service_latitude,
+                                                                    longitude: service.service_longitude,
+                                                                    placeId: service.google_place_id,
+                                                                    streetAddress: service.street_address,
+                                                                    city: service.city,
+                                                                    addressDetails: service.address_details,
                                                                 })}
                                                                 target="_blank"
                                                                 rel="noreferrer"
@@ -238,13 +284,13 @@ export default function Inquiries({ inquiries = [] }) {
 
                                                         <div className="fw-semibold small">
                                                             {
-                                                                inquiry.preferred_date
+                                                                service.preferred_date
                                                             }
                                                         </div>
 
                                                         <div className="small text-muted">
                                                             {
-                                                                inquiry.preferred_time
+                                                                service.preferred_time
                                                             }
                                                         </div>
                                                     </div>
@@ -255,12 +301,12 @@ export default function Inquiries({ inquiries = [] }) {
                                                                 className={
                                                                     "badge rounded-pill px-2 py-2 " +
                                                                     statusClass(
-                                                                        inquiry.status
+                                                                        service.status
                                                                     )
                                                                 }
                                                             >
                                                                 Status:{" "}
-                                                                {inquiry.status.replace(
+                                                                {service.status.replace(
                                                                     /_/g,
                                                                     " "
                                                                 )}
@@ -269,7 +315,7 @@ export default function Inquiries({ inquiries = [] }) {
                                                             <Link
                                                                 href={
                                                                     "/inquiries/" +
-                                                                    inquiry.id
+                                                                    service.id
                                                                 }
                                                                 className="btn btn-outline-primary btn-sm fw-bold"
                                                             >

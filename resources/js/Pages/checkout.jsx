@@ -1,6 +1,8 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
-import { Link, useForm } from "@inertiajs/react";
+import { Link, router, useForm, usePage } from "@inertiajs/react";
+import ServiceLocationPicker from "../Components/GoogleMaps/ServiceLocation";
+import { useState } from "react";
 
 const paymentMethods = [
     {
@@ -49,12 +51,25 @@ export default function Checkout({
     success,
     orderNumber,
     paymentMethod,
+    pickupAddress = "",
+    successPickupAddress = null,
+    fulfillmentMethod = "delivery",
 }) {
+    const { props: pageProps } = usePage();
+    const pageErrors = pageProps.errors ?? {};
+    const [voucherCode, setVoucherCode] = useState(String(cart?.voucher?.code ?? ""));
+    const [voucherProcessing, setVoucherProcessing] = useState(false);
+
     const { data, setData, post, processing, errors } = useForm({
         customer_name: customer?.name ?? "",
         customer_phone: customer?.phone ?? "",
         customer_email: customer?.email ?? "",
-        delivery_address: "",
+        fulfillment_method: "delivery",
+        delivery_street_address: "",
+        delivery_address_details: "",
+        delivery_city: "",
+        delivery_latitude: "",
+        delivery_longitude: "",
         notes: "",
         payment_method: "cash",
     });
@@ -62,6 +77,7 @@ export default function Checkout({
     const items = cart?.items ?? [];
     const subtotal = Number(cart?.subtotal ?? 0);
     const shippingFee = Number(cart?.shipping_fee ?? 0);
+    const discountAmount = Number(cart?.discount_amount ?? 0);
     const total = Number(cart?.total ?? 0);
 
     const totalQuantity = items.reduce(
@@ -92,6 +108,7 @@ export default function Checkout({
                 <Navbar />
 
                 <main
+                    className="checkout-page"
                     style={{
                         backgroundColor: "#f7f7f8",
                         minHeight: "65vh",
@@ -99,7 +116,7 @@ export default function Checkout({
                 >
                     <div className="container py-5">
                         <div
-                            className="mx-auto bg-white border rounded-4 p-4 p-md-5 text-center"
+                            className="mx-auto bg-white border rounded-4 p-4 p-md-5 text-center checkout-panel"
                             style={{ maxWidth: "700px" }}
                         >
                             <div
@@ -117,7 +134,7 @@ export default function Checkout({
                             </div>
 
                             <div className="small text-uppercase fw-bold text-primary mb-2">
-                                SecureView
+                                Netmax Trading
                             </div>
 
                             <h1
@@ -158,6 +175,14 @@ export default function Checkout({
                                 </div>
                             </div>
 
+                            {fulfillmentMethod === "pickup" && successPickupAddress && (
+                                <div className="alert alert-info text-start mt-3">
+                                    <div className="fw-bold mb-1"><i className="bi bi-shop me-2" />SHOP PICKUP ADDRESS</div>
+                                    <div className="small">{successPickupAddress}</div>
+                                    <div className="small mt-2">Please collect your order from this location. Keep your order number for reference.</div>
+                                </div>
+                            )}
+
                             <p className="small text-muted mb-4">
                                 Online payment processing for GCash, Card, and
                                 Maya will be connected to the payment gateway
@@ -184,6 +209,7 @@ export default function Checkout({
             <Navbar />
 
             <main
+                className="checkout-page"
                 style={{
                     backgroundColor: "#f7f7f8",
                     minHeight: "65vh",
@@ -193,13 +219,13 @@ export default function Checkout({
                     <div className="row g-4 align-items-start">
                         <div className="col-lg-7">
                             <div
-                                className="bg-white border rounded-4 p-3 p-md-4"
+                                className="bg-white border rounded-4 p-3 p-md-4 checkout-panel"
                                 style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}
                             >
                                 <div className="d-flex justify-content-between align-items-center mb-4">
                                     <div>
                                         <div className="small text-uppercase fw-bold text-primary mb-1">
-                                            SecureView
+                                            Netmax Trading
                                         </div>
 
                                         <h1
@@ -322,34 +348,59 @@ export default function Checkout({
                                     </div>
 
                                     <div className="mb-4">
-                                        <div style={sectionTitleStyle}>
-                                            CUSTOMER'S ADDRESS
+                                        <div style={sectionTitleStyle}>FULFILLMENT METHOD</div>
+                                        <div className="row g-2 mb-3">
+                                            <div className="col-sm-6">
+                                                <label className={"border rounded-3 p-3 d-flex gap-2 align-items-start h-100 w-100 " + (data.fulfillment_method === "delivery" ? "border-primary bg-primary-subtle" : "bg-white")} style={{ cursor: "pointer" }}>
+                                                    <input type="radio" name="fulfillment_method" value="delivery" checked={data.fulfillment_method === "delivery"} onChange={() => setData("fulfillment_method", "delivery")} className="form-check-input mt-1" />
+                                                    <span><strong className="d-block">Deliver to my address</strong><span className="small text-muted">Provide your complete address and pin the delivery entrance on the map.</span></span>
+                                                </label>
+                                            </div>
+                                            <div className="col-sm-6">
+                                                <label className={"border rounded-3 p-3 d-flex gap-2 align-items-start h-100 w-100 " + (data.fulfillment_method === "pickup" ? "border-primary bg-primary-subtle" : "bg-white")} style={{ cursor: pickupAddress ? "pointer" : "not-allowed", opacity: pickupAddress ? 1 : 0.6 }}>
+                                                    <input type="radio" name="fulfillment_method" value="pickup" checked={data.fulfillment_method === "pickup"} disabled={!pickupAddress} onChange={() => setData("fulfillment_method", "pickup")} className="form-check-input mt-1" />
+                                                    <span>
+                                                        <strong className="d-block">Shop pickup</strong>
+                                                        {pickupAddress ? (
+                                                            <span className="small text-muted d-block mt-1">Collect your order at this store:</span>
+                                                        ) : (
+                                                            <span className="small text-danger d-block mt-1">Shop pickup is temporarily unavailable because the store address has not been configured.</span>
+                                                        )}
+                                                        {pickupAddress && <span className="small fw-semibold d-block mt-1">{pickupAddress}</span>}
+                                                    </span>
+                                                </label>
+                                            </div>
                                         </div>
-
-                                        <label className="form-label small fw-semibold">
-                                            Delivery Address <span className="text-danger">*</span>
-                                        </label>
-
-                                        <textarea
-                                            rows="3"
-                                            className={`form-control ${errors.delivery_address ? "is-invalid" : ""}`}
-                                            style={{
-                                                ...fieldStyle,
-                                                resize: "vertical",
-                                            }}
-                                            placeholder="House/Unit, Street, Barangay, City, Province, ZIP Code"
-                                            value={data.delivery_address}
-                                            onChange={(event) =>
-                                                setData(
-                                                    "delivery_address",
-                                                    event.target.value
-                                                )
-                                            }
-                                        ></textarea>
-
-                                        {errors.delivery_address && (
-                                            <div className="invalid-feedback">
-                                                {errors.delivery_address}
+                                        {errors.fulfillment_method && <div className="small text-danger mb-2">{errors.fulfillment_method}</div>}
+                                        {data.fulfillment_method === "delivery" ? (
+                                            <>
+                                                <div className="fw-bold small mb-2">DELIVERY ADDRESS</div>
+                                                <div className="row g-3">
+                                                    <div className="col-12">
+                                                        <label htmlFor="checkout-delivery-street" className="form-label small fw-semibold">Street address / Barangay <span className="text-danger">*</span></label>
+                                                        <input id="checkout-delivery-street" type="text" maxLength={500} autoComplete="street-address" className={"form-control " + (errors.delivery_street_address ? "is-invalid" : "")} style={fieldStyle} placeholder="House number, street, barangay" value={data.delivery_street_address} onChange={(event) => setData("delivery_street_address", event.target.value)} />
+                                                        {errors.delivery_street_address && <div className="invalid-feedback">{errors.delivery_street_address}</div>}
+                                                    </div>
+                                                    <div className="col-12">
+                                                        <label htmlFor="checkout-delivery-details" className="form-label small fw-semibold">Unit / Building / Landmark <span className="text-muted fw-normal">(optional)</span></label>
+                                                        <input id="checkout-delivery-details" type="text" maxLength={500} className={"form-control " + (errors.delivery_address_details ? "is-invalid" : "")} style={fieldStyle} placeholder="Unit, floor, gate, or nearby landmark" value={data.delivery_address_details} onChange={(event) => setData("delivery_address_details", event.target.value)} />
+                                                        {errors.delivery_address_details && <div className="invalid-feedback">{errors.delivery_address_details}</div>}
+                                                    </div>
+                                                    <div className="col-12">
+                                                        <label htmlFor="checkout-delivery-city" className="form-label small fw-semibold">City / Municipality and Province <span className="text-danger">*</span></label>
+                                                        <input id="checkout-delivery-city" type="text" maxLength={180} autoComplete="address-level2" className={"form-control " + (errors.delivery_city ? "is-invalid" : "")} style={fieldStyle} placeholder="City / Municipality, Province" value={data.delivery_city} onChange={(event) => setData("delivery_city", event.target.value)} />
+                                                        {errors.delivery_city && <div className="invalid-feedback">{errors.delivery_city}</div>}
+                                                    </div>
+                                                </div>
+                                                <div className="small text-muted mt-2 mb-3">Search your address on OpenStreetMap, then drag the marker or click the map to pin the exact delivery entrance.</div>
+                                                <ServiceLocationPicker locationType="delivery" streetAddress={data.delivery_street_address} city={data.delivery_city} latitude={data.delivery_latitude} longitude={data.delivery_longitude} apiErrors={{ service_location: errors.delivery_latitude || errors.delivery_longitude || errors.delivery_location }} onChange={(changes) => setData((current) => ({ ...current, delivery_latitude: changes.service_latitude ?? current.delivery_latitude, delivery_longitude: changes.service_longitude ?? current.delivery_longitude }))} />
+                                                {errors.delivery_location && <div className="small text-danger mt-2">{errors.delivery_location}</div>}
+                                                {errors.delivery_address && <div className="small text-danger mt-2">{errors.delivery_address}</div>}
+                                            </>
+                                        ) : (
+                                            <div className="alert alert-info small mb-0">
+                                                <i className="bi bi-shop me-2" />
+                                                You selected shop pickup. Your order will be marked for collection at Netmax Trading; delivery address and map details are not required.
                                             </div>
                                         )}
                                     </div>
@@ -372,17 +423,7 @@ export default function Checkout({
                                                     >
                                                         <button
                                                             type="button"
-                                                            className="w-100 text-start border rounded-3 p-3"
-                                                            style={{
-                                                                backgroundColor:
-                                                                    selected
-                                                                        ? "#edf5ff"
-                                                                        : "#fff",
-                                                                borderColor:
-                                                                    selected
-                                                                        ? "#0d6efd"
-                                                                        : "#e3e3e6",
-                                                            }}
+                                                            className={"w-100 text-start border rounded-3 p-3 checkout-payment-method " + (selected ? "is-selected" : "")}
                                                             onClick={() =>
                                                                 setData(
                                                                     "payment_method",
@@ -392,7 +433,7 @@ export default function Checkout({
                                                         >
                                                             <div className="d-flex align-items-center gap-2">
                                                                 <div
-                                                                    className="d-flex align-items-center justify-content-center rounded-3 bg-light"
+                                                                    className="d-flex align-items-center justify-content-center rounded-3 bg-light checkout-method-icon"
                                                                     style={{
                                                                         width: "38px",
                                                                         height: "38px",
@@ -486,7 +527,7 @@ export default function Checkout({
                                     <button
                                         type="submit"
                                         className="btn btn-primary fw-bold w-100 mt-4 py-2"
-                                        disabled={processing}
+                                        disabled={processing || (data.fulfillment_method === "pickup" && !pickupAddress)}
                                     >
                                         {processing
                                             ? "PROCESSING..."
@@ -500,7 +541,7 @@ export default function Checkout({
 
                         <div className="col-lg-5">
                             <div
-                                className="bg-white border rounded-4 p-3 p-md-4 sticky-lg-top"
+                                className="bg-white border rounded-4 p-3 p-md-4 sticky-lg-top checkout-panel checkout-cart-panel"
                                 style={{
                                     top: "20px",
                                     boxShadow: "0 8px 24px rgba(0,0,0,0.04)",
@@ -528,12 +569,9 @@ export default function Checkout({
                                     {items.map((item) => (
                                         <div
                                             key={item.id}
-                                            className="border rounded-3 p-2"
-                                            style={{
-                                                backgroundColor: "#fafafa",
-                                            }}
+                                            className="border rounded-3 p-2 checkout-cart-item"
                                         >
-                                            <div className="d-flex gap-2 align-items-center">
+                                            <div className="d-flex gap-2 align-items-start checkout-cart-item-row">
                                                 {item.image ? (
                                                     <img
                                                         src={item.image}
@@ -566,18 +604,12 @@ export default function Checkout({
                                                     </div>
                                                 )}
 
-                                                <div className="flex-grow-1 min-w-0">
+                                                <div className="checkout-cart-item-details">
                                                     <div className="small text-primary text-uppercase fw-bold">
                                                         {item.type}
                                                     </div>
 
-                                                    <div
-                                                        className="fw-bold text-truncate"
-                                                        style={{
-                                                            fontFamily:
-                                                                "Outfit, sans-serif",
-                                                        }}
-                                                    >
+                                                    <div className="fw-bold checkout-cart-item-name">
                                                         {item.name}
                                                     </div>
 
@@ -602,7 +634,7 @@ export default function Checkout({
                                                     </div>
                                                 </div>
 
-                                                <div className="text-end">
+                                                <div className="text-end checkout-cart-item-subtotal">
                                                     <div className="fw-bold small">
                                                         ₱
                                                         {Number(
@@ -615,10 +647,66 @@ export default function Checkout({
                                     ))}
                                 </div>
 
-                                <div
-                                    className="rounded-3 p-3 mt-3"
-                                    style={{ backgroundColor: "#f6f6f7" }}
-                                >
+                                <div className="rounded-3 p-3 mt-3 border bg-light" aria-label="Voucher code">
+                                    <div className="fw-bold small mb-2">
+                                        <i className="bi bi-ticket-perforated text-primary me-2" aria-hidden="true"></i>
+                                        DISCOUNT PROMO / VOUCHER
+                                    </div>
+                                    <form
+                                        className="d-flex gap-2"
+                                        onSubmit={(event) => {
+                                            event.preventDefault();
+                                            setVoucherProcessing(true);
+                                            router.post("/checkout/voucher", { code: voucherCode }, {
+                                                preserveScroll: true,
+                                                onFinish: () => setVoucherProcessing(false),
+                                            });
+                                        }}
+                                    >
+                                        <input
+                                            type="text"
+                                            className={"form-control text-uppercase" + (pageErrors.voucher ? " is-invalid" : "")}
+                                            value={voucherCode}
+                                            onChange={(event) => setVoucherCode(event.target.value.toUpperCase())}
+                                            maxLength={50}
+                                            placeholder="Enter voucher code"
+                                            aria-label="Voucher code"
+                                            autoComplete="off"
+                                        />
+                                        <button type="submit" className="btn btn-primary fw-semibold flex-shrink-0" disabled={voucherProcessing}>
+                                            {voucherProcessing ? "Checking..." : "Apply"}
+                                        </button>
+                                    </form>
+                                    {pageErrors.voucher && <div className="small text-danger mt-2" role="alert">{pageErrors.voucher}</div>}
+                                    {pageErrors.cart && <div className="small text-danger mt-2" role="alert">{pageErrors.cart}</div>}
+                                    {pageProps.flash?.success && <div className="small text-success mt-2" role="status">{pageProps.flash.success}</div>}
+                                    {cart?.voucher && (
+                                        <div className="d-flex justify-content-between align-items-start gap-2 mt-3">
+                                            <div className="small">
+                                                <div className="fw-bold text-success"><i className="bi bi-check-circle-fill me-1" aria-hidden="true"></i>{cart.voucher.code} applied</div>
+                                                <div className="text-muted">{cart.voucher.name}</div>
+                                                {cart.voucher.description && <div className="text-muted">{cart.voucher.description}</div>}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="btn btn-link btn-sm p-0 text-danger"
+                                                disabled={voucherProcessing}
+                                                onClick={() => {
+                                                    setVoucherProcessing(true);
+                                                    setVoucherCode("");
+                                                    router.post("/checkout/voucher", { code: "" }, {
+                                                        preserveScroll: true,
+                                                        onFinish: () => setVoucherProcessing(false),
+                                                    });
+                                                }}
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="rounded-3 p-3 mt-3 checkout-order-summary">
                                     <div className="d-flex justify-content-between mb-2">
                                         <span className="text-muted small">
                                             Items
@@ -638,6 +726,15 @@ export default function Checkout({
                                             ₱{subtotal.toLocaleString()}
                                         </span>
                                     </div>
+
+                                    {discountAmount > 0 && (
+                                        <div className="d-flex justify-content-between mb-2 text-success">
+                                            <span className="small">
+                                                Voucher discount{cart?.voucher?.code ? " (" + cart.voucher.code + ")" : ""}
+                                            </span>
+                                            <span className="fw-semibold small">−₱{discountAmount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
 
                                     <div className="d-flex justify-content-between mb-3">
                                         <span className="text-muted small">
@@ -663,12 +760,7 @@ export default function Checkout({
                                     </div>
                                 </div>
 
-                                <div
-                                    className="rounded-3 p-3 mt-3"
-                                    style={{
-                                        backgroundColor: "#eef7ff",
-                                    }}
-                                >
+                                <div className="rounded-3 p-3 mt-3 checkout-secure-checkout">
                                     <div className="fw-bold small mb-2">
                                         <i className="bi bi-shield-check text-primary me-2"></i>
                                         SECURE CHECKOUT

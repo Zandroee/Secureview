@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\Order;
 use App\Models\Package;
@@ -14,7 +13,7 @@ use Illuminate\Support\Str;
 class PendingInquiryCheckoutService
 {
     /**
-     * Finalize an Installation inquiry after the order is confirmed paid.
+     * Finalize a linked service inquiry after the order is confirmed paid.
      *
      * This method is intentionally idempotent so both the payment-return route
      * and a PayMongo webhook can safely call it for the same order.
@@ -33,19 +32,25 @@ class PendingInquiryCheckoutService
 
             if ((int) $pending->user_id !== (int) $order->user_id) {
                 report(new \RuntimeException(
-                    'Pending installation checkout user does not match its order.'
+                    'Pending service checkout user does not match its order.'
                 ));
 
                 return null;
             }
 
             if ($pending->inquiry_id) {
-                return Inquiry::query()
+                $inquiry = Inquiry::query()
                     ->where('user_id', $pending->user_id)
                     ->find($pending->inquiry_id);
+
+                if ($inquiry && $pending->status === 'pending_payment' && in_array($order->payment_status, ['paid', 'partially_refunded', 'refunded'], true)) {
+                    $pending->update(['status' => 'paid']);
+                }
+
+                return $inquiry;
             }
 
-            if ($pending->status !== 'pending_payment' || $order->payment_status !== 'paid') {
+            if ($pending->status !== 'pending_payment' || !in_array($order->payment_status, ['paid', 'partially_refunded', 'refunded'], true)) {
                 return null;
             }
 
@@ -93,6 +98,7 @@ class PendingInquiryCheckoutService
                 'google_place_id' => $payload['google_place_id'] ?? null,
                 'service_type' => 'Installation',
                 'urgency' => $payload['urgency'],
+                'urgency_fee' => (float) ($payload['urgency_fee'] ?? 0),
                 'preferred_date' => $payload['preferred_date'],
                 'preferred_time' => $payload['preferred_time'],
                 'notes' => $payload['notes'] ?? null,
@@ -102,16 +108,6 @@ class PendingInquiryCheckoutService
             $pending->update([
                 'status' => 'paid',
                 'inquiry_id' => $inquiry->id,
-            ]);
-
-            CustomerNotification::create([
-                'user_id' => $pending->user_id,
-                'type' => 'inquiry',
-                'title' => 'Installation inquiry received',
-                'message' => 'Your payment is confirmed and installation inquiry ' . $inquiry->inquiry_number . ' has been received.',
-                'action_url' => route('inquiries.show', $inquiry),
-                'related_type' => Inquiry::class,
-                'related_id' => $inquiry->id,
             ]);
 
             app(JobNotificationService::class)->notifyNewInquirySubmitted($inquiry);

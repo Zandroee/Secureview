@@ -5,27 +5,29 @@ import AdminPagination from "../../Components/Admin/AdminPagination";
 import { Link, router } from "@inertiajs/react";
 import { useState } from "react";
 
-function urgencyClass(urgency) {
-    if (urgency === "emergency") return "bg-danger-subtle text-danger";
-    if (urgency === "urgent") return "bg-warning-subtle text-warning-emphasis";
-    return "bg-success-subtle text-success";
-}
-
-export default function ServiceHistory({ services = [], filters = {} }) {
+export default function ServiceHistory({ services = [], filters = {}, serviceIncomeSummary = {} }) {
     const serviceRows = services.data ?? [];
     const [search, setSearch] = useState(filters.search ?? "");
+    const [serviceType, setServiceType] = useState(filters.service_type ?? "");
+    const [urgency, setUrgency] = useState(filters.urgency ?? "");
+    const [dateFrom, setDateFrom] = useState(filters.date_from ?? "");
+    const [dateTo, setDateTo] = useState(filters.date_to ?? "");
 
     const applySearch = (event) => {
         event.preventDefault();
         router.get(
             "/admin/service-history",
-            { search },
+            { search, service_type: serviceType, urgency, date_from: dateFrom, date_to: dateTo },
             { preserveState: true, preserveScroll: true, replace: true }
         );
     };
 
     const clearSearch = () => {
         setSearch("");
+        setServiceType("");
+        setUrgency("");
+        setDateFrom("");
+        setDateTo("");
         router.get("/admin/service-history", {}, {
             preserveState: true,
             preserveScroll: true,
@@ -59,8 +61,35 @@ export default function ServiceHistory({ services = [], filters = {} }) {
                             </div>
                             <Link href="/admin/schedules" className="btn btn-outline-primary fw-bold">
                                 <i className="bi bi-calendar3 me-2" />
-                                BACK TO SCHEDULES
+                                BACK TO SCHEDULED SERVICES
                             </Link>
+                        </div>
+
+                        <div className="row g-3 mb-3">
+                            <div className="col-sm-6 col-xl-3">
+                                <div className="bg-white border rounded-4 p-3 h-100">
+                                    <div className="small text-secondary fw-semibold">RECORDED SERVICE INCOME</div>
+                                    <div className="fs-4 fw-bold text-primary">₱{Number(serviceIncomeSummary.recorded_service_income ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                </div>
+                            </div>
+                            <div className="col-sm-6 col-xl-3">
+                                <div className="bg-white border rounded-4 p-3 h-100">
+                                    <div className="small text-secondary fw-semibold">POST-SERVICE RECORDS</div>
+                                    <div className="fs-4 fw-bold">{serviceIncomeSummary.service_records ?? 0}</div>
+                                </div>
+                            </div>
+                            <div className="col-sm-6 col-xl-3">
+                                <div className="bg-white border rounded-4 p-3 h-100">
+                                    <div className="small text-secondary fw-semibold">PARTS REVENUE</div>
+                                    <div className="fs-4 fw-bold text-success">₱{Number(serviceIncomeSummary.parts_revenue ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                </div>
+                            </div>
+                            <div className="col-sm-6 col-xl-3">
+                                <div className="bg-white border rounded-4 p-3 h-100">
+                                    <div className="small text-secondary fw-semibold">COMPLETED WITHOUT RECORD</div>
+                                    <div className="fs-4 fw-bold text-warning-emphasis">{serviceIncomeSummary.completed_without_record ?? 0}</div>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="bg-white border rounded-3 p-3 mb-3">
@@ -77,6 +106,35 @@ export default function ServiceHistory({ services = [], filters = {} }) {
                                         value={search}
                                         onChange={(event) => setSearch(event.target.value)}
                                     />
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="service-history-type" className="form-label small fw-semibold mb-1">SERVICE TYPE</label>
+                                    <select id="service-history-type" className="form-select" value={serviceType} onChange={(event) => setServiceType(event.target.value)}>
+                                        <option value="">All service types</option>
+                                        <option value="Installation">Installation</option>
+                                        <option value="Site Inspection">Site Inspection</option>
+                                        <option value="Maintenance">Maintenance</option>
+                                        <option value="Repair">Repair</option>
+                                        <option value="Consultation">Consultation</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="service-history-urgency" className="form-label small fw-semibold mb-1">PRIORITY</label>
+                                    <select id="service-history-urgency" className="form-select" value={urgency} onChange={(event) => setUrgency(event.target.value)}>
+                                        <option value="">All priorities</option>
+                                        <option value="emergency">Emergency</option>
+                                        <option value="urgent">Urgent</option>
+                                        <option value="normal">Normal</option>
+                                    </select>
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="service-history-date-from" className="form-label small fw-semibold mb-1">DATE FROM</label>
+                                    <input id="service-history-date-from" type="date" className="form-control" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+                                </div>
+                                <div className="col-sm-6 col-lg-2">
+                                    <label htmlFor="service-history-date-to" className="form-label small fw-semibold mb-1">DATE TO</label>
+                                    <input id="service-history-date-to" type="date" className="form-control" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
                                 </div>
                                 <div className="col-md-3 d-flex gap-2">
                                     <button type="submit" className="btn btn-primary fw-bold flex-grow-1">
@@ -104,7 +162,7 @@ export default function ServiceHistory({ services = [], filters = {} }) {
                                             <th>CUSTOMER</th>
                                             <th>SCHEDULED FOR</th>
                                             <th>TECHNICIAN TEAM</th>
-                                            <th>PRIORITY</th>
+                                            <th>POST-SERVICE / INCOME</th>
                                             <th>COMPLETED / UPDATED</th>
                                             <th className="text-end pe-3">ACTION</th>
                                         </tr>
@@ -126,6 +184,7 @@ export default function ServiceHistory({ services = [], filters = {} }) {
                                                     <div className="fw-bold">{service.service_type}</div>
                                                     <div className="small text-muted">{service.item_name || "General service"}</div>
                                                     <div className="small text-muted">{service.inquiry_number}</div>
+                                                    <div className="mt-1 d-flex flex-wrap gap-1"><span className={"badge " + (service.intake_channel === "walk_in" ? "text-bg-info" : "text-bg-light text-dark")}>{service.intake_channel === "walk_in" ? "Walk-in" : "Online"}</span><span className="badge text-bg-light text-dark">{service.service_location_type === "in_shop" ? "In-shop" : "Customer site"}</span></div>
                                                 </td>
                                                 <td>
                                                     <div className="fw-semibold">{service.customer_name}</div>
@@ -145,18 +204,86 @@ export default function ServiceHistory({ services = [], filters = {} }) {
                                                     ) : <span className="small text-muted">No technician listed</span>}
                                                 </td>
                                                 <td>
-                                                    <span className={"badge rounded-pill text-capitalize px-3 py-2 " + urgencyClass(service.urgency)}>
-                                                        {service.urgency || "normal"}
-                                                    </span>
+                                                    {service.service_record ? (
+                                                        <div>
+                                                            <div className="fw-bold text-success">₱{Number(service.service_record.total_income ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                                                            <div className="small text-muted">{service.service_record.items?.length ?? 0} part line(s)</div>
+                                                            {service.service_record.invoice_record && (
+                                                                <div className="small text-muted">
+                                                                    {service.service_record.payment_count ?? 0} payment(s) · Paid ₱{Number(service.service_record.amount_paid ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · Balance ₱{Number(service.service_record.balance_due ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                </div>
+                                                            )}
+                                                            <div className="small text-break" title={service.service_record.work_summary}>{service.service_record.work_summary}</div>
+                                                        </div>
+                                                    ) : (
+                                                        <div>
+                                                            <span className="badge rounded-pill bg-warning-subtle text-warning-emphasis" title="No detailed post-service record is linked to this completed service.">No Post-Service Record</span>
+                                                            <div className="small text-muted mt-1">Detailed work notes and parts used were not saved; this may be an older service from before records were introduced.</div>
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="small text-muted">{service.completed_at || "—"}</td>
                                                 <td className="text-end pe-3">
-                                                    <Link
-                                                        href={"/admin/schedules/" + service.id + "?from=history"}
-                                                        className="btn btn-outline-primary btn-sm fw-bold"
-                                                    >
-                                                        VIEW
-                                                    </Link>
+                                                    <div className="d-flex flex-column align-items-end gap-1">
+                                                        <Link
+                                                            href={"/admin/schedules/" + service.id + "?from=history"}
+                                                            className="btn btn-outline-primary btn-sm fw-bold"
+                                                        >
+                                                            VIEW
+                                                        </Link>
+                                                        {service.service_record && !service.service_record.invoice_record && (
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-primary btn-sm fw-semibold"
+                                                                onClick={() => {
+                                                                    if (window.confirm("Issue an internal service invoice for " + service.inquiry_number + "? The invoice will preserve the finalized Post-Service Record charges. It is not a BIR-registered tax invoice.")) {
+                                                                        router.post("/admin/service-records/" + service.service_record.id + "/invoice-record", {}, { preserveScroll: true });
+                                                                    }
+                                                                }}
+                                                            >
+                                                                ISSUE INVOICE
+                                                            </button>
+                                                        )}
+                                                        {service.service_record?.invoice_record && (
+                                                            <>
+                                                                <Link href={service.service_record.invoice_record.url} className="btn btn-outline-success btn-sm fw-semibold">VIEW INVOICE</Link>
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-outline-secondary btn-sm"
+                                                                    disabled={Number(service.service_record.balance_due ?? 0) <= 0}
+                                                                    onClick={() => {
+                                                                        const balance = Number(service.service_record.balance_due ?? 0);
+                                                                        if (balance <= 0) {
+                                                                            window.alert("This service invoice is already fully paid.");
+                                                                            return;
+                                                                        }
+                                                                        const amount = window.prompt("Enter the payment received now (PHP). Remaining balance: ₱" + balance.toFixed(2), balance.toFixed(2));
+                                                                        if (amount === null) return;
+                                                                        const parsed = Number(amount);
+                                                                        if (!Number.isFinite(parsed) || parsed <= 0 || parsed > balance) {
+                                                                            window.alert("Enter a payment greater than zero and no more than the remaining balance.");
+                                                                            return;
+                                                                        }
+                                                                        const method = window.prompt("Payment method: cash, gcash, card, or maya", service.service_record.payment_method || "cash");
+                                                                        if (method === null) return;
+                                                                        if (!["cash", "gcash", "card", "maya"].includes(method.toLowerCase())) {
+                                                                            window.alert("Choose cash, gcash, card, or maya.");
+                                                                            return;
+                                                                        }
+                                                                        const reference = window.prompt("Payment reference (optional). Add a GCash/Maya/card reference when available.", "");
+                                                                        if (reference === null) return;
+                                                                        router.patch("/admin/service-records/" + service.service_record.id + "/payment", {
+                                                                            payment_amount: parsed,
+                                                                            payment_method: method.toLowerCase(),
+                                                                            reference: reference.trim() || null,
+                                                                        }, { preserveScroll: true });
+                                                                    }}
+                                                                >
+                                                                    RECORD PAYMENT
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

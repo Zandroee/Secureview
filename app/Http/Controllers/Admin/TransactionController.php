@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Refund;
 use App\Models\InvoiceRecord;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -36,6 +37,14 @@ class TransactionController extends Controller
             ->through(fn (Order $order) => $this->formatTransaction($order));
 
         $summaryQuery = $this->buildQuery($filters);
+        $matchingOrderIds = (clone $summaryQuery)->reorder()->select('orders.id');
+        $refundedAmount = (float) Refund::query()
+            ->whereIn('order_id', $matchingOrderIds)
+            ->where('status', 'completed')
+            ->sum('amount_approved');
+        $grossPaidAmount = (float) (clone $summaryQuery)
+            ->whereIn('payment_status', ['paid', 'partially_refunded', 'refunded'])
+            ->sum('total');
 
         return Inertia::render('Admin/Transactions', [
             'transactions' => $transactions,
@@ -43,18 +52,19 @@ class TransactionController extends Controller
                 'search' => $filters['search'] ?? '',
                 'payment_status' => $filters['payment_status'] ?? '',
                 'payment_method' => $filters['payment_method'] ?? '',
+                'sales_channel' => $filters['sales_channel'] ?? '',
                 'order_status' => $filters['order_status'] ?? '',
                 'date_from' => $filters['date_from'] ?? '',
                 'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
                 'total' => (clone $summaryQuery)->count(),
-                'paid' => (clone $summaryQuery)->where('payment_status', 'paid')->count(),
+                'paid' => (clone $summaryQuery)->whereIn('payment_status', ['paid', 'partially_refunded', 'refunded'])->count(),
+                'refunded' => (clone $summaryQuery)->whereIn('payment_status', ['partially_refunded', 'refunded'])->count(),
                 'pending' => (clone $summaryQuery)->where('payment_status', 'pending')->count(),
-                'failed' => (clone $summaryQuery)->where('payment_status', 'failed')->count(),
-                'paid_amount' => (float) (clone $summaryQuery)
-                    ->where('payment_status', 'paid')
-                    ->sum('total'),
+                'failed' => (clone $summaryQuery)->whereIn('payment_status', ['failed', 'cancelled'])->count(),
+                'refunded_amount' => $refundedAmount,
+                'paid_amount' => max(0, $grossPaidAmount - $refundedAmount),
             ],
         ]);
     }
@@ -66,8 +76,9 @@ class TransactionController extends Controller
     {
         return $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
-            'payment_status' => ['nullable', 'in:pending,paid,failed'],
+            'payment_status' => ['nullable', 'in:pending,paid,partially_refunded,refunded,failed,cancelled'],
             'payment_method' => ['nullable', 'in:cash,gcash,card,maya'],
+            'sales_channel' => ['nullable', 'in:online,walk_in'],
             'order_status' => ['nullable', 'in:' . implode(',', self::ORDER_STATUSES)],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
@@ -112,6 +123,10 @@ class TransactionController extends Controller
             $query->where('payment_method', $filters['payment_method']);
         }
 
+        if (!empty($filters['sales_channel'])) {
+            $query->where('sales_channel', $filters['sales_channel']);
+        }
+
         if (!empty($filters['order_status'])) {
             $query->where('order_status', $filters['order_status']);
         }
@@ -131,6 +146,7 @@ class TransactionController extends Controller
     {
         return [
             'id' => $order->id,
+            'sales_channel' => $order->sales_channel ?? 'online',
             'transaction_id' => $order->paymongo_payment_id,
             'checkout_session_id' => $order->paymongo_checkout_session_id,
             'order_number' => $order->order_number,
@@ -156,7 +172,7 @@ class TransactionController extends Controller
                 'payment_status_after' => $event->payment_status_after,
                 'order_status_before' => $event->order_status_before,
                 'order_status_after' => $event->order_status_after,
-                'actor_name' => $event->actor?->name ?? 'SecureView system',
+                'actor_name' => $event->actor?->name ?? 'Netmax Trading system',
                 'created_at' => $event->created_at?->format('M d, Y h:i A'),
             ])->values(),
         ];
@@ -178,6 +194,7 @@ class TransactionController extends Controller
 
             fputcsv($output, [
                 'Order Number',
+                'Sales Channel',
                 'Payment Transaction ID',
                 'Checkout Session ID',
                 'Customer Name',
@@ -194,6 +211,7 @@ class TransactionController extends Controller
             foreach ($query->cursor() as $order) {
                 fputcsv($output, [
                     $this->safeCsvCell($order->order_number),
+                    $order->sales_channel ?? 'online',
                     $this->safeCsvCell($order->paymongo_payment_id),
                     $this->safeCsvCell($order->paymongo_checkout_session_id),
                     $this->safeCsvCell($order->customer_name),

@@ -3,18 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\EmailVerificationCodeService;
 use App\Services\AdminActivityLogger;
-use Illuminate\Auth\Events\Registered;
+use App\Services\SingleLoginSessionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Laravel\Socialite\Facades\Socialite;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
+    public function register(Request $request, EmailVerificationCodeService $verificationCodes)
     {
         $validated = $request->validate([
             'firstName' => ['required', 'string', 'max:50'],
@@ -41,6 +43,8 @@ class AuthController extends Controller
                     ->symbols(),
             ],
             'terms' => ['accepted'],
+            // Newsletter consent is optional and must be an explicit user choice.
+            'newsletter_opt_in' => ['sometimes', 'boolean'],
         ], [
             'phone.unique' => 'This phone number is already registered.',
             'email.unique' => 'This email address is already registered.',
@@ -54,25 +58,44 @@ class AuthController extends Controller
             'password' => $validated['password'],
             'role' => 'user',
             'terms_accepted_at' => now(),
-            'terms_version' => '1.0',
+            'terms_version' => '2.0',
+            'marketing_emails_enabled' => (bool) ($validated['newsletter_opt_in'] ?? false),
+            'marketing_emails_consented_at' => !empty($validated['newsletter_opt_in']) ? now() : null,
+            'marketing_emails_withdrawn_at' => null,
         ]);
 
-        event(new Registered($user));
+        try {
+            $codeSent = $verificationCodes->send($user);
+        } catch (\Throwable $exception) {
+            $codeSent = false;
+            Log::warning('SecureView account was created but its verification code could not be sent.', [
+                'user_id' => $user->id,
+                'exception' => get_class($exception),
+            ]);
+        }
 
-        return redirect()->route('signup')->with([
-            'verificationSent' => true,
+        return redirect()->route('verification.notice')->with([
             'verificationEmail' => $user->email,
+            'status' => $codeSent
+                ? 'We sent a six-digit verification code to your email address. It expires in 10 minutes.'
+                : 'Your account was created, but we could not send a code right now. Use Resend verification code below to try again.',
         ]);
     }
 
-    public function authenticate(Request $request, AdminActivityLogger $activityLogger)
+    public function authenticate(Request $request, AdminActivityLogger $activityLogger, SingleLoginSessionService $singleLoginSession, EmailVerificationCodeService $verificationCodes)
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
+            'remember' => ['sometimes', 'boolean'],
         ]);
 
-        $user = User::where('email', $credentials['email'])->first();
+        // Keep the remember flag out of credential validation; it is not a user-table column.
+        $loginCredentials = [
+            'email' => $credentials['email'],
+            'password' => $credentials['password'],
+        ];
+        $user = User::where('email', $loginCredentials['email'])->first();
 
         if (!$user) {
             return back()->withErrors([
@@ -81,30 +104,35 @@ class AuthController extends Controller
         }
 
         // Check the password without logging the user in.
-        if (!Auth::validate($credentials)) {
+        if (!Auth::validate($loginCredentials)) {
             return back()->withErrors([
                 'email' => 'The provided credentials are incorrect.',
             ])->onlyInput('email');
         }
 
-        // Correct password, but email is still unverified.
+        // Correct password, but email is still unverified. Send a code without logging the user in.
         if (!$user->hasVerifiedEmail()) {
-            $cooldownKey = 'verification-email-cooldown:' . $user->id;
-
-            if (Cache::add($cooldownKey, true, now()->addSeconds(60))) {
-                $user->sendEmailVerificationNotification();
+            try {
+                $codeSent = $verificationCodes->send($user);
+            } catch (\Throwable $exception) {
+                $codeSent = false;
+                Log::warning('SecureView login could not send an email verification code.', [
+                    'user_id' => $user->id,
+                    'exception' => get_class($exception),
+                ]);
             }
 
             return redirect()->route('verification.notice')->with([
-                'verificationSent' => true,
                 'verificationEmail' => $user->email,
+                'status' => $codeSent
+                    ? 'Your password is correct. We sent a six-digit code to verify your email before you log in.'
+                    : 'Your email is not verified yet. Check your inbox for the current code, or request a new one below.',
             ]);
         }
 
-        // Only verified users are actually logged in.
-        Auth::login($user);
-
-        $request->session()->regenerate();
+        // Only verified users are actually logged in. Starting a new login
+        // replaces the previous active browser/device session.
+        $singleLoginSession->login($request, $user, $request->boolean('remember'));
 
         $activityLogger->record(
             $request,
@@ -126,7 +154,7 @@ class AuthController extends Controller
         return redirect()->intended('/');
     }
 
-    public function logout(Request $request, AdminActivityLogger $activityLogger)
+    public function logout(Request $request, AdminActivityLogger $activityLogger, SingleLoginSessionService $singleLoginSession)
     {
         $actor = $request->user();
 
@@ -139,12 +167,53 @@ class AuthController extends Controller
             $actor
         );
 
+        $singleLoginSession->forgetIfCurrent($request, $actor);
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        // Rotate Inertia's history encryption key so cached authenticated
+        // pages cannot be restored after the user signs out.
+        Inertia::clearHistory();
+
+        return redirect($this->safePublicLogoutDestination($request));
+    }
+
+    /**
+     * Keep guests on the public page they were viewing before sign-out.
+     * Authenticated-only, unknown, malformed, and off-site referrers fall back
+     * to the homepage so logout cannot become an open redirect.
+     */
+    private function safePublicLogoutDestination(Request $request): string
+    {
+        $referer = trim((string) $request->headers->get('referer'));
+
+        if ($referer === '') {
+            return '/';
+        }
+
+        $parts = parse_url($referer);
+
+        if (!is_array($parts) || empty($parts['host']) || strcasecmp($parts['host'], $request->getHost()) !== 0) {
+            return '/';
+        }
+
+        $path = (string) ($parts['path'] ?? '/');
+        $path = '/' . ltrim(preg_replace('#/+#', '/', $path) ?: '/', '/');
+        $path = rtrim($path, '/') ?: '/';
+
+        // These routes are intentionally guest-accessible. Keep their query string
+        // (e.g. catalog search/filter state), but never redirect back into admin,
+        // account, checkout, purchase, schedule, or inquiry pages after logout.
+        if (!preg_match('#^/(?:products(?:/[^/]+)?|packages(?:/[^/]+)?|about|services)?$#D', $path)) {
+            return '/';
+        }
+
+        $query = (string) ($parts['query'] ?? '');
+
+        return $path . ($query !== '' && strlen($query) <= 2000 ? '?' . $query : '');
     }
 
     public function redirectGoogle()
@@ -152,7 +221,7 @@ class AuthController extends Controller
         return Socialite::driver('google')->redirect();
     }
 
-    public function googleCallback(Request $request, AdminActivityLogger $activityLogger)
+    public function googleCallback(Request $request, AdminActivityLogger $activityLogger, SingleLoginSessionService $singleLoginSession)
     {
         $googleUser = Socialite::driver('google')->user();
 
@@ -167,8 +236,11 @@ class AuthController extends Controller
                 'google_id' => $googleUser->id,
                 'password' => Str::random(40),
                 'role' => 'user',
-                'email_verified_at' => now(),
             ]);
+
+            // email_verified_at is intentionally not mass assignable, so set it
+            // explicitly for an account authenticated through the OAuth provider.
+            $user->forceFill(['email_verified_at' => now()])->save();
         } else {
             if (!$user->google_id) {
                 $user->google_id = $googleUser->id;
@@ -181,9 +253,7 @@ class AuthController extends Controller
             $user->save();
         }
 
-        Auth::login($user);
-
-        $request->session()->regenerate();
+        $singleLoginSession->login($request, $user);
 
         $activityLogger->record(
             $request,
@@ -212,7 +282,7 @@ class AuthController extends Controller
             ->redirect();
     }
 
-    public function facebookCallback(Request $request, AdminActivityLogger $activityLogger)
+    public function facebookCallback(Request $request, AdminActivityLogger $activityLogger, SingleLoginSessionService $singleLoginSession)
     {
         $facebookUser = Socialite::driver('facebook')->user();
 
@@ -227,8 +297,11 @@ class AuthController extends Controller
                 'facebook_id' => $facebookUser->id,
                 'password' => Str::random(40),
                 'role' => 'user',
-                'email_verified_at' => now(),
             ]);
+
+            // email_verified_at is intentionally not mass assignable, so set it
+            // explicitly for an account authenticated through the OAuth provider.
+            $user->forceFill(['email_verified_at' => now()])->save();
         } else {
             if (!$user->facebook_id) {
                 $user->facebook_id = $facebookUser->id;
@@ -241,9 +314,7 @@ class AuthController extends Controller
             $user->save();
         }
 
-        Auth::login($user);
-
-        $request->session()->regenerate();
+        $singleLoginSession->login($request, $user);
 
         $activityLogger->record(
             $request,

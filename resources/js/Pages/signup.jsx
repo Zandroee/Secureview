@@ -1,24 +1,18 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm, Link } from "@inertiajs/react";
 
 import Navbar from "../Components/navbar";
+import GoogleLoginButton from "../Components/GoogleLoginButton";
 import PasswordInput from "../Components/PasswordInput";
 import PasswordStrength from "../Components/PasswordStrength";
-import EmailVerificationModal from "../Components/EmailVerificationModal";
 import TermsAndConditionsModal from "../Components/TermsAndConditionsModal";
+import RateLimitNotice from "../Components/RateLimitNotice";
 
 import "../../css/signup.css";
 
-export default function Signup({ verificationSent = false, verificationEmail = "" }) {
-    const [showVerification, setShowVerification] = useState(verificationSent);
+export default function Signup() {
     const [showTerms, setShowTerms] = useState(false);
     const [termsRead, setTermsRead] = useState(false);
-
-    useEffect(() => {
-        if (verificationSent) {
-            setShowVerification(true);
-        }
-    }, [verificationSent]);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         firstName: "",
@@ -28,6 +22,7 @@ export default function Signup({ verificationSent = false, verificationEmail = "
         password: "",
         password_confirmation: "",
         terms: false,
+        newsletter_opt_in: false,
     });
 
     const [touched, setTouched] = useState({
@@ -156,13 +151,6 @@ export default function Signup({ verificationSent = false, verificationEmail = "
         }
 
         post("/register", {
-            preserveState: true,
-            preserveScroll: true,
-
-            onSuccess: () => {
-                setShowVerification(true);
-            },
-
             onError: (serverErrors) => {
                 const emailExists =
                     serverErrors.email &&
@@ -205,7 +193,7 @@ export default function Signup({ verificationSent = false, verificationEmail = "
                         fontSize: "clamp(2rem, 4vw, 3rem)",
                     }}
                 >
-                    SECUREVIEW
+                    NETMAX TRADING
                 </h1>
 
                 <div
@@ -221,6 +209,8 @@ export default function Signup({ verificationSent = false, verificationEmail = "
                     >
                         CREATE AN ACCOUNT
                     </h2>
+
+                    <RateLimitNotice />
 
                     <form onSubmit={handleSubmit} noValidate>
 
@@ -454,13 +444,7 @@ export default function Signup({ verificationSent = false, verificationEmail = "
                         </div>
 
                         <div className="d-flex flex-column gap-2">
-                            <a
-                                href="/auth/google"
-                                className="btn btn-outline-dark fw-semibold py-2"
-                            >
-                                <i className="bi bi-google me-2"></i>
-                                Continue with Google
-                            </a>
+                            <GoogleLoginButton />
 
                             <a
                                 href="/auth/facebook"
@@ -489,21 +473,17 @@ export default function Signup({ verificationSent = false, verificationEmail = "
 
             {showTerms && (
                 <TermsAndConditionsModal
+                    initialNewsletterOptIn={data.newsletter_opt_in}
                     onClose={() => setShowTerms(false)}
-                    onAccept={() => {
+                    onAccept={({ newsletterOptIn }) => {
                         setTermsRead(true);
                         setData("terms", true);
+                        setData("newsletter_opt_in", newsletterOptIn);
                         setShowTerms(false);
                     }}
                 />
             )}
 
-            {showVerification && (
-                <EmailVerificationModal
-                    email={verificationEmail || data.email}
-                    onClose={() => setShowVerification(false)}
-                />
-            )}
         </>
     );
 }

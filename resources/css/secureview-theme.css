@@ -154,3 +154,2711 @@ html[data-bs-theme="dark"] [style*="background-color: rgb(248, 249, 250)"] {
         color: #20252b !important;
     }
 }
+
+
+/* --------------------------------------------------------------------------
+ * Responsive layout foundation
+ * Keep the document as the primary vertical scroll container and allow
+ * components to shrink within Bootstrap rows instead of forcing page overflow.
+ * -------------------------------------------------------------------------- */
+html {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+body {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: clip;
+    overflow-y: visible;
+}
+
+#app {
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+}
+
+img,
+picture,
+video,
+canvas,
+iframe {
+    max-width: 100%;
+}
+
+.container,
+.container-fluid,
+.row,
+.row > *,
+.card,
+.card-body,
+.modal-content,
+.offcanvas,
+.table-responsive {
+    min-width: 0;
+}
+
+.form-control,
+.form-select,
+textarea {
+    max-width: 100%;
+}
+
+.table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+pre,
+code,
+.text-break {
+    overflow-wrap: anywhere;
+}
+
+/* Admin pages use the same shared sidebar and content grid. Below laptop
+   widths, let the content use the full row and expose navigation as an
+   offcanvas menu instead of squeezing the desktop sidebar into a column. */
+@media (max-width: 1199.98px) {
+    .container-fluid > .row > aside.col-md-3.col-lg-2,
+    .container-fluid > .row > main.col-md-9.col-lg-10 {
+        flex: 0 0 100%;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .container-fluid > .row > main.col-md-9.col-lg-10 {
+        padding: 1rem !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    footer .container-fluid.px-5 {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem auto;
+    }
+
+    .admin-dashboard-calendar .card-body {
+        padding: 1rem !important;
+    }
+}
+
+.admin-revenue-chart-plot {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: clamp(220px, 27vw, 300px);
+}
+
+.admin-revenue-chart-plot canvas {
+    max-width: 100% !important;
+}
+
+@media (max-width: 575.98px) {
+    .admin-revenue-chart-plot {
+        height: 220px;
+    }
+}
+
+/* Full-screen dialogs must remain reachable when their content is taller than
+   a phone viewport. Safe alignment prevents the top of a centered flex child
+   from becoming inaccessible when the dialog needs to scroll. */
+@media (max-width: 767.98px), (max-height: 620px) {
+    .position-fixed.top-0.start-0.w-100.h-100.d-flex.align-items-center.justify-content-center {
+        align-items: flex-start !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        padding-top: 0.75rem !important;
+        padding-bottom: 0.75rem !important;
+    }
+
+    .position-fixed.top-0.start-0.w-100.h-100.d-flex.align-items-center.justify-content-center > .bg-white {
+        max-height: calc(100dvh - 1.5rem) !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+    }
+}
+
+
+/* Navbar search adapts without squeezing the primary navigation links. */
+.navbar-navigation-search {
+    position: relative;
+    width: clamp(170px, 17vw, 240px);
+    min-width: 145px;
+    flex: 0 1 clamp(170px, 17vw, 240px);
+    margin-left: 1rem;
+}
+
+.navbar-navigation-search .input-group,
+.navbar-navigation-search .form-control {
+    min-width: 0;
+}
+
+.navbar-navigation-search .form-control {
+    border-left: 0;
+}
+
+.navbar-navigation-search .input-group-text {
+    border-right: 0;
+}
+
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    .navbar .offcanvas-body {
+        flex-wrap: wrap;
+    }
+
+    .navbar-navigation-search {
+        width: 100%;
+        max-width: 340px;
+        min-width: 0;
+        flex: 1 1 100%;
+        margin: .75rem auto 0 0;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .navbar-navigation-search {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        flex: 0 0 100%;
+        margin: 1rem 0;
+    }
+}
+
+
+/* Global navbar search: match the rounded catalog-search style from Products
+   and Packages while giving the results panel enough space to be useful.
+   Keep the stacking context on the search control, not the whole navbar, so
+   Bootstrap's mobile off-canvas drawer retains its native overlay ordering. */
+.navbar-navigation-search {
+    position: relative;
+    z-index: 1050;
+    width: clamp(230px, 22vw, 350px);
+    min-width: 205px;
+    flex: 0 1 clamp(230px, 22vw, 350px);
+    margin: 0 0 0 1rem;
+}
+
+.navbar-navigation-search .navbar-navigation-search-input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 48px;
+    border: 1px solid #c5d0de !important;
+    border-radius: 24px !important;
+    background-color: #edf2f8 !important;
+    color: #172033 !important;
+    padding: 0 48px 0 24px;
+    font-size: .9rem;
+    font-family: "Outfit", sans-serif;
+    letter-spacing: .025em;
+    text-transform: uppercase;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, .06) !important;
+    transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.navbar-navigation-search .navbar-navigation-search-input::placeholder {
+    color: #596779;
+    opacity: 1;
+    letter-spacing: .08em;
+}
+
+.navbar-navigation-search .navbar-navigation-search-input:focus {
+    outline: 2px solid rgba(13, 110, 253, .28);
+    outline-offset: 1px;
+    border-color: #0d6efd !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, .12) !important;
+}
+
+.navbar-navigation-search-icon {
+    position: absolute;
+    top: 50%;
+    right: 18px;
+    transform: translateY(-50%);
+    color: #46566c;
+    pointer-events: none;
+    font-size: 1rem;
+}
+
+.navbar-search-dropdown {
+    position: absolute;
+    z-index: 1051;
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    top: calc(100% + 10px);
+    right: 0;
+    width: min(480px, calc(100vw - 2rem));
+    max-height: min(70dvh, 650px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px;
+    border-radius: 18px;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, .18);
+    scrollbar-width: thin;
+}
+
+.navbar-search-section + .navbar-search-section {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.navbar-search-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 10px 7px;
+    color: var(--bs-secondary-color);
+    font-family: "Outfit", sans-serif;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+}
+
+.navbar-search-section-heading > span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-secondary-color);
+    font-size: .7rem;
+    letter-spacing: 0;
+}
+
+.navbar-search-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.navbar-search-result,
+.navbar-search-catalog-result {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--bs-body-color);
+    text-align: left;
+    text-decoration: none;
+    transition: background-color .12s ease;
+}
+
+.navbar-search-result:hover,
+.navbar-search-result:focus-visible,
+.navbar-search-catalog-result:hover,
+.navbar-search-catalog-result:focus-visible {
+    background: #f1f1f1;
+    color: var(--bs-body-color);
+    outline: none;
+}
+
+.navbar-search-result-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(13, 110, 253, .09);
+    color: #0d6efd;
+    font-size: 1rem;
+}
+
+.navbar-search-result-copy {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    gap: 2px;
+}
+
+.navbar-search-result-title {
+    display: block;
+    overflow: hidden;
+    color: var(--bs-body-color);
+    font-size: .87rem;
+    font-weight: 700;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.navbar-search-result-subtitle {
+    display: block;
+    overflow: hidden;
+    color: var(--bs-secondary-color);
+    font-size: .73rem;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.navbar-search-result-arrow {
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: var(--bs-secondary-color);
+    font-size: .82rem;
+}
+
+.navbar-search-catalog-result {
+    gap: 11px;
+    padding: 8px 10px;
+}
+
+.navbar-search-thumbnail {
+    display: block;
+    flex: 0 0 46px;
+    width: 46px;
+    height: 46px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 10px;
+    background: var(--bs-tertiary-bg);
+    object-fit: cover;
+}
+
+.navbar-search-thumbnail-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bs-secondary-color);
+    font-size: 1.1rem;
+}
+
+.navbar-search-price {
+    flex: 0 0 auto;
+    color: var(--bs-primary);
+    font-size: .78rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.navbar-search-view-all {
+    display: block;
+    width: 100%;
+    margin-top: 4px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--bs-primary);
+    font-size: .78rem;
+    font-weight: 700;
+    text-align: left;
+}
+
+.navbar-search-view-all:hover {
+    background: var(--bs-tertiary-bg);
+}
+
+.navbar-search-hint,
+.navbar-search-state {
+    padding: 12px 10px;
+    color: var(--bs-secondary-color);
+    font-size: .78rem;
+    line-height: 1.5;
+}
+
+.navbar-search-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 14px;
+    color: var(--bs-secondary-color);
+    text-align: center;
+    font-size: .8rem;
+}
+
+.navbar-search-empty strong {
+    margin-bottom: 4px;
+    color: var(--bs-body-color);
+    font-size: .9rem;
+}
+
+.navbar-search-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 7px;
+    padding: 8px 2px 1px;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.navbar-search-footer-action {
+    flex: 1 1 150px;
+    padding: 9px 10px;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 10px;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    font-size: .75rem;
+    font-weight: 700;
+    text-align: left;
+}
+
+.navbar-search-footer-action:hover {
+    border-color: var(--bs-primary);
+    color: var(--bs-primary);
+}
+
+html[data-bs-theme="dark"] .navbar-navigation-search .navbar-navigation-search-input {
+    background-color: #273449 !important;
+    color: #f3f6fb !important;
+    border: 1px solid #506078 !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .14) !important;
+}
+
+html[data-bs-theme="dark"] .navbar-navigation-search .navbar-navigation-search-input:focus {
+    background-color: #18212f !important;
+    color: #f9fafb !important;
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, .2) !important;
+}
+
+html[data-bs-theme="dark"] .navbar-navigation-search .navbar-navigation-search-input::placeholder {
+    color: #aab6c6;
+}
+
+html[data-bs-theme="dark"] .navbar-search-result:hover,
+html[data-bs-theme="dark"] .navbar-search-result:focus-visible,
+html[data-bs-theme="dark"] .navbar-search-catalog-result:hover,
+html[data-bs-theme="dark"] .navbar-search-catalog-result:focus-visible {
+    background: #243449;
+}
+
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    .navbar-navigation-search {
+        width: min(100%, 340px);
+        max-width: 340px;
+        min-width: 0;
+        flex: 1 1 280px;
+        margin: .75rem 0 0;
+    }
+
+    .navbar-search-dropdown {
+        left: 0;
+        right: auto;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .navbar-navigation-search {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        flex: 0 0 100%;
+        margin: 1rem 0;
+    }
+
+    .navbar-navigation-search .navbar-navigation-search-input {
+        height: 52px;
+    }
+
+    .navbar-search-dropdown {
+        left: 0;
+        right: auto;
+        width: 100%;
+        max-height: min(58dvh, 540px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .navbar-search-result,
+    .navbar-search-catalog-result {
+        transition: none;
+    }
+}
+
+
+/* Keep the desktop navbar in one stable row while allowing the search to
+   contract before it can collide with the separator or account controls. */
+.navbar > .container-fluid {
+    min-width: 0;
+    gap: .5rem;
+}
+
+.navbar > .container-fluid > .navbar-brand {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+#navbarOffcanvas {
+    min-width: 0;
+}
+
+.navbar-desktop-auth {
+    flex: 0 0 auto;
+    min-width: max-content;
+}
+
+.navbar-desktop-auth > .btn,
+.navbar-desktop-auth > a.btn {
+    white-space: nowrap;
+}
+
+.navbar-user-menu-wrapper {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.navbar-user-trigger {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-secondary-color);
+    cursor: pointer;
+    transition: color .16s ease, background-color .16s ease, box-shadow .16s ease;
+}
+
+.navbar-user-trigger > i {
+    font-size: 1.25rem;
+}
+
+.navbar-user-trigger:hover,
+.navbar-user-trigger.is-open {
+    background: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, .12);
+}
+
+.navbar-user-trigger:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 3px;
+}
+
+.navbar-account-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    z-index: 1100;
+    width: min(300px, calc(100vw - 2rem));
+    max-height: calc(100dvh - 1.25rem);
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-radius: 16px;
+    padding: 0;
+    color: var(--bs-body-color);
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    animation: navbar-account-menu-enter .14s ease-out;
+}
+
+.navbar-account-menu-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 16px;
+    border-bottom: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+}
+
+.navbar-account-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary);
+    font-size: 1.45rem;
+}
+
+.navbar-account-profile-copy {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    gap: 3px;
+    font-family: "Outfit", sans-serif;
+}
+
+.navbar-account-profile-copy > strong {
+    width: 100%;
+    overflow: hidden;
+    color: var(--bs-body-color);
+    font-size: .91rem;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.navbar-account-profile-copy > span:not(.navbar-account-role) {
+    width: 100%;
+    overflow: hidden;
+    color: var(--bs-secondary-color);
+    font-size: .75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.navbar-account-role {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 2px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary-text-emphasis);
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+}
+
+.navbar-account-menu-links {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+}
+
+.navbar-account-menu-link {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    padding: 10px 11px;
+    border-radius: 10px;
+    color: var(--bs-body-color);
+    font-family: "Outfit", sans-serif;
+    font-size: .84rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-decoration: none;
+    transition: background-color .12s ease, color .12s ease;
+}
+
+.navbar-account-menu-link > i:first-child {
+    flex: 0 0 19px;
+    width: 19px;
+    color: var(--bs-secondary-color);
+    font-size: 1rem;
+    text-align: center;
+}
+
+.navbar-account-menu-link:hover,
+.navbar-account-menu-link:focus-visible {
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-primary);
+    outline: none;
+}
+
+.navbar-account-menu-link:hover > i:first-child,
+.navbar-account-menu-link:focus-visible > i:first-child {
+    color: var(--bs-primary);
+}
+
+.navbar-account-menu-footer {
+    padding: 8px;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.navbar-account-settings-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 11px;
+    border-radius: 10px;
+    color: var(--bs-primary);
+    font-family: "Outfit", sans-serif;
+    font-size: .8rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.navbar-account-settings-link:hover {
+    background: var(--bs-primary-bg-subtle);
+}
+
+@keyframes navbar-account-menu-enter {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* At ordinary laptop widths, reduce the navigation's generous desktop gaps
+   and hide its decorative divider so the rounded search never crosses it. */
+@media (min-width: 992px) and (max-width: 1399.98px) {
+    .navbar > .container-fluid {
+        gap: .35rem;
+    }
+
+    .navbar > .container-fluid > .navbar-brand {
+        margin-right: .35rem !important;
+        font-size: 1.35rem !important;
+    }
+
+    #navbarOffcanvas {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    #navbarOffcanvas .offcanvas-body {
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap !important;
+        min-width: 0;
+        padding: 0 !important;
+        overflow: visible;
+    }
+
+    #navbarOffcanvas .navbar-nav,
+    #navbarOffcanvas .navbar-nav.ms-auto {
+        flex: 0 1 auto;
+        flex-wrap: nowrap;
+        min-width: 0;
+        margin: 0 !important;
+        column-gap: clamp(.25rem, .7vw, .65rem) !important;
+    }
+
+    #navbarOffcanvas .navbar-nav .nav-item {
+        flex: 0 0 auto;
+    }
+
+    #navbarOffcanvas .navbar-nav .nav-link {
+        padding-right: .28rem;
+        padding-left: .28rem;
+        font-size: .8rem;
+        white-space: nowrap;
+    }
+
+    #navbarOffcanvas .navbar-navigation-search {
+        width: clamp(175px, 16.5vw, 220px);
+        min-width: 165px;
+        max-width: 220px;
+        flex: 0 1 220px;
+        margin: 0 0 0 auto;
+    }
+
+    .navbar > .container-fluid > .vr {
+        display: none !important;
+    }
+
+    .navbar-desktop-auth {
+        gap: .45rem !important;
+        margin-left: .35rem;
+    }
+
+    .navbar-desktop-auth .btn {
+        padding-right: .7rem !important;
+        padding-left: .7rem !important;
+        white-space: nowrap;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1099.98px) {
+    .navbar > .container-fluid > .navbar-brand {
+        font-size: 1.18rem !important;
+        margin-right: .15rem !important;
+    }
+
+    #navbarOffcanvas .navbar-nav {
+        column-gap: .15rem !important;
+    }
+
+    #navbarOffcanvas .navbar-nav .nav-link {
+        padding-right: .18rem;
+        padding-left: .18rem;
+        font-size: .75rem;
+    }
+
+    #navbarOffcanvas .navbar-navigation-search {
+        width: 165px;
+        min-width: 150px;
+        flex-basis: 165px;
+    }
+
+    .navbar-desktop-auth {
+        gap: .3rem !important;
+        margin-left: .15rem;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .navbar-user-menu-wrapper {
+        display: none;
+    }
+
+    .navbar-account-menu {
+        position: static;
+        width: 100%;
+        max-height: none;
+        box-shadow: none;
+        animation: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .navbar-account-menu {
+        animation: none;
+    }
+
+    .navbar-user-trigger,
+    .navbar-account-menu-link {
+        transition: none;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+ * Dark-mode accessibility pass
+ * Normalize the fixed light backgrounds and inline-styled controls used by
+ * older pages. Bootstrap's data-bs-theme handles semantic components; these
+ * rules cover the remaining custom screens and inline declarations.
+ * -------------------------------------------------------------------------- */
+
+html[data-bs-theme="dark"] {
+    color-scheme: dark;
+    --sv-surface: #1f2937;
+    --sv-surface-raised: #243244;
+    --sv-surface-input: #111827;
+    --sv-border: #435166;
+    --sv-text: #e5e7eb;
+    --sv-text-muted: #bac6d6;
+}
+
+html[data-bs-theme="dark"] body,
+html[data-bs-theme="dark"] #app {
+    background-color: #111827;
+    color: var(--sv-text);
+}
+
+html[data-bs-theme="dark"] main,
+html[data-bs-theme="dark"] section,
+html[data-bs-theme="dark"] article {
+    color: inherit;
+}
+
+html[data-bs-theme="dark"] .form-control,
+html[data-bs-theme="dark"] .form-select,
+html[data-bs-theme="dark"] select,
+html[data-bs-theme="dark"] textarea,
+html[data-bs-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]) {
+    background-color: var(--sv-surface-input) !important;
+    color: var(--sv-text) !important;
+    border-color: var(--sv-border) !important;
+    color-scheme: dark;
+}
+
+html[data-bs-theme="dark"] select option,
+html[data-bs-theme="dark"] select optgroup {
+    background-color: var(--sv-surface);
+    color: var(--sv-text);
+}
+
+html[data-bs-theme="dark"] .form-control::placeholder,
+html[data-bs-theme="dark"] input::placeholder,
+html[data-bs-theme="dark"] textarea::placeholder {
+    color: #a9b7ca !important;
+    opacity: 1;
+}
+
+html[data-bs-theme="dark"] .form-control:focus,
+html[data-bs-theme="dark"] .form-select:focus,
+html[data-bs-theme="dark"] select:focus,
+html[data-bs-theme="dark"] textarea:focus,
+html[data-bs-theme="dark"] input:focus {
+    background-color: #111827 !important;
+    color: #f8fafc !important;
+    border-color: #60a5fa !important;
+    box-shadow: 0 0 0 .2rem rgba(59, 130, 246, .2) !important;
+}
+
+html[data-bs-theme="dark"] .form-label,
+html[data-bs-theme="dark"] label {
+    color: #e5e7eb;
+}
+
+html[data-bs-theme="dark"] .form-text,
+html[data-bs-theme="dark"] .text-secondary,
+html[data-bs-theme="dark"] .text-muted {
+    color: #bac6d6 !important;
+}
+
+html[data-bs-theme="dark"] .bg-white,
+html[data-bs-theme="dark"] .bg-light,
+html[data-bs-theme="dark"] .card,
+html[data-bs-theme="dark"] .modal-content,
+html[data-bs-theme="dark"] .dropdown-menu,
+html[data-bs-theme="dark"] .list-group-item {
+    background-color: var(--sv-surface) !important;
+    color: var(--sv-text);
+    border-color: var(--sv-border);
+}
+
+html[data-bs-theme="dark"] .bg-body,
+html[data-bs-theme="dark"] .bg-body-tertiary {
+    background-color: #18212f !important;
+    color: var(--sv-text);
+}
+
+html[data-bs-theme="dark"] .text-dark {
+    color: var(--sv-text) !important;
+}
+
+html[data-bs-theme="dark"] .border,
+html[data-bs-theme="dark"] .border-top,
+html[data-bs-theme="dark"] .border-bottom,
+html[data-bs-theme="dark"] .border-start,
+html[data-bs-theme="dark"] .border-end,
+html[data-bs-theme="dark"] hr {
+    border-color: var(--sv-border) !important;
+}
+
+/* Correct inline light-gray backgrounds that bypass ordinary theme rules. */
+html[data-bs-theme="dark"] [style*="background-color: rgb(242, 242, 244)"],
+html[data-bs-theme="dark"] [style*="background-color: rgb(245, 246, 248)"],
+html[data-bs-theme="dark"] [style*="background-color: rgb(241, 241, 243)"],
+html[data-bs-theme="dark"] [style*="background-color: rgb(250, 250, 250)"],
+html[data-bs-theme="dark"] [style*="background-color: rgb(248, 249, 250)"] {
+    background-color: #111827 !important;
+    color: var(--sv-text) !important;
+}
+
+/* Notifications were rendered with inline pale-blue surfaces, which made
+   inherited light-mode text unreadable on dark mode. */
+html[data-bs-theme="dark"] .notifications-page .notification-item {
+    background-color: #1f2937 !important;
+    color: #f3f6fb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .notifications-page .notification-item:hover,
+html[data-bs-theme="dark"] .notifications-page .notification-item:focus-visible {
+    background-color: #273449 !important;
+    color: #f8fafc !important;
+}
+
+html[data-bs-theme="dark"] .notifications-page .notification-item .text-muted,
+html[data-bs-theme="dark"] .notifications-page .notification-item small {
+    color: #c3cedd !important;
+}
+
+html[data-bs-theme="dark"] .notifications-page .notification-empty {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+/* About-page FAQ used hard-coded white surfaces and dark text. */
+html[data-bs-theme="dark"] .about-faq-section {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .about-faq-item,
+html[data-bs-theme="dark"] .about-faq-question,
+html[data-bs-theme="dark"] .about-faq-cta {
+    background: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .about-faq-question:hover {
+    background: #273449 !important;
+}
+
+html[data-bs-theme="dark"] .about-faq-answer {
+    color: #c3cedd !important;
+}
+
+/* Technician workspace: neutralize the page's locally defined light-only
+   hero, metric cards, panels, job cards, filters, and table colors. */
+html[data-bs-theme="dark"] .technician-workspace {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .workspace-hero {
+    background: linear-gradient(125deg, #1b2738 0%, #172b45 100%) !important;
+    border-color: #435166 !important;
+    color: #f3f6fb !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .workspace-section,
+html[data-bs-theme="dark"] .technician-workspace .workspace-stat,
+html[data-bs-theme="dark"] .technician-workspace .technician-job-card {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .bg-light,
+html[data-bs-theme="dark"] .technician-workspace .workspace-filter:not(.active),
+html[data-bs-theme="dark"] .technician-workspace form.bg-light {
+    background-color: #273449 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .workspace-filter:not(.active) {
+    color: #d6deea !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .workspace-table {
+    --bs-table-color: #e5e7eb;
+    --bs-table-bg: #1f2937;
+    --bs-table-border-color: #435166;
+    --bs-table-striped-bg: #243244;
+    --bs-table-hover-bg: #2a3a50;
+    --bs-table-hover-color: #ffffff;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .workspace-table thead th {
+    color: #c3cedd !important;
+}
+
+html[data-bs-theme="dark"] .technician-workspace .text-secondary,
+html[data-bs-theme="dark"] .technician-workspace .text-muted {
+    color: #bac6d6 !important;
+}
+
+/* Keep short pages' footers at the bottom without fixing them over content.
+   The :has selectors progressively enhance layouts with the site footer. */
+#app {
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+#app:has(> .site-footer) {
+    display: flex;
+    flex-direction: column;
+}
+
+#app:has(> .site-footer) > main {
+    flex: 1 0 auto;
+}
+
+#app > div:has(> .site-footer) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+#app > div:has(> .site-footer) > main {
+    flex: 1 0 auto;
+}
+
+.site-footer {
+    width: 100%;
+    flex-shrink: 0;
+    margin-top: auto !important;
+}
+
+html[data-bs-theme="dark"] .site-footer {
+    background: #0b1220 !important;
+    color: #e5e7eb !important;
+    border-top: 1px solid #273449;
+}
+
+html[data-bs-theme="dark"] .site-footer a {
+    color: #dbeafe !important;
+}
+
+
+
+/* Targeted fixes for light surfaces shown in the QA screenshots. */
+html[data-bs-theme="dark"] .order-status-overview .order-status-card {
+    background-color: #1f2937 !important;
+    border-color: #435166 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .order-status-overview .order-status-card .fw-semibold,
+html[data-bs-theme="dark"] .order-status-overview .order-status-card .fw-bold,
+html[data-bs-theme="dark"] .order-status-overview .order-status-card .text-dark {
+    color: #f3f6fb !important;
+}
+
+html[data-bs-theme="dark"] .order-status-overview .order-status-card .text-muted,
+html[data-bs-theme="dark"] .order-status-overview .order-status-total .text-muted {
+    color: #bac6d6 !important;
+}
+
+html[data-bs-theme="dark"] .order-status-overview .order-status-total,
+html[data-bs-theme="dark"] .order-status-overview .order-status-empty {
+    background-color: #273449 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .service-location-map-card {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .service-location-map-empty {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .service-location-map-empty .text-muted {
+    color: #bac6d6 !important;
+}
+
+html[data-bs-theme="dark"] .service-location-map-card .border-top {
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-selected-item {
+    background-color: #1c2e43 !important;
+    border-color: #3c5877 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-selected-item .text-muted,
+html[data-bs-theme="dark"] .inquiry-selected-item .small:not(.text-primary) {
+    color: #bac6d6 !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-selected-item .fw-bold,
+html[data-bs-theme="dark"] .inquiry-selected-item .fw-semibold {
+    color: #f3f6fb !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-selected-item a {
+    color: #93c5fd !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-no-item {
+    background-color: #273449 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-no-item .text-muted {
+    color: #bac6d6 !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-why-card {
+    background-color: #1c2e43 !important;
+    color: #f3f6fb !important;
+    border: 1px solid #3c5877;
+}
+
+html[data-bs-theme="dark"] .inquiry-why-card .text-muted {
+    color: #c3d0e0 !important;
+}
+
+/* Time-slot buttons in the booking calendar use inline light-mode colors. */
+html[data-bs-theme="dark"] .inquiry-time-slot {
+    background-color: #273449 !important;
+    border-color: #435166 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-time-slot.is-selected {
+    background-color: #17365c !important;
+    border-color: #60a5fa !important;
+    color: #bfdbfe !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-time-slot.is-booked {
+    background-color: #48282d !important;
+    border-color: #7f3d46 !important;
+    color: #fecaca !important;
+}
+
+/* Invoice Settings previously painted the full-page wrapper light regardless
+   of theme. Its status cards, guidance alert, labels, and controls now remain
+   readable on the same theme-aware surface as the rest of the admin area. */
+html[data-bs-theme="dark"] .invoice-settings-page {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page main {
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page .card,
+html[data-bs-theme="dark"] .invoice-settings-page .card-body {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page .alert-warning {
+    background-color: #3a2c17 !important;
+    color: #f9e8c8 !important;
+    border-color: #73572a !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page .alert-success {
+    background-color: #123728 !important;
+    color: #d1fae5 !important;
+    border-color: #226447 !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page .invalid-feedback {
+    color: #fca5a5 !important;
+}
+
+html[data-bs-theme="dark"] .invoice-settings-page .form-text {
+    color: #bac6d6 !important;
+}
+
+
+html[data-bs-theme="dark"] .inquiry-date-option {
+    background-color: #273449 !important;
+    border-color: #435166 !important;
+    color: #e5e7eb !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-date-option.is-selected {
+    background-color: #0d6efd !important;
+    border-color: #60a5fa !important;
+    color: #ffffff !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-date-option.is-booked {
+    background-color: #48282d !important;
+    border-color: #7f3d46 !important;
+    color: #fecaca !important;
+}
+
+html[data-bs-theme="dark"] .inquiry-date-option.is-past {
+    background-color: #1f2937 !important;
+    border-color: #374151 !important;
+    color: #8492a6 !important;
+}
+
+
+/* Catalog search fields (Products and Packages) need a distinct surface in dark mode.
+   Their light-mode inline backgrounds and border-0 utility previously made them
+   blend into the page background after the global input theme override. */
+html[data-bs-theme="dark"] .catalog-search-input,
+html[data-bs-theme="dark"] .catalog-search-input:focus {
+    background-color: #273449 !important;
+    color: #f3f6fb !important;
+    border: 1px solid #506078 !important;
+    box-shadow: 0 0 0 0.15rem rgba(96, 165, 250, 0.08) !important;
+}
+
+html[data-bs-theme="dark"] .catalog-search-input::placeholder {
+    color: #c3cedd !important;
+    opacity: 1;
+}
+
+html[data-bs-theme="dark"] .catalog-search-icon {
+    color: #c3cedd !important;
+}
+
+
+/* Use higher specificity than the global input:not(...) dark-mode rule above.
+   That broad selector otherwise wins and makes catalog search inputs blend into
+   the page even though the catalog-specific theme styles are present. */
+html[data-bs-theme="dark"] input.catalog-search-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+html[data-bs-theme="dark"] input.catalog-search-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):focus {
+    background-color: #273449 !important;
+    color: #f3f6fb !important;
+    border: 1px solid #64748b !important;
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, .12) !important;
+}
+
+html[data-bs-theme="dark"] input.catalog-search-input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"])::placeholder {
+    color: #cbd5e1 !important;
+    opacity: 1;
+}
+
+
+/* Admin product/package forms must remain usable on short and narrow viewports.
+   These custom Bootstrap modal wrappers contain a form element between the
+   dialog and modal body, so the form itself must be a constrained flex column
+   for the body to become the scrollable region. */
+.admin-catalog-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    display: block !important;
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    padding: .75rem .5rem;
+}
+
+.admin-catalog-modal-dialog {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch !important;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: .25rem auto !important;
+}
+
+.admin-catalog-modal-dialog-product {
+    max-width: 900px;
+}
+
+.admin-catalog-modal-dialog-package {
+    max-width: 1140px;
+}
+
+.admin-catalog-modal-content {
+    display: flex !important;
+    flex: 1 1 auto;
+    flex-direction: column !important;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-height: calc(100dvh - 1.5rem);
+    overflow: hidden;
+}
+
+.admin-catalog-modal-content > form {
+    display: flex !important;
+    flex: 1 1 auto;
+    flex-direction: column !important;
+    min-width: 0;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+}
+
+.admin-catalog-modal-content .modal-header,
+.admin-catalog-modal-content .modal-footer {
+    flex: 0 0 auto;
+}
+
+.admin-catalog-modal-content .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767.98px), (max-height: 620px) {
+    .admin-catalog-modal {
+        padding: .5rem;
+    }
+
+    .admin-catalog-modal-dialog,
+    .admin-catalog-modal-dialog-product,
+    .admin-catalog-modal-dialog-package {
+        width: 100%;
+        max-width: 100%;
+        margin: 0 auto !important;
+    }
+
+    .admin-catalog-modal-content {
+        max-height: calc(100dvh - 1rem);
+        border-radius: .75rem !important;
+    }
+
+    .admin-catalog-modal-content .modal-header,
+    .admin-catalog-modal-content .modal-footer {
+        padding: .75rem 1rem;
+    }
+}
+
+
+/* On mobile, let the document (html) remain the vertical scroll container.
+   Bootstrap temporarily locks body scrolling while an offcanvas is open;
+   after it closes, the page must still scroll without requiring another tap. */
+@media (max-width: 991.98px) {
+    .offcanvas {
+        max-height: 100dvh;
+    }
+
+    .offcanvas .offcanvas-body {
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+    }
+
+    /* The chat launcher has a high fixed z-index. Keep it behind an open
+       navigation drawer so it cannot cover Sign Out or the last admin links. */
+    body:has(.offcanvas.show) .secureview-chatbot {
+        z-index: 1030 !important;
+        pointer-events: none;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Public catalog cards: visible text on both themes, with a separate light
+   product-photo stage so white product photography remains easy to inspect.
+   -------------------------------------------------------------------------- */
+.secureview-catalog-card {
+    --sv-catalog-card-bg: #ffffff;
+    --sv-catalog-card-border: #dbe3ed;
+    --sv-catalog-card-text: #14243b;
+    --sv-catalog-card-copy: #46566c;
+    --sv-catalog-card-muted: #64758b;
+    --sv-catalog-card-subtle: #f7f9fc;
+    --sv-catalog-card-image-start: #f7f9fc;
+    --sv-catalog-card-image-end: #eef2f7;
+    --sv-catalog-card-image-border: #e7edf5;
+    --sv-catalog-card-image-fallback: #eef2f7;
+    --sv-catalog-brand-icon-bg: #eaf2ff;
+    --sv-catalog-brand-icon-color: #1769d2;
+}
+
+.secureview-catalog-card-image-frame {
+    background: linear-gradient(145deg, var(--sv-catalog-card-image-start) 0%, var(--sv-catalog-card-image-end) 100%);
+    border: 1px solid var(--sv-catalog-card-image-border);
+}
+
+.secureview-catalog-card-image-fallback {
+    width: 100%;
+    height: 100%;
+    color: var(--sv-catalog-card-muted);
+    background: var(--sv-catalog-card-image-fallback);
+}
+
+.catalog-listing-main {
+    padding-bottom: clamp(3rem, 5vw, 4.5rem) !important;
+}
+
+html[data-bs-theme="dark"] .secureview-catalog-card {
+    --sv-catalog-card-bg: #1f2937;
+    --sv-catalog-card-border: #46566c;
+    --sv-catalog-card-text: #f3f6fb;
+    --sv-catalog-card-copy: #d2dbe7;
+    --sv-catalog-card-muted: #b7c3d3;
+    --sv-catalog-card-subtle: #18212f;
+    /* A light photo stage preserves detail; multiply helps blend white
+       photography backgrounds into it without losing the product silhouette. */
+    --sv-catalog-card-image-start: #eef2f7;
+    --sv-catalog-card-image-end: #e0e7f0;
+    --sv-catalog-card-image-border: #cbd5e1;
+    --sv-catalog-card-image-fallback: #e0e7f0;
+    --sv-catalog-brand-icon-bg: #243b59;
+    --sv-catalog-brand-icon-color: #93c5fd;
+    border-color: var(--sv-catalog-card-border) !important;
+    color: var(--sv-catalog-card-text) !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .18) !important;
+}
+
+html[data-bs-theme="dark"] .secureview-catalog-card-image {
+    mix-blend-mode: multiply;
+}
+
+html[data-bs-theme="dark"] .secureview-catalog-card .secureview-catalog-card-title,
+html[data-bs-theme="dark"] .secureview-catalog-card h5,
+html[data-bs-theme="dark"] .secureview-catalog-card .secureview-catalog-card-brand {
+    color: var(--sv-catalog-card-text) !important;
+}
+
+html[data-bs-theme="dark"] .secureview-catalog-card .secureview-catalog-card-specifications,
+html[data-bs-theme="dark"] .secureview-catalog-card .secureview-catalog-card-copy {
+    color: var(--sv-catalog-card-copy) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .secureview-catalog-card {
+        transition: none !important;
+        transform: none !important;
+    }
+}
+
+/* --------------------------------------------------------------------------
+ * Site-wide UI consistency and accessibility pass (admin shell + tables).
+ * -------------------------------------------------------------------------- */
+.container-fluid > .row > main.col-md-9.col-lg-10 {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.container-fluid > .row:has(> aside.col-md-3.col-lg-2 > .admin-sidebar-desktop) {
+    align-items: stretch;
+}
+
+.container-fluid > .row > aside.col-md-3.col-lg-2:has(> .admin-sidebar-desktop) {
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    min-width: 0;
+    background: var(--bs-body-bg);
+}
+
+.admin-sidebar-desktop {
+    position: sticky;
+    top: 1rem;
+    width: 100%;
+    flex: 1 1 auto;
+    align-self: flex-start;
+    min-height: 0 !important;
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 2rem !important;
+    background: var(--bs-body-bg) !important;
+    color: var(--bs-body-color);
+    scrollbar-width: thin;
+}
+
+.technician-sidebar-desktop {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    border-color: var(--bs-border-color) !important;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, .04);
+    scrollbar-width: thin;
+}
+
+.technician-sidebar-desktop .technician-sidebar-link,
+.offcanvas .technician-sidebar-link {
+    width: 100%;
+    border: 1px solid var(--bs-border-color);
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+    line-height: 1.3;
+    white-space: normal;
+}
+
+.technician-sidebar-desktop .technician-sidebar-link:hover,
+.offcanvas .technician-sidebar-link:hover {
+    border-color: var(--bs-primary-border-subtle);
+    background: var(--bs-primary-bg-subtle);
+    color: var(--bs-primary-text-emphasis);
+}
+
+html[data-bs-theme="dark"] .technician-sidebar-desktop {
+    background: #1f2937;
+    border-color: #46566c !important;
+}
+
+html[data-bs-theme="dark"] .technician-sidebar-desktop .technician-sidebar-link,
+html[data-bs-theme="dark"] .offcanvas .technician-sidebar-link {
+    background: #263449;
+    border-color: #43546c;
+    color: #e5e7eb;
+}
+
+.admin-sidebar-desktop nav .btn {
+    min-width: 0;
+    white-space: normal;
+    line-height: 1.3;
+}
+
+.container-fluid > .row > main.col-md-9.col-lg-10 h1.fw-bold {
+    font-size: clamp(1.55rem, 1.8vw, 2.05rem);
+    line-height: 1.2;
+    letter-spacing: -.025em;
+    overflow-wrap: anywhere;
+}
+
+.container-fluid > .row > main.col-md-9.col-lg-10 .btn {
+    border-radius: .55rem;
+    font-weight: 600;
+}
+
+.container-fluid > .row > main.col-md-9.col-lg-10 .form-control,
+.container-fluid > .row > main.col-md-9.col-lg-10 .form-select {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.container-fluid > .row > main.col-md-9.col-lg-10 .card,
+.container-fluid > .row > main.col-md-9.col-lg-10 .bg-white.border.rounded-3 {
+    border-color: var(--bs-border-color) !important;
+    border-radius: .875rem !important;
+}
+
+.container-fluid > .row > main.col-md-9.col-lg-10 .table-responsive {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    border-radius: .65rem;
+}
+
+.container-fluid > .row > main.col-md-9.col-lg-10 .table-responsive > table.table {
+    width: max-content;
+    min-width: 100%;
+    margin-bottom: 0;
+}
+
+.container-fluid > .row > main.col-md-9.col-lg-10 table.table th {
+    white-space: nowrap;
+    font-size: .76rem;
+    font-weight: 700;
+    letter-spacing: .035em;
+    vertical-align: middle;
+}
+
+.container-fluid > .row > main.col-md-9.col-lg-10 table.table td {
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+}
+
+@supports selector(div:has(> table.table)) {
+    main div:has(> table.table):not(.table-responsive),
+    main section:has(> table.table),
+    main article:has(> table.table) {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+    }
+
+    main div:has(> table.table):not(.table-responsive) > table.table,
+    main section:has(> table.table) > table.table,
+    main article:has(> table.table) > table.table {
+        width: max-content;
+        min-width: 100%;
+    }
+}
+
+html[data-bs-theme="dark"] .container-fluid > .row > main.col-md-9.col-lg-10 .card,
+html[data-bs-theme="dark"] .container-fluid > .row > main.col-md-9.col-lg-10 .bg-white.border.rounded-3 {
+    border-color: var(--sv-border, #435166) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+}
+
+html[data-bs-theme="dark"] .container-fluid > .row > main.col-md-9.col-lg-10 .table-responsive {
+    scrollbar-color: #53647b #1f2937;
+}
+
+html[data-bs-theme="dark"] .container-fluid > .row > main.col-md-9.col-lg-10 .table {
+    --bs-table-color: #e5e7eb;
+    --bs-table-bg: #1f2937;
+    --bs-table-border-color: #435166;
+    --bs-table-striped-bg: #243244;
+    --bs-table-hover-bg: #2a3a50;
+    --bs-table-hover-color: #ffffff;
+}
+
+@media (max-width: 1199.98px) {
+    .container-fluid > .row > aside.col-md-3.col-lg-2:has(> .admin-sidebar-desktop) {
+        display: block;
+        height: auto;
+    }
+
+    .admin-sidebar-desktop {
+        display: none !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .container-fluid > .row > main.col-md-9.col-lg-10 {
+        padding: 1rem !important;
+    }
+
+    .container-fluid > .row > main.col-md-9.col-lg-10 h1.fw-bold {
+        font-size: 1.5rem;
+    }
+
+    .container-fluid > .row > main.col-md-9.col-lg-10 .table-responsive {
+        margin-right: -.15rem;
+        margin-left: -.15rem;
+        width: calc(100% + .3rem);
+    }
+}
+
+/* About page: improve existing hero, company, mission, and Why Choose Us
+   sections only. The FAQ remains the next section after Why Choose Us. */
+.about-hero {
+    width: 100%;
+    background: #0b1220;
+}
+
+.about-hero-media {
+    isolation: isolate;
+    overflow: hidden;
+    background: #0b1220;
+}
+
+.about-hero-image {
+    display: block;
+    width: 100%;
+    height: clamp(270px, 32vw, 400px);
+    object-fit: cover;
+    object-position: center 46%;
+    filter: brightness(.58) saturate(.86);
+}
+
+.about-hero-media::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+        90deg,
+        rgba(5, 12, 24, .48) 0%,
+        rgba(5, 12, 24, .16) 48%,
+        rgba(5, 12, 24, .44) 100%
+    );
+}
+
+.about-hero-copy {
+    z-index: 2;
+    width: min(92%, 780px);
+    padding: .5rem 1rem;
+    color: #fff;
+    text-shadow: 0 3px 18px rgba(0, 0, 0, .75);
+}
+
+.about-hero-eyebrow {
+    color: #dbeafe;
+    font-size: clamp(.7rem, 1.2vw, .86rem);
+    letter-spacing: .16em;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, .9);
+}
+
+.about-hero-copy h1 {
+    color: #fff;
+    font-size: clamp(2.35rem, 5vw, 4rem);
+    line-height: 1.05;
+    letter-spacing: -.025em;
+    text-shadow: 0 3px 20px rgba(0, 0, 0, .85);
+}
+
+.about-hero-subtitle {
+    color: #fff !important;
+    font-size: clamp(1rem, 2vw, 1.3rem);
+    font-weight: 500;
+    letter-spacing: .015em;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .95);
+}
+
+.about-story-section {
+    padding: clamp(3rem, 5vw, 5rem) 0;
+    color: var(--bs-body-color);
+}
+
+.about-company-section {
+    background: var(--bs-body-bg);
+}
+
+.about-mission-section {
+    background: var(--bs-tertiary-bg);
+    border-top: 1px solid var(--bs-border-color-translucent);
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+}
+
+.about-story-media {
+    min-width: 0;
+}
+
+.about-story-image {
+    display: block;
+    width: 100%;
+    max-height: 410px;
+    object-fit: contain;
+    object-position: center;
+    background: #fff;
+    border: 1px solid rgba(148, 163, 184, .28);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, .12);
+}
+
+.about-story-copy {
+    max-width: 680px;
+}
+
+.about-section-kicker {
+    color: var(--bs-secondary-color);
+    font-size: .76rem;
+    font-weight: 800;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+
+.about-section-heading {
+    font-family: "Outfit", sans-serif;
+    font-size: clamp(1.7rem, 2.8vw, 2.35rem);
+    line-height: 1.14;
+    letter-spacing: -.025em;
+}
+
+.about-section-lead {
+    max-width: 58ch;
+    color: var(--bs-body-color);
+    font-size: clamp(1rem, 1.35vw, 1.13rem);
+    line-height: 1.8;
+}
+
+.about-benefits-section {
+    padding: clamp(3.25rem, 5vw, 5rem) 0 !important;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+.about-benefits-section .why-line {
+    width: min(100%, 1240px);
+    height: 3px;
+    margin: 0 auto 1.5rem;
+    border-radius: 999px;
+    background: #0d6efd;
+}
+
+.about-benefits-heading {
+    font-family: "Outfit", sans-serif;
+    font-size: clamp(1.65rem, 2.6vw, 2.25rem);
+    line-height: 1.15;
+}
+
+.about-benefit-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: clamp(1.25rem, 2.4vw, 1.8rem) 1.2rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 1rem;
+    background: var(--bs-body-bg);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .055);
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.about-benefit-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(13, 110, 253, .45);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, .1);
+}
+
+.about-benefit-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    margin-bottom: 1rem;
+    border-radius: 17px;
+    background: #e8f1ff;
+    color: #1264d8;
+    font-size: 1.55rem;
+}
+
+.about-benefit-card h3 {
+    min-height: 2.6em;
+    margin-bottom: .65rem;
+    color: var(--bs-body-color);
+    line-height: 1.3;
+}
+
+.about-benefit-card p {
+    max-width: 30ch;
+    color: var(--bs-secondary-color);
+    font-size: .92rem;
+    line-height: 1.65;
+}
+
+html[data-bs-theme="dark"] .about-company-section,
+html[data-bs-theme="dark"] .about-benefits-section {
+    background: #111827;
+    color: #e5e7eb;
+}
+
+html[data-bs-theme="dark"] .about-mission-section {
+    background: #18212f;
+    border-color: #2d3b50;
+    color: #e5e7eb;
+}
+
+html[data-bs-theme="dark"] .about-section-kicker {
+    color: #aebed2;
+}
+
+html[data-bs-theme="dark"] .about-section-lead {
+    color: #d3dce8;
+}
+
+html[data-bs-theme="dark"] .about-story-image {
+    border-color: #3b4b61;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .24);
+}
+
+html[data-bs-theme="dark"] .about-benefit-card {
+    border-color: #37465b;
+    background: #1f2937;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .16);
+}
+
+html[data-bs-theme="dark"] .about-benefit-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, .28);
+}
+
+html[data-bs-theme="dark"] .about-benefit-icon {
+    background: #17324d;
+    color: #93c5fd;
+}
+
+html[data-bs-theme="dark"] .about-benefit-card h3 {
+    color: #f3f6fb;
+}
+
+html[data-bs-theme="dark"] .about-benefit-card p {
+    color: #c3cedd;
+}
+
+@media (max-width: 767.98px) {
+    .about-hero-image {
+        height: clamp(260px, 68vw, 340px);
+        object-position: center;
+    }
+
+    .about-story-section {
+        padding: 2.75rem 0;
+    }
+
+    .about-story-image {
+        max-height: 340px;
+    }
+
+    .about-story-copy {
+        max-width: none;
+    }
+
+    .about-benefit-card h3 {
+        min-height: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .about-benefit-card {
+        transition: none;
+    }
+
+    .about-benefit-card:hover {
+        transform: none;
+    }
+}
+
+
+
+/* Checkout layout: keep long product titles inside the cart column. */
+.checkout-page {
+    background-color: #f7f7f8;
+    color: #212529;
+}
+.checkout-page .checkout-panel {
+    background-color: #fff;
+    color: #212529;
+}
+.checkout-cart-item {
+    min-width: 0;
+    background-color: #fafafa;
+    color: inherit;
+}
+.checkout-cart-item-row {
+    width: 100%;
+    min-width: 0;
+}
+.checkout-cart-item-details {
+    flex: 1 1 0%;
+    min-width: 0;
+    overflow: hidden;
+}
+.checkout-cart-item-name {
+    display: -webkit-box;
+    max-width: 100%;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+.checkout-cart-item-subtotal {
+    flex: 0 0 78px;
+    min-width: 64px;
+    max-width: 78px;
+    text-align: right;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.checkout-order-summary {
+    background-color: #f6f6f7;
+    color: #212529;
+}
+.checkout-secure-checkout {
+    background-color: #eef7ff;
+    color: #334155;
+}
+.checkout-payment-method {
+    background-color: #fff;
+    color: #212529;
+    border-color: #e3e3e6;
+    min-width: 0;
+}
+.checkout-payment-method.is-selected {
+    background-color: #edf5ff;
+    color: #17345e;
+    border-color: #0d6efd;
+}
+.checkout-method-icon {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+}
+.review-photo-tile {
+    width: 112px;
+    max-width: 100%;
+    position: relative;
+    min-width: 0;
+}
+.review-photo-tile img {
+    display: block;
+    width: 100%;
+    height: 88px;
+    object-fit: cover;
+    border-radius: .5rem;
+    border: 1px solid #d1d5db;
+    background: #f8fafc;
+}
+.review-photo-tile button {
+    margin-top: .35rem;
+    width: 100%;
+    padding: .2rem .35rem;
+}
+.review-photo-tile .text-truncate {
+    max-width: 100%;
+}
+.review-photo-tile.is-removed img {
+    opacity: .35;
+    filter: grayscale(1);
+}
+.review-public-photo {
+    display: block;
+    width: 104px;
+    height: 104px;
+    object-fit: cover;
+    border: 1px solid #d1d5db;
+    border-radius: .6rem;
+}
+.review-photo-link {
+    display: inline-block;
+    border-radius: .6rem;
+}
+.review-photo-link:focus-visible {
+    outline: 3px solid #60a5fa;
+    outline-offset: 2px;
+}
+.review-create-page {
+    background: #f7f7f8;
+    color: #212529;
+}
+.review-create-page main {
+    background: transparent;
+}
+.review-create-panel {
+    background: #fff;
+    color: #212529;
+    border-color: #dee2e6;
+}
+.review-create-item-image {
+    width: 104px;
+    height: 104px;
+    flex: 0 0 104px;
+    object-fit: contain;
+    padding: .35rem;
+}
+.review-create-item-image:not(img) {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 1.75rem;
+}
+
+html[data-bs-theme="dark"] .checkout-page {
+    background-color: #111827 !important;
+    color: #e5e7eb !important;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-panel {
+    background-color: #1f2937 !important;
+    border-color: #435166 !important;
+    color: #e5e7eb !important;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-panel h1,
+html[data-bs-theme="dark"] .checkout-page .checkout-panel h2,
+html[data-bs-theme="dark"] .checkout-page .checkout-panel h3,
+html[data-bs-theme="dark"] .checkout-page .checkout-panel h4,
+html[data-bs-theme="dark"] .checkout-page .checkout-panel h5,
+html[data-bs-theme="dark"] .checkout-page .checkout-panel .fw-bold,
+html[data-bs-theme="dark"] .checkout-page .checkout-panel .fw-semibold {
+    color: #f3f6fb;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-cart-item {
+    background-color: #18212f !important;
+    border-color: #435166 !important;
+    color: #e5e7eb !important;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-cart-item-name {
+    color: #f3f6fb !important;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-cart-item-subtotal {
+    color: #f3f6fb !important;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-order-summary {
+    background-color: #111827 !important;
+    color: #e5e7eb !important;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-secure-checkout {
+    background-color: #192b42 !important;
+    color: #dbeafe !important;
+    border: 1px solid #314b6c;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-secure-checkout .text-muted,
+html[data-bs-theme="dark"] .checkout-page .checkout-order-summary .text-muted {
+    color: #bac6d6 !important;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-payment-method {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-payment-method.is-selected {
+    background-color: #172b45 !important;
+    border-color: #3b82f6 !important;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-payment-method .text-muted,
+html[data-bs-theme="dark"] .checkout-page .checkout-payment-method .text-secondary {
+    color: #bac6d6 !important;
+}
+html[data-bs-theme="dark"] .checkout-page .checkout-method-icon {
+    background-color: #111827 !important;
+    color: #dbeafe !important;
+}
+html[data-bs-theme="dark"] .review-create-page {
+    background: #111827 !important;
+    color: #e5e7eb !important;
+}
+html[data-bs-theme="dark"] .review-create-panel {
+    background: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+html[data-bs-theme="dark"] .review-create-panel h1,
+html[data-bs-theme="dark"] .review-create-panel h2,
+html[data-bs-theme="dark"] .review-create-panel h3,
+html[data-bs-theme="dark"] .review-create-panel h4,
+html[data-bs-theme="dark"] .review-create-panel .fw-semibold,
+html[data-bs-theme="dark"] .review-create-panel .fw-bold {
+    color: #f3f6fb;
+}
+html[data-bs-theme="dark"] .review-create-item-image:not(img) {
+    background: #111827 !important;
+    color: #bac6d6 !important;
+}
+html[data-bs-theme="dark"] .review-photo-tile img,
+html[data-bs-theme="dark"] .review-public-photo {
+    border-color: #435166;
+    background: #111827;
+}
+@media (max-width: 575.98px) {
+    .checkout-cart-item-subtotal {
+        flex-basis: 62px;
+        min-width: 54px;
+        max-width: 62px;
+    }
+}
+
+.review-form-panel {
+    background-color: #fff;
+    color: #212529;
+}
+html[data-bs-theme="dark"] .review-form-panel {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    border-color: #435166 !important;
+}
+html[data-bs-theme="dark"] .review-form-panel h1,
+html[data-bs-theme="dark"] .review-form-panel h2,
+html[data-bs-theme="dark"] .review-form-panel h3,
+html[data-bs-theme="dark"] .review-form-panel h4,
+html[data-bs-theme="dark"] .review-form-panel .fw-semibold,
+html[data-bs-theme="dark"] .review-form-panel .fw-bold {
+    color: #f3f6fb;
+}
+
+
+/* Phase B: mobile card layouts, collapsible filters, and consistent keyboard focus. */
+.admin-product-filter-disclosure > .admin-product-filter-form,
+.admin-order-history-filter-disclosure > .admin-product-filter-form {
+    display: flex;
+}
+
+.admin-product-filter-disclosure > .admin-product-filter-summary,
+.admin-order-history-filter-disclosure > .admin-product-filter-summary {
+    display: none;
+}
+
+.admin-product-filter-summary {
+    align-items: center;
+    gap: .5rem;
+    min-height: 2.75rem;
+    cursor: pointer;
+    list-style: none;
+    color: var(--bs-body-color);
+}
+
+.admin-product-filter-summary::-webkit-details-marker {
+    display: none;
+}
+
+.admin-product-filter-summary > span:nth-child(2) {
+    margin-left: auto;
+    text-align: right;
+}
+
+.admin-product-mobile-card,
+.admin-order-history-mobile-card {
+    min-width: 0;
+    padding: 1rem;
+    margin-bottom: .875rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .875rem;
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    box-shadow: 0 3px 12px rgba(15, 23, 42, .05);
+}
+
+.admin-product-mobile-card:last-child,
+.admin-order-history-mobile-card:last-child {
+    margin-bottom: 0;
+}
+
+.admin-product-mobile-image {
+    display: block;
+    width: 68px;
+    height: 68px;
+    flex: 0 0 68px;
+    object-fit: cover;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .65rem;
+    background: var(--bs-tertiary-bg);
+}
+
+.admin-product-mobile-image-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--bs-secondary-color);
+}
+
+.admin-product-mobile-details,
+.admin-order-history-mobile-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .875rem;
+    margin: 1rem 0;
+    padding: .875rem 0;
+    border-top: 1px solid var(--bs-border-color);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.admin-product-mobile-details > div,
+.admin-order-history-mobile-details > div {
+    min-width: 0;
+}
+
+.admin-product-mobile-label {
+    display: block;
+    margin-bottom: .25rem;
+    color: var(--bs-secondary-color);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .025em;
+    text-transform: uppercase;
+}
+
+.admin-product-mobile-specs {
+    padding-left: 1.2rem;
+    font-size: .875rem;
+    overflow-wrap: anywhere;
+}
+
+.admin-product-mobile-stock input {
+    width: min(100%, 9rem);
+}
+
+.admin-product-mobile-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .5rem;
+    margin-top: 1rem;
+}
+
+.admin-product-mobile-actions .btn {
+    white-space: normal;
+}
+
+.admin-product-mobile-actions .btn:last-child {
+    grid-column: 1 / -1;
+}
+
+.admin-product-mobile-card .min-w-0,
+.admin-order-history-mobile-card .min-w-0 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.secureview-chatbot :where(button, input):focus-visible,
+.admin-product-filter-summary:focus-visible,
+.catalog-listing-main :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
+.admin-page :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 3px solid #1d4ed8;
+    outline-offset: 3px;
+}
+
+html[data-bs-theme="dark"] .secureview-chatbot :where(button, input):focus-visible,
+html[data-bs-theme="dark"] .admin-product-filter-summary:focus-visible,
+html[data-bs-theme="dark"] .catalog-listing-main :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
+html[data-bs-theme="dark"] .admin-page :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline-color: #67e8f9;
+}
+
+html[data-bs-theme="dark"] .admin-product-mobile-card,
+html[data-bs-theme="dark"] .admin-order-history-mobile-card {
+    background: #1f2937;
+    color: #e5e7eb;
+    border-color: #435166;
+}
+
+@media (max-width: 767.98px) {
+    .admin-product-filter-disclosure > .admin-product-filter-summary,
+    .admin-order-history-filter-disclosure > .admin-product-filter-summary {
+        display: flex;
+    }
+
+    .admin-product-filter-disclosure > .admin-product-filter-form,
+    .admin-order-history-filter-disclosure > .admin-product-filter-form {
+        margin-top: 1rem;
+    }
+
+    .admin-product-filter-disclosure:not([open]) > .admin-product-filter-form,
+    .admin-order-history-filter-disclosure:not([open]) > .admin-product-filter-form {
+        display: none;
+    }
+
+    .admin-product-filter-disclosure[open] > .admin-product-filter-form,
+    .admin-order-history-filter-disclosure[open] > .admin-product-filter-form {
+        display: flex;
+    }
+
+    .admin-product-filter-disclosure[open] > .admin-product-filter-summary > i:last-child,
+    .admin-order-history-filter-disclosure[open] > .admin-product-filter-summary > i:last-child {
+        transform: rotate(180deg);
+    }
+
+    .admin-product-mobile-list,
+    .admin-order-history-mobile-list {
+        min-width: 0;
+    }
+
+    .admin-product-mobile-actions {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .admin-product-mobile-details,
+    .admin-order-history-mobile-details {
+        gap: .625rem;
+    }
+}
+
+@media (max-width: 359.98px) {
+    .admin-product-mobile-details,
+    .admin-order-history-mobile-details {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-product-mobile-actions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-product-mobile-actions .btn:last-child {
+        grid-column: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-product-filter-summary > i:last-child {
+        transition: none !important;
+    }
+}
+
+
+/* Reserve space for the fixed chat launcher so it is less likely to cover
+   the final catalog action, pagination, or footer links on narrow screens. */
+@media (max-width: 575.98px) {
+    body {
+        padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+
+/* Netmax Trading catalog conversion and stock visibility */
+.secureview-catalog-card {
+    cursor: pointer;
+    color: var(--sv-catalog-card-text);
+}
+
+.secureview-catalog-card:hover,
+.secureview-catalog-card:focus-visible {
+    border-color: #8bbdff !important;
+    outline: none;
+    box-shadow: 0 16px 34px rgba(19, 43, 79, .16) !important;
+}
+
+.secureview-catalog-card:focus-visible {
+    outline: 3px solid rgba(13, 110, 253, .45);
+    outline-offset: 3px;
+}
+
+.secureview-catalog-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 9px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .035em;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.secureview-catalog-stock.is-in-stock {
+    border-color: #a7e4c2;
+    background: #eafaf1;
+    color: #087443;
+}
+
+.secureview-catalog-stock.is-out-of-stock {
+    border-color: #f2b9bd;
+    background: #fff0f1;
+    color: #b42332;
+}
+
+.catalog-detail-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 10px 14px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+}
+
+.catalog-detail-stock > i {
+    font-size: 1.35rem;
+    flex: 0 0 auto;
+}
+
+.catalog-detail-stock > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.catalog-detail-stock strong {
+    font-size: .88rem;
+    letter-spacing: .045em;
+}
+
+.catalog-detail-stock small {
+    font-size: .73rem;
+    opacity: .82;
+}
+
+.catalog-detail-stock.is-in-stock {
+    border-color: #9ddfba;
+    background: linear-gradient(135deg, #eafaf1 0%, #f7fdf9 100%);
+    color: #087443;
+}
+
+.catalog-detail-stock.is-out-of-stock {
+    border-color: #efb0b6;
+    background: linear-gradient(135deg, #fff0f1 0%, #fff8f8 100%);
+    color: #b42332;
+}
+
+.catalog-detail-actions > button {
+    flex: 1 1 0;
+    min-height: 50px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-size: .96rem;
+    letter-spacing: .01em;
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.catalog-buy-now-btn {
+    border: 1px solid #0756c7;
+    background: linear-gradient(135deg, #087cff 0%, #0756c7 100%);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(7, 86, 199, .25);
+}
+
+.catalog-buy-now-btn:hover:not(:disabled) {
+    border-color: #063e97;
+    background: linear-gradient(135deg, #0870eb 0%, #063e97 100%);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(7, 86, 199, .32);
+}
+
+.catalog-add-to-cart-btn {
+    border: 1.5px solid #0b65d8;
+    background: #eef6ff;
+    color: #0756c7;
+    box-shadow: 0 5px 14px rgba(7, 86, 199, .08);
+}
+
+.catalog-add-to-cart-btn:hover:not(:disabled) {
+    border-color: #0756c7;
+    background: #dcecff;
+    color: #063e97;
+    transform: translateY(-2px);
+    box-shadow: 0 9px 19px rgba(7, 86, 199, .16);
+}
+
+.catalog-buy-now-btn:disabled,
+.catalog-add-to-cart-btn:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+    transform: none;
+    box-shadow: none;
+}
+
+html[data-bs-theme="dark"] .catalog-detail-stock.is-in-stock {
+    border-color: #166744;
+    background: #102d22;
+    color: #8be0b2;
+}
+
+html[data-bs-theme="dark"] .catalog-detail-stock.is-out-of-stock {
+    border-color: #8b303b;
+    background: #351c21;
+    color: #ffb5bd;
+}
+
+html[data-bs-theme="dark"] .secureview-catalog-stock.is-in-stock {
+    border-color: #166744;
+    background: #102d22;
+    color: #8be0b2;
+}
+
+html[data-bs-theme="dark"] .secureview-catalog-stock.is-out-of-stock {
+    border-color: #8b303b;
+    background: #351c21;
+    color: #ffb5bd;
+}
+
+html[data-bs-theme="dark"] .catalog-add-to-cart-btn {
+    border-color: #3b82f6;
+    background: #122b4a;
+    color: #bfdbfe;
+}
+
+html[data-bs-theme="dark"] .catalog-add-to-cart-btn:hover:not(:disabled) {
+    border-color: #60a5fa;
+    background: #193d67;
+    color: #eff6ff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .catalog-detail-actions > button {
+        transition: none;
+    }
+}
+
+
+/* Netmax Trading company identity
+   Transparent artwork sits directly on the existing navbar/footer surfaces. */
+.netmax-navbar-logo {
+    display: block;
+    width: clamp(160px, 18vw, 220px);
+    height: auto;
+    max-height: 58px;
+    object-fit: contain;
+}
+
+.navbar-brand:has(.netmax-navbar-logo) {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Light navigation uses the original navy-and-blue mark; dark navigation
+   switches it to white so the wordmark remains readable on the navy surface. */
+html[data-bs-theme="dark"] .navbar-brand:has(.netmax-navbar-logo) .netmax-navbar-logo {
+    filter: brightness(0) invert(1);
+}
+
+.netmax-footer-logo-wrap {
+    display: inline-flex;
+    max-width: 100%;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.netmax-footer-logo {
+    display: block;
+    width: min(100%, 360px);
+    max-height: 110px;
+    height: auto;
+    object-fit: contain;
+    /* Footer is blue in light mode and navy in dark mode. */
+    filter: brightness(0) invert(1);
+}
+
+@media (max-width: 575.98px) {
+    .netmax-navbar-logo {
+        width: clamp(165px, 47vw, 220px);
+        max-height: 43px;
+    }
+
+    .netmax-footer-logo-wrap {
+        padding: 0;
+    }
+}

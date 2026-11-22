@@ -13,6 +13,17 @@ const serviceTypes = [
     "Other",
 ];
 
+const otherServiceExamples = [
+    "Relocation or repositioning of existing cameras",
+    "DVR/NVR troubleshooting or recording playback issues",
+    "Camera offline, network, router, or remote-viewing setup",
+    "Damaged cable, connector, power adapter, or power-supply replacement",
+    "Camera angle adjustment or coverage improvement",
+    "Adding or replacing a camera in an existing system",
+    "Storage/HDD checking or recording configuration",
+    "Other CCTV-related work (please describe the exact issue)",
+];
+
 const timeSlots = [
     { label: "08:00 AM - 11:00 AM", available: true },
     { label: "11:00 AM - 02:00 PM", available: true },
@@ -56,7 +67,7 @@ const formatDateLabel = (value) => {
     });
 };
 
-export default function Inquiry({ customer, item, catalogItems = [], cartItems = [], initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
+export default function Service({ customer, item, catalogItems = [], cartItems = [], urgencyFees = { normal: 0, urgent: 0, emergency: 0 }, bookingRequestToken, initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
     const today = new Date();
     const [showDateModal, setShowDateModal] = useState(false);
 
@@ -68,6 +79,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
     const [selectedTime, setSelectedTime] = useState("");
 
     const { data, setData, post, processing, errors } = useForm({
+        booking_request_token: bookingRequestToken ?? "",
         item_type: item?.type ?? "",
         item_id: item?.id ?? "",
         item_quantity: cartItems.find((cartItem) =>
@@ -101,13 +113,16 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                 preserveState: true,
                 preserveScroll: true,
             });
-        }, 15000);
+        }, 30000);
 
         return () => window.clearInterval(intervalId);
     }, [processing]);
 
-    const selectedCatalogItem =
-        catalogItems.find((candidate) =>
+    const selectedCatalogItem = data.service_type === "Installation"
+        ? cartItems.find((candidate) =>
+            candidate.type === data.item_type && String(candidate.id) === String(data.item_id)
+        ) || null
+        : catalogItems.find((candidate) =>
             candidate.type === data.item_type && String(candidate.id) === String(data.item_id)
         ) || (
             item && item.type === data.item_type && String(item.id) === String(data.item_id)
@@ -115,8 +130,11 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                 : null
         );
     const installationFee = Number(selectedCatalogItem?.installation_fee ?? 0);
-    const selectedItemQuantity = Math.max(1, Number(data.item_quantity ?? 1));
-    const selectedItemTotal = (Number(selectedCatalogItem?.price ?? 0) + installationFee) * selectedItemQuantity;
+    const selectedItemQuantity = Math.max(1, Number(selectedCatalogItem?.quantity ?? data.item_quantity ?? 1));
+    const selectedUrgencyFee = Math.max(0, Number(urgencyFees?.[data.urgency] ?? 0));
+    const requiresPaymentMethod = data.service_type === "Installation" || selectedUrgencyFee > 0;
+    const selectedItemTotal = (Number(selectedCatalogItem?.price ?? 0) + installationFee) * selectedItemQuantity
+        + (data.service_type === "Installation" ? selectedUrgencyFee : 0);
 
     const monthLabel = calendarMonth.toLocaleDateString("en-US", {
         month: "long",
@@ -278,7 +296,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <div>
                                         <div className="small text-uppercase fw-bold text-primary">
-                                            SecureView
+                                            Netmax Trading
                                         </div>
 
                                         <h1
@@ -298,12 +316,34 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                             fontFamily: "Outfit, sans-serif",
                                         }}
                                     >
-                                        Inquiry
+                                        Service Request
                                     </div>
                                 </div>
 
                                 {errors.inquiry && <div className="alert alert-danger small">{errors.inquiry}</div>}
                                 {errors.payment && <div className="alert alert-danger small">{errors.payment}</div>}
+
+                                {data.service_type === "Installation" && (
+                                    <div className="alert alert-info d-flex align-items-start gap-2 small mb-3" role="note">
+                                        <i className="bi bi-cart-check fs-5" />
+                                        <div>
+                                            <strong>Installation requires a store item in your cart.</strong>
+                                            <div>Add a product or package from the store to your cart, then select it in the Cart panel before submitting this booking.</div>
+                                            <div className="d-flex gap-3 mt-2">
+                                                <a href="/products" className="fw-semibold">Browse products</a>
+                                                <a href="/packages" className="fw-semibold">Browse packages</a>
+                                                <a href="/cart" className="fw-semibold">View cart</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedUrgencyFee > 0 && data.urgency !== "normal" && (
+                                    <div className="alert alert-warning small mb-3" role="status">
+                                        <strong>{data.urgency === "emergency" ? "Emergency" : "Urgent"} booking fee: ₱{selectedUrgencyFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.</strong>
+                                        {" "}This one-time fee is calculated by Netmax Trading and is not based on a price sent by your browser.
+                                    </div>
+                                )}
 
                                 <form onSubmit={submit}>
                                     <div className="mb-3">
@@ -515,7 +555,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                 <select
                                                     className={
                                                         "form-select " +
-                                                        (errors.service_type
+                                                        (errors.inquiry_type
                                                             ? "is-invalid"
                                                             : "")
                                                     }
@@ -539,10 +579,19 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                         )
                                                     )}
                                                 </select>
+                                                {data.service_type === "Other" && (
+                                                    <div className="rounded-3 border bg-body-tertiary p-3 mt-2">
+                                                        <div className="small fw-bold mb-2">EXAMPLES OF OTHER SERVICE REQUESTS</div>
+                                                        <ul className="small text-secondary mb-2 ps-3">
+                                                            {otherServiceExamples.map((example) => <li key={example} className="mb-1">{example}</li>)}
+                                                        </ul>
+                                                        <div className="small text-secondary">Please include the equipment type, symptoms, and any work already attempted in the service notes.</div>
+                                                    </div>
+                                                )}
 
-                                                {errors.service_type && (
+                                                {errors.inquiry_type && (
                                                     <div className="invalid-feedback">
-                                                        {errors.service_type}
+                                                        {errors.inquiry_type}
                                                     </div>
                                                 )}
                                             </div>
@@ -643,7 +692,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                 )}
                                             </div>
 
-                                            {item && (
+                                            {item && data.service_type !== "Installation" && (
                                                 <div className="col-12">
                                                     <label className="form-label small fw-semibold mb-1">
                                                         Selected Item
@@ -692,7 +741,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                 </div>
                                             )}
 
-                                            {data.service_type === "Installation" && (
+                                            {requiresPaymentMethod && (
                                                 <div className="col-12">
                                                     <label className="form-label small fw-semibold mb-1">Payment Method *</label>
                                                     <select
@@ -701,13 +750,19 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                         value={data.payment_method}
                                                         onChange={(event) => setData("payment_method", event.target.value)}
                                                     >
+                                                        <option value="cash">Cash</option>
                                                         <option value="gcash">GCash</option>
                                                         <option value="card">Credit / Debit Card</option>
                                                         <option value="maya">Maya</option>
                                                     </select>
                                                     {errors.payment_method && <div className="invalid-feedback">{errors.payment_method}</div>}
                                                     <div className="form-text">
-                                                        You will be redirected to PayMongo. SecureView creates the installation inquiry only after payment is confirmed.
+                                                        {data.payment_method === "cash"
+                                                            ? "Your service request will be saved immediately. Payment remains pending until Netmax Trading confirms receipt of cash."
+                                                            : "You will be redirected to PayMongo to pay the amount shown. Your service request remains subject to availability and review while payment is pending."}
+                                                        {data.service_type !== "Installation" && selectedUrgencyFee > 0
+                                                            ? " This payment is the one-time " + data.urgency + " service booking fee; repair or other labor charges are handled separately."
+                                                            : ""}
                                                     </div>
                                                 </div>
                                             )}
@@ -760,7 +815,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                             ? "PROCESSING..."
                                             : data.service_type === "Installation"
                                                 ? "CONTINUE TO PAYMENT"
-                                                : "CONFIRM INQUIRY"}
+                                                : "CONFIRM SERVICE REQUEST"}
                                     </button>
                                 </form>
                             </div>
@@ -782,7 +837,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                 </div>
 
                                 {selectedCatalogItem ? (
-                                    <div className="border rounded-3 p-3 mb-3" style={{ backgroundColor: "#eef7ff", borderColor: "#cfe2ff" }}>
+                                    <div className="inquiry-selected-item border rounded-3 p-3 mb-3" style={{ backgroundColor: "#eef7ff", borderColor: "#cfe2ff" }}>
                                         <div className="d-flex align-items-start gap-3">
                                             {selectedCatalogItem.image ? (
                                                 <img src={selectedCatalogItem.image} alt={selectedCatalogItem.name} className="rounded-2" style={{ width: 64, height: 64, objectFit: "cover" }} />
@@ -805,6 +860,11 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                                 ? "₱" + (installationFee * selectedItemQuantity).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                                                                 : "Free"}
                                                         </div>
+                                                        {selectedUrgencyFee > 0 && data.urgency !== "normal" && (
+                                                            <div className="small text-warning-emphasis fw-semibold">
+                                                                {data.urgency === "emergency" ? "Emergency" : "Urgent"} service fee: ₱{selectedUrgencyFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </div>
+                                                        )}
                                                         <div className="d-flex justify-content-between align-items-center border-top mt-2 pt-2">
                                                             <span className="small fw-bold">Total due</span>
                                                             <span className="fw-bold text-primary">₱{selectedItemTotal.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -821,7 +881,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="rounded-3 p-3 mb-3" style={{ backgroundColor: "#f6f6f7" }}>
+                                    <div className="inquiry-no-item rounded-3 p-3 mb-3" style={{ backgroundColor: "#f6f6f7" }}>
                                         <div className="fw-bold small">{data.service_type === "Installation" ? "Choose an item from your cart" : "No item selected"}</div>
                                         <div className="small text-muted mt-1">
                                             {data.service_type === "Installation"
@@ -871,7 +931,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                             }))}
                                                         >
                                                             <i className={"bi " + (isSelected ? "bi-check-circle me-1" : "bi-box-arrow-in-down-right me-1")} />
-                                                            {isSelected ? "Selected" : data.service_type === "Installation" ? "Use for installation" : "Attach to inquiry"}
+                                                            {isSelected ? "Selected" : data.service_type === "Installation" ? "Use for installation" : "Attach to service request"}
                                                         </button>
                                                         <button
                                                             type="button"
@@ -899,7 +959,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                         <div className="small fw-semibold mt-2">{selectedCatalogItem ? "No additional items in your cart" : "Your cart is empty"}</div>
                                         <div className="small text-muted mt-1 mb-2">
                                             {selectedCatalogItem
-                                                ? "Your selected catalog item is still attached to this inquiry. Add other products or packages from their details pages if needed."
+                                                ? "Your selected catalog item is still attached to this service request. Add other products or packages from their details pages if needed."
                                                 : "Add a product or package from its details page, then return here to select it."}
                                         </div>
                                         <div className="d-flex justify-content-center gap-2">
@@ -913,9 +973,18 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                     <span>Service</span>
                                     <span>{data.service_type}</span>
                                 </div>
+                                {data.service_type !== "Installation" && selectedUrgencyFee > 0 && (
+                                    <div className="border rounded-3 p-3 mb-3 bg-warning-subtle">
+                                        <div className="d-flex justify-content-between align-items-center gap-3">
+                                            <span className="small fw-semibold">{data.urgency === "emergency" ? "Emergency" : "Urgent"} booking fee</span>
+                                            <span className="fw-bold text-nowrap">₱{selectedUrgencyFee.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="small text-muted mt-1">Charged once per booking. This fee is separate from any additional labor, parts, or materials agreed for the service.</div>
+                                    </div>
+                                )}
 
                                 <div
-                                    className="rounded-3 p-3"
+                                    className="inquiry-why-card rounded-3 p-3"
                                     style={{
                                         backgroundColor: "#eef7ff",
                                     }}
@@ -1093,7 +1162,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                     onClick={() =>
                                                         selectDate(date)
                                                     }
-                                                    className="btn btn-sm"
+                                                    className={"inquiry-date-option btn btn-sm " + (selected ? "is-selected" : fullyBooked ? "is-booked" : past ? "is-past" : "")}
                                                     style={{
                                                         minHeight: "32px",
                                                         padding: 0,
@@ -1164,7 +1233,7 @@ export default function Inquiry({ customer, item, catalogItems = [], cartItems =
                                                             slot.label
                                                         )
                                                     }
-                                                    className="btn btn-sm text-start d-flex justify-content-between align-items-center"
+                                                    className={"inquiry-time-slot btn btn-sm text-start d-flex justify-content-between align-items-center " + (selected ? "is-selected" : fullyBooked ? "is-booked" : "")}
                                                     style={{
                                                         border: selected
                                                             ? "1px solid #0d6efd"

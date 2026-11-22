@@ -51,9 +51,12 @@ export default function EmailVerificationModal({ email, onClose }) {
                 inset: 0,
                 backgroundColor: "rgba(0, 0, 0, 0.78)",
                 display: "flex",
-                alignItems: "center",
+                alignItems: "safe center",
                 justifyContent: "center",
-                padding: "20px",
+                padding: "12px",
+                overflowY: "auto",
+                overscrollBehavior: "contain",
+                WebkitOverflowScrolling: "touch",
                 zIndex: 9999,
             }}
         >
@@ -61,9 +64,11 @@ export default function EmailVerificationModal({ email, onClose }) {
                 style={{
                     width: "100%",
                     maxWidth: "540px",
+                    maxHeight: "calc(100dvh - 24px)",
+                    overflowY: "auto",
                     backgroundColor: "#ffffff",
                     borderRadius: "18px",
-                    padding: "32px 38px",
+                    padding: "clamp(16px, 4vw, 32px) clamp(16px, 5vw, 38px)",
                     boxShadow: "0 15px 50px rgba(0, 0, 0, 0.25)",
                 }}
             >
@@ -73,7 +78,7 @@ export default function EmailVerificationModal({ email, onClose }) {
                         style={{
                             color: "#727272",
                             fontFamily: "Outfit, sans-serif",
-                            fontSize: "28px",
+                            fontSize: "clamp(1.25rem, 4vw, 1.75rem)",
                         }}
                     >
                         Email Verification

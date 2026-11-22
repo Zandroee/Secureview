@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\InventoryAdjustment;
+use App\Models\Order;
+use App\Models\PendingInquiryCheckout;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\JobNotificationService;
@@ -76,6 +78,164 @@ class TechnicianWorkspaceTest extends TestCase
                 ->has('inventory'));
     }
 
+    public function test_technician_sections_are_separate_routes_with_the_correct_active_page(): void
+    {
+        $technician = User::factory()->create(['role' => 'technician']);
+
+        $pages = [
+            'technician.dashboard' => 'dashboard',
+            'technician.services' => 'services',
+            'technician.available-jobs' => 'available-jobs',
+            'technician.post-service-records' => 'post-service-records',
+            'technician.service-history' => 'service-history',
+            'technician.products' => 'products',
+            'technician.schedule' => 'schedule',
+        ];
+
+        foreach ($pages as $routeName => $activePage) {
+            $this->actingAs($technician)
+                ->get(route($routeName))
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->component('Technician/Workspace')
+                    ->where('activePage', $activePage)
+                    ->has('jobs')
+                    ->has('openJobs')
+                    ->has('serviceHistory')
+                    ->has('inventory')
+                    ->has('recentNotifications')
+                    ->has('recentServices')
+                    ->has('recentAnnouncements')
+                    ->has('scheduleData')
+                    ->has('calendarAvailability.fullyBookedDates')
+                    ->has('calendarAvailability.partiallyBlockedDates')
+                    ->has('unreadNotificationCount'));
+        }
+    }
+
+    public function test_technician_service_history_is_paginated_separately_from_the_active_job_list(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $oldestCompleted = null;
+
+        // More records than fit on one page must still be available in history.
+        for ($day = 1; $day <= 13; $day++) {
+            $completed = $this->makeInquiry(
+                $customer,
+                today()->subDays($day)->toDateString(),
+                'completed'
+            );
+            $completed->update(['technician_id' => $technician->id]);
+            $completed->technicians()->attach($technician->id, [
+                'assigned_by' => $admin->id,
+            ]);
+            $oldestCompleted = $completed;
+        }
+
+        $this->actingAs($technician)
+            ->get(route('technician.service-history'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('activePage', 'service-history')
+                ->where('serviceHistory.total', 13)
+                ->where('serviceHistory.current_page', 1)
+                ->has('serviceHistory.data', 12));
+
+        $this->actingAs($technician)
+            ->get(route('technician.service-history') . '?page=2')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('serviceHistory.total', 13)
+                ->where('serviceHistory.current_page', 2)
+                ->has('serviceHistory.data', 1)
+                ->where('serviceHistory.data.0.id', $oldestCompleted->id));
+    }
+
+    public function test_technician_dashboard_sidebar_data_only_shows_services_assigned_to_that_technician(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $otherCustomer = User::factory()->create(['role' => 'user']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $otherTechnician = User::factory()->create(['role' => 'technician']);
+
+        $assignedService = $this->makeInquiry($customer, today()->addDays(3)->toDateString(), 'confirmed');
+        $assignedService->update(['technician_id' => $technician->id]);
+        $assignedService->technicians()->attach($technician->id, ['assigned_by' => $admin->id]);
+
+        $otherService = $this->makeInquiry($otherCustomer, today()->addDays(4)->toDateString(), 'confirmed');
+        $otherService->update(['technician_id' => $otherTechnician->id]);
+        $otherService->technicians()->attach($otherTechnician->id, ['assigned_by' => $admin->id]);
+
+        $this->actingAs($technician)
+            ->get(route('technician.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('recentServices.0.id', $assignedService->id)
+                ->has('recentServices', 1)
+                ->where('scheduleData.0.id', $assignedService->id)
+                ->has('scheduleData', 1));
+    }
+
+    public function test_technician_service_history_hides_customer_contact_and_exact_location(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $customer = User::factory()->create(['role' => 'user']);
+        $inquiry = $this->makeInquiry($customer, today()->subDays(3)->toDateString(), 'completed');
+        $inquiry->update(['technician_id' => $technician->id]);
+        $inquiry->technicians()->attach($technician->id, ['assigned_by' => $admin->id]);
+
+        $this->actingAs($technician)
+            ->get(route('technician.service-history'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('serviceHistory.data', 1)
+                ->where('serviceHistory.data.0.customer_name', $customer->name)
+                ->missing('serviceHistory.data.0.customer_phone')
+                ->where('serviceHistory.data.0.street_address', null)
+                ->missing('serviceHistory.data.0.payment_status')
+            );
+    }
+
+    public function test_admin_announcement_is_delivered_to_technician_notifications(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $customer = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.announcements.store'), [
+                'title' => 'Technician notice',
+                'message' => 'Please review the updated work schedule.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('customer_notifications', [
+            'user_id' => $technician->id,
+            'type' => 'announcement',
+            'title' => 'Technician notice',
+            'message' => 'Please review the updated work schedule.',
+        ]);
+
+        $this->assertDatabaseHas('customer_notifications', [
+            'user_id' => $customer->id,
+            'type' => 'announcement',
+            'title' => 'Technician notice',
+            'message' => 'Please review the updated work schedule.',
+        ]);
+    }
+
+    public function test_application_timezone_defaults_to_philippines(): void
+    {
+        $this->assertSame('Asia/Manila', config('app.timezone'));
+    }
+
     public function test_technician_can_join_an_open_job_if_their_schedule_is_free(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
@@ -106,6 +266,136 @@ class TechnicianWorkspaceTest extends TestCase
             'user_id' => $technicianOne->id,
             'type' => 'job_team_updated',
             'related_id' => $inquiry->id,
+        ]);
+    }
+
+    public function test_pending_unassigned_service_is_visible_and_can_be_claimed_when_the_technician_is_free(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $inquiry = $this->makeInquiry($customer, today()->addDays(4)->toDateString(), 'pending');
+
+        $this->actingAs($technician)
+            ->get(route('technician.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('openJobs.0.id', $inquiry->id)
+                ->where('openJobs.0.status', 'pending')
+                ->missing('openJobs.0.customer_name')
+                ->missing('openJobs.0.customer_phone')
+                ->missing('openJobs.0.payment_status')
+                ->missing('openJobs.0.payment_method')
+                ->where('openJobs.0.street_address', null)
+                ->where('openJobs.0.address_details', null)
+                ->where('openJobs.0.google_place_id', null)
+                ->where('openJobs.0.service_latitude', null)
+                ->where('openJobs.0.service_longitude', null)
+                ->missing('openJobs.0.notes'));
+
+        $this->actingAs($technician)
+            ->post(route('technician.jobs.claim', $inquiry))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('inquiry_technician', [
+            'inquiry_id' => $inquiry->id,
+            'technician_id' => $technician->id,
+        ]);
+        $this->assertDatabaseHas('inquiries', [
+            'id' => $inquiry->id,
+            'status' => 'pending',
+        ]);
+
+        // A just-joined pending service must appear in My Services while it
+        // waits for admin confirmation instead of disappearing from the list.
+        $this->actingAs($technician)
+            ->get(route('technician.services'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('jobs.0.id', $inquiry->id)
+                ->where('jobs.0.status', 'pending')
+                ->where('jobs.0.customer_name', $customer->name)
+                ->missing('jobs.0.customer_phone')
+                ->missing('jobs.0.payment_method'));
+    }
+
+    public function test_unassigned_jobs_with_unpaid_checkouts_are_not_exposed_as_available_to_technicians(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $inquiry = $this->makeInquiry($customer, today()->addDays(4)->toDateString(), 'pending');
+
+        $order = Order::create([
+            'user_id' => $customer->id,
+            'order_number' => 'SV-UNPAID-JOB-' . strtoupper(bin2hex(random_bytes(3))),
+            'subtotal' => 1500,
+            'shipping_fee' => 0,
+            'installation_fee' => 0,
+            'total' => 1500,
+            'payment_method' => 'gcash',
+            'payment_status' => 'pending',
+            'order_status' => 'awaiting_payment',
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'delivery_address' => '123 Test Street, Taguig',
+        ]);
+
+        PendingInquiryCheckout::create([
+            'user_id' => $customer->id,
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'payload' => [],
+            'status' => 'pending_payment',
+        ]);
+
+        $this->actingAs($technician)
+            ->get(route('technician.available-jobs'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->has('openJobs', 0)
+            );
+
+        $this->assertDatabaseHas('pending_inquiry_checkouts', [
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'status' => 'pending_payment',
+        ]);
+    }
+
+    public function test_legacy_technician_id_assignment_is_visible_and_actionable_without_a_pivot_row(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $inquiry = $this->makeInquiry($customer, today()->addDays(3)->toDateString(), 'confirmed');
+
+        // Older records may still use the legacy technician_id field without
+        // a matching inquiry_technician pivot row.
+        $inquiry->update(['technician_id' => $technician->id]);
+
+        $this->actingAs($technician)
+            ->get(route('technician.services'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('jobs.0.id', $inquiry->id)
+                ->where('jobs.0.status', 'confirmed')
+                ->where('jobs.0.technicians.0.id', $technician->id));
+
+        $this->actingAs($technician)
+            ->patch(route('technician.jobs.status', $inquiry), [
+                'status' => 'in_progress',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('inquiries', [
+            'id' => $inquiry->id,
+            'technician_id' => $technician->id,
+            'status' => 'in_progress',
         ]);
     }
 
@@ -148,11 +438,26 @@ class TechnicianWorkspaceTest extends TestCase
             $technicianTwo->id => ['assigned_by' => $admin->id],
         ]);
 
-        // Any member of the assigned team can complete the job.
+        // A job cannot be marked completed without a Post-Service Record.
         $this->actingAs($technicianTwo)->patch(route('technician.jobs.status', $inquiry), [
             'status' => 'completed',
+        ])->assertRedirect()->assertSessionHasErrors('status');
+
+        $this->assertDatabaseHas('inquiries', ['id' => $inquiry->id, 'status' => 'in_progress']);
+
+        // Any member of the assigned team can submit the record and complete the job.
+        $this->actingAs($technicianTwo)->post(route('technician.jobs.post-service-record', $inquiry), [
+            'work_summary' => 'Repaired the camera connection and verified live recording.',
+            'labor_charge' => 1200,
+            'additional_charge' => 0,
+            'items' => [],
         ])->assertRedirect()->assertSessionHasNoErrors();
 
+        $this->assertDatabaseHas('service_records', [
+            'inquiry_id' => $inquiry->id,
+            'technician_id' => $technicianTwo->id,
+            'total_income' => 1200,
+        ]);
         $this->assertDatabaseHas('inquiries', ['id' => $inquiry->id, 'status' => 'completed']);
         $this->assertDatabaseHas('customer_notifications', [
             'user_id' => $admin->id,
@@ -196,6 +501,26 @@ class TechnicianWorkspaceTest extends TestCase
         $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
             'quantity_change' => -5,
             'reason' => 'Invalid reduction',
+        ])->assertSessionHasErrors('quantity_change');
+
+        $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
+            'quantity_change' => -100001,
+            'reason' => 'Excessive negative adjustment',
+        ])->assertSessionHasErrors('quantity_change');
+
+        $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
+            'quantity_change' => 100001,
+            'reason' => 'Excessive positive adjustment',
+        ])->assertSessionHasErrors('quantity_change');
+
+        $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
+            'quantity_change' => 100000,
+            'reason' => 'Resulting stock would exceed maximum',
+        ])->assertSessionHasErrors('quantity_change');
+
+        $this->actingAs($technician)->patch(route('technician.inventory.adjust', $product), [
+            'quantity_change' => 0,
+            'reason' => 'No change',
         ])->assertSessionHasErrors('quantity_change');
 
         $this->assertSame(1, (int) $product->fresh()->stock_quantity);

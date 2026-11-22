@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PanelPagination from "./PanelPagination";
 import { Link } from "@inertiajs/react";
 import Calendar from "react-calendar";
 
@@ -35,9 +36,17 @@ export default function AdminCalendar({
     itemHrefPrefix = "/admin/schedules/",
 }) {
     const [date, setDate] = useState(new Date());
+    const [schedulePage, setSchedulePage] = useState(1);
     const fullyBookedSet = new Set(fullyBookedDates ?? []);
     const partiallyBlockedSet = new Set(partiallyBlockedDates ?? []);
-    const displayedSchedules = schedules ?? [];
+    const allSchedules = schedules ?? [];
+    const schedulePageSize = 3;
+    const scheduleTotalPages = Math.ceil(allSchedules.length / schedulePageSize);
+    const safeSchedulePage = Math.min(schedulePage, Math.max(1, scheduleTotalPages));
+    const displayedSchedules = allSchedules.slice(
+        (safeSchedulePage - 1) * schedulePageSize,
+        safeSchedulePage * schedulePageSize
+    );
 
     const markDateClass = ({ date: tileDate, view }) => {
         if (view !== "month") return null;
@@ -68,8 +77,8 @@ export default function AdminCalendar({
             return (
                 <span
                     className="d-block mx-auto mt-1 rounded-circle"
-                    style={{ width: "5px", height: "5px", backgroundColor: "#b7791f" }}
-                    title="Some time slots are blocked or technician capacity is in use"
+                    style={{ width: "5px", height: "5px", backgroundColor: "#eab308" }}
+                    title="Some time slots are blocked or have limited technician availability"
                     aria-label="Some time slots are blocked or technician capacity is in use"
                 />
             );
@@ -81,6 +90,69 @@ export default function AdminCalendar({
     return (
         <div className="card border rounded-3 admin-dashboard-calendar">
             <style>{`
+                .admin-dashboard-calendar {
+                    width: 100%;
+                    min-width: 0;
+                }
+                .admin-dashboard-calendar .card-body {
+                    min-width: 0;
+                }
+                .admin-dashboard-calendar .react-calendar {
+                    width: 100%;
+                    max-width: 100%;
+                    min-width: 0;
+                    box-sizing: border-box;
+                    border: 0;
+                    background: transparent;
+                    font-family: inherit;
+                    line-height: 1.35;
+                }
+                .admin-dashboard-calendar .react-calendar__navigation {
+                    display: flex;
+                    align-items: stretch;
+                    gap: 2px;
+                    height: auto;
+                    min-height: 2.5rem;
+                    margin-bottom: .5rem;
+                }
+                .admin-dashboard-calendar .react-calendar__navigation button {
+                    min-width: 0;
+                    flex: 1 1 0;
+                    padding: .35rem .1rem;
+                    border-radius: 6px;
+                    white-space: nowrap;
+                    font-size: .875rem;
+                }
+                .admin-dashboard-calendar .react-calendar__navigation__label {
+                    flex: 3 1 0;
+                    min-width: 0;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .admin-dashboard-calendar .react-calendar__month-view__weekdays {
+                    font-size: clamp(.56rem, .7vw, .7rem);
+                }
+                .admin-dashboard-calendar .react-calendar__month-view__weekdays__weekday {
+                    padding: .4em .05em;
+                }
+                .admin-dashboard-calendar .react-calendar__tile {
+                    min-width: 0;
+                    max-width: 100%;
+                    min-height: clamp(2.3rem, 3vw, 3rem);
+                    padding: .45em .05em;
+                    border-radius: 6px;
+                    font-size: clamp(.68rem, .8vw, .82rem);
+                }
+                @media (max-width: 575.98px) {
+                    .admin-dashboard-calendar .react-calendar__navigation button {
+                        font-size: .78rem;
+                    }
+                    .admin-dashboard-calendar .react-calendar__tile {
+                        min-height: 2.15rem;
+                        padding: .35em 0;
+                        font-size: .73rem;
+                    }
+                }
                 .admin-dashboard-calendar .react-calendar__tile.admin-calendar-day-fully-booked {
                     background: #fee2e2;
                     color: #991b1b;
@@ -119,7 +191,7 @@ export default function AdminCalendar({
                         </p>
                     </div>
                     <Link
-                        href="/admin/schedules"
+                        href={viewAllHref}
                         className="btn btn-sm btn-outline-primary text-nowrap"
                         title="View all schedules"
                     >
@@ -140,8 +212,8 @@ export default function AdminCalendar({
                         Fully booked / blocked
                     </span>
                     <span className="d-inline-flex align-items-center gap-1">
-                        <span className="rounded-circle" style={{ width: 8, height: 8, background: "#b7791f" }} />
-                        Partial capacity
+                        <span className="rounded-circle" style={{ width: 8, height: 8, background: "#eab308" }} />
+                        Limited availability
                     </span>
                 </div>
 
@@ -185,7 +257,7 @@ export default function AdminCalendar({
                                             {String(schedule.status || "confirmed").replace(/_/g, " ")}
                                         </span>
                                     </div>
-                                    <div className="small text-primary mt-1">{schedule.inquiry_number}</div>
+                                    <div className="small text-primary mt-1">{schedule.inquiry_number ? `Service # ${schedule.inquiry_number}` : "Service"}</div>
                                 </Link>
                             ))}
                         </div>
@@ -198,6 +270,13 @@ export default function AdminCalendar({
                             </Link>
                         </div>
                     )}
+                    <PanelPagination
+                        page={safeSchedulePage}
+                        totalPages={scheduleTotalPages}
+                        totalItems={allSchedules.length}
+                        pageSize={schedulePageSize}
+                        onPageChange={setSchedulePage}
+                    />
                 </div>
             </div>
         </div>

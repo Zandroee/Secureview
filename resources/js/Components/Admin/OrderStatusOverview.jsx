@@ -7,7 +7,7 @@ export default function OrderStatusOverview({ statuses = [] }) {
     );
 
     return (
-        <section className="card border rounded-3 mt-4">
+        <section className="order-status-overview card border rounded-3 mt-4">
             <div className="card-body p-4">
                 <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                     <div>
@@ -17,7 +17,7 @@ export default function OrderStatusOverview({ statuses = [] }) {
                         </p>
                     </div>
                     <div
-                        className="rounded-3 border bg-light px-3 py-2 text-end"
+                        className="order-status-total rounded-3 border bg-light px-3 py-2 text-end"
                         style={{ minWidth: "112px" }}
                     >
                         <div
@@ -31,7 +31,7 @@ export default function OrderStatusOverview({ statuses = [] }) {
                 </div>
 
                 {statuses.length === 0 ? (
-                    <div className="text-center text-muted rounded-3 bg-light py-4">
+                    <div className="order-status-empty text-center text-muted rounded-3 bg-light py-4">
                         No order status data available.
                     </div>
                 ) : totalOrders === 0 ? (
@@ -51,7 +51,7 @@ export default function OrderStatusOverview({ statuses = [] }) {
                                 <div className="col-sm-6" key={status.key}>
                                     <Link
                                         href={"/admin/purchases?order_status=" + encodeURIComponent(status.key)}
-                                        className="h-100 rounded-3 p-3 d-block text-decoration-none text-reset"
+                                        className="order-status-card h-100 rounded-3 p-3 d-block text-decoration-none text-reset"
                                         style={{
                                             backgroundColor: "#fbfcfe",
                                             border: "1px solid #e6ebf2",

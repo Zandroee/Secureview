@@ -11,6 +11,7 @@ class InvoiceSetting extends Model
         'business_name',
         'registered_name',
         'address',
+        'pickup_address',
         'email',
         'phone',
         'tin',

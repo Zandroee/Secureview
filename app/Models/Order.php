@@ -11,10 +11,14 @@ class Order extends Model
 {
     protected $fillable = [
         'user_id',
+        'voucher_id',
+        'voucher_code',
         'order_number',
         'subtotal',
+        'discount_amount',
         'shipping_fee',
         'installation_fee',
+        'service_priority_fee',
         'total',
         'payment_method',
         'paymongo_checkout_session_id',
@@ -27,22 +31,44 @@ class Order extends Model
         'customer_name',
         'customer_phone',
         'customer_email',
+        'fulfillment_method',
+        'pickup_address',
         'delivery_address',
+        'delivery_address_details',
+        'delivery_city',
+        'delivery_latitude',
+        'delivery_longitude',
         'notes',
+        'sales_channel',
+        'created_by',
     ];
 
     protected $casts = [
         'subtotal' => 'float',
+        'discount_amount' => 'float',
         'shipping_fee' => 'float',
         'installation_fee' => 'float',
+        'service_priority_fee' => 'float',
         'total' => 'float',
         'paid_at' => 'datetime',
         'stock_deducted_at' => 'datetime',
+        'delivery_latitude' => 'float',
+        'delivery_longitude' => 'float',
     ];
+
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(Voucher::class);
+    }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function items(): HasMany
@@ -53,6 +79,16 @@ class Order extends Model
     public function events(): HasMany
     {
         return $this->hasMany(OrderEvent::class)->oldest();
+    }
+
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class);
+    }
+
+    public function pendingInquiryCheckout(): HasOne
+    {
+        return $this->hasOne(PendingInquiryCheckout::class);
     }
 
     public function invoiceRecord(): HasOne

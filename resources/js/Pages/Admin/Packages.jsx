@@ -2,12 +2,14 @@ import Navbar from "../../Components/navbar";
 import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import AdminPagination from "../../Components/Admin/AdminPagination";
+import catalogImageUrl from "../../Components/catalogImageUrl";
 import { Link, router, useForm } from "@inertiajs/react";
 import { useEffect, useState } from "react";
 
 function emptyPackage() {
     return {
         name: "",
+        brand: "",
         category: "",
         warranty: "1 year",
         price: "",
@@ -162,9 +164,7 @@ function CatalogOptionSelect({
 
 
 function imageSource(image) {
-    if (!image) return "";
-    if (/^https?:\/\//i.test(image) || String(image).startsWith("/")) return image;
-    return "/storage/" + String(image).replace(/^\/+/, "");
+    return catalogImageUrl(image);
 }
 
 function ImagePicker({
@@ -213,7 +213,19 @@ function ImagePicker({
                                     alt={label + " " + (index + 1)}
                                     className="rounded border"
                                     style={{ width: "92px", height: "92px", objectFit: "cover" }}
+                                    onError={(event) => {
+                                        event.currentTarget.classList.add("d-none");
+                                        event.currentTarget.parentElement?.querySelector("[data-image-fallback]")?.classList.remove("d-none");
+                                    }}
                                 />
+                                <div
+                                    data-image-fallback
+                                    className="bg-secondary-subtle rounded border d-none d-flex align-items-center justify-content-center"
+                                    style={{ width: "92px", height: "92px" }}
+                                    aria-label="Image unavailable"
+                                >
+                                    <i className="bi bi-image text-secondary fs-4" />
+                                </div>
                                 <button
                                     type="button"
                                     className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle d-flex align-items-center justify-content-center"
@@ -236,7 +248,19 @@ function ImagePicker({
                                     alt={"Selected upload " + (index + 1)}
                                     className="rounded border"
                                     style={{ width: "92px", height: "92px", objectFit: "cover" }}
+                                    onError={(event) => {
+                                        event.currentTarget.classList.add("d-none");
+                                        event.currentTarget.parentElement?.querySelector("[data-image-fallback]")?.classList.remove("d-none");
+                                    }}
                                 />
+                                <div
+                                    data-image-fallback
+                                    className="bg-secondary-subtle rounded border d-none d-flex align-items-center justify-content-center"
+                                    style={{ width: "92px", height: "92px" }}
+                                    aria-label="Image unavailable"
+                                >
+                                    <i className="bi bi-image text-secondary fs-4" />
+                                </div>
                                 <button
                                     type="button"
                                     className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 rounded-circle d-flex align-items-center justify-content-center"
@@ -265,6 +289,7 @@ export default function AdminPackages({
     products = [],
     categories = [],
     categoryOptions = [],
+    brandOptions = [],
     warrantyOptions = [],
     badgeOptions = [],
     filters = {},
@@ -273,6 +298,7 @@ export default function AdminPackages({
 }) {
     const [search, setSearch] = useState(filters.search ?? "");
     const [category, setCategory] = useState(filters.category ?? "");
+    const [brand, setBrand] = useState(filters.brand ?? "");
     const [featured, setFeatured] = useState(filters.featured ?? "");
     const [showForm, setShowForm] = useState(false);
     const [editingPackage, setEditingPackage] = useState(null);
@@ -289,7 +315,7 @@ export default function AdminPackages({
 
         router.get(
             "/admin/packages",
-            { search, category, featured },
+            { search, category, brand, featured },
             {
                 preserveState: true,
                 preserveScroll: true,
@@ -301,6 +327,7 @@ export default function AdminPackages({
     const clearFilters = () => {
         setSearch("");
         setCategory("");
+        setBrand("");
         setFeatured("");
 
         router.get(
@@ -325,6 +352,7 @@ export default function AdminPackages({
     const openCreate = () => {
         setEditingPackage(null);
         setGeneralError("");
+        transform((values) => values);
         clearErrors();
         setData(emptyPackage());
         setShowForm(true);
@@ -336,6 +364,7 @@ export default function AdminPackages({
         clearErrors();
         setData({
             name: item.name ?? "",
+            brand: item.brand ?? "",
             category: item.category ?? "",
             warranty: item.warranty ?? "",
             price: String(item.price ?? ""),
@@ -364,7 +393,8 @@ export default function AdminPackages({
         clearErrors();
         setGeneralError("");
 
-        transform((values) => {
+        const hasNewImages = (data.image_files ?? []).length > 0;
+        const normalizePayload = (values) => {
             const { specificationsText, ...payload } = values;
 
             return {
@@ -379,20 +409,37 @@ export default function AdminPackages({
                     quantity: Number(item.quantity),
                 })),
             };
-        });
+        };
 
         const options = {
             preserveScroll: true,
-            forceFormData: true,
             onSuccess: () => closeForm(),
             onError: () => setGeneralError("Please review the highlighted fields and try again."),
+            onFinish: () => transform((values) => values),
         };
 
-        if (editingPackage) {
+        if (editingPackage && !hasNewImages) {
+            // With no new file uploads, JSON PATCH sends all populated fields directly.
+            transform((values) => normalizePayload(values));
             patch("/admin/packages/" + editingPackage.id, options);
-        } else {
-            post("/admin/packages", options);
+            return;
         }
+
+        transform((values) => ({
+            ...normalizePayload(values),
+            ...(editingPackage ? { _method: "patch" } : {}),
+        }));
+
+        // Only force multipart encoding when the request actually includes new files.
+        post(
+            editingPackage
+                ? "/admin/packages/" + editingPackage.id
+                : "/admin/packages",
+            {
+                ...options,
+                forceFormData: hasNewImages,
+            }
+        );
     };
 
     const addComponent = () => {
@@ -429,7 +476,7 @@ export default function AdminPackages({
 
     const deletePackage = (item) => {
         const confirmed = window.confirm(
-            "Delete the package “" + item.name + "”? Packages with purchase, cart, inquiry, or review history cannot be deleted."
+            "Remove the package “" + item.name + "” from the live catalog? Existing order and invoice line-item snapshots will be retained. Clear carts, linked inquiries and reviews first."
         );
 
         if (!confirmed) return;
@@ -467,7 +514,7 @@ export default function AdminPackages({
                         <div className="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
                             <div>
                                 <div className="small text-primary fw-bold">
-                                    SECUREVIEW ADMIN
+                                    NETMAX TRADING ADMIN
                                 </div>
                                 <h1 className="fw-bold mb-1">PACKAGE MANAGEMENT</h1>
                                 <div className="small text-muted">
@@ -534,18 +581,18 @@ export default function AdminPackages({
                         <div className="bg-white border rounded-3 p-3 p-md-4 mb-4">
                             <form onSubmit={applyFilters}>
                                 <div className="row g-3 align-items-end">
-                                    <div className="col-12 col-lg-5">
+                                    <div className="col-12 col-lg-4">
                                         <label className="form-label small fw-semibold">SEARCH</label>
                                         <input
                                             className="form-control"
                                             value={search}
                                             maxLength={120}
                                             onChange={(event) => setSearch(event.target.value)}
-                                            placeholder="Package, category, badge, or product"
+                                            placeholder="Package, brand, category, badge, or product"
                                         />
                                     </div>
 
-                                    <div className="col-6 col-lg-3">
+                                    <div className="col-6 col-lg-2">
                                         <label className="form-label small fw-semibold">CATEGORY</label>
                                         <select
                                             className="form-select"
@@ -556,6 +603,14 @@ export default function AdminPackages({
                                             {categories.map((item) => (
                                                 <option key={item} value={item}>{item}</option>
                                             ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="col-6 col-lg-2">
+                                        <label className="form-label small fw-semibold">BRAND</label>
+                                        <select className="form-select" value={brand} onChange={(event) => setBrand(event.target.value)}>
+                                            <option value="">All brands</option>
+                                            {brandOptions.map((item) => <option key={item} value={item}>{item}</option>)}
                                         </select>
                                     </div>
 
@@ -635,7 +690,7 @@ export default function AdminPackages({
                                                             )}
                                                             <div>
                                                                 <div className="fw-semibold">{item.name}</div>
-                                                                <div className="small text-muted">{item.category}</div>
+                                                                <div className="small text-muted">{item.category}{item.brand ? " · " + item.brand : ""}</div>
                                                                 {item.badge && (
                                                                     <span className="badge bg-primary-subtle text-primary mt-1">{item.badge}</span>
                                                                 )}
@@ -734,7 +789,7 @@ export default function AdminPackages({
 
             {showForm && (
                 <div
-                    className="modal d-block"
+                    className="modal d-block admin-catalog-modal"
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="packageFormTitle"
@@ -743,8 +798,8 @@ export default function AdminPackages({
                         if (event.target === event.currentTarget) closeForm();
                     }}
                 >
-                    <div className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-                        <div className="modal-content border-0 rounded-4 shadow">
+                    <div className="modal-dialog modal-xl admin-catalog-modal-dialog admin-catalog-modal-dialog-package">
+                        <div className="modal-content border-0 rounded-4 shadow admin-catalog-modal-content">
                             <form onSubmit={submit}>
                                 <div className="modal-header">
                                     <div>
@@ -777,6 +832,19 @@ export default function AdminPackages({
                                                 required
                                             />
                                             <ErrorText message={errors.name} />
+                                        </div>
+
+                                        <div className="col-md-6">
+                                            <label className="form-label fw-semibold">BRAND <span className="text-muted fw-normal">(OPTIONAL)</span></label>
+                                            <CatalogOptionSelect
+                                                label="Brand"
+                                                value={data.brand ?? ""}
+                                                options={brandOptions}
+                                                allowBlank
+                                                error={errors.brand}
+                                                onChange={(value) => setData("brand", value)}
+                                            />
+                                            <ErrorText message={errors.brand} />
                                         </div>
 
                                         <div className="col-md-3">

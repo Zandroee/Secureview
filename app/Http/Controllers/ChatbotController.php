@@ -13,18 +13,29 @@ class ChatbotController extends Controller
     public function reply(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'messages' => ['required', 'array', 'min:1', 'max:8'],
+            'messages' => ['required', 'array', 'min:1', 'max:6'],
             'messages.*.role' => ['required', 'in:user,assistant'],
             'messages.*.content' => ['required', 'string', 'max:1500'],
         ]);
 
+        // Answer frequent website FAQs locally so customers do not wait on an external AI request.
+        $latestUserMessage = collect($validated['messages'])
+            ->reverse()
+            ->first(fn (array $message) => $message['role'] === 'user');
+        $quickReply = $this->quickReply($latestUserMessage['content'] ?? '');
+
+        if ($quickReply !== null) {
+            return response()->json(['message' => $quickReply, 'handoff_suggested' => false]);
+        }
+
         $apiKey = config('services.gemini.key');
 
         if (!$apiKey) {
-            Log::warning('SecureView chatbot request blocked: Gemini API key is not configured.');
+            Log::warning('Netmax Trading chatbot request blocked: Gemini API key is not configured.');
 
             return response()->json([
-                'message' => 'The AI assistant is not configured yet. Please contact Netmax Trading or send an inquiry through the Services page.',
+                'message' => 'The AI assistant is not configured yet. You can request a conversation with our team below, or submit a service request through the Services page.',
+                'handoff_suggested' => true,
             ], 503);
         }
 
@@ -36,49 +47,65 @@ class ChatbotController extends Controller
         })->values()->all();
 
         $systemInstruction = <<<'PROMPT'
-You are SecureView Assistant for Netmax Trading, a Philippine CCTV and IT services business.
-Be friendly, concise, professional, and clear. Help visitors understand the website, CCTV products/packages, installation, site inspection, maintenance, repair, consultation, booking, checkout, and service inquiries.
-Known website guidance:
-- Visitors can browse Products and Packages and read their listed details.
-- To request Installation, Site Inspection, Maintenance, Repair, Consultation, or Other, open Services or Make an Inquiry and complete the inquiry form.
-- Customers can choose an available date and time slot, but it is a preference until the team confirms it.
-- Product/package checkout and cart features require a signed-in, verified account.
-- The company has operated across Luzon, Visayas, and Mindanao, but service availability must be confirmed for the specific location.
+You are the Netmax Trading Assistant for a Philippine CCTV and IT services business. Be helpful, polite, and direct. Answer in 1–3 short sentences unless the customer needs more detail. Avoid long introductions and repeated information.
+Website guidance:
+- Customers can browse products at /products and packages at /packages.
+- For installation, site inspection, maintenance, repair, consultation, or another service, use /services or submit a service request at /inquiry.
+- A selected date and time is only a preference until the team confirms the booking.
+- Checkout and cart require a signed-in, email-verified account.
+- The company has operated across Luzon, Visayas, and Mindanao; availability for a specific address must be confirmed.
 - For an unlisted service, choose Other and explain the request.
-Do not invent prices, stock, exact coverage, availability, warranties, technical specifications, or booking confirmations. You do not have live access to inventory, customer orders, or booking schedules. If information depends on a specific product or location, direct the visitor to the relevant catalog page or to make an inquiry at /inquiry. You may direct them to /products, /packages, /services, /about, and /inquiry.
-Never ask for passwords, payment details, or sensitive personal information. Do not claim to create, confirm, cancel, or change bookings or purchases. If unsure, say so and guide the visitor to the Services page or inquiry form.
+Do not invent prices, stock, coverage, availability, warranty terms, technical specifications, or booking status. You do not have live access to inventory, orders, or schedules. If you cannot answer reliably from these instructions, say clearly that you do not have enough information and suggest that the visitor can ask to speak with the Netmax Trading team. Guide product-specific or location-specific questions to the relevant page or a service request. Never request passwords, payment details, or sensitive personal information. Do not claim to create, confirm, cancel, or change an order or booking.
 PROMPT;
 
         try {
-            $model = config('services.gemini.model', 'gemini-2.5-flash');
-            $generationConfig = ['maxOutputTokens' => 400];
+            $model = config('services.gemini.model', 'gemini-3.5-flash-lite');
+            // Gemini thinking tokens can exhaust a small output limit before the
+            // customer-facing answer finishes, leaving a sentence cut off.
+            $generationConfig = [];
 
             if (str_starts_with($model, 'gemini-3.')) {
-                // Gemini 3 supports thinking levels; low keeps a customer FAQ response fast.
+                // Keep simple customer questions fast without starving the answer.
                 $generationConfig['thinkingConfig'] = ['thinkingLevel' => 'low'];
             } else {
                 $generationConfig['temperature'] = 0.35;
             }
 
-            $response = Http::acceptJson()
-                ->withHeaders(['x-goog-api-key' => $apiKey])
-                ->connectTimeout(10)
-                ->timeout(60)
-                ->post(
-                    'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent',
-                    [
-                        'systemInstruction' => [
-                            'parts' => [['text' => $systemInstruction]],
-                        ],
-                        'contents' => $contents,
-                        'generationConfig' => $generationConfig,
-                    ]
-                );
+            $sendGeminiRequest = function (int $maxOutputTokens) use ($model, $systemInstruction, $contents, $generationConfig) {
+                return Http::acceptJson()
+                    ->withHeaders(['x-goog-api-key' => config('services.gemini.key')])
+                    ->connectTimeout(5)
+                    ->timeout(25)
+                    ->post(
+                        'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent',
+                        [
+                            'systemInstruction' => [
+                                'parts' => [['text' => $systemInstruction]],
+                            ],
+                            'contents' => $contents,
+                            'generationConfig' => array_merge($generationConfig, [
+                                'maxOutputTokens' => $maxOutputTokens,
+                            ]),
+                        ]
+                    );
+            };
+
+            $response = $sendGeminiRequest(2048);
+
+            // Retry from the same prompt with more room rather than displaying
+            // the first (possibly mid-sentence) fragment to the customer.
+            if ($response->successful() && $response->json('candidates.0.finishReason') === 'MAX_TOKENS') {
+                Log::warning('Netmax Trading Gemini reply reached its output token limit; retrying.', [
+                    'model' => $model,
+                    'max_output_tokens' => 2048,
+                ]);
+                $response = $sendGeminiRequest(4096);
+            }
 
             if (!$response->successful()) {
                 $googleErrorCode = $response->json('error.status');
                 $googleErrorMessage = $response->json('error.message', 'No error message provided');
-                Log::warning('SecureView Gemini API request failed.', [
+                Log::warning('Netmax Trading Gemini API request failed.', [
                     'http_status' => $response->status(),
                     'error_code' => $googleErrorCode,
                     'error_message' => $googleErrorMessage,
@@ -87,44 +114,91 @@ PROMPT;
 
                 if ($response->status() === 429) {
                     return response()->json([
-                        'message' => 'Our AI assistant has reached its current usage limit. Please try again later or send us an inquiry through the Services page.',
+                        'message' => 'Our AI assistant has reached its current usage limit. You can request a conversation with our team below or submit a service request through the Services page.',
+                                'handoff_suggested' => true,
                     ], 429);
                 }
 
                 if (in_array($response->status(), [401, 403], true)) {
                     return response()->json([
-                        'message' => 'Our AI assistant is having a configuration issue. Please contact Netmax Trading or send us an inquiry through the Services page.',
+                        'message' => 'Our AI assistant is having a configuration issue. You can request a conversation with our team below, or submit a service request through the Services page.',
+                        'handoff_suggested' => true,
                     ], 503);
                 }
 
                 if ($response->status() === 400 || $response->status() === 404) {
                     return response()->json([
-                        'message' => 'Our AI assistant is temporarily misconfigured. Please try again later or send us an inquiry through the Services page.',
+                        'message' => 'Our AI assistant is temporarily misconfigured. You can request a conversation with our team below or submit a service request through the Services page.',
+                                'handoff_suggested' => true,
                     ], 502);
                 }
 
                 return response()->json([
-                    'message' => 'Sorry, the assistant is temporarily unavailable. Please try again shortly or send us an inquiry.',
+                    'message' => 'Sorry, the assistant is temporarily unavailable. You can request a conversation with our team below, or submit a service request.',
+                    'handoff_suggested' => true,
                 ], 502);
             }
 
-            $answer = $response->json('candidates.0.content.parts.0.text');
+            $finishReason = $response->json('candidates.0.finishReason');
+
+            if ($finishReason === 'MAX_TOKENS') {
+                Log::warning('Netmax Trading Gemini reply is still truncated after retry.', [
+                    'model' => $model,
+                    'max_output_tokens' => 4096,
+                ]);
+
+                return response()->json([
+                    'message' => "I couldn't finish that response. Please try asking a shorter question, or contact our team for help.",
+                    'handoff_suggested' => true,
+                ]);
+            }
+
+            // A content filter or other abnormal stop must never expose an
+            // incomplete generated fragment as if it were a finished answer.
+            if (is_string($finishReason) && $finishReason !== '' && $finishReason !== 'STOP') {
+                Log::warning('Netmax Trading Gemini reply stopped before completion.', [
+                    'model' => $model,
+                    'finish_reason' => $finishReason,
+                ]);
+
+                return response()->json([
+                    'message' => "I couldn't complete that response. Please rephrase your question, or ask our team for help.",
+                    'handoff_suggested' => true,
+                ]);
+            }
+
+            // Responses can contain multiple text parts and (for some models)
+            // separate thought parts; only show the complete visible answer.
+            $parts = $response->json('candidates.0.content.parts', []);
+            $answer = is_array($parts)
+                ? collect($parts)
+                    ->filter(fn ($part) => is_array($part)
+                        && !($part['thought'] ?? false)
+                        && isset($part['text'])
+                        && is_string($part['text']))
+                    ->pluck('text')
+                    ->implode('')
+                : '';
 
             if (!is_string($answer) || trim($answer) === '') {
-                Log::warning('SecureView Gemini API returned no text candidate.', [
+                Log::warning('Netmax Trading Gemini API returned no text candidate.', [
                     'model' => $model,
                     'finish_reason' => $response->json('candidates.0.finishReason'),
                     'prompt_feedback' => $response->json('promptFeedback.blockReason'),
                 ]);
 
                 return response()->json([
-                    'message' => 'I could not form an answer just now. Please try asking another way or send us an inquiry.',
+                    'message' => 'I could not form an answer just now. You can ask our team for help below or submit a service request.',
+                    'handoff_suggested' => true,
                 ], 502);
             }
 
-            return response()->json(['message' => trim($answer)]);
+            return response()->json([
+                'message' => trim($answer),
+                'handoff_suggested' => $this->answerMayNeedHuman(trim($answer)),
+            ]);
         } catch (ConnectionException $exception) {
-            Log::warning('SecureView chatbot timed out or could not connect to Gemini.', [
+            Log::warning('Netmax Trading chatbot timed out or could not connect to Gemini.', [
                 'model' => $model,
                 'exception' => get_class($exception),
                 'message' => $exception->getMessage(),
@@ -132,18 +206,87 @@ PROMPT;
 
             return response()->json([
                 'message' => 'The AI assistant took too long to connect or respond. Please try again shortly. If this keeps happening, check your internet connection and Google AI API availability.',
+                'handoff_suggested' => true,
             ], 504);
         } catch (\Throwable $exception) {
             report($exception);
 
-            Log::warning('SecureView chatbot could not reach Gemini API.', [
+            Log::warning('Netmax Trading chatbot could not reach Gemini API.', [
                 'exception' => get_class($exception),
                 'message' => $exception->getMessage(),
             ]);
 
             return response()->json([
-                'message' => 'Sorry, the assistant could not connect right now. Please try again later or use the Services page to contact us.',
+                'message' => 'Sorry, the assistant could not connect right now. You can request a conversation with our team below or use the Services page.',
+                'handoff_suggested' => true,
             ], 503);
         }
+    }
+    /**
+     * Suggest a human handoff when the model explicitly signals that it is
+     * uncertain or cannot resolve the customer's question.
+     */
+    private function answerMayNeedHuman(string $answer): bool
+    {
+        return (bool) preg_match(
+            '/\\b(i do not know|i don.t know|i cannot answer|i can.t answer|i do not have enough information|i don.t have enough information|i do not have access to|i.m not sure|not sure|not enough information|not certain|cannot confirm|can.t confirm|i cannot verify|i can.t verify|please contact (our|the) team|our team can help|a team member can help|outside my available information)\\b/i',
+            $answer
+        );
+    }
+
+    /**
+     * Return a fast, trusted response for common Netmax Trading website questions.
+     * Return null for anything that needs a model-generated answer.
+     */
+    private function quickReply(string $message): ?string
+    {
+        $text = mb_strtolower(trim($message));
+        $text = preg_replace('/[^\\pL\\pN]+/u', ' ', $text) ?? $text;
+        $text = trim($text);
+
+        if (preg_match('/^(hi|hello|hey|good morning|good afternoon|good evening|kumusta)$/u', $text)) {
+            return "Hi! I’m the Netmax Trading Assistant. I can help you find CCTV products and packages or explain how to request a service.";
+        }
+
+        if (preg_match('/\\b(what services do you offer|what service do you offer|what can netmax trading do|what can netmax do|what do you do)\\b/u', $text)) {
+            return "We can help with CCTV installation, site inspection, maintenance, repair, consultation, and other CCTV/IT requests. Start on the Services page (/services) or send details through the service request form (/inquiry).";
+        }
+
+        if (preg_match('/\\b(choose|select|pick)\\b.*\\b(date|time|schedule|slot)\\b/u', $text)
+            || preg_match('/\\b(date|time|schedule|slot)\\b.*\\b(choose|select|pick)\\b/u', $text)
+            || preg_match('/\\b(available|availability)\\b.*\\b(date|time|schedule|slot)\\b/u', $text)
+            || preg_match('/\\b(what are the|which are the|show me the)\\b.*\\b(time slots|available slots)\\b/u', $text)) {
+            return "You can choose an available preferred date and time when submitting a service request, but the schedule is not confirmed until our team approves it. Visit the Services page (/services) to get started.";
+        }
+
+        if ((preg_match('/\\b(book|booking|schedule|arrange|request)\\b/u', $text)
+                && preg_match('/\\b(installation|install|technician|service|appointment|inquiry)\\b/u', $text))
+            || preg_match('/\\bhow (do|can) i\\b.*\\b(book|schedule|request)\\b/u', $text)) {
+            return "To request an installation or another service, open the Services page (/services) and submit the service request form (/inquiry). You can choose a preferred time slot; our team will confirm the appointment.";
+        }
+
+        if (preg_match('/\\b(included|inclusions|contains|contain|comes with)\\b/u', $text)
+            && preg_match('/\\b(package|packages)\\b/u', $text)) {
+            return "Open the Packages page (/packages) to compare package details and see the items included in each package.";
+        }
+
+        if (preg_match('/\\b(products?|packages?|catalog|catalogue)\\b/u', $text)
+            && preg_match('/\\b(what|where|view|browse|see|find|details|list|offer|available|buy|purchase)\\b/u', $text)) {
+            return "You can browse CCTV products on the Products page (/products) and bundled offers on the Packages page (/packages). Product pages show the details currently listed by Netmax Trading.";
+        }
+
+        if (preg_match('/\\b(service area|service areas|do you serve|cover(?:age)?|coverage area|near me)\\b/u', $text)) {
+            return "Netmax Trading has operated across Luzon, Visayas, and Mindanao, but availability depends on the specific location and job. Please send your address and requested service through the service request form (/inquiry) so the team can confirm coverage.";
+        }
+
+        if (preg_match('/\\b(verify|verification|unverified|confirm my email|email confirmation|email verification)\\b/u', $text)) {
+            return "Please open the verification email sent to your registered email address and follow its link. If you cannot find it, check your spam folder or use the resend verification option on the login page.";
+        }
+
+        if (preg_match('/\\b(checkout|shopping cart|cart|buy online|purchase online)\\b/u', $text)) {
+            return "To add items to your cart or check out, sign in with an account that has a verified email. You can browse Products (/products) and Packages (/packages) before signing in.";
+        }
+
+        return null;
     }
 }

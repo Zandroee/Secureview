@@ -7,9 +7,11 @@ use App\Models\BlockedBookingDate;
 use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
+use App\Models\ServiceBookingFeeSetting;
 use App\Models\User;
 use App\Services\AdminActivityLogger;
 use App\Services\JobNotificationService;
+use App\Services\RefundService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -31,6 +33,9 @@ class InquiryController extends Controller
             'search' => ['nullable', 'string', 'max:120'],
             'status' => ['nullable', 'in:pending,confirmed,in_progress,completed,cancelled'],
             'urgency' => ['nullable', 'in:normal,urgent,emergency'],
+            'service_type' => ['nullable', 'in:Installation,Site Inspection,Maintenance,Repair,Consultation,Other'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
         ]);
 
         // Active jobs belong on Schedules; completed jobs belong in Service History.
@@ -55,6 +60,18 @@ class InquiryController extends Controller
 
         if (!empty($filters['urgency'])) {
             $query->where('urgency', $filters['urgency']);
+        }
+
+        if (!empty($filters['service_type'])) {
+            $query->where('service_type', $filters['service_type']);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('preferred_date', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('preferred_date', '<=', $filters['date_to']);
         }
 
         $inquiries = $query
@@ -85,6 +102,8 @@ class InquiryController extends Controller
                     ])->values(),
                     'service_type' => $inquiry->service_type,
                     'urgency' => $inquiry->urgency,
+                    'urgency_fee' => (float) $inquiry->urgency_fee,
+                    'preferred_payment_method' => $inquiry->preferred_payment_method,
                     'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                     'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                     'preferred_time' => $inquiry->preferred_time,
@@ -105,39 +124,50 @@ class InquiryController extends Controller
             ->get(['id', 'name', 'email'])
             ->values();
             
-        $technicianBookings = Inquiry::query()
-            ->with('technicians:id')
-            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
-            ->whereDate('preferred_date', '>=', today())
-            ->get(['id', 'technician_id', 'preferred_date', 'preferred_time'])
-            ->map(function (Inquiry $job) {
-                $technicianIds = $job->technicians->pluck('id')->map(fn ($id) => (int) $id);
-                if ($job->technician_id) {
-                    $technicianIds->push((int) $job->technician_id);
-                }
-
-                return [
-                    'inquiry_id' => $job->id,
-                    'date' => $job->preferred_date?->format('Y-m-d'),
-                    'time' => $job->preferred_time,
-                    'technician_ids' => $technicianIds->unique()->values(),
-                ];
-            })
-            ->values();
-
+        $bookingAvailability = $this->bookingAvailabilityData();
 
         return Inertia::render('Admin/Inquiries', [
             'inquiries' => $inquiries,
             'technicians' => $technicians,
-            'technicianBookings' => $technicianBookings,
+            'technicianBookings' => $bookingAvailability['technicianBookings'],
+            'blockedBookingDates' => $bookingAvailability['blockedBookingDates'],
+            'blockedBookingTimeSlots' => $bookingAvailability['blockedBookingTimeSlots'],
             'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
             'todayDate' => today()->toDateString(),
+            'bookingFees' => ServiceBookingFeeSetting::current()->fees(),
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? '',
                 'urgency' => $filters['urgency'] ?? '',
+                'service_type' => $filters['service_type'] ?? '',
+                'date_from' => $filters['date_from'] ?? '',
+                'date_to' => $filters['date_to'] ?? '',
             ],
         ]);
+    }
+
+    public function updateBookingFees(Request $request)
+    {
+        $validated = $request->validate([
+            'urgent_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
+            'emergency_fee' => ['required', 'numeric', 'min:0', 'max:1000000'],
+        ]);
+
+        $settings = ServiceBookingFeeSetting::current();
+
+        if (!$settings->exists) {
+            throw ValidationException::withMessages([
+                'urgent_fee' => 'Service fee settings are unavailable until the database migrations have been run.',
+            ]);
+        }
+
+        $settings->urgent_fee = round((float) $validated['urgent_fee'], 2);
+        $settings->emergency_fee = round((float) $validated['emergency_fee'], 2);
+        $settings->save();
+
+        return redirect()
+            ->route('admin.inquiries.index')
+            ->with('success', 'Service booking fees saved. Changes apply to new service requests; existing requests keep their saved fees.');
     }
 
     public function show(Inquiry $inquiry)
@@ -151,11 +181,15 @@ class InquiryController extends Controller
             ->get(['id', 'name', 'email'])
             ->values();
 
+        $bookingAvailability = $this->bookingAvailabilityData();
+
         return Inertia::render('Admin/InquiryDetails', [
             'inquiry' => [
                 'id' => $inquiry->id,
                 'inquiry_number' => $inquiry->inquiry_number,
                 'item_name' => $inquiry->item_name,
+                'intake_channel' => $inquiry->intake_channel ?? 'online',
+                'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                 'item_type' => $inquiry->inquirable_type
                     ? class_basename($inquiry->inquirable_type)
                     : null,
@@ -182,16 +216,24 @@ class InquiryController extends Controller
                 'service_longitude' => $inquiry->service_longitude,
                 'google_place_id' => $inquiry->google_place_id,
                 'service_type' => $inquiry->service_type,
+                'intake_channel' => $inquiry->intake_channel ?? 'online',
+                'service_location_type' => $inquiry->service_location_type ?? 'customer_site',
                 'urgency' => $inquiry->urgency,
+                'urgency_fee' => (float) $inquiry->urgency_fee,
+                'preferred_payment_method' => $inquiry->preferred_payment_method,
                 'preferred_date' => $inquiry->preferred_date?->format('M d, Y'),
                 'preferred_date_value' => $inquiry->preferred_date?->format('Y-m-d'),
                 'preferred_time' => $inquiry->preferred_time,
                 'notes' => $inquiry->notes,
                 'status' => $inquiry->status,
+                'service_record_exists' => $inquiry->serviceRecord()->exists(),
                 'created_at' => $inquiry->created_at?->format('M d, Y h:i A'),
                 'user_id' => $inquiry->user_id,
             ],
             'technicians' => $technicians,
+            'technicianBookings' => $bookingAvailability['technicianBookings'],
+            'blockedBookingDates' => $bookingAvailability['blockedBookingDates'],
+            'blockedBookingTimeSlots' => $bookingAvailability['blockedBookingTimeSlots'],
             'bookingTimeSlots' => self::BOOKING_TIME_SLOTS,
             'todayDate' => today()->toDateString(),
         ]);
@@ -201,7 +243,8 @@ class InquiryController extends Controller
         Request $request,
         Inquiry $inquiry,
         AdminActivityLogger $activityLogger,
-        JobNotificationService $jobNotifications
+        JobNotificationService $jobNotifications,
+        RefundService $refunds
     ) {
         $validated = $request->validate([
             'technician_ids' => ['sometimes', 'array', 'max:10'],
@@ -350,7 +393,7 @@ class InquiryController extends Controller
         Request $request,
         Inquiry $inquiry,
         AdminActivityLogger $activityLogger,
-        JobNotificationService $jobNotifications
+        JobNotificationService $jobNotifications,
     ) {
         if ($inquiry->status !== 'pending') {
             return back()->withErrors([
@@ -488,17 +531,19 @@ class InquiryController extends Controller
             $removedTechnicianIds = array_values(array_diff($oldTechnicianIds, $technicianIds));
             $jobNotifications->notifyAssignmentsRemoved($removedTechnicianIds, $inquiry);
 
-            CustomerNotification::create([
-                'user_id' => $inquiry->user_id,
-                'type' => 'inquiry_status',
-                'title' => 'Service inquiry confirmed',
-                'message' => 'Your inquiry ' . $inquiry->inquiry_number
-                    . ' has been confirmed for ' . $inquiry->preferred_date->format('F j, Y')
-                    . ' (' . $inquiry->preferred_time . '). Assigned technicians: ' . $technicianNames . '.',
-                'action_url' => route('inquiries.show', $inquiry),
-                'related_type' => Inquiry::class,
-                'related_id' => $inquiry->id,
-            ]);
+            if ($inquiry->user_id) {
+                CustomerNotification::create([
+                    'user_id' => $inquiry->user_id,
+                    'type' => 'inquiry_status',
+                    'title' => 'Service inquiry confirmed',
+                    'message' => 'Your inquiry ' . $inquiry->inquiry_number
+                        . ' has been confirmed for ' . $inquiry->preferred_date->format('F j, Y')
+                        . ' (' . $inquiry->preferred_time . '). Assigned technicians: ' . $technicianNames . '.',
+                    'action_url' => route('inquiries.show', $inquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $inquiry->id,
+                ]);
+            }
 
             $jobNotifications->notifyConfirmation($inquiry);
 
@@ -522,7 +567,8 @@ class InquiryController extends Controller
         Request $request,
         Inquiry $inquiry,
         AdminActivityLogger $activityLogger,
-        JobNotificationService $jobNotifications
+        JobNotificationService $jobNotifications,
+        RefundService $refunds
     ) {
         $validated = $request->validate([
             'status' => ['required', 'in:pending,confirmed,in_progress,completed,cancelled'],
@@ -552,6 +598,12 @@ class InquiryController extends Controller
         if ($newStatus === 'completed' && $oldStatus !== 'in_progress') {
             return back()->withErrors([
                 'status' => 'A job must be in progress before it can be completed.',
+            ]);
+        }
+
+        if ($newStatus === 'completed' && !$inquiry->serviceRecord()->exists()) {
+            return back()->withErrors([
+                'status' => 'Save the Post-Service Record before marking this service completed.',
             ]);
         }
 
@@ -586,15 +638,17 @@ class InquiryController extends Controller
                     'status' => $newStatus,
                 ]);
 
-                CustomerNotification::create([
-                    'user_id' => $inquiry->user_id,
-                    'type' => 'inquiry_status',
-                    'title' => 'Inquiry status updated',
-                    'message' => 'Your inquiry ' . $inquiry->inquiry_number . ' is now marked as ' . str_replace('_', ' ', $newStatus) . '.',
-                    'action_url' => route('inquiries.show', $inquiry),
-                    'related_type' => Inquiry::class,
-                    'related_id' => $inquiry->id,
-                ]);
+                if ($inquiry->user_id) {
+                    CustomerNotification::create([
+                        'user_id' => $inquiry->user_id,
+                        'type' => 'inquiry_status',
+                        'title' => 'Inquiry status updated',
+                        'message' => 'Your inquiry ' . $inquiry->inquiry_number . ' is now marked as ' . str_replace('_', ' ', $newStatus) . '.',
+                        'action_url' => route('inquiries.show', $inquiry),
+                        'related_type' => Inquiry::class,
+                        'related_id' => $inquiry->id,
+                    ]);
+                }
 
                 $jobNotifications->notifyStatusChanged($inquiry, $oldStatus, $newStatus, $request->user());
 
@@ -609,8 +663,106 @@ class InquiryController extends Controller
             });
         }
 
+        if ($newStatus === 'cancelled' && $oldStatus !== 'completed') {
+            $refund = $refunds->refundCancelledService($inquiry->fresh(), $request->user()->id);
+
+            if ($refund) {
+                return back()->with(
+                    'success',
+                    'Service cancelled. The installation and priority fee refund is now ' . str_replace('_', ' ', $refund->status) . '.'
+                );
+            }
+        }
+
         return back()->with('success', 'Inquiry status updated successfully.');
     }
+    /**
+     * Shared availability data for confirmation modals in both admin entry points.
+     */
+    private function bookingAvailabilityData(): array
+    {
+        $technicianBookings = Inquiry::query()
+            ->with('technicians:id')
+            ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->orderBy('preferred_date')
+            ->orderBy('preferred_time')
+            ->orderBy('id')
+            ->get(['id', 'technician_id', 'preferred_date', 'preferred_time'])
+            ->map(function (Inquiry $job) {
+                $ids = $job->technicians->pluck('id')->map(fn ($id) => (int) $id);
+                if ($job->technician_id) {
+                    $ids->push((int) $job->technician_id);
+                }
+
+                return [
+                    'inquiry_id' => $job->id,
+                    'date' => $job->preferred_date?->format('Y-m-d'),
+                    'time' => $job->preferred_time,
+                    'technician_ids' => $ids->unique()->values(),
+                ];
+            })->values();
+
+        $technicianCount = User::query()->where('role', 'technician')->count();
+        $activeBookings = Inquiry::query()
+            ->with('technicians:id')
+            ->whereIn('status', ['confirmed', 'in_progress'])
+            ->whereDate('preferred_date', '>=', today())
+            ->get(['id', 'technician_id', 'preferred_date', 'preferred_time']);
+
+        $busyTechniciansByDate = $activeBookings
+            ->groupBy(fn (Inquiry $job) => $job->preferred_date?->format('Y-m-d'))
+            ->map(function ($jobs) {
+                $ids = $jobs->flatMap(function (Inquiry $job) {
+                    $jobIds = $job->technicians->pluck('id')->map(fn ($id) => (int) $id);
+                    if ($job->technician_id) {
+                        $jobIds->push((int) $job->technician_id);
+                    }
+
+                    return $jobIds->unique()->values();
+                })->unique();
+
+                return $ids->count();
+            });
+
+        $capacityFullyBookedDates = $technicianCount > 0
+            ? $busyTechniciansByDate->filter(fn ($busyCount) => $busyCount >= $technicianCount)->keys()
+            : collect();
+
+        $manuallyBlockedDates = BlockedBookingDate::query()
+            ->whereDate('booking_date', '>=', today())
+            ->pluck('booking_date')
+            ->map(fn ($date) => \Illuminate\Support\Carbon::parse($date)->toDateString());
+
+        $blockedTimeSlotsRaw = BlockedBookingTimeSlot::query()
+            ->whereDate('booking_date', '>=', today())
+            ->get(['booking_date', 'booking_time']);
+
+        $datesWithAllSlotsBlocked = $blockedTimeSlotsRaw
+            ->groupBy(fn (BlockedBookingTimeSlot $slot) => $slot->booking_date?->format('Y-m-d'))
+            ->filter(fn ($slots) => $slots->pluck('booking_time')->unique()->count() >= count(self::BOOKING_TIME_SLOTS))
+            ->keys();
+
+        $blockedBookingDates = $manuallyBlockedDates
+            ->concat($capacityFullyBookedDates)
+            ->concat($datesWithAllSlotsBlocked)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $blockedBookingTimeSlots = $blockedTimeSlotsRaw
+            ->map(fn (BlockedBookingTimeSlot $slot) => [
+                'date' => $slot->booking_date?->format('Y-m-d'),
+                'time' => $slot->booking_time,
+            ])->values();
+
+        return [
+            'technicianBookings' => $technicianBookings,
+            'blockedBookingDates' => $blockedBookingDates,
+            'blockedBookingTimeSlots' => $blockedBookingTimeSlots,
+        ];
+    }
+
     private function dateUnavailableByTechnicianCapacity(string $date, ?int $exceptInquiryId = null): bool
     {
         $technicianCount = User::query()->where('role', 'technician')->count();

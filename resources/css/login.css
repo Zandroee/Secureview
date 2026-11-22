@@ -187,3 +187,135 @@
 .login-buttons button{
     font-size: 15px;
 }
+
+/* Explicitly visible remember row, including when global theme styles target inputs. */
+#login-page .login-options-row {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: 1rem;
+    row-gap: .65rem;
+    min-height: 24px;
+    width: 100%;
+    margin: 0 0 1.25rem;
+}
+
+#login-page .login-remember-control {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: flex-start;
+    gap: .55rem;
+    width: auto !important;
+    margin: 0 !important;
+    color: var(--bs-body-color, #212529);
+    cursor: pointer;
+    text-align: left;
+    user-select: none;
+}
+
+#login-page input.login-remember-checkbox[type="checkbox"] {
+    appearance: auto !important;
+    -webkit-appearance: checkbox !important;
+    display: inline-block !important;
+    position: static !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex: 0 0 16px;
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px;
+    margin: 0 !important;
+    padding: 0 !important;
+    accent-color: #0d6efd;
+    cursor: pointer;
+}
+
+#login-page .login-remember-label {
+    display: inline !important;
+    width: auto !important;
+    margin: 0 !important;
+    color: var(--bs-body-color, #212529) !important;
+    font-size: .85rem;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+#login-page .login-forgot-password {
+    display: inline-block;
+    width: auto !important;
+    margin: 0 !important;
+    color: #0d6efd !important;
+    font-size: .85rem;
+    line-height: 1.4;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+#login-page .login-forgot-password:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 380px) {
+    #login-page .login-options-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+
+
+/* Google authentication button: white Google-style surface instead of the
+   dark Bootstrap outline variant that made the label nearly invisible. */
+.btn-google-login {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: .7rem;
+    min-height: 44px;
+    padding: .65rem 1rem;
+    border: 1px solid #dadce0 !important;
+    border-radius: .5rem;
+    background: #fff !important;
+    color: #3c4043 !important;
+    font-family: "Outfit", sans-serif;
+    font-size: .92rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-decoration: none !important;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, .15);
+    transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.btn-google-login .google-login-icon {
+    display: block;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.btn-google-login:hover {
+    border-color: #d2e3fc !important;
+    background: #f8faff !important;
+    color: #202124 !important;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, .25);
+}
+
+.btn-google-login:focus-visible {
+    outline: 2px solid #4285f4;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, .18);
+}
+
+.btn-google-login:active {
+    background: #f1f3f4 !important;
+    box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-google-login {
+        transition: none;
+    }
+}

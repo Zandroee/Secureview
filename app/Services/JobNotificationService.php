@@ -6,6 +6,7 @@ use App\Models\CustomerNotification;
 use App\Models\Inquiry;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
 
 class JobNotificationService
 {
@@ -30,9 +31,9 @@ class JobNotificationService
                     [
                         'user_id' => $recipient->id,
                         'type' => 'new_inquiry',
-                        'title' => $isAdmin ? 'New service inquiry received' : 'New service request received',
+                        'title' => $isAdmin ? 'New service request received' : 'New service request received',
                         'message' => $isAdmin
-                            ? "Inquiry {$inquiry->inquiry_number} from {$inquiry->customer_name} ({$inquiry->service_type}) is waiting for review. Requested: {$date}, {$inquiry->preferred_time}. Priority: " . ucfirst($inquiry->urgency) . '.'
+                            ? "Service request {$inquiry->inquiry_number} from {$inquiry->customer_name} ({$inquiry->service_type}) is waiting for review. Requested: {$date}, {$inquiry->preferred_time}. Priority: " . ucfirst($inquiry->urgency) . '.'
                             : "A new {$inquiry->service_type} request ({$inquiry->inquiry_number}) was submitted for {$date}, {$inquiry->preferred_time}. It is awaiting admin review; customer details become available if you are assigned to the service.",
                         'action_url' => $isAdmin
                             ? route('admin.inquiries.show', $inquiry)
@@ -47,7 +48,124 @@ class JobNotificationService
                 }
             });
 
+        if (in_array($inquiry->urgency, ['urgent', 'emergency'], true)) {
+            $this->notifyUrgentService($inquiry, $date);
+        }
+
         return $sent;
+    }
+
+    public function notifyUrgencyEscalations($inquiries): void
+    {
+        foreach ($inquiries as $inquiry) {
+            if ($inquiry instanceof Inquiry && in_array($inquiry->urgency, ['urgent', 'emergency'], true)) {
+                $date = $inquiry->preferred_date?->format('F j, Y') ?? 'a date to be confirmed';
+                $this->notifyUrgentService($inquiry, $date);
+            }
+        }
+    }
+
+    private function notifyUrgentService(Inquiry $inquiry, string $date): void
+    {
+        $priority = strtoupper($inquiry->urgency);
+        $subject = "[{$priority}] SecureView service {$inquiry->inquiry_number}";
+        $schedule = "{$date}, {$inquiry->preferred_time}";
+        $generalMessage = "{$priority} SERVICE REQUEST\n\n"
+            . "Service ID: {$inquiry->inquiry_number}\n"
+            . "Service: {$inquiry->service_type}\n"
+            . "Urgency: {$priority}\n"
+            . "Requested schedule: {$schedule}\n\n"
+            . "Please review the service request in SecureView.";
+
+        // Customer details are limited to administrators and technicians who are
+        // already assigned. Unassigned technicians receive only the information
+        // needed to identify and claim the job.
+        $assignedTechnicianIds = $inquiry->technicians()
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if ($inquiry->technician_id) {
+            $assignedTechnicianIds[] = (int) $inquiry->technician_id;
+        }
+
+        $assignedTechnicianIds = array_values(array_unique($assignedTechnicianIds));
+
+        $adminMessage = $generalMessage . "\n\n"
+            . "Customer: {$inquiry->customer_name}\n"
+            . "Customer email: " . ($inquiry->customer_email ?: 'Not provided') . "\n"
+            . "Customer phone: " . ($inquiry->customer_phone ?: 'Not provided') . "\n"
+            . "Location: " . trim(implode(', ', array_filter([
+                $inquiry->street_address,
+                $inquiry->address_details,
+                $inquiry->city,
+            ]))) . "\n"
+            . "Notes: " . ($inquiry->notes ?: 'None provided');
+
+        $recipients = User::query()->whereIn('role', ['admin', 'technician'])->get();
+        foreach ($recipients as $recipient) {
+            $dedupeKey = 'urgent-service-email:' . $inquiry->id . ':' . $recipient->id;
+            $notification = CustomerNotification::firstOrCreate(
+                ['dedupe_key' => $dedupeKey],
+                [
+                    'user_id' => $recipient->id,
+                    'type' => 'urgent_service',
+                    'title' => $priority . ' service requires attention',
+                    'message' => "{$priority} {$inquiry->service_type} service {$inquiry->inquiry_number} is scheduled for {$schedule}.",
+                    'action_url' => $recipient->role === 'admin'
+                        ? route('admin.inquiries.show', $inquiry)
+                        : route('technician.dashboard'),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $inquiry->id,
+                ]
+            );
+
+            $isAssignedTechnician = in_array((int) $recipient->id, $assignedTechnicianIds, true);
+            $recipientMessage = $recipient->role === 'admin' || $isAssignedTechnician
+                ? $adminMessage
+                : $generalMessage;
+
+            if ($notification->wasRecentlyCreated && filled($recipient->email)) {
+                try {
+                    Mail::raw($recipientMessage, fn ($mail) => $mail->to($recipient->email)->subject($subject));
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            }
+        }
+
+        $customer = $inquiry->user;
+        if ($customer) {
+            $dedupeKey = 'urgent-service-customer:' . $inquiry->id . ':' . $customer->id;
+            $notification = CustomerNotification::firstOrCreate(
+                ['dedupe_key' => $dedupeKey],
+                [
+                    'user_id' => $customer->id,
+                    'type' => 'urgent_service',
+                    'title' => $priority . ' service request received',
+                    'message' => "Your {$inquiry->service_type} service {$inquiry->inquiry_number} is marked {$inquiry->urgency} and has been flagged to the SecureView team.",
+                    'action_url' => route('inquiries.show', $inquiry),
+                    'related_type' => Inquiry::class,
+                    'related_id' => $inquiry->id,
+                ]
+            );
+
+            // Send the customer only their own confirmation and schedule; internal
+            // notes and private location metadata are not included in the email.
+            $customerMessage = "Hello {$customer->name},\n\n"
+                . "Your {$priority} service request {$inquiry->inquiry_number} ({$inquiry->service_type}) "
+                . "has been received. Requested schedule: {$schedule}.\n"
+                . "You can view the request here: " . route('inquiries.show', $inquiry) . "\n\n"
+                . "SecureView";
+
+            if ($notification->wasRecentlyCreated && filled($customer->email)) {
+                try {
+                    Mail::raw($customerMessage, fn ($mail) => $mail->to($customer->email)->subject($subject));
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            }
+        }
     }
 
     public function notifyConfirmation(Inquiry $inquiry): void

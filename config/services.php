@@ -26,24 +26,40 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'redirect' => rtrim((string) env('APP_URL', 'http://localhost'), '/') . '/auth/google/callback',
     ],
 
     'facebook' => [
         'client_id' => env('FACEBOOK_CLIENT_ID'),
         'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
-        'redirect' => env('FACEBOOK_REDIRECT_URI'),
+        'redirect' => rtrim((string) env('APP_URL', 'http://localhost'), '/') . '/auth/facebook/callback',
     ],
 
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.5-flash-lite'),
     ],
 
     'paymongo' => [
         'secret_key' => env('PAYMONGO_SECRET_KEY'),
         'webhook_secret' => env('PAYMONGO_WEBHOOK_SECRET'),
         'base_url' => env('PAYMONGO_BASE_URL', 'https://api.paymongo.com'),
+    ],
+
+    'secureview' => [
+        // Unpaid orders are automatically cancelled 48 hours after placement.
+        // Host administrators may override this only by setting the hour-based
+        // value explicitly; the legacy *_DAYS setting is no longer used.
+        'unpaid_order_expiry_hours' => max(1, (int) env('SECUREVIEW_UNPAID_ORDER_EXPIRY_HOURS', 48)),
+        // Send one payment reminder before the automatic unpaid-order expiry deadline.
+        'unpaid_order_reminder_after_hours' => max(1, (int) env('SECUREVIEW_UNPAID_ORDER_REMINDER_AFTER_HOURS', 24)),
+
+        // Proposed default priority surcharges (PHP, charged once per booking).
+        // Confirm the business amounts before configuring these on production.
+        'booking_fees' => [
+            'urgent' => max(0, (float) env('SECUREVIEW_URGENT_BOOKING_FEE', 500)),
+            'emergency' => max(0, (float) env('SECUREVIEW_EMERGENCY_BOOKING_FEE', 1500)),
+        ],
     ],
 
 ];
