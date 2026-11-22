@@ -451,6 +451,78 @@ class CheckoutDeliveryLocationTest extends TestCase
     }
 
 
+    public function test_admin_pickup_address_update_enables_checkout_even_with_a_legacy_settings_row(): void
+    {
+        // Older/duplicate settings records must not override the canonical ID 1.
+        InvoiceSetting::forceCreate([
+            'id' => 0,
+            'business_name' => 'Legacy invoice settings',
+            'pickup_address' => null,
+        ]);
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $pickupAddress = '70 Cuasay Street, North Signal, Taguig City';
+
+        $this->actingAs($admin)
+            ->patch(route('admin.invoice-settings.pickup-address.update'), [
+                'pickup_address' => $pickupAddress,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+            'phone' => '09171234567',
+        ]);
+
+        $product = Product::create([
+            'name' => 'Pickup Configured Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 800,
+            'stock_quantity' => 4,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => 800,
+        ]);
+
+        $this->actingAs($customer)
+            ->get(route('checkout'))
+            ->assertOk()
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('checkout')
+                ->where('pickupAddress', $pickupAddress));
+
+        $this->actingAs($customer)
+            ->post(route('checkout.store'), [
+                'customer_name' => $customer->name,
+                'customer_phone' => '09171234567',
+                'customer_email' => $customer->email,
+                'fulfillment_method' => 'pickup',
+                'payment_method' => 'cash',
+            ])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHasNoErrors();
+
+        $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
+        $this->assertSame('pickup', $order->fulfillment_method);
+        $this->assertSame($pickupAddress, $order->pickup_address);
+    }
+
     public function test_shop_pickup_cannot_be_selected_until_admin_configures_a_pickup_address(): void
     {
         $customer = User::factory()->create([
