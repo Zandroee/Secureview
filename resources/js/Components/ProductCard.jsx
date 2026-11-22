@@ -11,6 +11,7 @@ export default function ProductCard({
     saleActive = false,
     saleDiscountPercent = 0,
     badge,
+    stockQuantity = null,
     specifications = [],
     inclusions = [],
     rating = 0,
@@ -31,6 +32,8 @@ export default function ProductCard({
     const totalReviews = Number.isFinite(Number(reviewsCount)) ? Math.max(0, Number(reviewsCount)) : 0;
     const visibleSpecifications = safeSpecifications.slice(0, 3);
     const visibleInclusions = safeInclusions.slice(0, 3);
+    const hasStockInformation = stockQuantity !== null && stockQuantity !== undefined && Number.isFinite(Number(stockQuantity));
+    const isOutOfStock = hasStockInformation && Number(stockQuantity) <= 0;
 
     const cardStyle = {
         display: "flex",
@@ -61,7 +64,7 @@ export default function ProductCard({
     );
 
     return (
-        <Link href={href} aria-label={"View details for " + name} className="card secureview-catalog-card text-decoration-none" style={cardStyle} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+        <Link href={href} aria-label={"View details for " + name + (isOutOfStock ? ", out of stock" : "")} className="card secureview-catalog-card text-decoration-none" style={cardStyle} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
             <div className="position-relative" style={{ padding: "12px 12px 0" }}>
                 <div
                     className="position-relative overflow-hidden rounded-3 secureview-catalog-card-image-frame"
@@ -84,6 +87,15 @@ export default function ProductCard({
                         />
                     ) : imageFallback}
                 </div>
+
+                {isOutOfStock && (
+                    <span
+                        className="position-absolute bottom-0 start-0 badge text-bg-danger m-3 px-3 py-2"
+                        style={{ zIndex: 1, borderRadius: "999px", fontWeight: 800, letterSpacing: "0.03em" }}
+                    >
+                        OUT OF STOCK
+                    </span>
+                )}
 
                 {badge && (
                     <span

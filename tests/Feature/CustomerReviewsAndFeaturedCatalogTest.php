@@ -77,6 +77,59 @@ class CustomerReviewsAndFeaturedCatalogTest extends TestCase
             );
     }
 
+    public function test_product_and_package_catalogs_expose_stock_for_availability_badges(): void
+    {
+        $outOfStockProduct = $this->createProduct('Sold Out Catalog Camera', 0, false);
+        $includedProduct = $this->createProduct('Catalog Package Camera', 1, false);
+
+        $package = Package::create([
+            'name' => 'Stock Limited Catalog Package',
+            'category' => 'CCTV',
+            'warranty' => '1 year',
+            'price' => 1500,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        PackageItem::create([
+            'package_id' => $package->id,
+            'product_id' => $includedProduct->id,
+            'quantity' => 2,
+            'price' => 500,
+        ]);
+
+        $this->get('/products')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('products')
+                ->where('products.0.id', $outOfStockProduct->id)
+                ->where('products.0.stock_quantity', 0)
+                ->where('products.1.id', $includedProduct->id)
+                ->where('products.1.stock_quantity', 1)
+            );
+
+        // A package is unavailable when its components cannot fulfill one bundle.
+        $this->get('/packages')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('packages')
+                ->where('packages.0.id', $package->id)
+                ->where('packages.0.available_stock', 0)
+            );
+
+        $includedProduct->update(['stock_quantity' => 4]);
+
+        $this->get('/packages')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('packages')
+                ->where('packages.0.available_stock', 2)
+            );
+    }
+
     public function test_only_customer_who_paid_for_an_item_can_review_and_can_update_their_review(): void
     {
         $customer = User::factory()->create([
