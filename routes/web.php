@@ -313,6 +313,8 @@ Route::middleware(['auth', 'verified', 'admin', 'inertia.encrypt'])->group(funct
         ->name('admin.invoice-settings.index');
     Route::patch('/admin/invoice-settings', [AdminInvoiceSettingsController::class, 'update'])
         ->name('admin.invoice-settings.update');
+    Route::patch('/admin/invoice-settings/pickup-address', [AdminInvoiceSettingsController::class, 'updatePickupAddress'])
+        ->name('admin.invoice-settings.pickup-address.update');
 
     Route::get('/admin/inquiries', [AdminInquiryController::class, 'index'])
         ->name('admin.inquiries.index');
