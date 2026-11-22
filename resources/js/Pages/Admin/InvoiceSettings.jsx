@@ -47,6 +47,7 @@ export default function InvoiceSettings({ settings = {}, profile_ready: profileR
     const { props } = usePage();
     const [form, setForm] = useState({ ...emptyForm, ...settings });
     const [saving, setSaving] = useState(false);
+    const [savingPickup, setSavingPickup] = useState(false);
     const errors = props.errors ?? {};
     const update = (name, value) => setForm((current) => ({ ...current, [name]: value }));
 
@@ -56,6 +57,16 @@ export default function InvoiceSettings({ settings = {}, profile_ready: profileR
         router.patch("/admin/invoice-settings", form, {
             preserveScroll: true,
             onFinish: () => setSaving(false),
+        });
+    };
+
+    const savePickupAddress = () => {
+        setSavingPickup(true);
+        router.patch("/admin/invoice-settings/pickup-address", {
+            pickup_address: form.pickup_address,
+        }, {
+            preserveScroll: true,
+            onFinish: () => setSavingPickup(false),
         });
     };
 
@@ -80,6 +91,16 @@ export default function InvoiceSettings({ settings = {}, profile_ready: profileR
                         </div>
 
                         {props.flash?.success && <div className="alert alert-success">{props.flash.success}</div>}
+                        {Object.keys(errors).length > 0 && (
+                            <div className="alert alert-danger" role="alert">
+                                <strong>Settings were not saved. Please correct the following:</strong>
+                                <ul className="mb-0 mt-2">
+                                    {Object.entries(errors).map(([field, message]) => (
+                                        <li key={field}>{String(message)}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                         <div className="alert alert-warning">
                             These settings prepare the invoice profile only. They do not register Netmax Trading with the BIR, authorize a serial-number series, calculate taxes, or enable BIR electronic transmission. Enter only details confirmed by the business's registration documents and accountant.
                         </div>
@@ -152,6 +173,17 @@ export default function InvoiceSettings({ settings = {}, profile_ready: profileR
                                     />
                                     {errors.pickup_address && <div className="invalid-feedback">{errors.pickup_address}</div>}
                                     <div className="form-text">Include enough detail for a customer to find the store. This is separate from the registered business address used for invoice records.</div>
+                                    <div className="d-flex flex-wrap gap-2 align-items-center mt-3">
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-primary fw-semibold"
+                                            onClick={savePickupAddress}
+                                            disabled={saving || savingPickup || !String(form.pickup_address ?? "").trim()}
+                                        >
+                                            {savingPickup ? "SAVING PICKUP ADDRESS..." : "SAVE PICKUP ADDRESS"}
+                                        </button>
+                                        <span className="small text-muted">Save the pickup location separately from invoice settings.</span>
+                                    </div>
                                 </div>
                             </div>
 
