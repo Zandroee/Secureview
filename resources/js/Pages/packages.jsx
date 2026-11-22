@@ -399,6 +399,7 @@ export default function Packages({ packages = [] }) {
                                             saleActive={pkg.sale_active}
                                             saleDiscountPercent={pkg.sale_discount_percent}
                                             badge={pkg.badge}
+                                            stockQuantity={pkg.available_stock}
                                             specifications={pkg.specifications}
                                             inclusions={(pkg.package_items ?? pkg.packageItems ?? [])
                                                 .map((item) => ({
