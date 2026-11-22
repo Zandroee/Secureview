@@ -387,6 +387,7 @@ export default function Products({ products = [] }) {
                                             saleActive={product.sale_active}
                                             saleDiscountPercent={product.sale_discount_percent}
                                             badge={product.badge}
+                                            stockQuantity={product.stock_quantity}
                                             specifications={product.specifications}
                                             rating={product.rating}
                                             href={`/products/${product.id}`}
