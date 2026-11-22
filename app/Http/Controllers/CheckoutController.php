@@ -181,7 +181,7 @@ class CheckoutController extends Controller
 
     public function index(Request $request, InventoryService $inventory)
     {
-        $pickupAddress = trim((string) (InvoiceSetting::query()->value('pickup_address') ?? ''));
+        $pickupAddress = trim((string) (InvoiceSetting::query()->whereKey(1)->value('pickup_address') ?? ''));
 
         $orderNumber = $request->session()->get('orderNumber');
 
@@ -372,7 +372,7 @@ class CheckoutController extends Controller
         $fulfillmentMethod = $validated['fulfillment_method'];
         $pickupAddress = null;
         if ($fulfillmentMethod === 'pickup') {
-            $pickupAddress = trim((string) (InvoiceSetting::query()->value('pickup_address') ?? ''));
+            $pickupAddress = trim((string) (InvoiceSetting::query()->whereKey(1)->value('pickup_address') ?? ''));
             if ($pickupAddress === '') {
                 throw ValidationException::withMessages([
                     'fulfillment_method' => 'Shop pickup is not available yet. Please choose delivery or contact Netmax Trading.',
