@@ -75,6 +75,63 @@ class InvoiceSettingsTest extends TestCase
                 ->where('settings.pickup_address', 'Unit 5, Netmax Building, 456 Store Road, Taguig City'));
     }
 
+    public function test_admin_can_save_shop_pickup_address_without_completing_invoice_series(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+
+        $address = '70 Cuasay Street, North Signal, Taguig City';
+
+        $this->actingAs($admin)
+            ->patch(route('admin.invoice-settings.pickup-address.update'), [
+                'pickup_address' => "  {$address}  ",
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Shop pickup address saved. Customers can now choose Shop Pickup at checkout.');
+
+        $this->assertDatabaseHas('invoice_settings', [
+            'id' => 1,
+            'pickup_address' => $address,
+            'updated_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.invoice-settings.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('settings.pickup_address', $address));
+
+        // Other invoice fields are not required to configure customer pickup.
+        $settings = InvoiceSetting::query()->findOrFail(1);
+        $this->assertNull($settings->first_invoice_number);
+    }
+
+    public function test_pickup_address_can_only_be_saved_by_admin_and_must_not_be_blank(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+        ]);
+
+        $this->actingAs($customer)
+            ->patch(route('admin.invoice-settings.pickup-address.update'), [
+                'pickup_address' => '123 Test Shop Road',
+            ])
+            ->assertForbidden();
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+        $this->actingAs($admin)
+            ->patch(route('admin.invoice-settings.pickup-address.update'), [
+                'pickup_address' => '   ',
+            ])
+            ->assertSessionHasErrors('pickup_address');
+    }
+
     public function test_invoice_series_rejects_a_last_number_below_the_first_number(): void
     {
         $admin = User::factory()->create([
