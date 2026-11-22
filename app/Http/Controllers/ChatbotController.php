@@ -60,29 +60,47 @@ PROMPT;
 
         try {
             $model = config('services.gemini.model', 'gemini-3.5-flash-lite');
-            $generationConfig = ['maxOutputTokens' => 240];
+            // Gemini thinking tokens can exhaust a small output limit before the
+            // customer-facing answer finishes, leaving a sentence cut off.
+            $generationConfig = [];
 
             if (str_starts_with($model, 'gemini-3.')) {
-                // Gemini 3 supports thinking levels; low keeps a customer FAQ response fast.
+                // Keep simple customer questions fast without starving the answer.
                 $generationConfig['thinkingConfig'] = ['thinkingLevel' => 'low'];
             } else {
                 $generationConfig['temperature'] = 0.35;
             }
 
-            $response = Http::acceptJson()
-                ->withHeaders(['x-goog-api-key' => $apiKey])
-                ->connectTimeout(5)
-                ->timeout(25)
-                ->post(
-                    'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent',
-                    [
-                        'systemInstruction' => [
-                            'parts' => [['text' => $systemInstruction]],
-                        ],
-                        'contents' => $contents,
-                        'generationConfig' => $generationConfig,
-                    ]
-                );
+            $sendGeminiRequest = function (int $maxOutputTokens) use ($model, $systemInstruction, $contents, $generationConfig) {
+                return Http::acceptJson()
+                    ->withHeaders(['x-goog-api-key' => config('services.gemini.key')])
+                    ->connectTimeout(5)
+                    ->timeout(25)
+                    ->post(
+                        'https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent',
+                        [
+                            'systemInstruction' => [
+                                'parts' => [['text' => $systemInstruction]],
+                            ],
+                            'contents' => $contents,
+                            'generationConfig' => array_merge($generationConfig, [
+                                'maxOutputTokens' => $maxOutputTokens,
+                            ]),
+                        ]
+                    );
+            };
+
+            $response = $sendGeminiRequest(2048);
+
+            // Retry from the same prompt with more room rather than displaying
+            // the first (possibly mid-sentence) fragment to the customer.
+            if ($response->successful() && $response->json('candidates.0.finishReason') === 'MAX_TOKENS') {
+                Log::warning('Netmax Trading Gemini reply reached its output token limit; retrying.', [
+                    'model' => $model,
+                    'max_output_tokens' => 2048,
+                ]);
+                $response = $sendGeminiRequest(4096);
+            }
 
             if (!$response->successful()) {
                 $googleErrorCode = $response->json('error.status');
@@ -121,7 +139,46 @@ PROMPT;
                 ], 502);
             }
 
-            $answer = $response->json('candidates.0.content.parts.0.text');
+            $finishReason = $response->json('candidates.0.finishReason');
+
+            if ($finishReason === 'MAX_TOKENS') {
+                Log::warning('Netmax Trading Gemini reply is still truncated after retry.', [
+                    'model' => $model,
+                    'max_output_tokens' => 4096,
+                ]);
+
+                return response()->json([
+                    'message' => "I couldn't finish that response. Please try asking a shorter question, or contact our team for help.",
+                    'handoff_suggested' => true,
+                ]);
+            }
+
+            // A content filter or other abnormal stop must never expose an
+            // incomplete generated fragment as if it were a finished answer.
+            if (is_string($finishReason) && $finishReason !== '' && $finishReason !== 'STOP') {
+                Log::warning('Netmax Trading Gemini reply stopped before completion.', [
+                    'model' => $model,
+                    'finish_reason' => $finishReason,
+                ]);
+
+                return response()->json([
+                    'message' => "I couldn't complete that response. Please rephrase your question, or ask our team for help.",
+                    'handoff_suggested' => true,
+                ]);
+            }
+
+            // Responses can contain multiple text parts and (for some models)
+            // separate thought parts; only show the complete visible answer.
+            $parts = $response->json('candidates.0.content.parts', []);
+            $answer = is_array($parts)
+                ? collect($parts)
+                    ->filter(fn ($part) => is_array($part)
+                        && !($part['thought'] ?? false)
+                        && isset($part['text'])
+                        && is_string($part['text']))
+                    ->pluck('text')
+                    ->implode('')
+                : '';
 
             if (!is_string($answer) || trim($answer) === '') {
                 Log::warning('Netmax Trading Gemini API returned no text candidate.', [
