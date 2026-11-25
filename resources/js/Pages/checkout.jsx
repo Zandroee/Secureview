@@ -1,8 +1,31 @@
 import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
-import ServiceLocationPicker from "../Components/GoogleMaps/ServiceLocation";
+import ServiceLocationPicker, { ServiceLocationMap } from "../Components/GoogleMaps/ServiceLocation";
 import { useState } from "react";
+
+function insideRing(latitude, longitude, ring) {
+    let inside = false;
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i];
+        const [xj, yj] = ring[j];
+        if ((yi > latitude) !== (yj > latitude) &&
+            longitude < ((xj - xi) * (latitude - yi)) / (yj - yi) + xi) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
+function isWithinMetroManila(latitude, longitude, polygons) {
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    return Number.isFinite(lat) && Number.isFinite(lng) &&
+        Array.isArray(polygons) && polygons.some((polygon) =>
+            insideRing(lat, lng, polygon[0]) &&
+            !polygon.slice(1).some((hole) => insideRing(lat, lng, hole))
+        );
+}
 
 const paymentMethods = [
     {
@@ -52,6 +75,9 @@ export default function Checkout({
     orderNumber,
     paymentMethod,
     pickupAddress = "",
+    pickupLatitude = null,
+    pickupLongitude = null,
+    deliveryCoverage = [],
     successPickupAddress = null,
     fulfillmentMethod = "delivery",
 }) {
@@ -59,6 +85,7 @@ export default function Checkout({
     const pageErrors = pageProps.errors ?? {};
     const [voucherCode, setVoucherCode] = useState(String(cart?.voucher?.code ?? ""));
     const [voucherProcessing, setVoucherProcessing] = useState(false);
+    const [coverageError, setCoverageError] = useState("");
 
     const { data, setData, post, processing, errors } = useForm({
         customer_name: customer?.name ?? "",
@@ -85,8 +112,17 @@ export default function Checkout({
         0
     );
 
+    const deliveryPinIsValid = data.delivery_latitude !== "" && data.delivery_longitude !== "" &&
+        isWithinMetroManila(data.delivery_latitude, data.delivery_longitude, deliveryCoverage);
+    const deliveryBlocked = data.fulfillment_method === "delivery" && !deliveryPinIsValid;
+
     const submit = (event) => {
         event.preventDefault();
+        if (deliveryBlocked) {
+            setCoverageError("Delivery is limited to Metro Manila. Choose a map pin inside Metro Manila, or select Shop Pickup.");
+            return;
+        }
+        setCoverageError("");
 
         post("/checkout", {
             preserveScroll: true,
@@ -392,16 +428,48 @@ export default function Checkout({
                                                         {errors.delivery_city && <div className="invalid-feedback">{errors.delivery_city}</div>}
                                                     </div>
                                                 </div>
-                                                <div className="small text-muted mt-2 mb-3">Search your address on OpenStreetMap, then drag the marker or click the map to pin the exact delivery entrance.</div>
-                                                <ServiceLocationPicker locationType="delivery" streetAddress={data.delivery_street_address} city={data.delivery_city} latitude={data.delivery_latitude} longitude={data.delivery_longitude} apiErrors={{ service_location: errors.delivery_latitude || errors.delivery_longitude || errors.delivery_location }} onChange={(changes) => setData((current) => ({ ...current, delivery_latitude: changes.service_latitude ?? current.delivery_latitude, delivery_longitude: changes.service_longitude ?? current.delivery_longitude }))} />
+                                                <div className="alert alert-info small mt-3 mb-2">
+                                                    Delivery is only available within Metro Manila (NCR). Choose an exact entrance on the map within the outlined service boundary.
+                                                </div>
+                                                <div className="small text-muted mt-2 mb-3">Search your Metro Manila address on OpenStreetMap, then click the map or drag the pin to the exact entrance.</div>
+                                                <ServiceLocationPicker locationType="delivery" coveragePolygons={deliveryCoverage} streetAddress={data.delivery_street_address} city={data.delivery_city} latitude={data.delivery_latitude} longitude={data.delivery_longitude} apiErrors={{ service_location: errors.delivery_latitude || errors.delivery_longitude || errors.delivery_location }} onChange={(changes) => setData((current) => ({ ...current, delivery_latitude: changes.service_latitude ?? current.delivery_latitude, delivery_longitude: changes.service_longitude ?? current.delivery_longitude }))} />
+                                                {data.delivery_latitude !== "" && data.delivery_longitude !== "" && (
+                                                    <div className={"small fw-semibold mt-2 " + (deliveryPinIsValid ? "text-success" : "text-danger")}>
+                                                        {deliveryPinIsValid
+                                                            ? "Delivery pin is within Metro Manila."
+                                                            : "Outside coverage. Please choose a location inside Metro Manila or use Shop Pickup."}
+                                                    </div>
+                                                )}
+                                                {coverageError && <div className="small text-danger mt-2">{coverageError}</div>}
                                                 {errors.delivery_location && <div className="small text-danger mt-2">{errors.delivery_location}</div>}
                                                 {errors.delivery_address && <div className="small text-danger mt-2">{errors.delivery_address}</div>}
                                             </>
                                         ) : (
-                                            <div className="alert alert-info small mb-0">
-                                                <i className="bi bi-shop me-2" />
-                                                You selected shop pickup. Your order will be marked for collection at Netmax Trading; delivery address and map details are not required.
-                                            </div>
+                                            <>
+                                                <div className="alert alert-info small mb-2">
+                                                    <i className="bi bi-shop me-2" />
+                                                    Shop pickup at: <strong>{pickupAddress || "Store address not configured"}</strong>
+                                                </div>
+                                                <ServiceLocationMap
+                                                    latitude={pickupLatitude}
+                                                    longitude={pickupLongitude}
+                                                    streetAddress={pickupAddress}
+                                                    city=""
+                                                    height={260}
+                                                    showDirections={false}
+                                                />
+                                                {pickupLatitude != null && pickupLongitude != null ? (
+                                                    <a className="btn btn-outline-primary btn-sm mt-2"
+                                                        href={`https://www.openstreetmap.org/?mlat=${pickupLatitude}&mlon=${pickupLongitude}#map=18/${pickupLatitude}/${pickupLongitude}`}
+                                                        target="_blank" rel="noreferrer">
+                                                        View the shop entrance on OpenStreetMap
+                                                    </a>
+                                                ) : (
+                                                    <div className="small text-muted mt-2">
+                                                        Netmax Trading has not pinned its exact shop entrance on the map yet. You can still use the saved pickup address.
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                     </div>
 
@@ -527,7 +595,7 @@ export default function Checkout({
                                     <button
                                         type="submit"
                                         className="btn btn-primary fw-bold w-100 mt-4 py-2"
-                                        disabled={processing || (data.fulfillment_method === "pickup" && !pickupAddress)}
+                                        disabled={processing || deliveryBlocked || (data.fulfillment_method === "pickup" && !pickupAddress)}
                                     >
                                         {processing
                                             ? "PROCESSING..."
