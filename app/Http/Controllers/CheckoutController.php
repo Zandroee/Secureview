@@ -10,6 +10,7 @@ use App\Models\PendingInquiryCheckout;
 use App\Models\Product;
 use App\Models\Package;
 use App\Services\InventoryService;
+use App\Services\MetroManilaCoverage;
 use App\Services\VoucherService;
 use App\Services\PayMongoLineItemBuilder;
 use Illuminate\Validation\ValidationException;
@@ -181,7 +182,11 @@ class CheckoutController extends Controller
 
     public function index(Request $request, InventoryService $inventory)
     {
-        $pickupAddress = trim((string) (InvoiceSetting::query()->whereKey(1)->value('pickup_address') ?? ''));
+        $pickupSettings = InvoiceSetting::query()->find(1);
+        $pickupAddress = trim((string) ($pickupSettings?->pickup_address ?? ''));
+        $pickupLatitude = $pickupSettings?->pickup_latitude;
+        $pickupLongitude = $pickupSettings?->pickup_longitude;
+        $deliveryCoverage = app(MetroManilaCoverage::class)->polygons();
 
         $orderNumber = $request->session()->get('orderNumber');
 
@@ -205,6 +210,9 @@ class CheckoutController extends Controller
                 ],
                 'success' => true,
                 'pickupAddress' => $pickupAddress,
+                'pickupLatitude' => $pickupLatitude,
+                'pickupLongitude' => $pickupLongitude,
+                'deliveryCoverage' => $deliveryCoverage,
                 'successPickupAddress' => $successOrder?->pickup_address,
                 'fulfillmentMethod' => $successOrder?->fulfillment_method ?? 'delivery',
                 'orderNumber' => $orderNumber,
@@ -276,6 +284,9 @@ class CheckoutController extends Controller
                 ],
                 'success' => false,
                 'pickupAddress' => $pickupAddress,
+                'pickupLatitude' => $pickupLatitude,
+                'pickupLongitude' => $pickupLongitude,
+                'deliveryCoverage' => $deliveryCoverage,
                 'orderNumber' => null,
                 'paymentMethod' => null,
             ]);
@@ -339,12 +350,15 @@ class CheckoutController extends Controller
             ],
             'success' => false,
             'pickupAddress' => $pickupAddress,
+            'pickupLatitude' => $pickupLatitude,
+            'pickupLongitude' => $pickupLongitude,
+            'deliveryCoverage' => $deliveryCoverage,
             'orderNumber' => null,
             'paymentMethod' => null,
         ]);
     }
 
-    public function store(Request $request, InventoryService $inventory, VoucherService $vouchers)
+    public function store(Request $request, InventoryService $inventory, VoucherService $vouchers, MetroManilaCoverage $coverage)
     {
         // Existing clients default to delivery; new checkout clients explicitly select delivery or pickup.
         $request->merge(['fulfillment_method' => $request->input('fulfillment_method', 'delivery')]);
@@ -362,17 +376,28 @@ class CheckoutController extends Controller
             'delivery_street_address' => ['exclude_if:fulfillment_method,pickup', 'required_without:delivery_address', 'nullable', 'string', 'min:5', 'max:500'],
             'delivery_address_details' => ['nullable', 'string', 'max:500'],
             'delivery_city' => ['exclude_if:fulfillment_method,pickup', 'required_without:delivery_address', 'nullable', 'string', 'max:180'],
-            'delivery_latitude' => ['exclude_if:fulfillment_method,pickup', 'nullable', 'numeric', 'between:-90,90', 'required_with:delivery_longitude'],
-            'delivery_longitude' => ['exclude_if:fulfillment_method,pickup', 'nullable', 'numeric', 'between:-180,180', 'required_with:delivery_latitude'],
+            'delivery_latitude' => ['exclude_if:fulfillment_method,pickup', 'required_if:fulfillment_method,delivery', 'numeric', 'between:-90,90'],
+            'delivery_longitude' => ['exclude_if:fulfillment_method,pickup', 'required_if:fulfillment_method,delivery', 'numeric', 'between:-180,180'],
             'delivery_address' => ['nullable', 'string', 'min:10', 'max:1000'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['required', 'in:cash,gcash,card,maya'],
         ]);
 
         $fulfillmentMethod = $validated['fulfillment_method'];
+        if ($fulfillmentMethod === 'delivery' &&
+            !$coverage->contains((float) $validated['delivery_latitude'], (float) $validated['delivery_longitude'])) {
+            throw ValidationException::withMessages([
+                'delivery_location' => 'Delivery is only available within Metro Manila. Move your map pin inside the Metro Manila coverage area or choose Shop Pickup.',
+            ]);
+        }
         $pickupAddress = null;
+        $pickupLatitude = null;
+        $pickupLongitude = null;
         if ($fulfillmentMethod === 'pickup') {
-            $pickupAddress = trim((string) (InvoiceSetting::query()->whereKey(1)->value('pickup_address') ?? ''));
+            $pickupSettings = InvoiceSetting::query()->find(1);
+            $pickupAddress = trim((string) ($pickupSettings?->pickup_address ?? ''));
+            $pickupLatitude = $pickupSettings?->pickup_latitude;
+            $pickupLongitude = $pickupSettings?->pickup_longitude;
             if ($pickupAddress === '') {
                 throw ValidationException::withMessages([
                     'fulfillment_method' => 'Shop pickup is not available yet. Please choose delivery or contact Netmax Trading.',
@@ -477,7 +502,7 @@ class CheckoutController extends Controller
             }
         }
 
-        $order = DB::transaction(function () use ($request, $validated, $checkoutItems, $deliveryDetails, $deliveryCity, $fulfillmentMethod, $pickupAddress, $vouchers) {
+        $order = DB::transaction(function () use ($request, $validated, $checkoutItems, $deliveryDetails, $deliveryCity, $fulfillmentMethod, $pickupAddress, $pickupLatitude, $pickupLongitude, $vouchers) {
             $subtotal = 0;
 
             foreach ($checkoutItems as $checkoutItem) {
@@ -525,6 +550,8 @@ class CheckoutController extends Controller
                 'customer_email' => $validated['customer_email'],
                 'fulfillment_method' => $fulfillmentMethod,
                 'pickup_address' => $fulfillmentMethod === 'pickup' ? $pickupAddress : null,
+                'pickup_latitude' => $fulfillmentMethod === 'pickup' ? $pickupLatitude : null,
+                'pickup_longitude' => $fulfillmentMethod === 'pickup' ? $pickupLongitude : null,
                 'delivery_address' => $validated['delivery_address'],
                 'delivery_address_details' => $deliveryDetails !== '' ? $deliveryDetails : null,
                 'delivery_city' => $deliveryCity !== '' ? $deliveryCity : null,
