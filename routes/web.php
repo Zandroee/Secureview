@@ -15,6 +15,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\RefundRequestController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\InquiryController;
@@ -220,6 +221,8 @@ Route::middleware(['auth', 'verified', 'inertia.encrypt'])->group(function () {
     Route::get('/purchases/{order}/items/{orderItem}/review', [ReviewController::class, 'create'])->name('purchases.items.review');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
+    Route::post('/purchases/{order}/payment-receipt', [PaymentReceiptController::class, 'store'])->name('purchases.receipt.store');
+    Route::get('/purchases/{order}/payment-receipt', [PaymentReceiptController::class, 'show'])->name('purchases.receipt.show');
     Route::patch('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
     Route::post('/purchases/{order}/refunds', [RefundRequestController::class, 'store'])->name('purchases.refunds.store');
     Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
