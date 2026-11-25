@@ -221,7 +221,7 @@ Route::middleware(['auth', 'verified', 'inertia.encrypt'])->group(function () {
     Route::get('/purchases/{order}/items/{orderItem}/review', [ReviewController::class, 'create'])->name('purchases.items.review');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
-    Route::post('/purchases/{order}/payment-receipt', [PaymentReceiptController::class, 'store'])->name('purchases.receipt.store');
+    Route::post('/purchases/{order}/payment-receipt', [PaymentReceiptController::class, 'store'])->middleware('throttle:6,1')->name('purchases.receipt.store');
     Route::get('/purchases/{order}/payment-receipt', [PaymentReceiptController::class, 'show'])->name('purchases.receipt.show');
     Route::patch('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
     Route::post('/purchases/{order}/refunds', [RefundRequestController::class, 'store'])->name('purchases.refunds.store');
