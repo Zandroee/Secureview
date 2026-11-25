@@ -22,6 +22,7 @@ class PurchaseController extends Controller
         'awaiting_payment',
         'payment_failed',
         'processing',
+        'out_for_delivery',
         'delivered',
         'completed',
         'cancelled',
@@ -189,7 +190,7 @@ class PurchaseController extends Controller
 
         $invoiceProfileReady = app(InvoiceDocumentService::class)->profileReady();
         $query = Order::with(['user', 'items', 'events.actor', 'invoiceRecord', 'refunds'])
-            ->whereIn('order_status', ['completed', 'cancelled'])
+            ->whereIn('order_status', ['completed', 'delivered', 'cancelled'])
             ->latest();
 
         if (!empty($filters['search'])) {
@@ -239,7 +240,7 @@ class PurchaseController extends Controller
         }
 
         $historyPaidOrderQuery = (clone $historySummaryQuery)
-            ->where('order_status', 'completed')
+            ->whereIn('order_status', ['completed', 'delivered'])
             ->whereIn('payment_status', ['paid', 'partially_refunded', 'refunded']);
         $historyRefundedAmount = (float) Refund::query()
             ->where('status', 'completed')
@@ -261,7 +262,7 @@ class PurchaseController extends Controller
                 'date_to' => $filters['date_to'] ?? '',
             ],
             'summary' => [
-                'completed_orders' => (clone $historySummaryQuery)->where('order_status', 'completed')->count(),
+                'completed_orders' => (clone $historySummaryQuery)->whereIn('order_status', ['completed', 'delivered'])->count(),
                 'cancelled_orders' => (clone $historySummaryQuery)->where('order_status', 'cancelled')->count(),
                 'completed_paid_revenue' => max(0, (float) $historyPaidOrderQuery->sum('total') - $historyRefundedAmount),
             ],
@@ -504,6 +505,14 @@ class PurchaseController extends Controller
                 && $order->paid_at === null
                 && in_array($order->payment_status, ['pending', 'failed'], true)
                 && in_array($order->order_status, ['pending', 'awaiting_payment', 'payment_failed'], true),
+            'can_mark_out_for_delivery' => ($order->sales_channel ?? 'online') === 'online'
+                && ($order->fulfillment_method ?? 'delivery') === 'delivery'
+                && in_array($order->payment_status, ['paid', 'partially_refunded'], true)
+                && $order->order_status === 'processing',
+            'can_mark_delivered' => ($order->sales_channel ?? 'online') === 'online'
+                && ($order->fulfillment_method ?? 'delivery') === 'delivery'
+                && in_array($order->payment_status, ['paid', 'partially_refunded'], true)
+                && $order->order_status === 'out_for_delivery',
             'can_confirm_cash_payment' => $order->payment_method === 'cash'
                 && $order->payment_status === 'pending'
                 && $order->order_status === 'pending',
