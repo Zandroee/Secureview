@@ -958,6 +958,8 @@ class TechnicianWorkspaceController extends Controller
             return back()->withErrors(['reschedule' => 'The requested date or time is missing.']);
         }
 
+        BookingSlotCutoff::assertBookable($date, $time);
+
         if ($this->dateUnavailableByTechnicianCapacity($date, $inquiry->id)) {
             return back()->withErrors(['reschedule' => 'No technicians are available on that date. Every technician is already scheduled for another service.']);
         }
