@@ -12,6 +12,7 @@ use App\Models\PendingInquiryCheckout;
 use App\Models\ServiceRecord;
 use App\Models\User;
 use App\Services\JobNotificationService;
+use App\Services\BookingSlotCutoff;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -860,6 +861,8 @@ class TechnicianWorkspaceController extends Controller
             'preferred_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
             'preferred_time' => ['required', 'in:08:00 AM - 11:00 AM,11:00 AM - 02:00 PM,02:00 PM - 05:00 PM'],
         ]);
+
+        BookingSlotCutoff::assertBookable($validated['preferred_date'], $validated['preferred_time']);
 
         if ($this->dateUnavailableByTechnicianCapacity($validated['preferred_date'], $inquiry->id)) {
             return back()->withErrors(['preferred_date' => 'No technicians are available on that date. Every technician is already scheduled for another service.']);
