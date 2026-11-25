@@ -3,12 +3,15 @@ import Footer from "../../Components/footer";
 import Sidebar from "../../Components/Admin/Sidebar";
 import { router, usePage } from "@inertiajs/react";
 import { useState } from "react";
+import ServiceLocationPicker from "../../Components/GoogleMaps/ServiceLocation";
 
 const emptyForm = {
     business_name: "",
     registered_name: "",
     address: "",
     pickup_address: "",
+    pickup_latitude: "",
+    pickup_longitude: "",
     email: "",
     phone: "",
     tin: "",
@@ -64,6 +67,8 @@ export default function InvoiceSettings({ settings = {}, profile_ready: profileR
         setSavingPickup(true);
         router.patch("/admin/invoice-settings/pickup-address", {
             pickup_address: form.pickup_address,
+            pickup_latitude: form.pickup_latitude,
+            pickup_longitude: form.pickup_longitude,
         }, {
             preserveScroll: true,
             onFinish: () => setSavingPickup(false),
@@ -167,12 +172,31 @@ export default function InvoiceSettings({ settings = {}, profile_ready: profileR
                                         rows={3}
                                         maxLength={1000}
                                         value={form.pickup_address ?? ""}
-                                        onChange={(event) => update("pickup_address", event.target.value)}
+                                        onChange={(event) => setForm((current) => ({ ...current, pickup_address: event.target.value, pickup_latitude: "", pickup_longitude: "" }))}
                                         className={"form-control" + (errors.pickup_address ? " is-invalid" : "")}
                                         placeholder="Building / unit, street, barangay, city / municipality, province"
                                     />
                                     {errors.pickup_address && <div className="invalid-feedback">{errors.pickup_address}</div>}
                                     <div className="form-text">Include enough detail for a customer to find the store. This is separate from the registered business address used for invoice records.</div>
+                                    <div className="mt-3">
+                                        <ServiceLocationPicker
+                                            locationType="pickup"
+                                            streetAddress={form.pickup_address ?? ""}
+                                            city=""
+                                            latitude={form.pickup_latitude}
+                                            longitude={form.pickup_longitude}
+                                            apiErrors={{ service_location: errors.pickup_latitude || errors.pickup_longitude }}
+                                            onChange={(changes) => setForm((current) => ({
+                                                ...current,
+                                                pickup_latitude: changes.service_latitude ?? current.pickup_latitude,
+                                                pickup_longitude: changes.service_longitude ?? current.pickup_longitude,
+                                            }))}
+                                        />
+                                        <div className="small text-muted">
+                                            Place the pin on the exact shop entrance so customers can find it.
+                                            Saving the address without a pin keeps pickup available, but the map preview will need a pin.
+                                        </div>
+                                    </div>
                                     <div className="d-flex flex-wrap gap-2 align-items-center mt-3">
                                         <button
                                             type="button"
