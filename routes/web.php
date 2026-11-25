@@ -15,6 +15,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\RefundRequestController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\InquiryController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Admin\InquiryController as AdminInquiryController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\ScheduleController as AdminScheduleController;
 use App\Http\Controllers\Admin\PurchaseController as AdminPurchaseController;
+use App\Http\Controllers\Admin\DeliveryTrackingController as AdminDeliveryTrackingController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
 use App\Http\Controllers\Admin\PackageController as AdminPackageController;
@@ -219,6 +221,8 @@ Route::middleware(['auth', 'verified', 'inertia.encrypt'])->group(function () {
     Route::get('/purchases/{order}/items/{orderItem}/review', [ReviewController::class, 'create'])->name('purchases.items.review');
     Route::get('/purchases/{order}', [PurchaseController::class, 'show'])->name('purchases.show');
     Route::post('/purchases/{order}/pay', [PurchaseController::class, 'pay'])->name('purchases.pay');
+    Route::post('/purchases/{order}/payment-receipt', [PaymentReceiptController::class, 'store'])->middleware('throttle:6,1')->name('purchases.receipt.store');
+    Route::get('/purchases/{order}/payment-receipt', [PaymentReceiptController::class, 'show'])->name('purchases.receipt.show');
     Route::patch('/purchases/{order}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
     Route::post('/purchases/{order}/refunds', [RefundRequestController::class, 'store'])->name('purchases.refunds.store');
     Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
@@ -306,6 +310,10 @@ Route::middleware(['auth', 'verified', 'admin', 'inertia.encrypt'])->group(funct
     Route::get('/admin/service-records/{serviceRecord}/invoice', [InvoiceController::class, 'adminService'])->name('admin.service-records.invoice');
     Route::post('/admin/walk-in/sales', [AdminWalkInController::class, 'storeSale'])->name('admin.walk-in.sales.store');
     Route::post('/admin/walk-in/services', [AdminWalkInController::class, 'storeService'])->name('admin.walk-in.services.store');
+
+    Route::patch('/admin/purchases/{order}/delivery-status/{status}', [AdminDeliveryTrackingController::class, 'update'])
+        ->whereIn('status', ['out_for_delivery', 'delivered'])
+        ->name('admin.purchases.delivery-status');
 
     Route::get('/admin/transactions', [AdminTransactionController::class, 'index'])
         ->name('admin.transactions.index');

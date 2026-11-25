@@ -11,6 +11,7 @@ use App\Models\ServiceRecord;
 use App\Models\ServiceRecordItem;
 use App\Models\User;
 use App\Services\InvoiceDocumentService;
+use App\Services\BookingSlotCutoff;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -552,6 +553,8 @@ class ScheduleController extends Controller
             'preferred_time' => ['required', 'in:' . implode(',', self::BOOKING_TIME_SLOTS)],
         ]);
 
+        BookingSlotCutoff::assertBookable($validated['preferred_date'], $validated['preferred_time']);
+
         if ($this->dateUnavailableByTechnicianCapacity($validated['preferred_date'], $inquiry->id)) {
             throw ValidationException::withMessages([
                 'preferred_date' => 'No technicians are available on that date. Every technician is already scheduled for another service.',
@@ -599,6 +602,8 @@ class ScheduleController extends Controller
         if (!$date || !$time) {
             return back()->withErrors(['reschedule' => 'The requested date or time is missing.']);
         }
+
+        BookingSlotCutoff::assertBookable($date, $time);
 
         if ($this->dateUnavailableByTechnicianCapacity($date, $inquiry->id)) {
             throw ValidationException::withMessages([

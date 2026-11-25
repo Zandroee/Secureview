@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BlockedBookingDate;
+use App\Services\BookingSlotCutoff;
 use App\Models\BlockedBookingTimeSlot;
 use App\Models\CustomerNotification;
 use App\Models\Inquiry;
@@ -261,6 +262,8 @@ class InquiryController extends Controller
             'payment_method' => ['nullable', 'required_if:service_type,Installation', 'in:cash,gcash,card,maya'],
         ]);
 
+        BookingSlotCutoff::assertBookable($validated['preferred_date'], $validated['preferred_time']);
+
         $urgencyFee = $this->configuredUrgencyFee($validated['urgency']);
         // Only flows that create an order require the stable form token. Existing
         // standard service requests remain compatible and do not create fee orders.
@@ -337,6 +340,8 @@ class InquiryController extends Controller
                 'service_location' => 'Choose a point on the map or leave the map pin unset.',
             ]);
         }
+
+        BookingSlotCutoff::assertBookable($validated['preferred_date'], $validated['preferred_time']);
 
         if (BlockedBookingDate::query()->whereDate('booking_date', $validated['preferred_date'])->exists()) {
             throw ValidationException::withMessages([

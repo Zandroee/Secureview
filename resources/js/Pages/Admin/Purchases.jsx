@@ -123,8 +123,12 @@ export default function AdminPurchases({
 
     const runOrderAction = (order, action) => {
         const confirmation = action === "confirm-cash-payment"
-            ? "Confirm that cash has actually been received for order " + order.order_number + "? This will mark the payment as paid and move the order to Processing."
-            : "Confirm that order " + order.order_number + " has been fulfilled? This will mark it Completed. Netmax Trading does not track shipments.";
+            ? "Confirm that cash has actually been received for order " + order.order_number + "? This will mark the payment as paid."
+            : action === "out_for_delivery"
+            ? "Mark order " + order.order_number + " as Out for Delivery? The customer will see this update."
+            : action === "delivered"
+            ? "Confirm order " + order.order_number + " has been delivered? The customer will see this update."
+            : "Confirm order " + order.order_number + " is completed?";
 
         if (!window.confirm(confirmation)) {
             return;
@@ -132,7 +136,9 @@ export default function AdminPurchases({
 
         setUpdatingOrderId(order.id);
         router.patch(
-            "/admin/purchases/" + order.id + "/" + action,
+            action === "out_for_delivery" || action === "delivered"
+                ? "/admin/purchases/" + order.id + "/delivery-status/" + action
+                : "/admin/purchases/" + order.id + "/" + action,
             {},
             {
                 preserveScroll: true,
@@ -275,7 +281,7 @@ export default function AdminPurchases({
                         )}
 
                         <div className="small text-muted mb-3">
-                            Netmax Trading does not currently have shipment tracking. “Delivered” is not offered as an action; it will only appear in the dashboard if a legacy delivered order already exists.
+                            Delivery orders can be marked Out for Delivery, then Delivered. These are updates entered by the shop team, not live GPS tracking.
                         </div>
 
                         <div className="row g-3 mb-3">
@@ -790,6 +796,11 @@ export default function AdminPurchases({
                                     <div className="fw-semibold">
                                         {viewingOrder.fulfillment_method === "pickup" ? (viewingOrder.pickup_address || "Pickup location not recorded on this order") : viewingOrder.delivery_address}
                                     </div>
+                                    {viewingOrder.fulfillment_method === "pickup" && viewingOrder.pickup_latitude != null && viewingOrder.pickup_longitude != null && (
+                                        <a className="d-inline-flex align-items-center gap-2 small text-primary text-decoration-none mt-2"
+                                            href={`https://www.openstreetmap.org/?mlat=${viewingOrder.pickup_latitude}&mlon=${viewingOrder.pickup_longitude}#map=18/${viewingOrder.pickup_latitude}/${viewingOrder.pickup_longitude}`}
+                                            target="_blank" rel="noreferrer">View shop pickup pin on OpenStreetMap</a>
+                                    )}
                                     {viewingOrder.delivery_latitude != null && viewingOrder.delivery_longitude != null && (
                                         <a
                                             className="d-inline-flex align-items-center gap-2 small text-primary text-decoration-none mt-2"
@@ -805,6 +816,32 @@ export default function AdminPurchases({
                                 </div>
                             </div>
                         </div>
+
+                        {["gcash", "card", "maya"].includes(viewingOrder.payment_method) && (
+                            <div className="border rounded-3 p-3 mb-3">
+                                <div className="fw-bold mb-1">PAYMONGO PAYMENT REVIEW</div>
+                                <div className="small text-muted mb-2">
+                                    Payment: {viewingOrder.payment_status}. PayMongo verification is authoritative.
+                                    A screenshot is supporting evidence, not confirmation of payment.
+                                </div>
+                                {viewingOrder.paymongo_payment_reference && (
+                                    <div className="small text-muted mb-2">
+                                        PayMongo payment ID: <code>{viewingOrder.paymongo_payment_reference}</code>
+                                    </div>
+                                )}
+                                {viewingOrder.payment_receipt_url ? (
+                                    <a className="btn btn-outline-primary btn-sm fw-semibold"
+                                        href={viewingOrder.payment_receipt_url} target="_blank" rel="noreferrer">
+                                        VIEW PAYMENT RECEIPT
+                                    </a>
+                                ) : (
+                                    <div className="small text-muted">No customer receipt uploaded.</div>
+                                )}
+                                {viewingOrder.payment_receipt_uploaded_at && (
+                                    <div className="small text-muted mt-1">Uploaded: {viewingOrder.payment_receipt_uploaded_at}</div>
+                                )}
+                            </div>
+                        )}
 
                         <div className="border rounded-3 p-3 mb-3">
                             <div className="d-flex justify-content-between align-items-center mb-3">
@@ -1042,6 +1079,20 @@ export default function AdminPurchases({
                                     </button>
                                 )}
 
+                                {viewingOrder.can_mark_out_for_delivery && (
+                                    <button type="button" className="btn btn-primary fw-bold"
+                                        onClick={() => runOrderAction(viewingOrder, "out_for_delivery")}
+                                        disabled={updatingOrderId === viewingOrder.id || cancellingOrderId === viewingOrder.id}>
+                                        {updatingOrderId === viewingOrder.id ? "UPDATING..." : "MARK OUT FOR DELIVERY"}
+                                    </button>
+                                )}
+                                {viewingOrder.can_mark_delivered && (
+                                    <button type="button" className="btn btn-success fw-bold"
+                                        onClick={() => runOrderAction(viewingOrder, "delivered")}
+                                        disabled={updatingOrderId === viewingOrder.id || cancellingOrderId === viewingOrder.id}>
+                                        {updatingOrderId === viewingOrder.id ? "UPDATING..." : "MARK DELIVERED"}
+                                    </button>
+                                )}
                                 {viewingOrder.can_mark_completed && (
                                     <button
                                         type="button"

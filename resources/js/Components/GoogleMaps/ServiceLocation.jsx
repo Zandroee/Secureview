@@ -105,6 +105,7 @@ function makeSearchQuery(streetAddress, city) {
 export default function ServiceLocationPicker({
     streetAddress = "", city = "", latitude = null, longitude = null, placeId = "", apiErrors = {}, onChange,
     locationType = "service",
+    coveragePolygons = [],
 }) {
     const mapHostRef = useRef(null);
     const mapInstanceRef = useRef(null);
@@ -114,7 +115,7 @@ export default function ServiceLocationPicker({
     const lastAddressQueryRef = useRef(makeSearchQuery(streetAddress, city));
     const searchedAddressRef = useRef("");
     const pendingSearchPositionRef = useRef(null);
-    const locationNoun = locationType === "delivery" ? "delivery" : "service";
+    const locationNoun = locationType === "delivery" ? "delivery" : locationType === "pickup" ? "shop pickup" : "service";
     const locationTitle = locationNoun.charAt(0).toUpperCase() + locationNoun.slice(1);
     const [mapReady, setMapReady] = useState(false);
     const [mapError, setMapError] = useState("");
@@ -126,7 +127,7 @@ export default function ServiceLocationPicker({
 
     onChangeRef.current = onChange;
     addressRef.current = { streetAddress, city };
-    const hasSearchAddress = Boolean(streetAddress.trim() && city.trim());
+    const hasSearchAddress = Boolean(streetAddress.trim() && (city.trim() || locationType === "pickup"));
 
     useEffect(() => {
         let cancelled = false;
@@ -145,6 +146,15 @@ export default function ServiceLocationPicker({
                 maxZoom: 19,
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
             }).addTo(map);
+            if (Array.isArray(coveragePolygons) && coveragePolygons.length) {
+                const shapes = coveragePolygons.map((polygon) =>
+                    polygon.map((ring) => ring.map(([lng, lat]) => [lat, lng]))
+                );
+                L.polygon(shapes, {
+                    color: "#1763bf", weight: 2, fillColor: "#0d6efd",
+                    fillOpacity: 0.08, interactive: false,
+                }).addTo(map);
+            }
 
             const marker = L.marker(
                 initialPosition ? [initialPosition.lat, initialPosition.lng] : DEFAULT_CENTER,
@@ -242,7 +252,7 @@ export default function ServiceLocationPicker({
         const { streetAddress: street, city: municipality } = addressRef.current;
         const query = makeSearchQuery(street, municipality);
 
-        if (!street.trim() || !municipality.trim()) {
+        if (!street.trim() || (!municipality.trim() && locationType !== "pickup")) {
             setLocationMessage("Enter both the street address and city above before searching.");
             return;
         }

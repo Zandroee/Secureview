@@ -22,6 +22,8 @@ class InvoiceSettingsController extends Controller
                 'registered_name',
                 'address',
                 'pickup_address',
+                'pickup_latitude',
+                'pickup_longitude',
                 'email',
                 'phone',
                 'tin',
@@ -53,6 +55,8 @@ class InvoiceSettingsController extends Controller
             'registered_name' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:1000'],
             'pickup_address' => ['nullable', 'string', 'max:1000'],
+            'pickup_latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:pickup_longitude'],
+            'pickup_longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:pickup_latitude'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:40'],
             'tin' => ['nullable', 'string', 'max:80'],
@@ -126,6 +130,8 @@ class InvoiceSettingsController extends Controller
     {
         $validated = $request->validate([
             'pickup_address' => ['required', 'string', 'max:1000'],
+            'pickup_latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:pickup_longitude'],
+            'pickup_longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:pickup_latitude'],
         ]);
 
         $address = trim($validated['pickup_address']);
@@ -137,6 +143,8 @@ class InvoiceSettingsController extends Controller
 
         $settings = $this->settings();
         $settings->pickup_address = $address;
+        $settings->pickup_latitude = $validated['pickup_latitude'] ?? null;
+        $settings->pickup_longitude = $validated['pickup_longitude'] ?? null;
         $settings->updated_by = $request->user()->id;
         $settings->save();
 

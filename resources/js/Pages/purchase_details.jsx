@@ -20,7 +20,23 @@ function statusClass(status) {
 
 export default function PurchaseDetails({ order }) {
     const { props } = usePage();
+    const pageErrors = props.errors ?? {};
     const [paying, setPaying] = useState(false);
+    const [receiptFile, setReceiptFile] = useState(null);
+    const [uploadingReceipt, setUploadingReceipt] = useState(false);
+
+    const uploadReceipt = (event) => {
+        event.preventDefault();
+        if (!receiptFile) return;
+        setUploadingReceipt(true);
+        router.post("/purchases/" + order.id + "/payment-receipt", { receipt: receiptFile }, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => setReceiptFile(null),
+            onFinish: () => setUploadingReceipt(false),
+        });
+    };
+
     const [cancelling, setCancelling] = useState(false);
     const [refundAmount, setRefundAmount] = useState(String(order.refundable_remaining ?? ""));
     const [refundReason, setRefundReason] = useState("");
@@ -345,6 +361,13 @@ export default function PurchaseDetails({ order }) {
                                         <div className="fw-semibold">
                                             {order.fulfillment_method === "pickup" ? (order.pickup_address || "Pickup location will be confirmed by Netmax Trading") : order.delivery_address}
                                         </div>
+                                        {order.fulfillment_method === "pickup" && order.pickup_latitude != null && order.pickup_longitude != null && (
+                                            <a className="d-inline-flex align-items-center gap-2 small text-primary text-decoration-none mt-2"
+                                                href={`https://www.openstreetmap.org/?mlat=${order.pickup_latitude}&mlon=${order.pickup_longitude}#map=18/${order.pickup_latitude}/${order.pickup_longitude}`}
+                                                target="_blank" rel="noreferrer">
+                                                <i className="bi bi-geo-alt-fill" /> View shop pickup location on OpenStreetMap
+                                            </a>
+                                        )}
                                         {order.delivery_latitude != null && order.delivery_longitude != null && (
                                             <a
                                                 className="d-inline-flex align-items-center gap-2 small text-primary text-decoration-none mt-2"
@@ -378,6 +401,32 @@ export default function PurchaseDetails({ order }) {
                                     )}
                                 </div>
                             </div>
+                            {["gcash", "card", "maya"].includes(order.payment_method) &&
+                                ["paid", "partially_refunded"].includes(order.payment_status) && (
+                                <div className="bg-white border rounded-4 p-3 p-md-4 mt-4">
+                                    <h4 className="fw-bold mb-2">PAYMENT RECEIPT</h4>
+                                    <p className="small text-muted">
+                                        You may attach a GCash, Maya, or card-payment screenshot for Netmax Trading to review.
+                                        This is optional; payment verification is based on PayMongo, not the screenshot.
+                                    </p>
+                                    {order.payment_receipt_url && (
+                                        <a className="btn btn-outline-primary btn-sm mb-3"
+                                            href={order.payment_receipt_url} target="_blank" rel="noreferrer">
+                                            View uploaded receipt
+                                        </a>
+                                    )}
+                                    <form onSubmit={uploadReceipt} className="d-flex flex-column gap-2">
+                                        <input type="file" className="form-control"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            onChange={(event) => setReceiptFile(event.target.files?.[0] ?? null)} />
+                                        {pageErrors.receipt && <div className="small text-danger">{pageErrors.receipt}</div>}
+                                        <button type="submit" className="btn btn-primary fw-semibold"
+                                            disabled={!receiptFile || uploadingReceipt}>
+                                            {uploadingReceipt ? "UPLOADING..." : order.payment_receipt_url ? "REPLACE RECEIPT" : "UPLOAD RECEIPT"}
+                                        </button>
+                                    </form>
+                                </div>
+                            )}
                             <div
                                 className="bg-white border rounded-4 p-3 p-md-4 mt-4"
                                 style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.04)" }}

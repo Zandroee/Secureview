@@ -108,6 +108,8 @@ class CheckoutDeliveryLocationTest extends TestCase
                 'customer_phone' => '09171234567',
                 'customer_email' => $customer->email,
                 'delivery_address' => '12 Legacy Street, Barangay San Miguel, Taguig',
+                'delivery_latitude' => 14.5176,
+                'delivery_longitude' => 121.0509,
                 'payment_method' => 'cash',
             ])
             ->assertRedirect(route('checkout'))
@@ -211,6 +213,8 @@ class CheckoutDeliveryLocationTest extends TestCase
                 'customer_email' => $customer->email,
                 'delivery_street_address' => '123 Sample Street, Barangay San Miguel',
                 'delivery_city' => 'Taguig, Metro Manila',
+                'delivery_latitude' => 14.5176,
+                'delivery_longitude' => 121.0509,
                 'payment_method' => 'cash',
                 'notes' => '',
             ])
@@ -358,6 +362,8 @@ class CheckoutDeliveryLocationTest extends TestCase
                     'customer_email' => $customer->email,
                     'delivery_street_address' => '123 Sample Street',
                     'delivery_city' => 'Taguig, Metro Manila',
+                    'delivery_latitude' => 14.5176,
+                    'delivery_longitude' => 121.0509,
                     'payment_method' => 'cash',
                     'notes' => '',
                 ])
@@ -521,6 +527,96 @@ class CheckoutDeliveryLocationTest extends TestCase
         $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
         $this->assertSame('pickup', $order->fulfillment_method);
         $this->assertSame($pickupAddress, $order->pickup_address);
+    }
+
+    public function test_checkout_rejects_delivery_pins_outside_metro_manila(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => now(),
+            'phone' => '09171234567',
+        ]);
+
+        $product = Product::create([
+            'name' => 'NCR Delivery Test Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 1000,
+            'stock_quantity' => 5,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => 1000,
+        ]);
+
+        $this->actingAs($customer)->post(route('checkout.store'), [
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'fulfillment_method' => 'delivery',
+            'delivery_street_address' => '100 Outside Street',
+            'delivery_city' => 'Antipolo, Rizal',
+            'delivery_latitude' => 14.58,
+            'delivery_longitude' => 121.17,
+            'payment_method' => 'cash',
+        ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('delivery_location');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_shop_pickup_remains_available_even_if_delivery_is_outside_ncr(): void
+    {
+        $pickupAddress = '70 Cuasay Street, North Signal, Taguig City';
+        InvoiceSetting::create(['business_name' => 'Netmax Trading', 'pickup_address' => $pickupAddress]);
+        $customer = User::factory()->create(['role' => 'user', 'email_verified_at' => now(), 'phone' => '09171234567']);
+
+        $product = Product::create([
+            'name' => 'NCR Pickup Camera',
+            'category' => 'bullet',
+            'warranty' => '1 year',
+            'price' => 1000,
+            'stock_quantity' => 5,
+            'badge' => null,
+            'image' => null,
+            'specifications' => [],
+            'rating' => 0,
+            'is_featured' => false,
+        ]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create([
+            'purchasable_type' => Product::class,
+            'purchasable_id' => $product->id,
+            'quantity' => 1,
+            'price' => 1000,
+        ]);
+
+        $this->actingAs($customer)->post(route('checkout.store'), [
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'fulfillment_method' => 'pickup',
+            'delivery_latitude' => 14.58,
+            'delivery_longitude' => 121.17,
+            'payment_method' => 'cash',
+        ])
+            ->assertRedirect(route('checkout'))
+            ->assertSessionHasNoErrors();
+
+        $order = Order::query()->where('user_id', $customer->id)->firstOrFail();
+        $this->assertSame('pickup', $order->fulfillment_method);
+        $this->assertSame($pickupAddress, $order->pickup_address);
+        $this->assertNull($order->delivery_latitude);
     }
 
     public function test_shop_pickup_cannot_be_selected_until_admin_configures_a_pickup_address(): void
