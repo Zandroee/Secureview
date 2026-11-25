@@ -108,6 +108,8 @@ class CheckoutDeliveryLocationTest extends TestCase
                 'customer_phone' => '09171234567',
                 'customer_email' => $customer->email,
                 'delivery_address' => '12 Legacy Street, Barangay San Miguel, Taguig',
+                'delivery_latitude' => 14.5176,
+                'delivery_longitude' => 121.0509,
                 'payment_method' => 'cash',
             ])
             ->assertRedirect(route('checkout'))
@@ -211,6 +213,8 @@ class CheckoutDeliveryLocationTest extends TestCase
                 'customer_email' => $customer->email,
                 'delivery_street_address' => '123 Sample Street, Barangay San Miguel',
                 'delivery_city' => 'Taguig, Metro Manila',
+                'delivery_latitude' => 14.5176,
+                'delivery_longitude' => 121.0509,
                 'payment_method' => 'cash',
                 'notes' => '',
             ])
@@ -358,6 +362,8 @@ class CheckoutDeliveryLocationTest extends TestCase
                     'customer_email' => $customer->email,
                     'delivery_street_address' => '123 Sample Street',
                     'delivery_city' => 'Taguig, Metro Manila',
+                    'delivery_latitude' => 14.5176,
+                    'delivery_longitude' => 121.0509,
                     'payment_method' => 'cash',
                     'notes' => '',
                 ])
