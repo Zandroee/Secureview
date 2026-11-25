@@ -30,6 +30,26 @@ const timeSlots = [
     { label: "02:00 PM - 05:00 PM", available: true },
 ];
 
+function manilaDateAndTime(timestamp) {
+    const parts = Object.fromEntries(
+        new Intl.DateTimeFormat("en-US", {
+            timeZone: "Asia/Manila",
+            year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+        }).formatToParts(new Date(timestamp)).map((part) => [part.type, part.value])
+    );
+    return {
+        date: parts.year + "-" + parts.month + "-" + parts.day,
+        minutes: Number(parts.hour) * 60 + Number(parts.minute),
+    };
+}
+
+const slotStartMinutes = {
+    "08:00 AM - 11:00 AM": 480,
+    "11:00 AM - 02:00 PM": 660,
+    "02:00 PM - 05:00 PM": 840,
+};
+
 const sectionTitleStyle = {
     fontFamily: "Outfit, sans-serif",
     fontSize: "0.95rem",
@@ -69,6 +89,11 @@ const formatDateLabel = (value) => {
 
 export default function Service({ customer, item, catalogItems = [], cartItems = [], urgencyFees = { normal: 0, urgent: 0, emergency: 0 }, bookingRequestToken, initialServiceType = "Installation", unavailableDates = [], unavailableTimeSlots = {}, noTechniciansAvailable = false }) {
     const today = new Date();
+    const [currentClock, setCurrentClock] = useState(() => Date.now());
+    useEffect(() => {
+        const id = window.setInterval(() => setCurrentClock(Date.now()), 30000);
+        return () => window.clearInterval(id);
+    }, []);
     const [showDateModal, setShowDateModal] = useState(false);
 
     const [calendarMonth, setCalendarMonth] = useState(
@@ -190,6 +215,15 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
     const isFullyBookedDate = (dateValue) =>
         Boolean(dateValue) && (noTechniciansAvailable || unavailableDates.includes(dateValue));
 
+    const isTimeSlotExpired = (dateValue, timeSlot) => {
+        if (!dateValue) return false;
+        const now = manilaDateAndTime(currentClock);
+        return dateValue < now.date
+            || (dateValue === now.date && now.minutes >= (slotStartMinutes[timeSlot] ?? Infinity));
+    };
+    const noSlotsRemainToday = (dateValue) =>
+        Boolean(dateValue) && timeSlots.every((slot) => isTimeSlotExpired(dateValue, slot.label));
+
     const isTimeSlotFullyBooked = (timeSlot) =>
         Boolean(selectedDate) &&
         (
@@ -198,13 +232,13 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
         );
 
     useEffect(() => {
-        if (selectedDate && isFullyBookedDate(selectedDate)) {
+        if (selectedDate && (isFullyBookedDate(selectedDate) || noSlotsRemainToday(selectedDate))) {
             setSelectedDate("");
             setSelectedTime("");
             setData("preferred_date", "");
             setData("preferred_time", "");
         }
-    }, [selectedDate, unavailableDates, noTechniciansAvailable]);
+    }, [selectedDate, unavailableDates, noTechniciansAvailable, currentClock]);
 
     const openDateModal = () => {
         if (data.preferred_date) {
@@ -217,7 +251,8 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
             );
             if (
                 isFullyBookedDate(data.preferred_date) ||
-                (unavailableTimeSlots[data.preferred_date] ?? []).includes(data.preferred_time)
+                (unavailableTimeSlots[data.preferred_date] ?? []).includes(data.preferred_time) ||
+                isTimeSlotExpired(data.preferred_date, data.preferred_time)
             ) {
                 setSelectedDate(isFullyBookedDate(data.preferred_date) ? "" : data.preferred_date);
                 setSelectedTime("");
@@ -243,7 +278,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
 
         const value = localDateString(date);
 
-        if (isFullyBookedDate(value)) {
+        if (isFullyBookedDate(value) || noSlotsRemainToday(value)) {
             return;
         }
 
@@ -256,7 +291,8 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
             !selectedDate ||
             !selectedTime ||
             isFullyBookedDate(selectedDate) ||
-            isTimeSlotFullyBooked(selectedTime)
+            isTimeSlotFullyBooked(selectedTime) ||
+            isTimeSlotExpired(selectedDate, selectedTime)
         ) {
             return;
         }
@@ -1142,6 +1178,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                 selectedDate === value;
                                             const past = isPastDate(date);
                                             const fullyBooked = isFullyBookedDate(value);
+                                            const expired = noSlotsRemainToday(value);
 
                                             return (
                                                 <button
@@ -1149,10 +1186,12 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                     key={
                                                         value || "empty-" + index
                                                     }
-                                                    disabled={!date || past || fullyBooked}
+                                                    disabled={!date || past || fullyBooked || expired}
                                                     title={
                                                         fullyBooked
                                                             ? "Fully booked"
+                                                            : expired
+                                                            ? "All time slots have started"
                                                             : past
                                                               ? "Past date"
                                                               : date
@@ -1218,6 +1257,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                 selectedTime === slot.label;
                                             const fullyBooked =
                                                 isTimeSlotFullyBooked(slot.label);
+                                             const expired = isTimeSlotExpired(selectedDate, slot.label);
 
                                             return (
                                                 <button
@@ -1226,8 +1266,8 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                                     disabled={
                                                         !selectedDate ||
                                                         !slot.available ||
-                                                        fullyBooked
-                                                    }
+                                                        fullyBooked || expired
+                                                     }
                                                     onClick={() =>
                                                         setSelectedTime(
                                                             slot.label
@@ -1260,12 +1300,14 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
 
                                                     <span
                                                         className={
-                                                            slot.available && !fullyBooked
+                                                            slot.available && !fullyBooked && !expired
                                                                 ? "text-success"
                                                                 : "text-danger"
                                                         }
                                                     >
-                                                        {!slot.available || fullyBooked
+                                                        {expired
+                                                            ? "Time passed"
+                                                            : !slot.available || fullyBooked
                                                             ? "Fully booked"
                                                             : "Available"}
                                                     </span>
@@ -1289,7 +1331,7 @@ export default function Service({ customer, item, catalogItems = [], cartItems =
                                 type="button"
                                 className="btn btn-primary fw-bold px-4"
                                 onClick={confirmDateTime}
-                                disabled={!selectedDate || !selectedTime}
+                                disabled={!selectedDate || !selectedTime || isTimeSlotExpired(selectedDate, selectedTime) || isTimeSlotFullyBooked(selectedTime)}
                             >
                                 Confirm
                             </button>
