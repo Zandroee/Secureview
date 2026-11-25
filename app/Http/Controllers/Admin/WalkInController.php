@@ -16,6 +16,7 @@ use App\Models\Product;
 use App\Models\ServiceBookingFeeSetting;
 use App\Models\User;
 use App\Services\InventoryService;
+use App\Services\BookingSlotCutoff;
 use App\Services\JobNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -221,6 +222,8 @@ class WalkInController extends Controller
             'preferred_payment_method' => ['nullable', 'required_if:service_type,Installation', Rule::in(['cash', 'gcash', 'card', 'maya'])],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        BookingSlotCutoff::assertBookable($validated['preferred_date'], $validated['preferred_time']);
 
         $urgencyFees = ServiceBookingFeeSetting::current()->fees();
         $urgencyFee = match ($validated['urgency']) {
