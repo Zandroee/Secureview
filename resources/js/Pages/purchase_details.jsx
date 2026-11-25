@@ -20,6 +20,7 @@ function statusClass(status) {
 
 export default function PurchaseDetails({ order }) {
     const { props } = usePage();
+    const pageErrors = props.errors ?? {};
     const [paying, setPaying] = useState(false);
     const [receiptFile, setReceiptFile] = useState(null);
     const [uploadingReceipt, setUploadingReceipt] = useState(false);
