@@ -824,6 +824,11 @@ export default function AdminPurchases({
                                     Payment: {viewingOrder.payment_status}. PayMongo verification is authoritative.
                                     A screenshot is supporting evidence, not confirmation of payment.
                                 </div>
+                                {viewingOrder.paymongo_payment_reference && (
+                                    <div className="small text-muted mb-2">
+                                        PayMongo payment ID: <code>{viewingOrder.paymongo_payment_reference}</code>
+                                    </div>
+                                )}
                                 {viewingOrder.payment_receipt_url ? (
                                     <a className="btn btn-outline-primary btn-sm fw-semibold"
                                         href={viewingOrder.payment_receipt_url} target="_blank" rel="noreferrer">
