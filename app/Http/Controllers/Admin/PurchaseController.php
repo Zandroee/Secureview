@@ -459,6 +459,8 @@ class PurchaseController extends Controller
             'shipping_fee' => (float) $order->shipping_fee,
             'total' => (float) $order->total,
             'payment_method' => $order->payment_method,
+            'payment_receipt_url' => $order->payment_receipt_path ? route('purchases.receipt.show', $order) : null,
+            'payment_receipt_uploaded_at' => $order->payment_receipt_uploaded_at?->format('M d, Y h:i A'),
             'payment_status' => $order->payment_status,
             'order_status' => $order->order_status,
             'cancellation_reason' => $order->cancellation_reason,
