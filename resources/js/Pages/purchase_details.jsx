@@ -361,6 +361,13 @@ export default function PurchaseDetails({ order }) {
                                         <div className="fw-semibold">
                                             {order.fulfillment_method === "pickup" ? (order.pickup_address || "Pickup location will be confirmed by Netmax Trading") : order.delivery_address}
                                         </div>
+                                        {order.fulfillment_method === "pickup" && order.pickup_latitude != null && order.pickup_longitude != null && (
+                                            <a className="d-inline-flex align-items-center gap-2 small text-primary text-decoration-none mt-2"
+                                                href={`https://www.openstreetmap.org/?mlat=${order.pickup_latitude}&mlon=${order.pickup_longitude}#map=18/${order.pickup_latitude}/${order.pickup_longitude}`}
+                                                target="_blank" rel="noreferrer">
+                                                <i className="bi bi-geo-alt-fill" /> View shop pickup location on OpenStreetMap
+                                            </a>
+                                        )}
                                         {order.delivery_latitude != null && order.delivery_longitude != null && (
                                             <a
                                                 className="d-inline-flex align-items-center gap-2 small text-primary text-decoration-none mt-2"
