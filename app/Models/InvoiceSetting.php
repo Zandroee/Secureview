@@ -12,6 +12,8 @@ class InvoiceSetting extends Model
         'registered_name',
         'address',
         'pickup_address',
+        'pickup_latitude',
+        'pickup_longitude',
         'email',
         'phone',
         'tin',
@@ -31,6 +33,8 @@ class InvoiceSetting extends Model
     ];
 
     protected $casts = [
+        'pickup_latitude' => 'float',
+        'pickup_longitude' => 'float',
         'first_invoice_number' => 'integer',
         'last_invoice_number' => 'integer',
         'next_invoice_number' => 'integer',
