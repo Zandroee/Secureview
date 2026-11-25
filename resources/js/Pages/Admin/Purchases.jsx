@@ -796,6 +796,11 @@ export default function AdminPurchases({
                                     <div className="fw-semibold">
                                         {viewingOrder.fulfillment_method === "pickup" ? (viewingOrder.pickup_address || "Pickup location not recorded on this order") : viewingOrder.delivery_address}
                                     </div>
+                                    {viewingOrder.fulfillment_method === "pickup" && viewingOrder.pickup_latitude != null && viewingOrder.pickup_longitude != null && (
+                                        <a className="d-inline-flex align-items-center gap-2 small text-primary text-decoration-none mt-2"
+                                            href={`https://www.openstreetmap.org/?mlat=${viewingOrder.pickup_latitude}&mlon=${viewingOrder.pickup_longitude}#map=18/${viewingOrder.pickup_latitude}/${viewingOrder.pickup_longitude}`}
+                                            target="_blank" rel="noreferrer">View shop pickup pin on OpenStreetMap</a>
+                                    )}
                                     {viewingOrder.delivery_latitude != null && viewingOrder.delivery_longitude != null && (
                                         <a
                                             className="d-inline-flex align-items-center gap-2 small text-primary text-decoration-none mt-2"
