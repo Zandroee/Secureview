@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\InquiryController as AdminInquiryController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\ScheduleController as AdminScheduleController;
 use App\Http\Controllers\Admin\PurchaseController as AdminPurchaseController;
+use App\Http\Controllers\Admin\DeliveryTrackingController as AdminDeliveryTrackingController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
 use App\Http\Controllers\Admin\PackageController as AdminPackageController;
@@ -306,6 +307,10 @@ Route::middleware(['auth', 'verified', 'admin', 'inertia.encrypt'])->group(funct
     Route::get('/admin/service-records/{serviceRecord}/invoice', [InvoiceController::class, 'adminService'])->name('admin.service-records.invoice');
     Route::post('/admin/walk-in/sales', [AdminWalkInController::class, 'storeSale'])->name('admin.walk-in.sales.store');
     Route::post('/admin/walk-in/services', [AdminWalkInController::class, 'storeService'])->name('admin.walk-in.services.store');
+
+    Route::patch('/admin/purchases/{order}/delivery-status/{status}', [AdminDeliveryTrackingController::class, 'update'])
+        ->whereIn('status', ['out_for_delivery', 'delivered'])
+        ->name('admin.purchases.delivery-status');
 
     Route::get('/admin/transactions', [AdminTransactionController::class, 'index'])
         ->name('admin.transactions.index');
