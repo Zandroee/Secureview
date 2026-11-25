@@ -296,6 +296,8 @@ class VoucherCheckoutTest extends TestCase
             'customer_email' => $customer->email,
             'delivery_street_address' => '123 Sample Street, Barangay San Miguel',
             'delivery_city' => 'Taguig, Metro Manila',
+            'delivery_latitude' => 14.5176,
+            'delivery_longitude' => 121.0509,
             'payment_method' => 'cash',
             'notes' => '',
         ];
