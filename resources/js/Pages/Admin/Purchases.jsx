@@ -812,6 +812,27 @@ export default function AdminPurchases({
                             </div>
                         </div>
 
+                        {["gcash", "card", "maya"].includes(viewingOrder.payment_method) && (
+                            <div className="border rounded-3 p-3 mb-3">
+                                <div className="fw-bold mb-1">PAYMONGO PAYMENT REVIEW</div>
+                                <div className="small text-muted mb-2">
+                                    Payment: {viewingOrder.payment_status}. PayMongo verification is authoritative.
+                                    A screenshot is supporting evidence, not confirmation of payment.
+                                </div>
+                                {viewingOrder.payment_receipt_url ? (
+                                    <a className="btn btn-outline-primary btn-sm fw-semibold"
+                                        href={viewingOrder.payment_receipt_url} target="_blank" rel="noreferrer">
+                                        VIEW PAYMENT RECEIPT
+                                    </a>
+                                ) : (
+                                    <div className="small text-muted">No customer receipt uploaded.</div>
+                                )}
+                                {viewingOrder.payment_receipt_uploaded_at && (
+                                    <div className="small text-muted mt-1">Uploaded: {viewingOrder.payment_receipt_uploaded_at}</div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="border rounded-3 p-3 mb-3">
                             <div className="d-flex justify-content-between align-items-center mb-3">
                                 <div className="fw-bold">
