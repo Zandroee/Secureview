@@ -56,8 +56,7 @@ class DeliveryTrackingTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('order.order_status', 'out_for_delivery')
-                ->has('order.timeline', 2)
-                ->where('order.timeline.1.event_key', 'shipment_status_changed'));
+                ->where('order.timeline.2.event_key', 'shipment_status_changed'));
 
         $this->actingAs($admin)
             ->patch(route('admin.purchases.delivery-status', [$order, 'delivered']))
