@@ -123,8 +123,12 @@ export default function AdminPurchases({
 
     const runOrderAction = (order, action) => {
         const confirmation = action === "confirm-cash-payment"
-            ? "Confirm that cash has actually been received for order " + order.order_number + "? This will mark the payment as paid and move the order to Processing."
-            : "Confirm that order " + order.order_number + " has been fulfilled? This will mark it Completed. Netmax Trading does not track shipments.";
+            ? "Confirm that cash has actually been received for order " + order.order_number + "? This will mark the payment as paid."
+            : action === "out_for_delivery"
+            ? "Mark order " + order.order_number + " as Out for Delivery? The customer will see this update."
+            : action === "delivered"
+            ? "Confirm order " + order.order_number + " has been delivered? The customer will see this update."
+            : "Confirm order " + order.order_number + " is completed?";
 
         if (!window.confirm(confirmation)) {
             return;
@@ -132,7 +136,9 @@ export default function AdminPurchases({
 
         setUpdatingOrderId(order.id);
         router.patch(
-            "/admin/purchases/" + order.id + "/" + action,
+            action === "out_for_delivery" || action === "delivered"
+                ? "/admin/purchases/" + order.id + "/delivery-status/" + action
+                : "/admin/purchases/" + order.id + "/" + action,
             {},
             {
                 preserveScroll: true,
@@ -275,7 +281,7 @@ export default function AdminPurchases({
                         )}
 
                         <div className="small text-muted mb-3">
-                            Netmax Trading does not currently have shipment tracking. “Delivered” is not offered as an action; it will only appear in the dashboard if a legacy delivered order already exists.
+                            Delivery orders can be marked Out for Delivery, then Delivered. These are updates entered by the shop team, not live GPS tracking.
                         </div>
 
                         <div className="row g-3 mb-3">
@@ -1042,6 +1048,20 @@ export default function AdminPurchases({
                                     </button>
                                 )}
 
+                                {viewingOrder.can_mark_out_for_delivery && (
+                                    <button type="button" className="btn btn-primary fw-bold"
+                                        onClick={() => runOrderAction(viewingOrder, "out_for_delivery")}
+                                        disabled={updatingOrderId === viewingOrder.id || cancellingOrderId === viewingOrder.id}>
+                                        {updatingOrderId === viewingOrder.id ? "UPDATING..." : "MARK OUT FOR DELIVERY"}
+                                    </button>
+                                )}
+                                {viewingOrder.can_mark_delivered && (
+                                    <button type="button" className="btn btn-success fw-bold"
+                                        onClick={() => runOrderAction(viewingOrder, "delivered")}
+                                        disabled={updatingOrderId === viewingOrder.id || cancellingOrderId === viewingOrder.id}>
+                                        {updatingOrderId === viewingOrder.id ? "UPDATING..." : "MARK DELIVERED"}
+                                    </button>
+                                )}
                                 {viewingOrder.can_mark_completed && (
                                     <button
                                         type="button"
