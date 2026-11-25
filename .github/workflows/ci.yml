@@ -109,6 +109,7 @@ jobs:
           cp config/app.php hostinger-release/config/app.php
           cp config/session.php hostinger-release/config/session.php
           cp config/invoice.php hostinger-release/config/invoice.php
+          cp config/metro_manila_coverage.php hostinger-release/config/metro_manila_coverage.php
           cp app/Http/Controllers/Admin/WarrantyController.php hostinger-release/app/Http/Controllers/Admin/WarrantyController.php
           cp app/Http/Controllers/Admin/InventoryAdjustmentController.php hostinger-release/app/Http/Controllers/Admin/InventoryAdjustmentController.php
           cp app/Http/Controllers/Admin/UserController.php hostinger-release/app/Http/Controllers/Admin/UserController.php
@@ -117,6 +118,7 @@ jobs:
           cp app/Http/Controllers/Admin/DashboardController.php hostinger-release/app/Http/Controllers/Admin/DashboardController.php
           cp app/Http/Controllers/Admin/ActivityLogController.php hostinger-release/app/Http/Controllers/Admin/ActivityLogController.php
           cp app/Http/Controllers/Admin/PurchaseController.php hostinger-release/app/Http/Controllers/Admin/PurchaseController.php
+          cp app/Http/Controllers/Admin/DeliveryTrackingController.php hostinger-release/app/Http/Controllers/Admin/DeliveryTrackingController.php
           cp app/Http/Controllers/Admin/RefundController.php hostinger-release/app/Http/Controllers/Admin/RefundController.php
           cp app/Http/Controllers/Admin/WalkInController.php hostinger-release/app/Http/Controllers/Admin/WalkInController.php
           cp app/Http/Controllers/Admin/ServiceInvoiceIssuanceController.php hostinger-release/app/Http/Controllers/Admin/ServiceInvoiceIssuanceController.php
@@ -142,6 +144,7 @@ jobs:
           cp app/Http/Controllers/PackageController.php hostinger-release/app/Http/Controllers/PackageController.php
           cp app/Http/Controllers/TechnicianWorkspaceController.php hostinger-release/app/Http/Controllers/TechnicianWorkspaceController.php
           cp app/Http/Controllers/PurchaseController.php hostinger-release/app/Http/Controllers/PurchaseController.php
+          cp app/Http/Controllers/PaymentReceiptController.php hostinger-release/app/Http/Controllers/PaymentReceiptController.php
           cp app/Http/Controllers/RefundRequestController.php hostinger-release/app/Http/Controllers/RefundRequestController.php
           cp app/Http/Controllers/ReviewController.php hostinger-release/app/Http/Controllers/ReviewController.php
           cp app/Http/Controllers/ReviewController.php hostinger-release/app/Http/Controllers/ReviewController.php
@@ -189,6 +192,8 @@ jobs:
           cp app/Http/Middleware/HandleInertiaRequests.php hostinger-release/app/Http/Middleware/HandleInertiaRequests.php
           cp app/Services/SingleLoginSessionService.php hostinger-release/app/Services/SingleLoginSessionService.php
           cp app/Services/InventoryService.php hostinger-release/app/Services/InventoryService.php
+          cp app/Services/BookingSlotCutoff.php hostinger-release/app/Services/BookingSlotCutoff.php
+          cp app/Services/MetroManilaCoverage.php hostinger-release/app/Services/MetroManilaCoverage.php
           cp app/Services/InvoiceDocumentService.php hostinger-release/app/Services/InvoiceDocumentService.php
           cp app/Services/VoucherService.php hostinger-release/app/Services/VoucherService.php
           cp app/Services/PayMongoLineItemBuilder.php hostinger-release/app/Services/PayMongoLineItemBuilder.php
@@ -213,6 +218,8 @@ jobs:
           cp database/migrations/2026_11_08_000003_add_walk_in_payment_preference_to_inquiries.php hostinger-release/database/migrations/2026_11_08_000003_add_walk_in_payment_preference_to_inquiries.php
           cp database/migrations/2026_11_08_000004_add_fulfillment_method_to_orders_table.php hostinger-release/database/migrations/2026_11_08_000004_add_fulfillment_method_to_orders_table.php
           cp database/migrations/2026_11_08_000005_add_shop_pickup_address_to_settings_and_orders.php hostinger-release/database/migrations/2026_11_08_000005_add_shop_pickup_address_to_settings_and_orders.php
+          cp database/migrations/2026_11_25_000001_add_payment_receipts_to_orders.php hostinger-release/database/migrations/2026_11_25_000001_add_payment_receipts_to_orders.php
+          cp database/migrations/2026_11_25_000002_add_shop_pickup_coordinates.php hostinger-release/database/migrations/2026_11_25_000002_add_shop_pickup_coordinates.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp database/migrations/2026_10_24_220000_add_images_to_reviews_table.php hostinger-release/database/migrations/2026_10_24_220000_add_images_to_reviews_table.php
           cp bootstrap/app.php hostinger-release/bootstrap/app.php
