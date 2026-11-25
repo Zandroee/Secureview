@@ -10,6 +10,7 @@ use App\Models\Inquiry;
 use App\Models\ServiceBookingFeeSetting;
 use App\Models\User;
 use App\Services\AdminActivityLogger;
+use App\Services\BookingSlotCutoff;
 use App\Services\JobNotificationService;
 use App\Services\RefundService;
 use Illuminate\Http\Request;
@@ -422,6 +423,7 @@ class InquiryController extends Controller
 
         $bookingDate = $validated['preferred_date'];
         $bookingTime = $validated['preferred_time'];
+        BookingSlotCutoff::assertBookable($bookingDate, $bookingTime);
 
         if (BlockedBookingDate::query()->whereDate('booking_date', $bookingDate)->exists()) {
             return back()->withErrors([
