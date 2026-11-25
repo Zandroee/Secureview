@@ -35,6 +35,8 @@ class Order extends Model
         'customer_email',
         'fulfillment_method',
         'pickup_address',
+        'pickup_latitude',
+        'pickup_longitude',
         'delivery_address',
         'delivery_address_details',
         'delivery_city',
@@ -55,6 +57,8 @@ class Order extends Model
         'paid_at' => 'datetime',
         'payment_receipt_uploaded_at' => 'datetime',
         'stock_deducted_at' => 'datetime',
+        'pickup_latitude' => 'float',
+        'pickup_longitude' => 'float',
         'delivery_latitude' => 'float',
         'delivery_longitude' => 'float',
     ];
