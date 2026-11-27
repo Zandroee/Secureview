@@ -831,6 +831,9 @@ class TechnicianWorkspaceController extends Controller
 
         if ($includePaymentStatus) {
             $data['payment_status'] = $inquiry->pendingCheckout?->order?->payment_status ?? 'not_applicable';
+            // Use the same payment gate as the status endpoint. A confirmed
+            // booking does not mean the linked fee/order has been paid.
+            $data['payment_blocked'] = $this->hasPendingServicePayment($inquiry);
         }
 
         if ($includeCustomerDetails) {
