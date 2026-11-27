@@ -13,6 +13,8 @@ use App\Services\OrderCancellationService;
 use App\Services\PendingInquiryCheckoutService;
 use App\Services\RefundService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
 class PurchaseController extends Controller
@@ -138,7 +140,29 @@ class PurchaseController extends Controller
             ->map(fn (Order $order) => $this->formatOrder($order, $invoiceProfileReady))
             ->values();
 
+        $expiryMonitoring = null;
+        try {
+            $path = 'system/unpaid-order-expiry-last-run.json';
+            if (Storage::disk('local')->exists($path)) {
+                $report = json_decode(Storage::disk('local')->get($path), true);
+                if (is_array($report) && !empty($report['checked_at'])) {
+                    $checkedAt = Carbon::parse($report['checked_at']);
+                    $expiryMonitoring = [
+                        'checked_at' => $checkedAt->setTimezone('Asia/Manila')->format('M d, Y h:i A'),
+                        'stale' => $checkedAt->lt(now()->subMinutes(150)),
+                        'attempted' => (int) ($report['attempted'] ?? 0),
+                        'cancelled' => (int) ($report['cancelled'] ?? 0),
+                        'deferred' => (int) ($report['deferred'] ?? 0),
+                        'remaining_overdue' => (int) ($report['remaining_overdue'] ?? 0),
+                    ];
+                }
+            }
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+
         return Inertia::render('Admin/Purchases', [
+            'expiryMonitoring' => $expiryMonitoring,
             'orders' => $orders,
             'attentionOrders' => $attentionOrders,
             'filters' => [
