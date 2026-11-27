@@ -93,7 +93,9 @@ Route::get('/login', function () {
 })->name('login');
 
 Route::get('/signup', function () {
-    return Inertia::render('signup');
+    return Inertia::render('signup', [
+        'allowedEmailDomains' => config('registration.allowed_email_domains', []),
+    ]);
 })->name('signup');
 
 Route::post('/login', [AuthController::class, 'authenticate'])->middleware('throttle:login')->name('login.authenticate');
