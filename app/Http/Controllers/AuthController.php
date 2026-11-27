@@ -19,8 +19,8 @@ class AuthController extends Controller
     public function register(Request $request, EmailVerificationCodeService $verificationCodes)
     {
         $validated = $request->validate([
-            'firstName' => ['required', 'string', 'max:50'],
-            'lastName' => ['required', 'string', 'max:50'],
+            'firstName' => ['required', 'string', 'max:50', 'regex:/^\p{L}[\p{L}\p{M}]*(?: +\p{L}[\p{L}\p{M}]*)*$/u'],
+            'lastName' => ['required', 'string', 'max:50', 'regex:/^\p{L}[\p{L}\p{M}]*(?: +\p{L}[\p{L}\p{M}]*)*$/u'],
             'phone' => [
                 'required',
                 'string',
@@ -33,6 +33,17 @@ class AuthController extends Controller
                 'email',
                 'max:255',
                 'unique:users,email',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (!is_string($value)) {
+                        return;
+                    }
+
+                    $at = strrpos($value, '@');
+                    $domain = $at === false ? '' : strtolower(substr($value, $at + 1));
+                    if (!in_array($domain, config('registration.allowed_email_domains', []), true)) {
+                        $fail('Use an email address from a supported provider (Gmail, Yahoo, Outlook, iCloud, Proton Mail, etc.). Temporary or disposable email domains are not accepted.');
+                    }
+                },
             ],
             'password' => [
                 'required',
@@ -48,11 +59,13 @@ class AuthController extends Controller
         ], [
             'phone.unique' => 'This phone number is already registered.',
             'email.unique' => 'This email address is already registered.',
+            'firstName.regex' => 'First name may contain letters and spaces only. Numbers and special characters are not allowed.',
+            'lastName.regex' => 'Last name may contain letters and spaces only. Numbers and special characters are not allowed.',
             'terms.accepted' => 'You must accept the Terms and Conditions.',
         ]);
 
         $user = User::create([
-            'name' => trim($validated['firstName'] . ' ' . $validated['lastName']),
+            'name' => trim(preg_replace('/ +/u', ' ', $validated['firstName'])) . ' ' . trim(preg_replace('/ +/u', ' ', $validated['lastName'])),
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'password' => $validated['password'],

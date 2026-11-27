@@ -110,6 +110,7 @@ jobs:
           cp config/session.php hostinger-release/config/session.php
           cp config/invoice.php hostinger-release/config/invoice.php
           cp config/metro_manila_coverage.php hostinger-release/config/metro_manila_coverage.php
+          cp config/registration.php hostinger-release/config/registration.php
           cp app/Http/Controllers/Admin/WarrantyController.php hostinger-release/app/Http/Controllers/Admin/WarrantyController.php
           cp app/Http/Controllers/Admin/InventoryAdjustmentController.php hostinger-release/app/Http/Controllers/Admin/InventoryAdjustmentController.php
           cp app/Http/Controllers/Admin/UserController.php hostinger-release/app/Http/Controllers/Admin/UserController.php

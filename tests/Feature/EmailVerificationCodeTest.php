@@ -23,22 +23,22 @@ class EmailVerificationCodeTest extends TestCase
             'firstName' => 'Test',
             'lastName' => 'Customer',
             'phone' => '09171234567',
-            'email' => 'test.customer@example.com',
+            'email' => 'test.customer@gmail.com',
             'password' => 'SecurePassword1!',
             'password_confirmation' => 'SecurePassword1!',
             'terms' => '1',
         ])
             ->assertRedirect(route('verification.notice'))
-            ->assertSessionHas('verificationEmail', 'test.customer@example.com')
+            ->assertSessionHas('verificationEmail', 'test.customer@gmail.com')
             ->assertSessionHas('status');
 
-        $user = User::where('email', 'test.customer@example.com')->firstOrFail();
+        $user = User::where('email', 'test.customer@gmail.com')->firstOrFail();
 
         $this->get(route('verification.notice'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('verify-email')
-                ->where('email', 'test.customer@example.com')
+                ->where('email', 'test.customer@gmail.com')
             );
 
         Mail::assertSent(EmailVerificationCodeMail::class, fn (EmailVerificationCodeMail $mail) =>
@@ -61,14 +61,14 @@ class EmailVerificationCodeTest extends TestCase
             'firstName' => 'Newsletter',
             'lastName' => 'Customer',
             'phone' => '09181234567',
-            'email' => 'newsletter.customer@example.com',
+            'email' => 'newsletter.customer@yahoo.com',
             'password' => 'SecurePassword1!',
             'password_confirmation' => 'SecurePassword1!',
             'terms' => true,
             'newsletter_opt_in' => true,
         ])->assertRedirect(route('verification.notice'));
 
-        $user = User::where('email', 'newsletter.customer@example.com')->firstOrFail();
+        $user = User::where('email', 'newsletter.customer@yahoo.com')->firstOrFail();
 
         $this->assertTrue($user->marketing_emails_enabled);
         $this->assertNotNull($user->marketing_emails_consented_at);
