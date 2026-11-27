@@ -4,6 +4,8 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Schedule;
 use App\Mail\PendingPaymentReminderMail;
 use App\Models\CustomerNotification;
@@ -133,12 +135,24 @@ Schedule::command('secureview:send-unpaid-order-payment-reminders')
     ->name('send-unpaid-order-payment-reminders')
     ->withoutOverlapping();
 
-Artisan::command('secureview:cancel-expired-unpaid-orders', function (
+Artisan::command('secureview:cancel-expired-unpaid-orders {--dry-run : List eligible orders without making changes}', function (
     OrderCancellationService $cancellation,
     InventoryService $inventory
 ) {
     $hours = max(1, (int) config('services.secureview.unpaid_order_expiry_hours', 48));
     $cutoff = now()->subHours($hours);
+    if ($this->option('dry-run')) {
+        $eligible = Order::query()->whereNull('paid_at')
+            ->whereIn('payment_status', ['pending', 'failed'])
+            ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed'])
+            ->where('created_at', '<=', $cutoff);
+        $count = (clone $eligible)->count();
+        $providerSessions = (clone $eligible)->whereNotNull('paymongo_checkout_session_id')->count();
+        $this->info("Dry run: {$count} overdue unpaid orders, {$providerSessions} with provider checkout sessions needing verification. Nothing was changed.");
+        return;
+    }
+
+    $attempted = 0;
     $cancelled = 0;
     $deferred = 0;
 
@@ -148,8 +162,9 @@ Artisan::command('secureview:cancel-expired-unpaid-orders', function (
         ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed'])
         ->where('created_at', '<=', $cutoff)
         ->orderBy('id')
-        ->chunkById(100, function ($orders) use ($cancellation, $inventory, $hours, &$cancelled, &$deferred) {
+        ->chunkById(100, function ($orders) use ($cancellation, $inventory, $hours, &$attempted, &$cancelled, &$deferred) {
             foreach ($orders as $order) {
+                $attempted++;
                 $previousStatus = $order->order_status;
                 $previousPaymentStatus = $order->payment_status;
                 $reason = "Automatically cancelled after {$hours} hours without confirmed payment.";
@@ -192,9 +207,13 @@ Artisan::command('secureview:cancel-expired-unpaid-orders', function (
                     // Payment providers may still be processing the checkout. Leave the
                     // order untouched and retry on the next scheduled run.
                     report($exception);
+                    $reasonDetail = $exception instanceof ValidationException
+                        ? implode('; ', array_merge(...array_values($exception->errors())))
+                        : 'An unexpected error occurred. Inspect the Laravel exception log.';
                     logger()->warning('SecureView deferred expiry of unpaid order.', [
                         'order_id' => $order->id,
                         'order_number' => $order->order_number,
+                        'reason' => $reasonDetail,
                     ]);
                     $deferred++;
                 }
