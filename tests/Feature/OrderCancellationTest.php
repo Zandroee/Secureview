@@ -462,7 +462,7 @@ class OrderCancellationTest extends TestCase
         $ageOrder($paidOrder, 72);
 
         $this->artisan('secureview:cancel-expired-unpaid-orders')
-            ->expectsOutput('Expired unpaid orders: 2 cancelled; 0 deferred. Deadline: 48 hours.')
+            ->expectsOutput('Expired unpaid orders: 2 cancelled; 0 deferred; 0 still overdue. Deadline: 48 hours.')
             ->assertExitCode(0);
 
         $this->assertDatabaseHas('orders', [
