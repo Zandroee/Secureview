@@ -366,6 +366,82 @@ class TechnicianWorkspaceTest extends TestCase
         ]);
     }
 
+    public function test_technician_sees_pending_payment_block_for_confirmed_job_until_admin_receives_cash(): void
+    {
+        $customer = User::factory()->create(['role' => 'user']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $technician = User::factory()->create(['role' => 'technician']);
+        $inquiry = $this->makeInquiry($customer, today()->addDays(3)->toDateString(), 'confirmed');
+        $inquiry->update([
+            'technician_id' => $technician->id,
+            'urgency' => 'emergency',
+            'urgency_fee' => 2000,
+        ]);
+
+        $order = Order::create([
+            'user_id' => $customer->id,
+            'order_number' => 'SV-FEE-' . strtoupper(bin2hex(random_bytes(3))),
+            'subtotal' => 0,
+            'shipping_fee' => 0,
+            'service_priority_fee' => 2000,
+            'total' => 2000,
+            'payment_method' => 'cash',
+            'payment_status' => 'pending',
+            'order_status' => 'pending',
+            'customer_name' => $customer->name,
+            'customer_phone' => '09171234567',
+            'customer_email' => $customer->email,
+            'delivery_address' => 'Taguig',
+        ]);
+
+        PendingInquiryCheckout::create([
+            'user_id' => $customer->id,
+            'order_id' => $order->id,
+            'inquiry_id' => $inquiry->id,
+            'payload' => [],
+            'status' => 'pending_payment',
+        ]);
+
+        $this->actingAs($technician)->get(route('technician.services'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('jobs.0.id', $inquiry->id)
+                ->where('jobs.0.status', 'confirmed')
+                ->where('jobs.0.payment_status', 'pending')
+                ->where('jobs.0.payment_blocked', true)
+                ->missing('jobs.0.payment_method'));
+
+        $this->actingAs($technician)
+            ->patch(route('technician.jobs.status', $inquiry), ['status' => 'in_progress'])
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame('confirmed', $inquiry->fresh()->status);
+
+        // Only an admin can record cash payment after actually receiving it.
+        $this->actingAs($admin)
+            ->patch(route('admin.purchases.confirm-cash-payment', $order))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('paid', $order->fresh()->payment_status);
+
+        $this->actingAs($technician)->get(route('technician.services'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Technician/Workspace')
+                ->where('jobs.0.id', $inquiry->id)
+                ->where('jobs.0.payment_status', 'paid')
+                ->where('jobs.0.payment_blocked', false));
+
+        $this->actingAs($technician)
+            ->patch(route('technician.jobs.status', $inquiry), ['status' => 'in_progress'])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('in_progress', $inquiry->fresh()->status);
+    }
+
     public function test_legacy_technician_id_assignment_is_visible_and_actionable_without_a_pivot_row(): void
     {
         $customer = User::factory()->create(['role' => 'user']);
