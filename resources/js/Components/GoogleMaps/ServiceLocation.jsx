@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { isWithinMetroManila } from "../../utils/metroManilaCoverage";
 
 const LEAFLET_CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const LEAFLET_JS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
@@ -106,11 +107,13 @@ export default function ServiceLocationPicker({
     streetAddress = "", city = "", latitude = null, longitude = null, placeId = "", apiErrors = {}, onChange,
     locationType = "service",
     coveragePolygons = [],
+    onCoverageChange,
 }) {
     const mapHostRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const markerRef = useRef(null);
     const onChangeRef = useRef(onChange);
+    const onCoverageChangeRef = useRef(onCoverageChange);
     const addressRef = useRef({ streetAddress, city });
     const lastAddressQueryRef = useRef(makeSearchQuery(streetAddress, city));
     const searchedAddressRef = useRef("");
@@ -126,8 +129,43 @@ export default function ServiceLocationPicker({
     );
 
     onChangeRef.current = onChange;
+    onCoverageChangeRef.current = onCoverageChange;
     addressRef.current = { streetAddress, city };
     const hasSearchAddress = Boolean(streetAddress.trim() && (city.trim() || locationType === "pickup"));
+    const pinOutsideCoverage = locationType === "delivery" && pin !== null &&
+        !isWithinMetroManila(pin.lat, pin.lng, coveragePolygons);
+    const unconfirmedDeliveryPin = locationType === "delivery" && pin !== null &&
+        !pin.manuallyPinned && !pinOutsideCoverage;
+
+    const saveSelectedPosition = (position, source = "manual") => {
+        pendingSearchPositionRef.current = null;
+        setPin({ ...position, manuallyPinned: true, source });
+        setLocationMessage(source === "confirmed-search"
+            ? "This location has been confirmed for delivery. Move the pin if the entrance is elsewhere."
+            : "Entrance pin saved. This location will be used for your " + locationNoun + ".");
+        onChangeRef.current?.({
+            service_latitude: String(position.lat),
+            service_longitude: String(position.lng),
+            google_place_id: "",
+        });
+    };
+
+    const confirmLocatedPin = () => {
+        if (!unconfirmedDeliveryPin || !pin) return;
+        saveSelectedPosition({ lat: pin.lat, lng: pin.lng }, "confirmed-search");
+    };
+
+    useEffect(() => {
+        if (locationType !== "delivery") return;
+        const status = pin === null
+            ? "unselected"
+            : !isWithinMetroManila(pin.lat, pin.lng, coveragePolygons)
+                ? "outside"
+                : pin.manuallyPinned
+                    ? "confirmed"
+                    : "needs_confirmation";
+        onCoverageChangeRef.current?.(status);
+    }, [pin, locationType, coveragePolygons]);
 
     useEffect(() => {
         let cancelled = false;
@@ -164,39 +202,24 @@ export default function ServiceLocationPicker({
             if (initialPosition) marker.addTo(map);
 
             marker.on("dragend", () => {
-                const position = positionFromLeaflet(marker.getLatLng());
-                pendingSearchPositionRef.current = null;
-                setPin({ ...position, manuallyPinned: true });
-                setLocationMessage("Exact entrance saved. These coordinates will be included with your " + locationNoun + ".");
-                onChangeRef.current?.({
-                    service_latitude: String(position.lat),
-                    service_longitude: String(position.lng),
-                    google_place_id: "",
-                });
+                saveSelectedPosition(positionFromLeaflet(marker.getLatLng()));
             });
 
             map.on("click", (event) => {
                 const position = positionFromLeaflet(event.latlng);
-                pendingSearchPositionRef.current = null;
                 showMarker(map, marker, position);
-                setPin({ ...position, manuallyPinned: true });
-                setLocationMessage("Exact entrance saved. These coordinates will be included with your " + locationNoun + ".");
-                onChangeRef.current?.({
-                    service_latitude: String(position.lat),
-                    service_longitude: String(position.lng),
-                    google_place_id: "",
-                });
+                saveSelectedPosition(position);
             });
 
             mapInstanceRef.current = map;
             markerRef.current = marker;
 
             if (savedPosition) {
-                setPin({ ...savedPosition, manuallyPinned: true });
+                setPin({ ...savedPosition, manuallyPinned: true, source: "saved" });
                 setLocationMessage("Saved entrance pin. Drag it or click the map to refine the location.");
             } else if (pendingSearchPositionRef.current) {
-                setPin({ ...pendingSearchPositionRef.current, manuallyPinned: false });
-                setLocationMessage("Address found approximately. Drag the marker or click the exact entrance to save its coordinates.");
+                setPin({ ...pendingSearchPositionRef.current, manuallyPinned: false, source: "search" });
+                setLocationMessage("Address located approximately. Confirm the result or move the pin to your exact entrance.");
             }
 
             setMapReady(true);
@@ -223,7 +246,9 @@ export default function ServiceLocationPicker({
         if (savedPosition) {
             pendingSearchPositionRef.current = null;
             moveMarkerAndMap(mapInstanceRef.current, markerRef.current, savedPosition);
-            setPin({ ...savedPosition, manuallyPinned: true });
+            setPin((current) => current?.manuallyPinned &&
+                current.lat === savedPosition.lat && current.lng === savedPosition.lng
+                ? current : { ...savedPosition, manuallyPinned: true, source: "saved" });
             setLocationMessage("Saved entrance pin. Drag it or click the map to refine the location.");
         } else if (!placeId && !pendingSearchPositionRef.current) {
             markerRef.current.remove();
@@ -262,6 +287,17 @@ export default function ServiceLocationPicker({
             return;
         }
 
+        // Never retain coordinates from a previous address when a new map search starts.
+        // Otherwise checkout may accidentally submit the earlier, valid location.
+        pendingSearchPositionRef.current = null;
+        searchedAddressRef.current = "";
+        markerRef.current?.remove();
+        setPin(null);
+        onChangeRef.current?.({
+            service_latitude: "",
+            service_longitude: "",
+            google_place_id: "",
+        });
         setSearching(true);
         setMapError("");
 
@@ -274,6 +310,7 @@ export default function ServiceLocationPicker({
             );
             if (!response.ok) throw new Error("Address search unavailable");
             const results = await response.json();
+            if (makeSearchQuery(addressRef.current.streetAddress, addressRef.current.city) !== query) return;
             const result = results[0];
 
             if (!result) {
@@ -282,6 +319,9 @@ export default function ServiceLocationPicker({
             }
 
             const position = { lat: Number(result.lat), lng: Number(result.lon) };
+            if (!Number.isFinite(position.lat) || !Number.isFinite(position.lng)) {
+                throw new Error("Invalid map location");
+            }
             searchedAddressRef.current = query;
             pendingSearchPositionRef.current = position;
 
@@ -289,8 +329,11 @@ export default function ServiceLocationPicker({
                 moveMarkerAndMap(mapInstanceRef.current, markerRef.current, position, 17);
             }
 
-            setPin({ ...position, manuallyPinned: false });
-            setLocationMessage("Address found approximately. Drag the marker or click the exact entrance to save its coordinates.");
+            setPin({ ...position, manuallyPinned: false, source: "search" });
+            setLocationMessage(locationType === "delivery" &&
+                !isWithinMetroManila(position.lat, position.lng, coveragePolygons)
+                ? "The map found this address outside Metro Manila. We cannot deliver here. Select Shop Pickup or choose an address inside the service area."
+                : "Address found within Metro Manila approximately. Click USE THIS LOCATION FOR DELIVERY to confirm, or move the pin to your exact entrance.");
         } catch {
             setMapError("Address search is temporarily unavailable. You can still click the map or drag the pin manually.");
             setLocationMessage("Address search is unavailable. You can still place the pin manually.");
@@ -350,24 +393,38 @@ export default function ServiceLocationPicker({
             </div>
 
             <div className={"d-flex align-items-start gap-2 rounded-3 border p-2 mt-2 " + (
-                pin?.manuallyPinned
-                    ? "bg-success-subtle border-success-subtle"
-                    : pin
-                        ? "bg-primary-subtle border-primary-subtle"
-                        : "bg-light"
+                pinOutsideCoverage
+                    ? "bg-danger-subtle border-danger"
+                    : pin?.manuallyPinned
+                        ? "bg-success-subtle border-success-subtle"
+                        : pin
+                            ? "bg-warning-subtle border-warning-subtle"
+                            : "bg-light"
             )}>
                 <i className={"bi mt-1 " + (
-                    pin?.manuallyPinned
-                        ? "bi-check-circle-fill text-success"
-                        : pin
-                            ? "bi-info-circle-fill text-primary"
-                            : "bi-cursor-fill text-secondary"
+                    pinOutsideCoverage
+                        ? "bi-x-circle-fill text-danger"
+                        : pin?.manuallyPinned
+                            ? "bi-check-circle-fill text-success"
+                            : pin
+                                ? "bi-info-circle-fill text-warning"
+                                : "bi-cursor-fill text-secondary"
                 )} />
                 <div className="small">
                     <div className="fw-semibold">
-                        {pin?.manuallyPinned ? "Exact entrance pin saved" : pin ? "Approximate address located" : mapReady ? "Pin your " + locationNoun + " entrance" : "Loading map"}
+                        {pinOutsideCoverage
+                            ? "OUTSIDE METRO MANILA — DELIVERY UNAVAILABLE"
+                            : pin?.manuallyPinned
+                                ? locationType === "delivery" ? "Delivery location confirmed — within Metro Manila" : "Entrance pin saved"
+                                : pin
+                                    ? locationType === "delivery" ? "Metro Manila location found — confirmation needed" : "Approximate address located"
+                                    : mapReady ? "Pin your " + locationNoun + " entrance" : "Loading map"}
                     </div>
-                    <div>{locationMessage}</div>
+                    <div>{pinOutsideCoverage
+                        ? "The selected map point is outside the Metro Manila delivery area. Please choose another address within Metro Manila or select Shop Pickup. No delivery order can be placed for this location."
+                        : unconfirmedDeliveryPin
+                            ? "The map located an approximate address. Confirm this position below, or click/drag the marker to set your delivery entrance. The Place Order button will unlock after confirmation."
+                            : locationMessage}</div>
                     {pin?.manuallyPinned && (
                         <div className="text-muted mt-1">
                             Coordinates: {pin.lat.toFixed(6)}, {pin.lng.toFixed(6)}
@@ -376,9 +433,26 @@ export default function ServiceLocationPicker({
                 </div>
             </div>
 
+            {unconfirmedDeliveryPin && (
+                <button
+                    type="button"
+                    className="btn btn-success fw-semibold mt-3 w-100"
+                    onClick={confirmLocatedPin}
+                >
+                    <i className="bi bi-geo-alt-fill me-2" />
+                    USE THIS LOCATION FOR DELIVERY
+                </button>
+            )}
+
+            {locationType === "delivery" && !pin && mapReady && (
+                <div className="alert alert-warning small py-2 mt-2 mb-0" role="status">
+                    Choose your address using Find address on map, then confirm the located pin or click your exact entrance on the map to enable checkout.
+                </div>
+            )}
+
             <div className="small text-muted mt-2">
                 <i className="bi bi-shield-check me-1" />
-                A search result is approximate. Your pin is saved only after you click the map or drag the marker. Map data © OpenStreetMap contributors.
+                A search result is approximate. Confirm the location or click/drag the map marker to save the entrance. Map data © OpenStreetMap contributors.
             </div>
 
             {apiErrors.service_location && <div className="small text-danger mt-1">{apiErrors.service_location}</div>}
