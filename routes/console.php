@@ -220,7 +220,32 @@ Artisan::command('secureview:cancel-expired-unpaid-orders {--dry-run : List elig
             }
         });
 
-    $this->info("Expired unpaid orders: {$cancelled} cancelled; {$deferred} deferred. Deadline: {$hours} hours.");
+    $remaining = Order::query()
+        ->whereNull('paid_at')
+        ->whereIn('payment_status', ['pending', 'failed'])
+        ->whereIn('order_status', ['pending', 'awaiting_payment', 'payment_failed'])
+        ->where('created_at', '<=', $cutoff)
+        ->count();
+
+    // This report contains counts and timestamps only, not customer or payment data.
+    // It is updated by both manual and scheduled runs; it does not prove cron is configured.
+    try {
+        $written = Storage::disk('local')->put('system/unpaid-order-expiry-last-run.json', json_encode([
+            'checked_at' => now('Asia/Manila')->toIso8601String(),
+            'expiry_hours' => $hours,
+            'attempted' => $attempted,
+            'cancelled' => $cancelled,
+            'deferred' => $deferred,
+            'remaining_overdue' => $remaining,
+        ], JSON_THROW_ON_ERROR));
+        if (!$written) {
+            logger()->warning('Unpaid-order expiry monitoring report could not be saved.');
+        }
+    } catch (\Throwable $exception) {
+        report($exception);
+    }
+
+    $this->info("Expired unpaid orders: {$cancelled} cancelled; {$deferred} deferred; {$remaining} still overdue. Deadline: {$hours} hours.");
 })->purpose('Automatically cancel unpaid orders 48 hours after placement if payment is still unconfirmed');
 
 Schedule::command('secureview:cancel-expired-unpaid-orders')
