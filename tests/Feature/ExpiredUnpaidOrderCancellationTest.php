@@ -10,6 +10,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ExpiredUnpaidOrderCancellationTest extends TestCase
@@ -52,6 +54,64 @@ class ExpiredUnpaidOrderCancellationTest extends TestCase
     }
 
 
+    public function test_expiry_dry_run_reports_eligible_orders_without_modifying_records(): void
+    {
+        Storage::fake('local');
+        config(['services.secureview.unpaid_order_expiry_hours' => 48]);
+        $customer = User::factory()->create(['role' => 'user']);
+        $oldOrder = $this->makeOrder($customer, 'SV-DRYRUN-ORDER', 'pending', 'awaiting_payment');
+        DB::table('orders')->where('id', $oldOrder->id)->update(['created_at' => now()->subHours(50)]);
+
+        Artisan::call('secureview:cancel-expired-unpaid-orders', ['--dry-run' => true]);
+        $this->assertStringContainsString('Dry run: 1 overdue unpaid orders', Artisan::output());
+        $this->assertDatabaseHas('orders', ['id' => $oldOrder->id, 'payment_status' => 'pending', 'order_status' => 'awaiting_payment']);
+        Storage::disk('local')->assertMissing('system/unpaid-order-expiry-last-run.json');
+    }
+
+    public function test_expiry_run_records_a_report_for_administrators(): void
+    {
+        Storage::fake('local');
+        config(['services.secureview.unpaid_order_expiry_hours' => 48]);
+        $customer = User::factory()->create(['role' => 'user']);
+        $oldOrder = $this->makeOrder($customer, 'SV-REPORT-ORDER', 'pending', 'pending');
+        DB::table('orders')->where('id', $oldOrder->id)->update(['created_at' => now()->subHours(49)]);
+
+        Artisan::call('secureview:cancel-expired-unpaid-orders');
+
+        Storage::disk('local')->assertExists('system/unpaid-order-expiry-last-run.json');
+        $report = json_decode(Storage::disk('local')->get('system/unpaid-order-expiry-last-run.json'), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(1, $report['attempted']);
+        $this->assertSame(1, $report['cancelled']);
+        $this->assertSame(0, $report['deferred']);
+        $this->assertSame(0, $report['remaining_overdue']);
+        $this->assertNotEmpty($report['checked_at']);
+        $this->assertDatabaseHas('orders', ['id' => $oldOrder->id, 'order_status' => 'cancelled']);
+    }
+
+    public function test_online_order_with_processing_payment_remains_untouched_when_paymongo_refuses_expiry(): void
+    {
+        Storage::fake('local');
+        config(['services.paymongo.secret_key' => 'sk_test_expiry', 'services.paymongo.base_url' => 'https://api.paymongo.com']);
+        Http::fake([
+            'https://api.paymongo.com/v1/checkout_sessions/cs_processing_test/expire' => Http::response(['errors' => [['detail' => 'Payment processing']]], 400),
+            'https://api.paymongo.com/v1/checkout_sessions/cs_processing_test' => Http::response([
+                'data' => ['attributes' => ['status' => 'active', 'payments' => [['id' => 'pay_processing', 'attributes' => ['status' => 'processing']]]]],
+            ], 200),
+        ]);
+        $customer = User::factory()->create(['role' => 'user']);
+        $order = $this->makeOrder($customer, 'SV-VERIFY-ORDER', 'pending', 'awaiting_payment');
+        $order->update(['payment_method' => 'gcash', 'paymongo_checkout_session_id' => 'cs_processing_test']);
+        DB::table('orders')->where('id', $order->id)->update(['created_at' => now()->subHours(50)]);
+
+        Artisan::call('secureview:cancel-expired-unpaid-orders');
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'payment_status' => 'pending', 'order_status' => 'awaiting_payment']);
+        $report = json_decode(Storage::disk('local')->get('system/unpaid-order-expiry-last-run.json'), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame(1, $report['attempted']);
+        $this->assertSame(0, $report['cancelled']);
+        $this->assertSame(1, $report['deferred']);
+        $this->assertSame(1, $report['remaining_overdue']);
+    }
     public function test_scheduled_payment_reminder_emails_only_eligible_unpaid_orders_once(): void
     {
         config([

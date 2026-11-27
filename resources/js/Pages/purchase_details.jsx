@@ -2,6 +2,7 @@ import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import { Link, router, usePage } from "@inertiajs/react";
 import { useState } from "react";
+import DeliveryProgress from "../Components/Orders/DeliveryProgress";
 
 function formatPaymentMethod(method) {
     if (method === "gcash") return "GCash";
@@ -171,6 +172,8 @@ export default function PurchaseDetails({ order }) {
                     {props.errors?.review && (
                         <div className="alert alert-danger mb-4">{props.errors.review}</div>
                     )}
+
+                    <DeliveryProgress order={order} />
 
                     <div className="row g-4">
                         <div className="col-lg-8">
@@ -703,7 +706,9 @@ export default function PurchaseDetails({ order }) {
 
                                     <div className="small text-muted">
                                         {order.payment_method === "cash"
-                                            ? "Cash payment is still marked pending until Netmax Trading confirms it. Delivery tracking is not currently available in the site."
+                                            ? order.payment_status === "paid"
+                                                ? "Cash payment has been confirmed by Netmax Trading. Delivery updates appear above for orders that are shipped."
+                                                : "Cash payment is pending until Netmax Trading confirms that it was received. Shipment updates begin after payment confirmation."
                                             : "Online payment is confirmed only after PayMongo reports a successful payment."}
                                     </div>
                                 </div>
