@@ -2,30 +2,8 @@ import Navbar from "../Components/navbar";
 import Footer from "../Components/footer";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 import ServiceLocationPicker, { ServiceLocationMap } from "../Components/GoogleMaps/ServiceLocation";
+import { isWithinMetroManila } from "../utils/metroManilaCoverage";
 import { useState } from "react";
-
-function insideRing(latitude, longitude, ring) {
-    let inside = false;
-    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-        const [xi, yi] = ring[i];
-        const [xj, yj] = ring[j];
-        if ((yi > latitude) !== (yj > latitude) &&
-            longitude < ((xj - xi) * (latitude - yi)) / (yj - yi) + xi) {
-            inside = !inside;
-        }
-    }
-    return inside;
-}
-
-function isWithinMetroManila(latitude, longitude, polygons) {
-    const lat = Number(latitude);
-    const lng = Number(longitude);
-    return Number.isFinite(lat) && Number.isFinite(lng) &&
-        Array.isArray(polygons) && polygons.some((polygon) =>
-            insideRing(lat, lng, polygon[0]) &&
-            !polygon.slice(1).some((hole) => insideRing(lat, lng, hole))
-        );
-}
 
 const paymentMethods = [
     {
@@ -112,14 +90,17 @@ export default function Checkout({
         0
     );
 
-    const deliveryPinIsValid = data.delivery_latitude !== "" && data.delivery_longitude !== "" &&
+    const hasDeliveryPin = data.delivery_latitude !== "" && data.delivery_longitude !== "";
+    const deliveryPinIsValid = hasDeliveryPin &&
         isWithinMetroManila(data.delivery_latitude, data.delivery_longitude, deliveryCoverage);
     const deliveryBlocked = data.fulfillment_method === "delivery" && !deliveryPinIsValid;
 
     const submit = (event) => {
         event.preventDefault();
         if (deliveryBlocked) {
-            setCoverageError("Delivery is limited to Metro Manila. Choose a map pin inside Metro Manila, or select Shop Pickup.");
+            setCoverageError(hasDeliveryPin
+                ? "Outside Metro Manila — delivery is unavailable. Please choose an address within Metro Manila or select Shop Pickup."
+                : "Confirm the location found on the map using USE THIS LOCATION FOR DELIVERY, or click/drag the marker to your exact entrance.");
             return;
         }
         setCoverageError("");
@@ -432,12 +413,19 @@ export default function Checkout({
                                                     Delivery is only available within Metro Manila (NCR). Choose an exact entrance on the map within the outlined service boundary.
                                                 </div>
                                                 <div className="small text-muted mt-2 mb-3">Search your Metro Manila address on OpenStreetMap, then click the map or drag the pin to the exact entrance.</div>
-                                                <ServiceLocationPicker locationType="delivery" coveragePolygons={deliveryCoverage} streetAddress={data.delivery_street_address} city={data.delivery_city} latitude={data.delivery_latitude} longitude={data.delivery_longitude} apiErrors={{ service_location: errors.delivery_latitude || errors.delivery_longitude || errors.delivery_location }} onChange={(changes) => setData((current) => ({ ...current, delivery_latitude: changes.service_latitude ?? current.delivery_latitude, delivery_longitude: changes.service_longitude ?? current.delivery_longitude }))} />
-                                                {data.delivery_latitude !== "" && data.delivery_longitude !== "" && (
-                                                    <div className={"small fw-semibold mt-2 " + (deliveryPinIsValid ? "text-success" : "text-danger")}>
+                                                <ServiceLocationPicker locationType="delivery" coveragePolygons={deliveryCoverage} streetAddress={data.delivery_street_address} city={data.delivery_city} latitude={data.delivery_latitude} longitude={data.delivery_longitude} apiErrors={{ service_location: errors.delivery_latitude || errors.delivery_longitude || errors.delivery_location }} onChange={(changes) => {
+                                                    setCoverageError("");
+                                                    setData((current) => ({ ...current, delivery_latitude: changes.service_latitude ?? current.delivery_latitude, delivery_longitude: changes.service_longitude ?? current.delivery_longitude }));
+                                                }} />
+                                                {hasDeliveryPin ? (
+                                                    <div role="status" className={"alert small mt-2 mb-2 py-2 " + (deliveryPinIsValid ? "alert-success" : "alert-danger")}>
                                                         {deliveryPinIsValid
-                                                            ? "Delivery pin is within Metro Manila."
-                                                            : "Outside coverage. Please choose a location inside Metro Manila or use Shop Pickup."}
+                                                            ? "Delivery location confirmed within Metro Manila. You can now place your order."
+                                                            : "OUTSIDE METRO MANILA — DELIVERY UNAVAILABLE. Move your pin inside Metro Manila or select Shop Pickup."}
+                                                    </div>
+                                                ) : (
+                                                    <div role="status" className="alert alert-warning small mt-2 mb-2 py-2">
+                                                        Delivery location not confirmed yet. After finding your address on the map, click USE THIS LOCATION FOR DELIVERY or click/drag the pin to your exact entrance.
                                                     </div>
                                                 )}
                                                 {coverageError && <div className="small text-danger mt-2">{coverageError}</div>}
@@ -599,9 +587,13 @@ export default function Checkout({
                                     >
                                         {processing
                                             ? "PROCESSING..."
-                                            : data.payment_method === "cash"
-                                              ? "PLACE ORDER"
-                                              : "CONTINUE TO PAYMENT"}
+                                            : deliveryBlocked
+                                              ? hasDeliveryPin
+                                                  ? "DELIVERY UNAVAILABLE OUTSIDE METRO MANILA"
+                                                  : "CONFIRM DELIVERY LOCATION ABOVE"
+                                              : data.payment_method === "cash"
+                                                ? "PLACE ORDER"
+                                                : "CONTINUE TO PAYMENT"}
                                     </button>
                                 </form>
                             </div>
