@@ -10,11 +10,11 @@ import RateLimitNotice from "../Components/RateLimitNotice";
 
 import "../../css/signup.css";
 
-export default function Signup() {
+export default function Signup({ allowedEmailDomains = [] }) {
     const [showTerms, setShowTerms] = useState(false);
     const [termsRead, setTermsRead] = useState(false);
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, clearErrors } = useForm({
         firstName: "",
         lastName: "",
         phone: "",
@@ -46,7 +46,21 @@ export default function Signup() {
         noSpaces: !/\s/.test(data.password),
     };
 
-    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email);
+    // Laravel supplies the exact allowed-provider list; the backend independently
+    // enforces it so a manipulated browser request cannot bypass the restriction.
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim());
+    const emailDomain = data.email.trim().split("@").pop()?.toLowerCase() ?? "";
+    const isEmailProviderAllowed = allowedEmailDomains.includes(emailDomain);
+    const namePattern = /^\p{L}[\p{L}\p{M}]*(?: +\p{L}[\p{L}\p{M}]*)*$/u;
+    const isNameValid = (value) => namePattern.test(value.trim());
+
+    const updateName = (field, value) => {
+        // Prevent numbers, punctuation and symbols on typing and pasting.
+        const cleaned = value.replace(/[^\p{L}\p{M} ]/gu, "").replace(/ {2,}/g, " ");
+        clearErrors(field);
+        setData(field, cleaned);
+    };
+
 
     const getError = (field) => {
         if (errors[field]) {
@@ -57,12 +71,14 @@ export default function Signup() {
             return "";
         }
 
-        if (field === "firstName" && !data.firstName.trim()) {
-            return "First name is required.";
+        if (field === "firstName") {
+            if (!data.firstName.trim()) return "First name is required.";
+            if (!isNameValid(data.firstName)) return "Use letters and spaces only; no numbers or special characters.";
         }
 
-        if (field === "lastName" && !data.lastName.trim()) {
-            return "Last name is required.";
+        if (field === "lastName") {
+            if (!data.lastName.trim()) return "Last name is required.";
+            if (!isNameValid(data.lastName)) return "Use letters and spaces only; no numbers or special characters.";
         }
 
         if (field === "phone") {
@@ -82,6 +98,9 @@ export default function Signup() {
 
             if (!isEmailValid) {
                 return "Enter a valid email address.";
+            }
+            if (!isEmailProviderAllowed) {
+                return "Use a supported email provider (Gmail, Yahoo, Outlook, iCloud, Proton Mail, etc.). Disposable email domains are not accepted.";
             }
         }
 
@@ -147,6 +166,13 @@ export default function Signup() {
 
         if (!data.terms) {
             setShowTerms(true);
+            return;
+        }
+
+        // Avoid unnecessary submissions when the client knows the name or
+        // provider is invalid. Laravel repeats every check authoritatively.
+        if (!isNameValid(data.firstName) || !isNameValid(data.lastName) ||
+            !isEmailValid || !isEmailProviderAllowed) {
             return;
         }
 
@@ -227,10 +253,12 @@ export default function Signup() {
                                 className={`form-control ${isInvalid("firstName") ? "is-invalid" : ""}`}
                                 placeholder="First Name"
                                 value={data.firstName}
-                                onChange={(e) => setData("firstName", e.target.value)}
+                                onChange={(e) => updateName("firstName", e.target.value)}
                                 onBlur={() => markTouched("firstName")}
                                 aria-invalid={isInvalid("firstName")}
                             />
+
+                            <div className="form-text">Letters and spaces only.</div>
 
                             {getError("firstName") && (
                                 <div className="text-danger small mt-1">
@@ -252,10 +280,12 @@ export default function Signup() {
                                 className={`form-control ${isInvalid("lastName") ? "is-invalid" : ""}`}
                                 placeholder="Last Name"
                                 value={data.lastName}
-                                onChange={(e) => setData("lastName", e.target.value)}
+                                onChange={(e) => updateName("lastName", e.target.value)}
                                 onBlur={() => markTouched("lastName")}
                                 aria-invalid={isInvalid("lastName")}
                             />
+
+                            <div className="form-text">Letters and spaces only.</div>
 
                             {getError("lastName") && (
                                 <div className="text-danger small mt-1">
@@ -309,10 +339,15 @@ export default function Signup() {
                                 className={`form-control ${isInvalid("email") ? "is-invalid" : ""}`}
                                 placeholder="Email"
                                 value={data.email}
-                                onChange={(e) => setData("email", e.target.value)}
+                                onChange={(e) => { clearErrors("email"); setData("email", e.target.value); }}
                                 onBlur={() => markTouched("email")}
                                 aria-invalid={isInvalid("email")}
                             />
+
+                            <div className="form-text">
+                                Use an established email provider (such as Gmail, Yahoo, Outlook, or iCloud).
+                                A six-digit code will verify that you own the mailbox.
+                            </div>
 
                             {getError("email") && (
                                 <div className="text-danger small mt-1">
