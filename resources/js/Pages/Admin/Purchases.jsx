@@ -53,6 +53,7 @@ export default function AdminPurchases({
     attentionOrders = [],
     summary = {},
     filters = {},
+    expiryMonitoring = null,
 }) {
     const [search, setSearch] = useState(filters.search ?? "");
     const [paymentStatus, setPaymentStatus] = useState(
@@ -350,29 +351,67 @@ export default function AdminPurchases({
                                     <button type="button" onClick={() => applyQuickFilter({ payment_status: "pending", order_status: "awaiting_payment" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-warning-subtle">
                                         <div className="small text-secondary fw-semibold">PENDING ONLINE</div>
                                         <div className="h3 fw-bold mb-1 text-warning-emphasis">{summary.pending_online_payments ?? 0}</div>
-                                        <div className="small text-secondary">GCash, Card, or Maya payment not confirmed. Auto-cancels after 48 hours unpaid.</div>
+                                        <div className="small text-secondary">GCash, Card, or Maya payment not confirmed. Cancellation is attempted after 48 hours if provider checks allow it.</div>
                                     </button>
                                 </div>
                                 <div className="col-6 col-xl-3">
                                     <button type="button" onClick={() => applyQuickFilter({ payment_status: "failed", order_status: "payment_failed" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-danger-subtle">
                                         <div className="small text-secondary fw-semibold">PAYMENT FAILED</div>
                                         <div className="h3 fw-bold mb-1 text-danger">{summary.failed_payments ?? 0}</div>
-                                        <div className="small text-secondary">Payment failed. Customer may retry; unpaid orders auto-cancel after 48 hours.</div>
+                                        <div className="small text-secondary">Payment failed. Cancellation check runs after 48 hours if the scheduler is working.</div>
                                     </button>
                                 </div>
                                 <div className="col-6 col-xl-3">
                                     <button type="button" onClick={() => applyQuickFilter({ payment_status: "pending", order_status: "pending", payment_method: "cash" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-info-subtle">
                                         <div className="small text-secondary fw-semibold">CASH TO CONFIRM</div>
                                         <div className="h3 fw-bold mb-1 text-info-emphasis">{summary.cash_awaiting_confirmation ?? 0}</div>
-                                        <div className="small text-secondary">Confirm only after cash is received. Unpaid orders auto-cancel after 48 hours.</div>
+                                        <div className="small text-secondary">Confirm only after cash is received; unpaid orders are eligible for cancellation after 48 hours.</div>
                                     </button>
                                 </div>
                                 <div className="col-6 col-xl-3">
                                     <button type="button" onClick={() => applyQuickFilter({ attention: "stale" })} className="btn text-start w-100 h-100 border rounded-3 p-3 bg-light">
                                         <div className="small text-secondary fw-semibold">UNPAID OVER 48 HOURS</div>
                                         <div className="h3 fw-bold mb-1 text-dark">{summary.stale_unpaid_orders ?? 0}</div>
-                                        <div className="small text-secondary">The automatic cancellation deadline has passed.</div>
+                                        <div className="small text-secondary">Overdue; requires a successful cancellation check.</div>
                                     </button>
+                                </div>
+                            </div>
+
+                            <div className={"alert small mb-4 " +
+                                (!expiryMonitoring || expiryMonitoring.stale || expiryMonitoring.deferred > 0
+                                    ? "alert-warning" : "alert-info")} role="status">
+                                <div className="fw-bold mb-1">
+                                    <i className="bi bi-clock-history me-2" />
+                                    Unpaid order cancellation check
+                                </div>
+                                {expiryMonitoring ? (
+                                    <>
+                                        <div>
+                                            Last recorded check: <strong>{expiryMonitoring.checked_at} (Philippine time)</strong>.
+                                            {" "}Checked {expiryMonitoring.attempted} overdue order(s):
+                                            {" "}{expiryMonitoring.cancelled} cancelled,
+                                            {" "}{expiryMonitoring.deferred} deferred for verification,
+                                            {" "}{expiryMonitoring.remaining_overdue} remained overdue.
+                                        </div>
+                                        {expiryMonitoring.stale && (
+                                            <div className="text-danger fw-semibold mt-2">
+                                                The recorded check is over 2.5 hours old. Verify the Hostinger cron schedule.
+                                            </div>
+                                        )}
+                                        {expiryMonitoring.deferred > 0 && (
+                                            <div className="mt-2">
+                                                Some cancellations could not safely complete. Check Laravel logs and PayMongo checkout status; do not cancel a payment still processing.
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div>
+                                        No completed cancellation check has been recorded by this version yet.
+                                        Verify Hostinger Cron Jobs runs Laravel <code>schedule:run</code> regularly.
+                                    </div>
+                                )}
+                                <div className="mt-2 text-muted">
+                                    A manual command run also updates this report, so this display alone does not prove cron is correctly configured.
                                 </div>
                             </div>
 
@@ -385,12 +424,12 @@ export default function AdminPurchases({
                                 <div className="d-flex flex-column gap-2">
                                     {attentionOrders.map((order) => {
                                         const actionText = order.is_stale_unpaid
-                                            ? "Unpaid for over 48 hours. The scheduled job will cancel it after verifying payment is still unpaid."
+                                            ? "Unpaid for over 48 hours. Cancellation is awaiting a successful scheduled check and, for online orders, PayMongo verification."
                                             : order.next_action === "confirm_cash_payment"
-                                                ? "Payment is pending. Confirm only after cash has been received; unpaid orders auto-cancel after 48 hours."
+                                                ? "Payment is pending. Confirm only when cash is received; unpaid orders are eligible for expiry after 48 hours."
                                                 : order.next_action === "retry_or_cancel"
-                                                    ? "Payment failed. The customer may retry; this order auto-cancels after 48 hours if it remains unpaid."
-                                                    : "Waiting for payment confirmation. This order auto-cancels after 48 hours if unpaid.";
+                                                    ? "Payment failed. The customer may retry; cancellation requires a successful expiry check after 48 hours."
+                                                    : "Waiting for payment confirmation. Automatic cancellation requires the Hostinger scheduler and provider checks.";
 
                                         return (
                                             <div key={order.id} className="border rounded-3 p-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
