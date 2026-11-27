@@ -46,7 +46,8 @@ function JobCard({ job, open = false, products = [] }) {
     const [scheduleDate, setScheduleDate] = useState(job.preferred_date_value || "");
     const [scheduleTime, setScheduleTime] = useState(job.preferred_time || "08:00 AM - 11:00 AM");
     const [scheduleError, setScheduleError] = useState("");
-    const paymentBlocked = Boolean(job.payment_status && !["paid", "not_applicable"].includes(job.payment_status));
+    // Match the exact backend rule instead of assuming every non-"paid" label is blocked.
+    const paymentBlocked = Boolean(job.payment_blocked);
     const [showServiceReport, setShowServiceReport] = useState(false);
     const [serviceReportErrors, setServiceReportErrors] = useState({});
     const [serviceReport, setServiceReport] = useState({
@@ -262,9 +263,15 @@ function JobCard({ job, open = false, products = [] }) {
 
             {error && <div className="alert alert-danger py-2 small" role="alert">{error}</div>}
 
-            {paymentBlocked && open && (
+            {paymentBlocked && (
                 <div className="alert alert-warning py-2 small" role="status">
-                    Payment must be confirmed before a technician can join or start this service.
+                    <i className="bi bi-exclamation-triangle-fill me-2" />
+                    <strong>{job.status === "confirmed" ? "Booking confirmed — payment still pending." : "Required payment pending."}</strong>
+                    <div className="mt-1">
+                        This service cannot start until Netmax Trading verifies the required payment.
+                        For cash, an administrator must confirm receipt in Orders; for online payments,
+                        the payment must be verified through PayMongo. Contact the admin to resolve this booking.
+                    </div>
                 </div>
             )}
 
@@ -273,12 +280,17 @@ function JobCard({ job, open = false, products = [] }) {
                     {working ? "JOINING..." : "JOIN THIS SERVICE"}
                 </button>
             ) : job.status === "confirmed" ? (
-                <button className="btn btn-primary w-100 fw-bold" disabled={working} onClick={() => updateStatus("in_progress")}>
-                    {working ? "UPDATING..." : "START JOB"}
+                <button
+                    className={"btn w-100 fw-bold " + (paymentBlocked ? "btn-secondary" : "btn-primary")}
+                    disabled={working || paymentBlocked}
+                    title={paymentBlocked ? "Required booking payment must be confirmed by the shop before starting." : "Start this confirmed job"}
+                    onClick={() => updateStatus("in_progress")}
+                >
+                    {working ? "UPDATING..." : paymentBlocked ? "AWAITING PAYMENT CONFIRMATION" : "START JOB"}
                 </button>
             ) : job.status === "in_progress" ? (
-                <button className="btn btn-success w-100 fw-bold" disabled={working} onClick={() => updateStatus("completed")}>
-                    <i className="bi bi-journal-check me-2" />POST SERVICE RECORD
+                <button className="btn btn-success w-100 fw-bold" disabled={working || paymentBlocked} onClick={() => updateStatus("completed")}>
+                    <i className="bi bi-journal-check me-2" />{paymentBlocked ? "PAYMENT CONFIRMATION REQUIRED" : "POST SERVICE RECORD"}
                 </button>
             ) : job.status === "completed" ? (
                 <div className="small text-success fw-semibold"><i className="bi bi-check-circle-fill me-1" />This job is completed.</div>
