@@ -107,11 +107,13 @@ export default function ServiceLocationPicker({
     streetAddress = "", city = "", latitude = null, longitude = null, placeId = "", apiErrors = {}, onChange,
     locationType = "service",
     coveragePolygons = [],
+    onCoverageChange,
 }) {
     const mapHostRef = useRef(null);
     const mapInstanceRef = useRef(null);
     const markerRef = useRef(null);
     const onChangeRef = useRef(onChange);
+    const onCoverageChangeRef = useRef(onCoverageChange);
     const addressRef = useRef({ streetAddress, city });
     const lastAddressQueryRef = useRef(makeSearchQuery(streetAddress, city));
     const searchedAddressRef = useRef("");
@@ -127,6 +129,7 @@ export default function ServiceLocationPicker({
     );
 
     onChangeRef.current = onChange;
+    onCoverageChangeRef.current = onCoverageChange;
     addressRef.current = { streetAddress, city };
     const hasSearchAddress = Boolean(streetAddress.trim() && (city.trim() || locationType === "pickup"));
     const pinOutsideCoverage = locationType === "delivery" && pin !== null &&
@@ -151,6 +154,18 @@ export default function ServiceLocationPicker({
         if (!unconfirmedDeliveryPin || !pin) return;
         saveSelectedPosition({ lat: pin.lat, lng: pin.lng }, "confirmed-search");
     };
+
+    useEffect(() => {
+        if (locationType !== "delivery") return;
+        const status = pin === null
+            ? "unselected"
+            : !isWithinMetroManila(pin.lat, pin.lng, coveragePolygons)
+                ? "outside"
+                : pin.manuallyPinned
+                    ? "confirmed"
+                    : "needs_confirmation";
+        onCoverageChangeRef.current?.(status);
+    }, [pin, locationType, coveragePolygons]);
 
     useEffect(() => {
         let cancelled = false;
